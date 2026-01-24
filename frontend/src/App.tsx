@@ -1,76 +1,46 @@
-import { useEffect, useState } from "react";
-import api from "./api/axios";
+import { useState } from "react";
+
+// Import Global Styles
 import "bootstrap/dist/css/bootstrap.min.css";
 import "admin-lte/dist/css/adminlte.min.css";
 import "admin-lte/dist/js/adminlte.min.js";
 
-// Define the shape of your data (matches your SQL)
-interface Laboratory {
-  lab_id: number;
-  lab_name: string;
-  location: string;
-}
+// Import your Pages
+import InventoryPage from "./pages/InventoryPage";
+import LaboratoriesPage from "./pages/LaboratoriesPage";
 
 function App() {
-  const [labs, setLabs] = useState<Laboratory[]>([]);
-
-  useEffect(() => {
-    // Fetch data from your new API
-    api
-      .get("/laboratories")
-      .then((res) => setLabs(res.data))
-      .catch((err) => console.error("Error fetching labs:", err));
-  }, []);
+  // Simple state to switch pages (Temporary until we add React Router)
+  const [currentPage, setCurrentPage] = useState<"inventory" | "labs">(
+    "inventory",
+  );
 
   return (
-    <div className="app-wrapper">
-      <nav className="app-header navbar navbar-expand bg-body">
-        <div className="container-fluid">
-          <span className="navbar-brand mb-0 h1">CIT Asset System</span>
-        </div>
-      </nav>
+    <>
+      {/* This is a temporary "Page Switcher" 
+         In a real app, we would use <Routes> here.
+      */}
+      {currentPage === "inventory" && <InventoryPage />}
+      {currentPage === "labs" && <LaboratoriesPage />}
 
-      <main className="app-main pt-4">
-        <div className="app-content">
-          <div className="container-fluid">
-            {/* LABS TABLE CARD */}
-            <div className="card mb-4">
-              <div className="card-header">
-                <h3 className="card-title">Registered Laboratories</h3>
-              </div>
-              <div className="card-body p-0">
-                <table className="table table-striped">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Lab Name</th>
-                      <th>Location</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {labs.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="text-center">
-                          No labs found. Add some in MySQL!
-                        </td>
-                      </tr>
-                    ) : (
-                      labs.map((lab) => (
-                        <tr key={lab.lab_id}>
-                          <td>{lab.lab_id}</td>
-                          <td>{lab.lab_name}</td>
-                          <td>{lab.location}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+      {/* Debug Menu: Remove this later 
+         (Just helps you switch back and forth for now)
+      */}
+      <div style={{ position: "fixed", bottom: 10, right: 10, zIndex: 9999 }}>
+        <button
+          className="btn btn-secondary btn-sm me-2"
+          onClick={() => setCurrentPage("labs")}
+        >
+          View Labs Test
+        </button>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => setCurrentPage("inventory")}
+        >
+          View Inventory App
+        </button>
+      </div>
+    </>
   );
 }
 

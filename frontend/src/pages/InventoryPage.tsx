@@ -1,72 +1,134 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import api from "../api/axios"; // Ensure you have your axios helper
 import Sidebar from "../components/layout/Sidebar";
-import InventoryTable from "../components/inventory/InventoryTable";
-import AssetFormModal from "../components/inventory/AssetFormModal";
-// import api from '../services/api'; // Assuming you have this set up
+import "bootstrap/dist/css/bootstrap.min.css";
+import "admin-lte/dist/css/adminlte.min.css";
+import "admin-lte/dist/js/adminlte.min.js";
+
+interface Asset {
+  asset_id: number;
+  property_tag_no: string;
+  item_name: string;
+  description: string;
+  serial_number: string;
+  quantity: number;
+  laboratories?: { lab_name: string };
+  units?: { unit_name: string };
+  date_of_purchase: string;
+}
 
 const InventoryPage = () => {
-  const [showModal, setShowModal] = useState(false);
-  const [assets, setAssets] = useState<any[]>([]); // Replace 'any' with your Interface
+  const [assets, setAssets] = useState<Asset[]>([]);
 
-  // Mock Data Fetching
   useEffect(() => {
-    // api.get('/inventory').then(res => setAssets(res.data));
-    console.log("Fetching assets...");
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await api.get("/inventory");
+      setAssets(res.data);
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+    }
+  };
 
   return (
     <div className="app-wrapper">
+      {/* Header */}
       <nav className="app-header navbar navbar-expand bg-body">
         <div className="container-fluid">
-          <span className="navbar-brand">CIT Asset System</span>
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <a
+                className="nav-link"
+                data-lte-toggle="sidebar"
+                href="#"
+                role="button"
+              >
+                <i className="bi bi-list"></i> Menu
+              </a>
+            </li>
+          </ul>
         </div>
       </nav>
 
-      <Sidebar activePage="inventory" />
+      <Sidebar active="inventory" />
 
-      <main className="app-main">
-        {/* Page Header */}
-        <div className="app-content-header">
-          <div className="container-fluid">
-            <div className="row">
-              <div className="col-sm-6">
-                <h3 className="mb-0">Inventory Assets</h3>
-              </div>
-              <div className="col-sm-6 text-end">
-                <button
-                  className="btn btn-primary shadow-sm hover:shadow-md transition-all"
-                  onClick={() => setShowModal(true)}
-                >
-                  <i className="bi bi-plus-lg me-2"></i>
-                  Add New Asset
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
+      <main className="app-main pt-4">
         <div className="app-content">
           <div className="container-fluid">
             <div className="card card-outline card-primary">
               <div className="card-header">
-                <h3 className="card-title">Asset List</h3>
+                <h3 className="card-title">Inventory Assets</h3>
+                <div className="card-tools">
+                  <button className="btn btn-primary btn-sm">
+                    <i className="bi bi-plus-lg"></i> Add Asset
+                  </button>
+                </div>
               </div>
-              <div className="card-body p-0">
-                <InventoryTable assets={assets} />
+
+              <div className="card-body p-0 table-responsive">
+                <table className="table table-striped table-hover text-nowrap">
+                  <thead>
+                    <tr>
+                      <th>Property Tag</th>
+                      <th>Item Name</th>
+                      <th>Description</th>
+                      <th>Serial No.</th>
+                      <th>Location</th>
+                      <th>Unit Type</th>
+                      <th>Qty</th>
+                      <th>Purchase Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="text-center">
+                          No assets found.
+                        </td>
+                      </tr>
+                    ) : (
+                      assets.map((asset) => (
+                        <tr key={asset.asset_id}>
+                          <td className="fw-bold text-primary">
+                            {asset.property_tag_no}
+                          </td>
+                          <td>{asset.item_name}</td>
+                          <td>{asset.description}</td>
+                          <td>{asset.serial_number}</td>
+                          <td>
+                            <span className="badge text-bg-info">
+                              {asset.laboratories?.lab_name || "N/A"}
+                            </span>
+                          </td>
+                          <td>{asset.units?.unit_name || "N/A"}</td>
+                          <td>{asset.quantity}</td>
+                          <td>
+                            {new Date(
+                              asset.date_of_purchase,
+                            ).toLocaleDateString()}
+                          </td>
+                          <td>
+                            <button className="btn btn-sm btn-warning me-1">
+                              <i className="bi bi-pencil"></i>
+                            </button>
+                            <button className="btn btn-sm btn-danger">
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
       </main>
-
-      {/* Modal Overlay */}
-      {showModal && (
-        <AssetFormModal
-          onClose={() => setShowModal(false)}
-          onSave={(data) => console.log("Saving", data)}
-        />
-      )}
     </div>
   );
 };

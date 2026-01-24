@@ -2,6 +2,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
+import { getInventory, createAsset } from "./controllers/inventoryController";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -9,6 +10,9 @@ const port = 3000;
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/inventory", getInventory);
+app.post("/inventory", createAsset);
 
 // 1. GET all Laboratories (e.g., for a dropdown menu)
 app.get("/laboratories", async (req: Request, res: Response) => {
