@@ -1,21 +1,152 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+model campuses {
+  campus_id   Int           @id @default(autoincrement())
+  campus_name String        @db.VarChar(50)
+  departments departments[]
+}
+
+model daily_reports {
+  report_id              Int                      @id @default(autoincrement())
+  user_id                Int
+  lab_id                 Int
+  report_date            DateTime                 @db.Date
+  time_in                DateTime?                @db.Time(0)
+  time_out               DateTime?                @db.Time(0)
+  general_remarks        String?                  @db.Text
+  status                 daily_reports_status?    @default(Pending)
+  created_at             DateTime?                @default(now()) @db.Timestamp(0)
+  users                  users                    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "daily_reports_ibfk_1")
+  laboratories           laboratories             @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction, map: "daily_reports_ibfk_2")
+  report_checklist_items report_checklist_items[]
+
+  @@index([lab_id], map: "lab_id")
+  @@index([user_id], map: "user_id")
+}
+
+model departments {
+  dept_id        Int            @id @default(autoincrement())
+  dept_name      String         @db.VarChar(100)
+  campus_id      Int?
+  office_type_id Int?
+  designee_name  String?        @db.VarChar(100)
+  campuses       campuses?      @relation(fields: [campus_id], references: [campus_id], onDelete: NoAction, onUpdate: NoAction, map: "departments_ibfk_1")
+  office_types   office_types?  @relation(fields: [office_type_id], references: [type_id], onDelete: NoAction, onUpdate: NoAction, map: "departments_ibfk_2")
+  laboratories   laboratories[]
+
+  @@index([campus_id], map: "campus_id")
+  @@index([office_type_id], map: "office_type_id")
+}
+
+model inventory_assets {
+  asset_id           Int           @id @default(autoincrement())
+  lab_id             Int?
+  workstation_number String?       @db.VarChar(50)
+  unit_id            Int?
+  item_name          String?       @db.VarChar(100)
+  description        String?       @db.Text
+  property_tag_no    String?       @unique(map: "property_tag_no") @db.VarChar(50)
+  serial_number      String?       @db.VarChar(100)
+  quantity           Int?          @default(1)
+  date_of_purchase   DateTime?     @db.Date
+  supplier_name      String?       @db.VarChar(100)
+  added_by_user_id   Int?
+  date_added         DateTime?     @default(now()) @db.Timestamp(0)
+  laboratories       laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_1")
+  units              units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_2")
+  users              users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_3")
+
+  @@index([added_by_user_id], map: "added_by_user_id")
+  @@index([lab_id], map: "lab_id")
+  @@index([unit_id], map: "unit_id")
+}
+
+model laboratories {
+  lab_id           Int                @id @default(autoincrement())
+  lab_name         String             @db.VarChar(50)
+  location         String?            @db.VarChar(50)
+  dept_id          Int?
+  lab_in_charge    String?            @db.VarChar(100)
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+  departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
+
+  @@index([dept_id], map: "dept_id")
+}
+
+model report_checklist_items {
+  item_id          Int                                 @id @default(autoincrement())
+  report_id        Int
+  task_id          Int
+  task_status      report_checklist_items_task_status? @default(Done)
+  specific_remarks String?                             @db.VarChar(255)
+  daily_reports    daily_reports                       @relation(fields: [report_id], references: [report_id], onDelete: Cascade, onUpdate: NoAction, map: "report_checklist_items_ibfk_1")
+  standard_tasks   standard_tasks                      @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction, map: "report_checklist_items_ibfk_2")
+
+  @@index([report_id], map: "report_id")
+  @@index([task_id], map: "task_id")
+}
+
+model standard_tasks {
+  task_id                Int                      @id @default(autoincrement())
+  task_name              String                   @db.VarChar(100)
+  category               String?                  @db.VarChar(50)
+  report_checklist_items report_checklist_items[]
+}
+
+model users {
+  user_id          Int                @id @default(autoincrement())
+  full_name        String             @db.VarChar(100)
+  email            String             @unique(map: "email") @db.VarChar(100)
+  password_hash    String             @db.VarChar(255)
+  role             users_role?        @default(Custodian)
+  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+}
+
+model device_types {
+  device_type_id   Int     @id @default(autoincrement())
+  device_type_name String  @db.VarChar(50)
+  units            units[]
+}
+
+model office_types {
+  type_id     Int           @id @default(autoincrement())
+  type_name   String        @unique(map: "type_name") @db.VarChar(50)
+  departments departments[]
+}
+
+model units {
+  unit_id          Int                @id @default(autoincrement())
+  unit_name        String             @db.VarChar(50)
+  device_type_id   Int
+  inventory_assets inventory_assets[]
+  device_types     device_types       @relation(fields: [device_type_id], references: [device_type_id], onDelete: NoAction, onUpdate: NoAction, map: "units_ibfk_1")
+
+  @@index([device_type_id], map: "device_type_id")
+}
+
+enum report_checklist_items_task_status {
+  Done
+  Issue_Found @map("Issue Found")
+  N_A         @map("N/A")
+}
+
+enum users_role {
+  Admin
+  Custodian
+}
+
+enum daily_reports_status {
+  Pending
+  Submitted
+  Approved
 }
