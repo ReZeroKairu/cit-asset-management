@@ -11,10 +11,17 @@
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
+    "@prisma/client": "^6.18.0",
+    "@types/date-fns": "^2.5.3",
+    "@types/react-bootstrap": "^1.0.1",
     "admin-lte": "^4.0.0-beta2",
     "axios": "^1.13.2",
     "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "date-fns": "^4.1.0",
+    "prisma": "^6.18.0",
     "react": "^19.2.0",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"
   },
