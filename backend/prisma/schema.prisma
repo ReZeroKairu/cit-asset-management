@@ -1,3 +1,4 @@
+//backend/prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -62,10 +63,13 @@ model inventory_assets {
   laboratories       laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_1")
   units              units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_2")
   users              users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_3")
+  workstation_id   Int?    
+  workstation      workstations? @relation(fields: [workstation_id], references: [workstation_id])
 
   @@index([added_by_user_id], map: "added_by_user_id")
   @@index([lab_id], map: "lab_id")
   @@index([unit_id], map: "unit_id")
+  @@index([workstation_id])
 }
 
 model laboratories {
@@ -74,9 +78,16 @@ model laboratories {
   location         String?            @db.VarChar(50)
   dept_id          Int?
   lab_in_charge    String?            @db.VarChar(100)
+  
+  // Existing relations
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
   departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
+
+  // NEW: This is the missing line! 
+  // It tells Prisma that this Lab contains a list of Users (Custodians)
+  users            users[]
+  workstations     workstations[]
 
   @@index([dept_id], map: "dept_id")
 }
@@ -102,12 +113,18 @@ model standard_tasks {
 }
 
 model users {
-  user_id          Int                @id @default(autoincrement())
-  full_name        String             @db.VarChar(100)
-  email            String             @unique(map: "email") @db.VarChar(100)
-  password_hash    String             @db.VarChar(255)
-  role             users_role?        @default(Custodian)
-  created_at       DateTime?          @default(now()) @db.Timestamp(0)
+  user_id       Int       @id @default(autoincrement())
+  full_name     String    @db.VarChar(100)
+  email         String    @unique(map: "email") @db.VarChar(100)
+  password_hash String    @db.VarChar(255)
+  role          users_role? @default(Custodian)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  
+  // NEW: Link user to a Laboratory
+  lab_id        Int?      
+  assigned_lab  laboratories? @relation(fields: [lab_id], references: [lab_id])
+
+  // Existing relations...
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
 }
@@ -149,4 +166,17 @@ enum daily_reports_status {
   Pending
   Submitted
   Approved
+}
+
+model workstations {
+  workstation_id   Int      @id @default(autoincrement())
+  workstation_name String   @unique // e.g. "WS-PC1"
+  lab_id           Int?     // The lab where this PC is located
+  created_at       DateTime @default(now())
+
+  // Relations
+  laboratory       laboratories?      @relation(fields: [lab_id], references: [lab_id])
+  assets           inventory_assets[] // A workstation has many assets (RAM, Mouse, etc.)
+
+  @@index([lab_id])
 }

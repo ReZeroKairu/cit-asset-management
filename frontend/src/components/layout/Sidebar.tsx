@@ -1,3 +1,4 @@
+//frontend/src/components/layout/Sidebar.tsx
 import React from "react";
 
 const Sidebar = ({ active }: { active: string }) => {

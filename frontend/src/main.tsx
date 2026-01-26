@@ -7,11 +7,13 @@ import "admin-lte/dist/js/adminlte.min.js"; // 3. Import AdminLTE JS (Controls t
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./index.css"; // Your custom overrides
+import App from "./App.tsx";
+import { AuthProvider } from "./context/AuthContext"; // Import this
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>,
 );

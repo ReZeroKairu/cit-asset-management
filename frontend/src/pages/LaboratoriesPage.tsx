@@ -1,3 +1,4 @@
+//frontend/src/pages/LaboratoriesPage.tsx
 import { useEffect, useState } from "react";
 import api from "../api/axios"; // Adjust path if needed
 import Sidebar from "../components/layout/Sidebar"; // Reusing the sidebar

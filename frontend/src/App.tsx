@@ -1,43 +1,42 @@
 import { useState } from "react";
-
-// Import Global Styles
+import { useAuth } from "./context/AuthContext"; // Import Auth Hook
+import LoginPage from "./pages/LoginPage";
+import InventoryPage from "./pages/InventoryPage";
+import LaboratoriesPage from "./pages/LaboratoriesPage";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "admin-lte/dist/css/adminlte.min.css";
 import "admin-lte/dist/js/adminlte.min.js";
 
-// Import your Pages
-import InventoryPage from "./pages/InventoryPage";
-import LaboratoriesPage from "./pages/LaboratoriesPage";
-
 function App() {
-  // Simple state to switch pages (Temporary until we add React Router)
+  const { user } = useAuth(); // Check if user is logged in
   const [currentPage, setCurrentPage] = useState<"inventory" | "labs">(
     "inventory",
   );
 
+  // 1. IF NOT LOGGED IN -> SHOW LOGIN PAGE
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // 2. IF LOGGED IN -> SHOW MAIN APP
   return (
     <>
-      {/* This is a temporary "Page Switcher" 
-         In a real app, we would use <Routes> here.
-      */}
       {currentPage === "inventory" && <InventoryPage />}
       {currentPage === "labs" && <LaboratoriesPage />}
 
-      {/* Debug Menu: Remove this later 
-         (Just helps you switch back and forth for now)
-      */}
+      {/* Navigation Switcher (Replace with real sidebar links later) */}
       <div style={{ position: "fixed", bottom: 10, right: 10, zIndex: 9999 }}>
         <button
           className="btn btn-secondary btn-sm me-2"
           onClick={() => setCurrentPage("labs")}
         >
-          View Labs Test
+          Labs
         </button>
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setCurrentPage("inventory")}
         >
-          View Inventory App
+          Inventory
         </button>
       </div>
     </>

@@ -1,16 +1,17 @@
+// backend/src/controllers/inventoryController.ts
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// GET: Fetch all assets with relations
+// 1. GET ALL ASSETS
 export const getInventory = async (req: Request, res: Response) => {
   try {
     const assets = await prisma.inventory_assets.findMany({
       include: {
-        laboratories: true, // Get Lab Name instead of just ID
-        units: true, // Get Unit Name (e.g., "System Unit")
-        users: true, // Get who added it
+        laboratories: true,
+        units: true,
+        users: true,
       },
       orderBy: {
         date_added: "desc",
@@ -18,12 +19,11 @@ export const getInventory = async (req: Request, res: Response) => {
     });
     res.json(assets);
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: "Failed to fetch assets" });
   }
 };
 
-// POST: Create a new asset
+// 2. CREATE NEW ASSET
 export const createAsset = async (req: Request, res: Response) => {
   try {
     const {
@@ -51,7 +51,8 @@ export const createAsset = async (req: Request, res: Response) => {
         // Connect Foreign Keys
         laboratories: { connect: { lab_id: Number(lab_id) } },
         units: { connect: { unit_id: Number(unit_id) } },
-        users: { connect: { user_id: Number(user_id) } },
+        // Handle optional user_id
+        users: user_id ? { connect: { user_id: Number(user_id) } } : undefined,
       },
     });
     res.json(newAsset);

@@ -1,3 +1,4 @@
+//frontend/src/component/inventory/InventoryTable.tsx
 import React from "react";
 
 interface AssetProps {

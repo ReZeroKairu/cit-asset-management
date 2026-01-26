@@ -1,3 +1,4 @@
+//frontend/src/component/inventory/AssetFormModal.tsx
 import React, { useState } from "react";
 
 interface ModalProps {
