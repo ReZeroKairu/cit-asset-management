@@ -97,8 +97,21 @@ export const createDailyReport = async (req: Request, res: Response) => {
 
     // Get user ID from authenticated request
     const user_id = req.user?.userId;
+    const user_role = req.user?.role;
     if (!user_id) {
       return res.status(401).json({ error: "User authentication required" });
+    }
+
+    // For non-admin users, validate they can only create reports for their assigned lab
+    if (user_role !== 'Admin') {
+      const user = await prisma.users.findUnique({
+        where: { user_id },
+        select: { lab_id: true }
+      });
+
+      if (!user?.lab_id || user.lab_id !== lab_id) {
+        return res.status(403).json({ error: "You can only create reports for your assigned laboratory" });
+      }
     }
 
     // Check how many reports already exist for this user, lab, and date (max 10)

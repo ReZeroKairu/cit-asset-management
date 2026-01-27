@@ -47,14 +47,14 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
       
       const data = viewMode === 'my' 
         ? await getMyDailyReports({
-            status: filters.status,
-            start_date: filters.start_date,
-            end_date: filters.end_date
+            status: filters.status || undefined,
+            start_date: filters.start_date || undefined,
+            end_date: filters.end_date || undefined
           })
         : await getAllDailyReports({
-            status: filters.status,
-            start_date: filters.start_date,
-            end_date: filters.end_date,
+            status: filters.status || undefined,
+            start_date: filters.start_date || undefined,
+            end_date: filters.end_date || undefined,
             exclude_status: adminMode && !filters.status ? 'Approved' : undefined
           });
       setReports(data);

@@ -27,13 +27,15 @@ async function main() {
   const custodian = await prisma.users.upsert({
     where: { email: "custodian@cit.edu" },
     update: {
-      role: "Custodian"
+      role: "Custodian",
+      lab_id: 1 // Assign to Computer Laboratory 1
     },
     create: {
       email: "custodian@cit.edu",
       full_name: "CIT Custodian",
       password_hash: hashedPassword,
       role: "Custodian",
+      lab_id: 1 // Assign to Computer Laboratory 1
     },
   });
 

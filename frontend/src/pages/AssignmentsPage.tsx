@@ -166,10 +166,9 @@ const AssignmentsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           value={user.lab_id || ''}
                           onChange={(e) => handleAssignmentChange(user.user_id, e.target.value ? parseInt(e.target.value) : null)}
-                          disabled={user.role === 'Admin'}
                         >
                           <option value="">Select Laboratory</option>
                           <option value="">-- Remove Assignment --</option>

@@ -9,7 +9,10 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     
+    console.log("getUserAssignedLab called - userId:", userId);
+    
     if (!userId) {
+      console.log("ERROR: No userId in request");
       return res.status(401).json({ error: "User authentication required" });
     }
 
@@ -26,16 +29,26 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
       }
     });
 
+    console.log("Database result:", { 
+      user_id: user?.user_id, 
+      lab_id: user?.lab_id, 
+      assigned_lab: user?.assigned_lab 
+    });
+
     if (!user) {
+      console.log("ERROR: User not found");
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json({ 
+    const response = { 
       assigned_lab: user.assigned_lab,
       has_lab: !!user.assigned_lab
-    });
+    };
+    
+    console.log("Sending response:", response);
+    res.json(response);
   } catch (error) {
-    console.error("Error fetching user assigned lab:", error);
+    console.error("ERROR in getUserAssignedLab:", error);
     res.status(500).json({ error: "Failed to fetch user assigned laboratory" });
   }
 };

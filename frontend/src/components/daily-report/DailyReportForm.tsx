@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContext";
 import { getUserAssignedLab, createDailyReport, updateDailyReport } from "../../api/dailyReports";
 import api from "../../api/axios";
 import type {
@@ -53,17 +52,20 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
 
   const loadAssignedLab = async () => {
     try {
+      console.log("Loading assigned lab...");
       const data = await getUserAssignedLab();
+      console.log("API Response:", data);
       setAssignedLab(data.assigned_lab);
       
-      // Auto-fill lab_id if user has assigned lab
-      if (data.assigned_lab && !report) {
+      // Auto-fill lab_id if user has assigned lab (for both new and existing reports)
+      if (data.assigned_lab) {
         setFormData(prev => ({
           ...prev,
           lab_id: data.assigned_lab.lab_id
         }));
       }
     } catch (err: any) {
+      console.error("API Error:", err);
       setError('Failed to load assigned laboratory');
     }
   };
@@ -72,6 +74,13 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Prevent submission if no assigned lab
+    if (!assignedLab) {
+      setError('You must be assigned to a laboratory to create reports');
+      setLoading(false);
+      return;
+    }
 
     try {
       const submitData = {
@@ -112,20 +121,50 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assigned Laboratory
+                  Laboratory *
                 </label>
-                <div className="px-3 py-2 bg-white border border-gray-300 rounded-md">
-                  {assignedLab ? (
-                    <div>
-                      <span className="font-medium text-gray-900">{assignedLab.lab_name}</span>
-                      {assignedLab.location && (
-                        <span className="text-gray-500 text-sm ml-2">({assignedLab.location})</span>
-                      )}
+                {assignedLab ? (
+                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium text-gray-900">{assignedLab.lab_name}</span>
+                        {assignedLab.location && (
+                          <span className="text-gray-500 text-sm ml-2">({assignedLab.location})</span>
+                        )}
+                        <span className="text-gray-400 text-xs ml-2">(Your Assigned Lab)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadAssignedLab}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        title="Refresh assignment"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
                     </div>
-                  ) : (
-                    <span className="text-gray-500">No laboratory assigned</span>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="px-3 py-2 bg-red-50 border border-red-300 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div className="text-red-700">
+                        <span className="font-medium">No laboratory assigned</span>
+                        <span className="text-sm ml-2">Please contact an administrator to be assigned to a laboratory before creating reports.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadAssignedLab}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                        title="Check again"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -223,7 +262,7 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !assignedLab}
               className="px-6 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {loading ? 'Saving...' : (report ? 'Update Report' : 'Create Report')}
