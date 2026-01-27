@@ -75,9 +75,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     setShowForm(true);
   };
 
-  const handleStatusUpdate = async (reportId: number, newStatus: 'Pending' | 'Submitted' | 'Approved' | 'Rejected') => {
+  const handleStatusUpdate = async (reportId: number, newStatus: 'Pending' | 'Approved' | 'Rejected') => {
     try {
-      await updateDailyReport(reportId, { status: newStatus as 'Pending' | 'Submitted' | 'Approved' });
+      await updateDailyReport(reportId, { status: newStatus as 'Pending' | 'Approved' });
       loadReports();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update report status');
@@ -100,7 +100,6 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Approved': return { backgroundColor: '#10b981', color: 'white', fontWeight: 'bold', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' };
-      case 'Submitted': return { backgroundColor: '#3b82f6', color: 'white', fontWeight: 'bold', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' };
       case 'Pending': return { backgroundColor: '#eab308', color: 'white', fontWeight: 'bold', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' };
       default: return { backgroundColor: '#6b7280', color: 'white', fontWeight: 'bold', fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' };
     }
@@ -153,7 +152,6 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
               >
                 <option value="">All Status</option>
                 <option value="Pending">Pending</option>
-                <option value="Submitted">Submitted</option>
                 <option value="Approved">Approved</option>
               </select>
             </div>
@@ -206,7 +204,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No daily reports found</p>
           {adminMode ? (
-            <p className="text-gray-400 mt-2">No reports have been submitted by custodians yet.</p>
+            <p className="text-gray-400 mt-2">No reports have been created by custodians yet.</p>
           ) : (
             <p className="text-gray-400 mt-2">Create your first report to get started</p>
           )}
@@ -240,7 +238,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                     <tr>
                       <td colSpan={adminMode ? 4 : 3} className="text-center py-4">
                         {adminMode ? (
-                          <p className="text-gray-400 mt-2">No reports have been submitted by custodians yet.</p>
+                          <p className="text-gray-400 mt-2">No reports have been created by custodians yet.</p>
                         ) : (
                           <p className="text-gray-400 mt-2">Create your first report to get started</p>
                         )}

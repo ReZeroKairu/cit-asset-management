@@ -6,13 +6,14 @@ const prisma = new PrismaClient();
 // GET all daily reports (with filtering options)
 export const getAllDailyReports = async (req: Request, res: Response) => {
   try {
-    const { lab_id, user_id, status, start_date, end_date } = req.query;
+    const { lab_id, user_id, status, start_date, end_date, exclude_status } = req.query;
     
     const where: any = {};
     
     if (lab_id) where.lab_id = parseInt(lab_id as string);
     if (user_id) where.user_id = parseInt(user_id as string);
     if (status) where.status = Array.isArray(status) ? status[0] : status;
+    if (exclude_status) where.status = { not: String(exclude_status) };
     if (start_date && end_date) {
       const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
       const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;
@@ -100,8 +101,8 @@ export const createDailyReport = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User authentication required" });
     }
 
-    // Check if report already exists for this user, lab, and date
-    const existingReport = await prisma.daily_reports.findFirst({
+    // Check how many reports already exist for this user, lab, and date (max 10)
+    const existingReports = await prisma.daily_reports.count({
       where: {
         user_id,
         lab_id,
@@ -109,8 +110,8 @@ export const createDailyReport = async (req: Request, res: Response) => {
       }
     });
 
-    if (existingReport) {
-      return res.status(400).json({ error: "Report already exists for this date and laboratory" });
+    if (existingReports >= 10) {
+      return res.status(400).json({ error: "Maximum 10 reports allowed per day for each laboratory" });
     }
 
     // Create the daily report
@@ -205,6 +206,12 @@ export const updateDailyReport = async (req: Request, res: Response) => {
 
     if (user_role !== 'Admin' && status === 'Approved') {
       return res.status(403).json({ error: "Only Admin can approve reports" });
+    }
+
+    // Validate status
+    const validStatuses = ['Pending', 'Approved'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid status. Valid statuses are: Pending, Approved" });
     }
 
     // Update the report

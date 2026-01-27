@@ -8,7 +8,7 @@ export interface DailyReport {
   time_in?: string;
   time_out?: string;
   general_remarks?: string;
-  status: 'Pending' | 'Submitted' | 'Approved';
+  status: 'Pending' | 'Approved';
   created_at?: string;
   users?: {
     user_id: number;
@@ -118,7 +118,7 @@ export const updateDailyReport = async (id: number, data: {
   time_in?: string;
   time_out?: string;
   general_remarks?: string;
-  status?: 'Pending' | 'Submitted' | 'Approved';
+  status?: 'Pending' | 'Approved';
   checklist_items?: {
     task_id: number;
     task_status?: 'Done' | 'Issue Found' | 'N/A';

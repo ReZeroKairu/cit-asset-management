@@ -44,35 +44,43 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
   return (
     <>
-      <div className="modal-backdrop fade show"></div>
-      <div className="modal fade show d-block">
-        <div className="modal-dialog">
-          <div className="modal-content">
-            <div className="modal-header bg-dark text-white">
-              <h5 className="modal-title">Create Workstation</h5>
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-gray-800 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create Workstation</h3>
               <button
                 type="button"
-                className="btn-close btn-close-white"
+                className="text-white hover:text-gray-200 transition-colors"
                 onClick={onClose}
-              ></button>
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Workstation Name</label>
+              <div className="p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Workstation Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    className="form-control"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g. WS-PC1"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
-                <div className="mb-3">
-                  <label className="form-label">Location (Lab)</label>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location (Lab) <span className="text-red-500">*</span>
+                  </label>
                   <select
-                    className="form-select"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={labId}
                     onChange={(e) => setLabId(e.target.value)}
                     required
@@ -86,20 +94,20 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                   </select>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
-                  Create
+                  {loading ? "Creating..." : "Create"}
                 </button>
               </div>
             </form>

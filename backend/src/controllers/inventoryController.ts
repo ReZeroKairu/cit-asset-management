@@ -34,10 +34,13 @@ export const createAsset = async (req: Request, res: Response) => {
       quantity,
       lab_id,
       unit_id,
+      workstation_id,
       date_of_purchase,
       supplier_name,
-      user_id,
     } = req.body;
+
+    // Get user ID from authenticated request
+    const user_id = req.user?.userId;
 
     const newAsset = await prisma.inventory_assets.create({
       data: {
@@ -45,19 +48,28 @@ export const createAsset = async (req: Request, res: Response) => {
         description,
         property_tag_no,
         serial_number,
-        quantity: Number(quantity),
-        date_of_purchase: new Date(date_of_purchase),
+        quantity: Number(quantity) || 1,
+        date_of_purchase: date_of_purchase ? new Date(date_of_purchase) : null,
         supplier_name,
-        // Connect Foreign Keys
-        laboratories: { connect: { lab_id: Number(lab_id) } },
-        units: { connect: { unit_id: Number(unit_id) } },
-        // Handle optional user_id
+        // Connect Foreign Keys (optional)
+        laboratories: lab_id ? { connect: { lab_id: Number(lab_id) } } : undefined,
+        units: unit_id ? { connect: { unit_id: Number(unit_id) } } : undefined,
+        workstation: workstation_id ? { connect: { workstation_id: Number(workstation_id) } } : undefined,
         users: user_id ? { connect: { user_id: Number(user_id) } } : undefined,
+      },
+      include: {
+        laboratories: true,
+        units: true,
+        users: true,
+        workstation: true,
       },
     });
     res.json(newAsset);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create asset" });
+    console.error("Error creating asset:", error);
+    res.status(500).json({ 
+      error: "Failed to create asset",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 };

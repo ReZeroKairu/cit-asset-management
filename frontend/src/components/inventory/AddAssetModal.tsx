@@ -110,60 +110,66 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
   return (
     <>
-      <div className="modal-backdrop fade show"></div>
-      <div className="modal fade show d-block" tabIndex={-1}>
-        <div className="modal-dialog modal-lg">
-          <div className="modal-content">
-            <div className="modal-header bg-primary text-white">
-              <h5 className="modal-title">Add New Asset</h5>
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Add New Asset</h3>
               <button
                 type="button"
-                className="btn-close btn-close-white"
+                className="text-white hover:text-gray-200 transition-colors"
                 onClick={onClose}
-              ></button>
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                {error && <div className="alert alert-danger">{error}</div>}
+              <div className="p-6">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                    {error}
+                  </div>
+                )}
 
-                <div className="row g-3">
-                  {/* ... (Keep your Name, Tag inputs same as before) ... */}
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">
-                      Item Name <span className="text-danger">*</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Item Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="item_name"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.item_name}
                       onChange={handleChange}
                       required
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">
-                      Property Tag No. <span className="text-danger">*</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Property Tag No. <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="property_tag_no"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.property_tag_no}
                       onChange={handleChange}
                       required
                     />
                   </div>
 
-                  {/* Dropdowns */}
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">
-                      Location (Lab) <span className="text-danger">*</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Location (Lab) <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="lab_id"
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.lab_id}
                       onChange={handleChange}
                       required
@@ -177,13 +183,13 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                     </select>
                   </div>
 
-                  <div className="col-md-6">
-                    <label className="form-label fw-bold">
-                      Unit Type <span className="text-danger">*</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Unit Type <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="unit_id"
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.unit_id}
                       onChange={handleChange}
                       required
@@ -201,15 +207,14 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                     </select>
                   </div>
 
-                  {/* FIX 3: Workstation Dropdown with Controlled Value */}
-                  <div className="col-md-6">
-                    <label className="form-label">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Assign to Workstation (Optional)
                     </label>
                     <select
                       name="workstation_id"
-                      className="form-select"
-                      value={formData.workstation_id} // <--- Controlled Component
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={formData.workstation_id}
                       onChange={handleChange}
                     >
                       <option value="">None (Loose Item)</option>
@@ -224,70 +229,79 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                     </select>
                   </div>
 
-                  {/* ... (Keep Serial, Quantity, Date, Supplier, Description inputs same as before) ... */}
-                  <div className="col-md-6">
-                    <label className="form-label">Serial Number</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Serial Number
+                    </label>
                     <input
                       type="text"
                       name="serial_number"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.serial_number}
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Quantity</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity
+                    </label>
                     <input
                       type="number"
                       name="quantity"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.quantity}
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Date of Purchase</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Purchase
+                    </label>
                     <input
                       type="date"
                       name="date_of_purchase"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.date_of_purchase}
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="col-12">
-                    <label className="form-label">Supplier Name</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Supplier Name
+                    </label>
                     <input
                       type="text"
                       name="supplier_name"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.supplier_name}
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="col-12">
-                    <label className="form-label">Description</label>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
                     <textarea
                       name="description"
-                      className="form-control"
-                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      rows={3}
                       value={formData.description}
                       onChange={handleChange}
-                    ></textarea>
+                    />
                   </div>
                 </div>
               </div>
-              <div className="modal-footer bg-light">
+              <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
                   {loading ? "Saving..." : "Save Asset"}

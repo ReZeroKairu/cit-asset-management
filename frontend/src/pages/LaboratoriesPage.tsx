@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory } from "../api/laboratories";
-import api from "../api/axios";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Plus, Edit, Trash2, Building } from "lucide-react";
 
@@ -16,11 +14,6 @@ interface Laboratory {
   location?: string | null;
   dept_id?: number | null;
   lab_in_charge?: string | null;
-}
-
-interface Department {
-  dept_id: number;
-  dept_name: string;
 }
 
 interface LabFormData {
@@ -37,6 +30,12 @@ const LaboratoriesPage: React.FC = () => {
   const [editingLab, setEditingLab] = useState<Laboratory | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [formData, setFormData] = useState<LabFormData>({
+    lab_name: '',
+    location: '',
+    dept_id: null,
+    lab_in_charge: '',
+  });
 
   useEffect(() => {
     loadData();
@@ -45,10 +44,7 @@ const LaboratoriesPage: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [labsData, orgData] = await Promise.all([
-        getLaboratories(),
-        api.get('/organization-data')
-      ]);
+      const labsData = await getLaboratories();
       setLabs(labsData);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load data');
@@ -59,11 +55,25 @@ const LaboratoriesPage: React.FC = () => {
 
   const handleCreate = () => {
     setEditingLab(null);
+    setFormData({
+      lab_name: '',
+      location: '',
+      dept_id: null,
+      lab_in_charge: '',
+    });
+    setError('');
     setShowModal(true);
   };
 
   const handleEdit = (lab: Laboratory) => {
     setEditingLab(lab);
+    setFormData({
+      lab_name: lab.lab_name,
+      location: lab.location || '',
+      dept_id: lab.dept_id || null,
+      lab_in_charge: lab.lab_in_charge || '',
+    });
+    setError('');
     setShowModal(true);
   };
 
@@ -87,10 +97,10 @@ const LaboratoriesPage: React.FC = () => {
       setError('');
 
       const labData: LabFormData = {
-        lab_name: editingLab?.lab_name || '',
-        location: editingLab?.location || null,
-        lab_in_charge: editingLab?.lab_in_charge || null,
-        dept_id: editingLab?.dept_id || null,
+        lab_name: formData.lab_name,
+        location: formData.location || null,
+        lab_in_charge: formData.lab_in_charge || null,
+        dept_id: formData.dept_id || null,
       };
 
       if (editingLab) {
@@ -133,75 +143,10 @@ const LaboratoriesPage: React.FC = () => {
               Registered Laboratories
             </CardTitle>
             {user?.role === 'Admin' && (
-              <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogTrigger asChild>
-                  <Button onClick={handleCreate}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Laboratory
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingLab ? 'Edit Laboratory' : 'Add New Laboratory'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="lab_name">Laboratory Name</Label>
-                      <Input
-                        id="lab_name"
-                        type="text"
-                        placeholder="Enter laboratory name"
-                        value={editingLab?.lab_name || ''}
-                        onChange={(e) => setEditingLab(editingLab ? {...editingLab, lab_name: e.target.value} : null)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        type="text"
-                        placeholder="Enter location"
-                        value={editingLab?.location || ''}
-                        onChange={(e) => setEditingLab(editingLab ? {...editingLab, location: e.target.value} : null)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lab_in_charge">Lab In Charge</Label>
-                      <Input
-                        id="lab_in_charge"
-                        type="text"
-                        placeholder="Enter lab in charge"
-                        value={editingLab?.lab_in_charge || ''}
-                        onChange={(e) => setEditingLab(editingLab ? {...editingLab, lab_in_charge: e.target.value} : null)}
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowModal(false);
-                          setEditingLab(null);
-                          setError('');
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={loading}>
-                        {loading ? 'Saving...' : (editingLab ? 'Update' : 'Create')}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Laboratory
+              </Button>
             )}
           </div>
         </CardHeader>
@@ -282,6 +227,91 @@ const LaboratoriesPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Custom Modal */}
+      {showModal && (
+        <>
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">
+                    {editingLab ? 'Edit Laboratory' : 'Add New Laboratory'}
+                  </h3>
+                  <button
+                    type="button"
+                    className="text-white hover:text-gray-200 transition-colors"
+                    onClick={() => {
+                      setShowModal(false);
+                      setEditingLab(null);
+                      setError('');
+                    }}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="lab_name">Laboratory Name</Label>
+                    <Input
+                      id="lab_name"
+                      type="text"
+                      placeholder="Enter laboratory name"
+                      value={formData.lab_name}
+                      onChange={(e) => setFormData({...formData, lab_name: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      type="text"
+                      placeholder="Enter location"
+                      value={formData.location || ''}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lab_in_charge">Lab In Charge</Label>
+                    <Input
+                      id="lab_in_charge"
+                      type="text"
+                      placeholder="Enter lab in charge"
+                      value={formData.lab_in_charge || ''}
+                      onChange={(e) => setFormData({...formData, lab_in_charge: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowModal(false);
+                        setEditingLab(null);
+                        setError('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                      {loading ? 'Saving...' : (editingLab ? 'Update' : 'Create')}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -73,62 +73,74 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
 
   return (
     <>
-      <div className="modal-backdrop fade show"></div>
-      <div className="modal fade show d-block">
-        <div className="modal-dialog modal-lg">
-          <div className="modal-content">
-            <div className="modal-header bg-success text-white">
-              <h5 className="modal-title">Create New User</h5>
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-green-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create New User</h3>
               <button
                 type="button"
-                className="btn-close btn-close-white"
+                className="text-white hover:text-gray-200 transition-colors"
                 onClick={onClose}
-              ></button>
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <h6 className="text-primary border-bottom pb-2 mb-3">
+              <div className="p-6">
+                <h6 className="text-blue-600 font-semibold border-b border-gray-200 pb-2 mb-4">
                   1. Account Details
                 </h6>
-                <div className="row g-3 mb-4">
-                  <div className="col-md-6">
-                    <label className="form-label">Full Name</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                       onChange={(e) =>
                         setFormData({ ...formData, full_name: e.target.value })
                       }
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Email</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="email"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                       onChange={(e) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Password</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="password"
-                      className="form-control"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                       onChange={(e) =>
                         setFormData({ ...formData, password: e.target.value })
                       }
                     />
                   </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Role</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role <span className="text-red-500">*</span>
+                    </label>
                     <select
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.role}
                       onChange={(e) =>
                         setFormData({ ...formData, role: e.target.value })
@@ -140,15 +152,16 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                   </div>
                 </div>
 
-                <h6 className="text-primary border-bottom pb-2 mb-3">
+                <h6 className="text-blue-600 font-semibold border-b border-gray-200 pb-2 mb-4">
                   2. Assign Area (Cascading Selection)
                 </h6>
-                <div className="row g-3">
-                  {/* STEP A: Select Campus */}
-                  <div className="col-md-6">
-                    <label className="form-label">Campus</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Campus
+                    </label>
                     <select
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => setSelectedCampus(e.target.value)}
                     >
                       <option value="">Select Campus...</option>
@@ -160,11 +173,12 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                     </select>
                   </div>
 
-                  {/* STEP B: Select Office Type */}
-                  <div className="col-md-6">
-                    <label className="form-label">Office Type</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Office Type
+                    </label>
                     <select
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       onChange={(e) => setSelectedOfficeType(e.target.value)}
                     >
                       <option value="">Select Type...</option>
@@ -176,11 +190,12 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                     </select>
                   </div>
 
-                  {/* STEP C: Select Department (Filtered) */}
-                  <div className="col-md-12">
-                    <label className="form-label">Department</label>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Department
+                    </label>
                     <select
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       disabled={!selectedCampus}
                       onChange={(e) => setSelectedDept(e.target.value)}
                     >
@@ -193,13 +208,12 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                     </select>
                   </div>
 
-                  {/* STEP D: Select Lab (Filtered - Final Assignment) */}
-                  <div className="col-md-12">
-                    <label className="form-label fw-bold text-success">
-                      Assign Laboratory
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 font-semibold text-green-600">
+                      Assign Laboratory <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="form-select"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       required
                       disabled={!selectedDept}
                       onChange={(e) =>
@@ -216,15 +230,18 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-success">
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
                   Create User
                 </button>
               </div>
