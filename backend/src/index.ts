@@ -2,13 +2,15 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
-import { getInventory, createAsset } from "./controllers/inventoryController";
+import { getInventory, createAsset, deleteAsset, updateAsset } from "./controllers/inventoryController";
 import { login } from "./controllers/authController";
 import { getOrganizationData, createUser, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab } from "./controllers/userController";
 import {
   getAllWorkstations,
   createWorkstation,
   getWorkstationDetails,
+  updateWorkstation,
+  deleteWorkstation,
 } from "./controllers/workstationController";
 import {
   getAllDailyReports,
@@ -40,11 +42,15 @@ app.post("/users", authenticateToken, requireRole(["Admin"]), createUser);
 
 app.get("/inventory", authenticateToken, getInventory);
 app.post("/inventory", authenticateToken, createAsset);
+app.put("/inventory/:id", authenticateToken, updateAsset);
+app.delete("/inventory/:id", authenticateToken, deleteAsset);
 
 // Workstation Routes
 app.get("/workstations", authenticateToken, getAllWorkstations);
 app.post("/workstations", authenticateToken, createWorkstation);
 app.get("/workstations/:name", authenticateToken, getWorkstationDetails);
+app.put("/workstations/:id", authenticateToken, updateWorkstation);
+app.delete("/workstations/:id", authenticateToken, deleteWorkstation);
 
 // Laboratory Routes
 app.get("/laboratories", authenticateToken, getLaboratories);

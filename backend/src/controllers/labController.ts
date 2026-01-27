@@ -7,6 +7,25 @@ const prisma = new PrismaClient();
 export const getLaboratories = async (req: Request, res: Response) => {
   try {
     const laboratories = await prisma.laboratories.findMany({
+      include: {
+        users: {
+          select: {
+            user_id: true,
+            full_name: true,
+            email: true,
+            role: true
+          },
+          where: {
+            role: 'Custodian'
+          }
+        },
+        departments: {
+          select: {
+            dept_id: true,
+            dept_name: true
+          }
+        }
+      },
       orderBy: {
         lab_name: 'asc'
       }

@@ -1,67 +1,71 @@
-// frontend/src/components/AddAssetModal.tsx
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
-import { useAuth } from "../../context/AuthContext";
 
 interface Props {
   show: boolean;
+  asset: any;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
-  const { user } = useAuth();
-
-  // 1. Defined State
-  const [workstations, setWorkstations] = useState<any[]>([]); // Use 'any' or interface
+const EditAssetModal: React.FC<Props> = ({ show, asset, onClose, onSuccess }) => {
+  const [workstations, setWorkstations] = useState<any[]>([]);
   const [labs, setLabs] = useState<{ lab_id: number; lab_name: string }[]>([]);
-  const [units, setUnits] = useState<{ unit_id: number; unit_name: string }[]>(
-    [],
-  );
+  const [units, setUnits] = useState<{ unit_id: number; unit_name: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     item_name: "",
     property_tag_no: "",
     lab_id: "",
     unit_id: "",
-    workstation_id: "", // <--- FIX 2: Initialize this!
+    workstation_id: "",
     description: "",
     serial_number: "",
     quantity: 1,
     date_of_purchase: "",
     supplier_name: "",
-    user_id: 0,
   });
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
-    if (show) {
+    if (show && asset) {
+      // Set form data from asset
+      setFormData({
+        item_name: asset.item_name || "",
+        property_tag_no: asset.property_tag_no || "",
+        lab_id: asset.laboratories?.lab_id?.toString() || "",
+        unit_id: asset.units?.unit_id?.toString() || "",
+        workstation_id: asset.workstation?.workstation_id?.toString() || "",
+        description: asset.description || "",
+        serial_number: asset.serial_number || "",
+        quantity: asset.quantity || 1,
+        date_of_purchase: asset.date_of_purchase ? new Date(asset.date_of_purchase).toISOString().split('T')[0] : "",
+        supplier_name: asset.supplier_name || "",
+      });
+
+      // Load dropdown data
       const fetchData = async () => {
         try {
-          // <--- FIX 1: Fetch Workstations here!
           const [labRes, unitRes, wsRes] = await Promise.all([
             api.get("/laboratories"),
             api.get("/units"),
-            api.get("/workstations"), // Assuming you created this endpoint
+            api.get("/workstations"),
           ]);
 
           setLabs(labRes.data);
           setUnits(unitRes.data);
-          setWorkstations(wsRes.data); // Set the data
+          setWorkstations(wsRes.data);
         } catch (err) {
           console.error("Failed to load dropdowns", err);
         }
       };
       fetchData();
     }
-  }, [show]);
+  }, [show, asset]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -71,42 +75,26 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     setLoading(true);
     setError(null);
 
-    const submissionData = {
-      ...formData,
-      user_id: user?.id,
-      // Convert empty string to null for database
-      workstation_id: formData.workstation_id
-        ? parseInt(formData.workstation_id)
-        : null,
-    };
-
     try {
-      await api.post("/inventory", submissionData);
+      const submissionData = {
+        ...formData,
+        workstation_id: formData.workstation_id ? parseInt(formData.workstation_id) : null,
+        lab_id: formData.lab_id ? parseInt(formData.lab_id) : null,
+        unit_id: formData.unit_id ? parseInt(formData.unit_id) : null,
+        quantity: parseInt(formData.quantity.toString()),
+      };
+
+      await api.put(`/inventory/${asset.asset_id}`, submissionData);
       onSuccess();
       onClose();
-
-      // Reset Form
-      setFormData({
-        item_name: "",
-        property_tag_no: "",
-        lab_id: "",
-        unit_id: "",
-        workstation_id: "",
-        quantity: 1,
-        description: "",
-        serial_number: "",
-        supplier_name: "",
-        date_of_purchase: "",
-        user_id: 0,
-      });
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to add asset.");
+      setError(err.response?.data?.error || "Failed to update asset.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!show) return null;
+  if (!show || !asset) return null;
 
   return (
     <>
@@ -115,7 +103,7 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         <div className="flex items-center justify-center min-h-screen px-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Add New Asset</h3>
+              <h3 className="text-lg font-semibold">Edit Asset</h3>
               <button
                 type="button"
                 className="text-white hover:text-gray-200 transition-colors"
@@ -209,7 +197,7 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Assign to Workstation <span className="text-xs text-gray-500">(Recommended)</span>
+                      Assign to Workstation
                     </label>
                     <select
                       name="workstation_id"
@@ -227,9 +215,6 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 Assign to a workstation to track computer components (RAM, CPU, etc.)
-                    </p>
                   </div>
 
                   <div>
@@ -307,7 +292,7 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
-                  {loading ? "Saving..." : "Save Asset"}
+                  {loading ? "Updating..." : "Update Asset"}
                 </button>
               </div>
             </form>
@@ -318,4 +303,4 @@ const AddAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   );
 };
 
-export default AddAssetModal;
+export default EditAssetModal;

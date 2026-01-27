@@ -52,10 +52,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
             end_date: filters.end_date || undefined
           })
         : await getAllDailyReports({
-            status: filters.status || undefined,
+            status: adminMode ? (filters.status || 'Pending') : (filters.status || undefined),
             start_date: filters.start_date || undefined,
-            end_date: filters.end_date || undefined,
-            exclude_status: adminMode && !filters.status ? 'Approved' : undefined
+            end_date: filters.end_date || undefined
           });
       setReports(data);
     } catch (err: any) {
@@ -121,9 +120,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
           <h2 className="text-2xl font-bold text-gray-900">
             {viewMode === 'my' ? 'My Daily Reports' : 'All Daily Reports'}
           </h2>
-          {adminMode && !filters.status && (
+          {adminMode && (
             <p className="text-sm text-gray-500 mt-1">
-              ✅ Approved reports are hidden by default. Select "Approved" in filters to view them.
+              📋 Default view shows pending reports. Use status filter to see approved reports.
             </p>
           )}
         </div>
@@ -146,13 +145,22 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                 Status
               </label>
               <select
-                value={filters.status}
+                value={adminMode ? (filters.status || 'Pending') : filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
+                {adminMode ? (
+                  <>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                  </>
+                )}
               </select>
             </div>
 

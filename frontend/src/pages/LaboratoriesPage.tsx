@@ -14,6 +14,16 @@ interface Laboratory {
   location?: string | null;
   dept_id?: number | null;
   lab_in_charge?: string | null;
+  users?: {
+    user_id: number;
+    full_name: string;
+    email: string;
+    role: string;
+  }[];
+  departments?: {
+    dept_id: number;
+    dept_name: string;
+  };
 }
 
 interface LabFormData {
@@ -178,7 +188,10 @@ const LaboratoriesPage: React.FC = () => {
                       Location
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Lab In Charge
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Lab In Charge (Custodian)
                     </th>
                     {user?.role === 'Admin' && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -197,7 +210,23 @@ const LaboratoriesPage: React.FC = () => {
                         {lab.location || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {lab.lab_in_charge || 'N/A'}
+                        {lab.departments?.dept_name || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {lab.users && lab.users.length > 0 ? (
+                          <div className="space-y-1">
+                            {lab.users.map((user) => (
+                              <div key={user.user_id} className="flex items-center space-x-2">
+                                <span className="font-medium text-gray-900">{user.full_name}</span>
+                                <span className="text-gray-400 text-xs">({user.email})</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">
+                            {lab.lab_in_charge || 'No custodian assigned'}
+                          </span>
+                        )}
                       </td>
                       {user?.role === 'Admin' && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

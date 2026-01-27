@@ -6,6 +6,7 @@ import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AssignmentsPage from "./pages/AssignmentsPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Package, Building, FileText, Users } from "lucide-react";
@@ -109,7 +110,7 @@ const HomePage = () => (
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "assignments" | "profile">(
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "assignments" | "user-management" | "profile">(
     "home",
   );
 
@@ -129,6 +130,8 @@ function App() {
         return <DailyReportsPage />;
       case "assignments":
         return <AssignmentsPage />;
+      case "user-management":
+        return <UserManagementPage />;
       case "profile":
         return <ProfilePage />;
       default:
