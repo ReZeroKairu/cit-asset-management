@@ -166,6 +166,7 @@ enum daily_reports_status {
   Pending
   Submitted
   Approved
+  Rejected
 }
 
 model workstations {
