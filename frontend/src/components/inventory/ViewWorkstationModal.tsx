@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import EditAssetModal from "./EditAssetModal";
+import AddAssetModal from "./AddAssetModal";
 
 interface Props {
   show: boolean;
@@ -13,6 +14,7 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
   const [assets, setAssets] = useState<any[]>([]);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,10 +26,12 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
   const fetchWorkstationAssets = async () => {
     try {
       setLoading(true);
+      console.log("🔍 Fetching assets for workstation:", workstation.workstation_id);
       const res = await api.get(`/inventory?workstation_id=${workstation.workstation_id}`);
+      console.log("📦 Received assets:", res.data);
       setAssets(res.data);
     } catch (err) {
-      console.error("Error fetching workstation assets:", err);
+      console.error("❌ Error fetching workstation assets:", err);
     } finally {
       setLoading(false);
     }
@@ -56,8 +60,13 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
   const handleAssetModalSuccess = () => {
     setShowEditModal(false);
     setEditingAsset(null);
+    setShowAddModal(false);
     fetchWorkstationAssets();
     onSuccess();
+  };
+
+  const handleAddAsset = () => {
+    setShowAddModal(true);
   };
 
   if (!show || !workstation) return null;
@@ -109,10 +118,7 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                 <h4 className="text-lg font-semibold text-gray-900">Assigned Assets</h4>
                 <button
                   className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
-                  onClick={() => {
-                    // This would open AddAssetModal with workstation pre-selected
-                    alert('Add Asset functionality - can be integrated');
-                  }}
+                  onClick={handleAddAsset}
                 >
                   <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -138,9 +144,8 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property Tag</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Type</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
@@ -149,12 +154,11 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                       {assets.map((asset) => (
                         <tr key={asset.asset_id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="font-semibold text-blue-600">{asset.property_tag_no}</span>
+                            <span className="font-semibold text-blue-600">{asset.details?.property_tag_no || 'N/A'}</span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.item_name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.serial_number}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.units?.unit_name || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.quantity}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.details?.serial_number || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.details?.quantity || 1}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <button 
                               className="p-1 text-blue-600 hover:text-blue-800"
@@ -205,6 +209,13 @@ const ViewWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
           setShowEditModal(false);
           setEditingAsset(null);
         }}
+        onSuccess={handleAssetModalSuccess}
+      />
+
+      {/* Add Asset Modal */}
+      <AddAssetModal
+        show={showAddModal}
+        onClose={() => setShowAddModal(false)}
         onSuccess={handleAssetModalSuccess}
       />
     </>

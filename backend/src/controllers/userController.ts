@@ -1,3 +1,4 @@
+//backend/src/controllers/userController.ts
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -8,9 +9,9 @@ const prisma = new PrismaClient();
 export const getUserAssignedLab = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
-    
+
     console.log("getUserAssignedLab called - userId:", userId);
-    
+
     if (!userId) {
       console.log("ERROR: No userId in request");
       return res.status(401).json({ error: "User authentication required" });
@@ -23,16 +24,16 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
           select: {
             lab_id: true,
             lab_name: true,
-            location: true
-          }
-        }
-      }
+            location: true,
+          },
+        },
+      },
     });
 
-    console.log("Database result:", { 
-      user_id: user?.user_id, 
-      lab_id: user?.lab_id, 
-      assigned_lab: user?.assigned_lab 
+    console.log("Database result:", {
+      user_id: user?.user_id,
+      lab_id: user?.lab_id,
+      assigned_lab: user?.assigned_lab,
     });
 
     if (!user) {
@@ -40,11 +41,11 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const response = { 
+    const response = {
       assigned_lab: user.assigned_lab,
-      has_lab: !!user.assigned_lab
+      has_lab: !!user.assigned_lab,
     };
-    
+
     console.log("Sending response:", response);
     res.json(response);
   } catch (error) {
@@ -54,7 +55,10 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
 };
 
 // GET: Get all users with their laboratory assignments
-export const getAllUsersWithAssignments = async (req: Request, res: Response) => {
+export const getAllUsersWithAssignments = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     const users = await prisma.users.findMany({
       include: {
@@ -62,13 +66,13 @@ export const getAllUsersWithAssignments = async (req: Request, res: Response) =>
           select: {
             lab_id: true,
             lab_name: true,
-            location: true
-          }
-        }
+            location: true,
+          },
+        },
       },
       orderBy: {
-        full_name: 'asc'
-      }
+        full_name: "asc",
+      },
     });
 
     res.json(users);
@@ -82,14 +86,14 @@ export const getAllUsersWithAssignments = async (req: Request, res: Response) =>
 export const assignUserToLab = async (req: Request, res: Response) => {
   try {
     const { userId, labId } = req.body;
-    
+
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
     // Verify user exists
     const user = await prisma.users.findUnique({
-      where: { user_id: parseInt(userId) }
+      where: { user_id: parseInt(userId) },
     });
 
     if (!user) {
@@ -97,7 +101,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
     }
 
     // If labId is null, remove assignment
-    if (labId === null || labId === '') {
+    if (labId === null || labId === "") {
       const updatedUser = await prisma.users.update({
         where: { user_id: parseInt(userId) },
         data: { lab_id: null },
@@ -106,17 +110,17 @@ export const assignUserToLab = async (req: Request, res: Response) => {
             select: {
               lab_id: true,
               lab_name: true,
-              location: true
-            }
-          }
-        }
+              location: true,
+            },
+          },
+        },
       });
       return res.json(updatedUser);
     }
 
     // Verify lab exists
     const lab = await prisma.laboratories.findUnique({
-      where: { lab_id: parseInt(labId) }
+      where: { lab_id: parseInt(labId) },
     });
 
     if (!lab) {
@@ -132,10 +136,10 @@ export const assignUserToLab = async (req: Request, res: Response) => {
           select: {
             lab_id: true,
             lab_name: true,
-            location: true
-          }
-        }
-      }
+            location: true,
+          },
+        },
+      },
     });
 
     res.json(updatedUser);
@@ -175,22 +179,52 @@ export const createUser = async (req: Request, res: Response) => {
     // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Create User
-    const newUser = await prisma.users.create({
-      data: {
-        full_name,
-        email,
-        password_hash: hashedPassword,
-        role: role || "Custodian",
-        lab_id: lab_id ? Number(lab_id) : null,
-      },
+    // 3. Create User and update laboratory in_charge_id in a single transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the user
+      const newUser = await tx.users.create({
+        data: {
+          full_name,
+          email,
+          password_hash: hashedPassword,
+          role: role || "Custodian",
+          lab_id: lab_id ? Number(lab_id) : null,
+        },
+      });
+
+      // If creating a custodian with a lab assignment, update the laboratory's in_charge_id
+      if (lab_id && (role === "Custodian" || !role)) {
+        await tx.laboratories.update({
+          where: { lab_id: Number(lab_id) },
+          data: { in_charge_id: newUser.user_id },
+        });
+      }
+
+      return newUser;
     });
 
     // Exclude password from response
-    const { password_hash, ...userWithoutPassword } = newUser;
-    res.status(201).json(userWithoutPassword);
-  } catch (error) {
+    const { password_hash, ...userWithoutPassword } = result;
+
+    res.status(201).json({
+      ...userWithoutPassword,
+      message:
+        role === "Custodian" || !role
+          ? "Custodian created and assigned as laboratory manager successfully"
+          : "User created successfully",
+    });
+  } catch (error: any) {
     console.error("Create User Error:", error);
+
+    // Handle specific database errors
+    if (error.code === "P2002") {
+      return res.status(400).json({ error: "Email already exists" });
+    }
+
+    if (error.code === "P2025") {
+      return res.status(400).json({ error: "Laboratory not found" });
+    }
+
     res.status(500).json({ error: "Failed to create user" });
   }
 };

@@ -5,6 +5,7 @@ interface User {
   name: string;
   email: string;
   role: "Admin" | "Custodian";
+  lab_id?: number; // Assigned lab for custodians
 }
 
 interface AuthContextType {

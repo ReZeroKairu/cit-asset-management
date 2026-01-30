@@ -1,3 +1,4 @@
+//backend/src/controllers/authController.ts
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
@@ -33,6 +34,7 @@ export const login = async (req: Request, res: Response) => {
         name: user.full_name,
         email: user.email,
         role: user.role,
+        lab_id: user.lab_id, // Include lab assignment for custodians
       },
     });
   } catch (error) {

@@ -20,7 +20,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
         <a href="/" className={`text-xl font-light hover:text-gray-300 ${
           collapsed ? 'text-center' : ''
         }`}>
-          {collapsed ? 'CIT' : 'CIT Asset Mgr'}
+          {collapsed ? 'CIT' : 'CIT Asset Management'}
         </a>
       </div>
       <div className="flex-1 overflow-y-auto">

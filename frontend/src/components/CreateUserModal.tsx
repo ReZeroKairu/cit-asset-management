@@ -55,15 +55,29 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.lab_id) {
+    
+    // Validate lab assignment for custodians
+    if ((formData.role === "Custodian" || !formData.role) && !formData.lab_id) {
       alert("Please assign a laboratory to the custodian.");
       return;
     }
+    
     try {
-      await api.post("/users", formData);
-      alert("User Created Successfully!");
+      const response = await api.post("/users", formData);
+      alert(response.data.message || "User Created Successfully!");
       onClose();
-      // Optionally reset form here
+      
+      // Reset form
+      setFormData({
+        full_name: "",
+        email: "",
+        password: "",
+        role: "Custodian",
+        lab_id: "",
+      });
+      setSelectedCampus("");
+      setSelectedOfficeType("");
+      setSelectedDept("");
     } catch (err: any) {
       alert(err.response?.data?.error || "Failed to create user");
     }
@@ -142,9 +156,15 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                     <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={formData.role}
-                      onChange={(e) =>
-                        setFormData({ ...formData, role: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const newRole = e.target.value;
+                        setFormData({ 
+                          ...formData, 
+                          role: newRole,
+                          // Clear lab assignment if switching to Admin role
+                          lab_id: newRole === "Admin" ? "" : formData.lab_id 
+                        });
+                      }}
                     >
                       <option value="Custodian">Custodian</option>
                       <option value="Admin">Admin</option>
@@ -153,82 +173,104 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
                 </div>
 
                 <h6 className="text-blue-600 font-semibold border-b border-gray-200 pb-2 mb-4">
-                  2. Assign Area (Cascading Selection)
+                  2. Assign Area {(formData.role === "Custodian" || !formData.role) && "(Cascading Selection)"}
                 </h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Campus
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      onChange={(e) => setSelectedCampus(e.target.value)}
-                    >
-                      <option value="">Select Campus...</option>
-                      {campuses.map((c) => (
-                        <option key={c.campus_id} value={c.campus_id}>
-                          {c.campus_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                
+                {(formData.role === "Custodian" || !formData.role) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Campus
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onChange={(e) => setSelectedCampus(e.target.value)}
+                      >
+                        <option value="">Select Campus...</option>
+                        {campuses.map((c) => (
+                          <option key={c.campus_id} value={c.campus_id}>
+                            {c.campus_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Office Type
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      onChange={(e) => setSelectedOfficeType(e.target.value)}
-                    >
-                      <option value="">Select Type...</option>
-                      {officeTypes.map((o) => (
-                        <option key={o.type_id} value={o.type_id}>
-                          {o.type_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Office Type
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onChange={(e) => setSelectedOfficeType(e.target.value)}
+                      >
+                        <option value="">Select Type...</option>
+                        {officeTypes.map((o) => (
+                          <option key={o.type_id} value={o.type_id}>
+                            {o.type_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Department
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      disabled={!selectedCampus && !selectedOfficeType}
-                      onChange={(e) => setSelectedDept(e.target.value)}
-                    >
-                      <option value="">Select Department...</option>
-                      {filteredDepartments.map((d) => (
-                        <option key={d.dept_id} value={d.dept_id}>
-                          {d.dept_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Department
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        disabled={!selectedCampus && !selectedOfficeType}
+                        onChange={(e) => setSelectedDept(e.target.value)}
+                      >
+                        <option value="">Select Department...</option>
+                        {filteredDepartments.map((d) => (
+                          <option key={d.dept_id} value={d.dept_id}>
+                            {d.dept_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1 font-semibold text-green-600">
-                      Assign Laboratory <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      required
-                      disabled={!selectedDept}
-                      onChange={(e) =>
-                        setFormData({ ...formData, lab_id: e.target.value })
-                      }
-                    >
-                      <option value="">Select Laboratory to Assign...</option>
-                      {filteredLabs.map((l) => (
-                        <option key={l.lab_id} value={l.lab_id}>
-                          {l.lab_name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1 font-semibold text-green-600">
+                        Assign Laboratory <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                        disabled={!selectedDept}
+                        onChange={(e) =>
+                          setFormData({ ...formData, lab_id: e.target.value })
+                        }
+                      >
+                        <option value="">Select Laboratory to Assign...</option>
+                        {filteredLabs.map((l) => (
+                          <option key={l.lab_id} value={l.lab_id}>
+                            {l.lab_name}
+                          </option>
+                        ))}
+                      </select>
+                      {formData.lab_id && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                          <p className="text-sm text-blue-700 flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            This user will be assigned as the Laboratory Manager (in_charge_id) for the selected laboratory.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <p className="text-sm text-gray-600 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Admin users do not require laboratory assignment. They have system-wide access.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button

@@ -8,101 +8,109 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- ORGANIZATION ---
+
 model campuses {
   campus_id   Int           @id @default(autoincrement())
   campus_name String        @db.VarChar(50)
   departments departments[]
 }
 
-model daily_reports {
-  report_id              Int                      @id @default(autoincrement())
-  user_id                Int
-  lab_id                 Int
-  report_date            DateTime                 @db.Date
-  time_in                DateTime?                @db.Time(0)
-  time_out               DateTime?                @db.Time(0)
-  general_remarks        String?                  @db.Text
-  status                 daily_reports_status?    @default(Pending)
-  created_at             DateTime?                @default(now()) @db.Timestamp(0)
-  users                  users                    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "daily_reports_ibfk_1")
-  laboratories           laboratories             @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction, map: "daily_reports_ibfk_2")
-  report_checklist_items report_checklist_items[]
-
-  @@index([lab_id], map: "lab_id")
-  @@index([user_id], map: "user_id")
+model office_types {
+  type_id     Int           @id @default(autoincrement())
+  type_name   String        @unique(map: "type_name") @db.VarChar(50)
+  departments departments[]
 }
 
 model departments {
-  dept_id        Int            @id @default(autoincrement())
-  dept_name      String         @db.VarChar(100)
+  dept_id        Int           @id @default(autoincrement())
+  dept_name      String        @db.VarChar(100)
   campus_id      Int?
   office_type_id Int?
-  designee_name  String?        @db.VarChar(100)
-  campuses       campuses?      @relation(fields: [campus_id], references: [campus_id], onDelete: NoAction, onUpdate: NoAction, map: "departments_ibfk_1")
-  office_types   office_types?  @relation(fields: [office_type_id], references: [type_id], onDelete: NoAction, onUpdate: NoAction, map: "departments_ibfk_2")
+  designee_name  String?       @db.VarChar(100)
+  campuses       campuses?     @relation(fields: [campus_id], references: [campus_id], onDelete: NoAction, onUpdate: NoAction)
+  office_types   office_types? @relation(fields: [office_type_id], references: [type_id], onDelete: NoAction, onUpdate: NoAction)
   laboratories   laboratories[]
 
   @@index([campus_id], map: "campus_id")
   @@index([office_type_id], map: "office_type_id")
 }
 
-model inventory_assets {
-  asset_id           Int           @id @default(autoincrement())
-  lab_id             Int?
-  workstation_number String?       @db.VarChar(50)
-  unit_id            Int?
-  item_name          String?       @db.VarChar(100)
-  description        String?       @db.Text
-  property_tag_no    String?       @unique(map: "property_tag_no") @db.VarChar(50)
-  serial_number      String?       @db.VarChar(100)
-  quantity           Int?          @default(1)
-  date_of_purchase   DateTime?     @db.Date
-  supplier_name      String?       @db.VarChar(100)
-  added_by_user_id   Int?
-  date_added         DateTime?     @default(now()) @db.Timestamp(0)
-  laboratories       laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_1")
-  units              units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_2")
-  users              users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "inventory_assets_ibfk_3")
-  workstation_id   Int?    
-  workstation      workstations? @relation(fields: [workstation_id], references: [workstation_id])
-
-  @@index([added_by_user_id], map: "added_by_user_id")
-  @@index([lab_id], map: "lab_id")
-  @@index([unit_id], map: "unit_id")
-  @@index([workstation_id])
-}
-
 model laboratories {
-  lab_id           Int                @id @default(autoincrement())
-  lab_name         String             @db.VarChar(50)
-  location         String?            @db.VarChar(50)
-  dept_id          Int?
-  lab_in_charge    String?            @db.VarChar(100)
+  lab_id        Int     @id @default(autoincrement())
+  lab_name      String  @db.VarChar(50)
+  location      String? @db.VarChar(50)
+  dept_id       Int?
   
-  // Existing relations
+  // Manager Link (The User in charge)
+  in_charge_id  Int?
+  manager       users?  @relation("LabManager", fields: [in_charge_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
+
+  // Relations
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
-  departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
-
-  // NEW: This is the missing line! 
-  // It tells Prisma that this Lab contains a list of Users (Custodians)
-  users            users[]
+  departments      departments?     @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
+  
+  // Workers Link (Custodians working here)
+  users            users[]          @relation("LabAssignment") 
   workstations     workstations[]
 
   @@index([dept_id], map: "dept_id")
+  @@index([in_charge_id]) 
 }
 
-model report_checklist_items {
-  item_id          Int                                 @id @default(autoincrement())
-  report_id        Int
-  task_id          Int
-  task_status      report_checklist_items_task_status? @default(Done)
-  specific_remarks String?                             @db.VarChar(255)
-  daily_reports    daily_reports                       @relation(fields: [report_id], references: [report_id], onDelete: Cascade, onUpdate: NoAction, map: "report_checklist_items_ibfk_1")
-  standard_tasks   standard_tasks                      @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction, map: "report_checklist_items_ibfk_2")
+model workstations {
+  workstation_id   Int              @id @default(autoincrement())
+  workstation_name String           @db.VarChar(100) 
+  lab_id           Int?      
+  created_at       DateTime         @default(now())
 
-  @@index([report_id], map: "report_id")
-  @@index([task_id], map: "task_id")
+  laboratory       laboratories?    @relation(fields: [lab_id], references: [lab_id])
+  assets           inventory_assets[] 
+
+  @@index([lab_id])
+  @@unique([workstation_name, lab_id]) 
+}
+
+// --- USERS ---
+
+model users {
+  user_id       Int         @id @default(autoincrement())
+  full_name     String      @db.VarChar(100)
+  email         String      @unique(map: "email") @db.VarChar(100)
+  password_hash String      @db.VarChar(255)
+  role          users_role? @default(Custodian)
+  created_at    DateTime?   @default(now()) @db.Timestamp(0)
+  
+  // Worker Relation (Where they work)
+  lab_id        Int?       
+  assigned_lab  laboratories? @relation("LabAssignment", fields: [lab_id], references: [lab_id])
+
+  // Manager Relation (What they manage)
+  managed_labs  laboratories[] @relation("LabManager")
+
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+}
+
+// --- DAILY REPORTS ---
+
+model daily_reports {
+  report_id              Int                     @id @default(autoincrement())
+  user_id                Int
+  lab_id                 Int
+  report_date            DateTime                @db.Date
+  time_in                DateTime?               @db.Time(0)
+  time_out               DateTime?               @db.Time(0)
+  general_remarks        String?                 @db.Text
+  status                 daily_reports_status?   @default(Pending)
+  created_at             DateTime?               @default(now()) @db.Timestamp(0)
+  users                  users                   @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  laboratories           laboratories            @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
+  report_checklist_items report_checklist_items[]
+
+  @@index([lab_id], map: "lab_id")
+  @@index([user_id], map: "user_id")
 }
 
 model standard_tasks {
@@ -112,21 +120,67 @@ model standard_tasks {
   report_checklist_items report_checklist_items[]
 }
 
-model users {
-  user_id       Int       @id @default(autoincrement())
-  full_name     String    @db.VarChar(100)
-  email         String    @unique(map: "email") @db.VarChar(100)
-  password_hash String    @db.VarChar(255)
-  role          users_role? @default(Custodian)
-  created_at    DateTime? @default(now()) @db.Timestamp(0)
-  
-  // NEW: Link user to a Laboratory
-  lab_id        Int?      
-  assigned_lab  laboratories? @relation(fields: [lab_id], references: [lab_id])
+model report_checklist_items {
+  item_id          Int                                 @id @default(autoincrement())
+  report_id        Int
+  task_id          Int
+  task_status      report_checklist_items_task_status? @default(Done)
+  specific_remarks String?                             @db.VarChar(255)
+  daily_reports    daily_reports                       @relation(fields: [report_id], references: [report_id], onDelete: Cascade, onUpdate: NoAction)
+  standard_tasks   standard_tasks                      @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction)
 
-  // Existing relations...
-  daily_reports    daily_reports[]
-  inventory_assets inventory_assets[]
+  @@index([report_id], map: "report_id")
+  @@index([task_id], map: "task_id")
+}
+
+// --- INVENTORY (PARTITIONED) ---
+
+// 1. Logistics Table (Lightweight - Links & Audit)
+model inventory_assets {
+  asset_id         Int       @id @default(autoincrement())
+  
+  // Location
+  lab_id           Int?
+  workstation_id   Int?    
+
+  // Classification
+  unit_id          Int?
+  
+  // Audit
+  added_by_user_id Int?
+  date_added       DateTime? @default(now()) @db.Timestamp(0)
+  
+  // --- RELATIONSHIP TO DETAILS ---
+  details          asset_details?  // 1:1 link to the details table
+  
+  // Standard Relations
+  laboratories     laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
+  units            units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
+  users            users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  workstation      workstations? @relation(fields: [workstation_id], references: [workstation_id])
+
+  @@index([added_by_user_id], map: "added_by_user_id")
+  @@index([lab_id], map: "lab_id")
+  @@index([unit_id], map: "unit_id")
+  @@index([workstation_id])
+}
+
+// 2. Details Table (Heavy Info - Specs, Tags, Purchasing)
+model asset_details {
+  detail_id        Int       @id @default(autoincrement())
+  
+  // Foreign Key to Main Asset (Must be unique for 1:1)
+  asset_id         Int       @unique 
+  
+  // Detailed Fields
+  property_tag_no  String?   @unique(map: "property_tag_no") @db.VarChar(50)
+  quantity         Int?      @default(1)
+  description      String?   @db.Text
+  serial_number    String?   @db.VarChar(100)
+  date_of_purchase DateTime? @db.Date
+
+  // Relation back to main asset
+  asset            inventory_assets @relation(fields: [asset_id], references: [asset_id], onDelete: Cascade)
 }
 
 model device_types {
@@ -135,21 +189,17 @@ model device_types {
   units            units[]
 }
 
-model office_types {
-  type_id     Int           @id @default(autoincrement())
-  type_name   String        @unique(map: "type_name") @db.VarChar(50)
-  departments departments[]
-}
-
 model units {
   unit_id          Int                @id @default(autoincrement())
   unit_name        String             @db.VarChar(50)
   device_type_id   Int
   inventory_assets inventory_assets[]
-  device_types     device_types       @relation(fields: [device_type_id], references: [device_type_id], onDelete: NoAction, onUpdate: NoAction, map: "units_ibfk_1")
+  device_types     device_types       @relation(fields: [device_type_id], references: [device_type_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([device_type_id], map: "device_type_id")
 }
+
+// --- ENUMS ---
 
 enum report_checklist_items_task_status {
   Done
@@ -166,18 +216,5 @@ enum daily_reports_status {
   Pending
   Submitted
   Approved
-  Rejected
 }
 
-model workstations {
-  workstation_id   Int      @id @default(autoincrement())
-  workstation_name String   @unique // e.g. "WS-PC1"
-  lab_id           Int?     // The lab where this PC is located
-  created_at       DateTime @default(now())
-
-  // Relations
-  laboratory       laboratories?      @relation(fields: [lab_id], references: [lab_id])
-  assets           inventory_assets[] // A workstation has many assets (RAM, Mouse, etc.)
-
-  @@index([lab_id])
-}

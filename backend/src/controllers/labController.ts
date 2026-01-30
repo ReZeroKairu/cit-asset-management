@@ -1,3 +1,4 @@
+//backend/src/controllers/labController.ts
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 
@@ -13,22 +14,22 @@ export const getLaboratories = async (req: Request, res: Response) => {
             user_id: true,
             full_name: true,
             email: true,
-            role: true
+            role: true,
           },
           where: {
-            role: 'Custodian'
-          }
+            role: "Custodian",
+          },
         },
         departments: {
           select: {
             dept_id: true,
-            dept_name: true
-          }
-        }
+            dept_name: true,
+          },
+        },
       },
       orderBy: {
-        lab_name: 'asc'
-      }
+        lab_name: "asc",
+      },
     });
 
     res.json(laboratories);
@@ -49,11 +50,13 @@ export const createLaboratory = async (req: Request, res: Response) => {
 
     // Check if laboratory name already exists
     const existingLab = await prisma.laboratories.findFirst({
-      where: { lab_name }
+      where: { lab_name },
     });
 
     if (existingLab) {
-      return res.status(400).json({ error: "Laboratory with this name already exists" });
+      return res
+        .status(400)
+        .json({ error: "Laboratory with this name already exists" });
     }
 
     const newLab = await prisma.laboratories.create({
@@ -61,8 +64,8 @@ export const createLaboratory = async (req: Request, res: Response) => {
         lab_name,
         location: location || null,
         dept_id: dept_id ? parseInt(dept_id) : null,
-        lab_in_charge: lab_in_charge || null
-      }
+        in_charge_id: lab_in_charge ? parseInt(lab_in_charge) : null,
+      },
     });
 
     res.status(201).json(newLab);
@@ -85,7 +88,7 @@ export const updateLaboratory = async (req: Request, res: Response) => {
 
     // Check if laboratory exists
     const existingLab = await prisma.laboratories.findUnique({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     if (!existingLab) {
@@ -95,11 +98,13 @@ export const updateLaboratory = async (req: Request, res: Response) => {
     // If updating name, check for duplicates
     if (lab_name && lab_name !== existingLab.lab_name) {
       const duplicateLab = await prisma.laboratories.findFirst({
-        where: { lab_name }
+        where: { lab_name },
       });
 
       if (duplicateLab) {
-        return res.status(400).json({ error: "Laboratory with this name already exists" });
+        return res
+          .status(400)
+          .json({ error: "Laboratory with this name already exists" });
       }
     }
 
@@ -108,9 +113,19 @@ export const updateLaboratory = async (req: Request, res: Response) => {
       data: {
         lab_name: lab_name || existingLab.lab_name,
         location: location !== undefined ? location : existingLab.location,
-        dept_id: dept_id !== undefined ? (dept_id ? parseInt(dept_id) : null) : existingLab.dept_id,
-        lab_in_charge: lab_in_charge !== undefined ? lab_in_charge : existingLab.lab_in_charge
-      }
+        dept_id:
+          dept_id !== undefined
+            ? dept_id
+              ? parseInt(dept_id)
+              : null
+            : existingLab.dept_id,
+        in_charge_id:
+          lab_in_charge !== undefined
+            ? lab_in_charge
+              ? parseInt(lab_in_charge)
+              : null
+            : existingLab.in_charge_id,
+      },
     });
 
     res.json(updatedLab);
@@ -132,7 +147,7 @@ export const deleteLaboratory = async (req: Request, res: Response) => {
 
     // Check if laboratory exists
     const existingLab = await prisma.laboratories.findUnique({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     if (!existingLab) {
@@ -141,39 +156,42 @@ export const deleteLaboratory = async (req: Request, res: Response) => {
 
     // Check if laboratory has assigned users
     const assignedUsers = await prisma.users.count({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     if (assignedUsers > 0) {
-      return res.status(400).json({ 
-        error: "Cannot delete laboratory with assigned users. Please reassign users first." 
+      return res.status(400).json({
+        error:
+          "Cannot delete laboratory with assigned users. Please reassign users first.",
       });
     }
 
     // Check if laboratory has inventory assets
     const assetCount = await prisma.inventory_assets.count({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     if (assetCount > 0) {
-      return res.status(400).json({ 
-        error: "Cannot delete laboratory with inventory assets. Please move or delete assets first." 
+      return res.status(400).json({
+        error:
+          "Cannot delete laboratory with inventory assets. Please move or delete assets first.",
       });
     }
 
     // Check if laboratory has daily reports
     const reportCount = await prisma.daily_reports.count({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     if (reportCount > 0) {
-      return res.status(400).json({ 
-        error: "Cannot delete laboratory with daily reports. Please delete reports first." 
+      return res.status(400).json({
+        error:
+          "Cannot delete laboratory with daily reports. Please delete reports first.",
       });
     }
 
     await prisma.laboratories.delete({
-      where: { lab_id: labId }
+      where: { lab_id: labId },
     });
 
     res.json({ message: "Laboratory deleted successfully" });
