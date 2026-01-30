@@ -36,6 +36,7 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
   // --- UI State ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [existingCustodians, setExistingCustodians] = useState<{[key: number]: string}>({});
 
   // Load Dropdown Data on component mount
   useEffect(() => {
@@ -44,6 +45,17 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
       setOfficeTypes(res.data.officeTypes);
       setDepartments(res.data.departments);
       setLaboratories(res.data.laboratories);
+    });
+    
+    // Load existing custodian assignments
+    api.get("/users/assignments").then((res) => {
+      const custodians: {[key: number]: string} = {};
+      res.data.forEach((user: any) => {
+        if (user.role === 'Custodian' && user.lab_id) {
+          custodians[user.lab_id] = user.full_name;
+        }
+      });
+      setExistingCustodians(custodians);
     });
   }, []);
 
@@ -71,6 +83,16 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
       setError("Please assign a laboratory to the custodian.");
       setLoading(false);
       return;
+    }
+    
+    // Check if lab already has a custodian assigned
+    if (formData.lab_id && (formData.role === "Custodian" || !formData.role)) {
+      const labId = Number(formData.lab_id);
+      if (existingCustodians[labId]) {
+        setError(`Cannot assign custodian to this laboratory. ${existingCustodians[labId]} is already assigned as the custodian.`);
+        setLoading(false);
+        return;
+      }
     }
     
     try {
@@ -251,11 +273,19 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
                 }
               >
                 <option value="">Select Laboratory to Assign...</option>
-                {filteredLabs.map((l) => (
-                  <option key={l.lab_id} value={l.lab_id}>
-                    {l.lab_name}
-                  </option>
-                ))}
+                {filteredLabs.map((l) => {
+                  const hasCustodian = existingCustodians[l.lab_id];
+                  return (
+                    <option 
+                      key={l.lab_id} 
+                      value={l.lab_id}
+                      disabled={hasCustodian}
+                      className={hasCustodian ? "text-gray-400" : ""}
+                    >
+                      {l.lab_name} {hasCustodian ? `(Already assigned to ${hasCustodian})` : ""}
+                    </option>
+                  );
+                })}
               </select>
               {formData.lab_id && (
                 <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
@@ -264,6 +294,16 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     This user will be assigned as the Laboratory Manager (in_charge_id) for the selected laboratory.
+                  </p>
+                </div>
+              )}
+              {Object.keys(existingCustodians).length > 0 && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-700 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Laboratories with existing custodians are disabled in the dropdown above.
                   </p>
                 </div>
               )}
