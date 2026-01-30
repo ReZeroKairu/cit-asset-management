@@ -4,7 +4,7 @@ import cors from "cors";
 import { PrismaClient } from "@prisma/client";
 import { getInventory, createAsset, deleteAsset, updateAsset, batchCreateAssets } from "./controllers/inventoryController";
 import { login } from "./controllers/authController";
-import { getOrganizationData, createUser, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab } from "./controllers/userController";
+import { getOrganizationData, createUser, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab, updateUser, deleteUser } from "./controllers/userController";
 import {
   getAllWorkstations,
   createWorkstation,
@@ -22,6 +22,7 @@ import {
   getMyDailyReports
 } from "./controllers/dailyReportController";
 import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory } from "./controllers/labController";
+import { getDashboardStats } from "./controllers/dashboardController";
 import { authenticateToken, requireRole } from "./middleware/auth";
 
 const app = express();
@@ -40,6 +41,11 @@ app.get("/users/assigned-lab", authenticateToken, getUserAssignedLab);
 app.get("/users/assignments", authenticateToken, requireRole(["Admin"]), getAllUsersWithAssignments);
 app.put("/users/assign-lab", authenticateToken, requireRole(["Admin"]), assignUserToLab);
 app.post("/users", authenticateToken, requireRole(["Admin"]), createUser);
+app.put("/users/:id", authenticateToken, requireRole(["Admin"]), updateUser);
+app.delete("/users/:id", authenticateToken, requireRole(["Admin"]), deleteUser);
+
+// Dashboard route
+app.get("/dashboard/stats", authenticateToken, getDashboardStats);
 
 app.get("/inventory", authenticateToken, getInventory);
 app.post("/inventory", authenticateToken, createAsset);

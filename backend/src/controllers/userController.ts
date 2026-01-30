@@ -127,6 +127,20 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Laboratory not found" });
     }
 
+    // Check if lab already has a custodian assigned
+    const existingCustodian = await prisma.users.findFirst({
+      where: {
+        lab_id: parseInt(labId),
+        role: "Custodian"
+      }
+    });
+
+    if (existingCustodian && existingCustodian.user_id !== parseInt(userId)) {
+      return res.status(400).json({ 
+        error: "This laboratory already has a custodian assigned. Only one custodian per laboratory is allowed." 
+      });
+    }
+
     // Update user assignment
     const updatedUser = await prisma.users.update({
       where: { user_id: parseInt(userId) },
@@ -146,6 +160,97 @@ export const assignUserToLab = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error assigning user to lab:", error);
     res.status(500).json({ error: "Failed to assign user to laboratory" });
+  }
+};
+
+// PUT: Update user information
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
+    const { full_name, email, role } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.users.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // If updating email, check for duplicates
+    if (email && email !== existingUser.email) {
+      const duplicateUser = await prisma.users.findFirst({
+        where: { email },
+      });
+
+      if (duplicateUser) {
+        return res.status(400).json({ error: "User with this email already exists" });
+      }
+    }
+
+    const updatedUser = await prisma.users.update({
+      where: { user_id: userId },
+      data: {
+        full_name: full_name || existingUser.full_name,
+        email: email || existingUser.email,
+        role: role || existingUser.role,
+      },
+      include: {
+        assigned_lab: {
+          select: {
+            lab_id: true,
+            lab_name: true,
+            location: true,
+          },
+        },
+      },
+    });
+
+    res.json(updatedUser);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ error: "Failed to update user" });
+  }
+};
+
+// DELETE: Delete user
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.users.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Prevent deletion of the current user
+    if (req.user?.userId === userId) {
+      return res.status(400).json({ error: "Cannot delete your own account" });
+    }
+
+    await prisma.users.delete({
+      where: { user_id: userId },
+    });
+
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user" });
   }
 };
 

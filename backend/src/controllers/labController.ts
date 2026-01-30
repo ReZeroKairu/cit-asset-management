@@ -42,7 +42,7 @@ export const getLaboratories = async (req: Request, res: Response) => {
 // POST: Create new laboratory
 export const createLaboratory = async (req: Request, res: Response) => {
   try {
-    const { lab_name, location, dept_id, lab_in_charge } = req.body;
+    const { lab_name, location, dept_id } = req.body;
 
     if (!lab_name) {
       return res.status(400).json({ error: "Laboratory name is required" });
@@ -64,7 +64,6 @@ export const createLaboratory = async (req: Request, res: Response) => {
         lab_name,
         location: location || null,
         dept_id: dept_id ? parseInt(dept_id) : null,
-        in_charge_id: lab_in_charge ? parseInt(lab_in_charge) : null,
       },
     });
 
@@ -80,7 +79,7 @@ export const updateLaboratory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const labId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
-    const { lab_name, location, dept_id, lab_in_charge } = req.body;
+    const { lab_name, location, dept_id } = req.body;
 
     if (!labId) {
       return res.status(400).json({ error: "Laboratory ID is required" });
@@ -119,12 +118,6 @@ export const updateLaboratory = async (req: Request, res: Response) => {
               ? parseInt(dept_id)
               : null
             : existingLab.dept_id,
-        in_charge_id:
-          lab_in_charge !== undefined
-            ? lab_in_charge
-              ? parseInt(lab_in_charge)
-              : null
-            : existingLab.in_charge_id,
       },
     });
 
