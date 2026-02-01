@@ -1,54 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { getAllDailyReports, getMyDailyReports, updateDailyReport, getDailyReportById } from "../../api/dailyReports";
+import React, { useState, useEffect } from 'react';
 import type { DailyReport } from '../../api/dailyReports';
-import DailyReportFormTab from './DailyReportFormTab';
-import DailyReportViewModal from './DailyReportViewModal';
-import { useAuth } from '../../context/AuthContext';
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { getAllDailyReports, getDailyReportById, updateDailyReport } from '../../api/dailyReports';
+import AdminReportDetailView from '../admin/AdminReportDetailView';
 
-interface DailyReportListProps {
-  viewMode?: 'my' | 'all';
-  adminMode?: boolean;
-}
+interface AdminDailyReportsProps {}
 
-const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', adminMode = false }) => {
+const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
-  const [editingReport, setEditingReport] = useState<DailyReport | undefined>();
-  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
-  const [viewingReport, setViewingReport] = useState<DailyReport | null>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
+  const [showDetailView, setShowDetailView] = useState(false);
   const [filters, setFilters] = useState({
     status: 'Pending',
     start_date: '',
     end_date: ''
   });
 
-  const { user } = useAuth();
+  useEffect(() => {
+    loadReports();
+  }, []);
 
   useEffect(() => {
     loadReports();
-  }, [viewMode, filters]);
-
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (activeDropdown !== null) {
-        setActiveDropdown(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [activeDropdown]);
+  }, [filters]);
 
   const loadReports = async () => {
     try {
       setLoading(true);
-      
-      const data = viewMode === 'my' ? await getMyDailyReports() : await getAllDailyReports();
+      const data = await getAllDailyReports();
       setReports(data);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load reports');
@@ -57,49 +37,28 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     }
   };
 
-  const handleEdit = (report: DailyReport) => {
-    setEditingReport(report);
-    setActiveTab('create');
+  const handleViewReport = async (report: DailyReport) => {
+    try {
+      // Fetch detailed report data including workstations and procedures
+      const detailedReport = await getDailyReportById(report.report_id);
+      setSelectedReport(detailedReport);
+      setShowDetailView(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load report details');
+    }
   };
 
-  const handleFormSuccess = () => {
-    setActiveTab('list');
-    setEditingReport(undefined);
-    loadReports();
+  const handleBackToList = () => {
+    setShowDetailView(false);
+    setSelectedReport(null);
   };
 
-  const handleFormCancel = () => {
-    setActiveTab('list');
-    setEditingReport(undefined);
-  };
-
-  const handleView = (report: DailyReport) => {
-    // Fetch detailed report data including workstations and procedures
-    getDailyReportById(report.report_id).then(detailedReport => {
-      setViewingReport(detailedReport);
-      setIsViewModalOpen(true);
-    }).catch(err => {
-      setError('Failed to load report details');
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleQuickApprove = async (reportId: number) => {
+    try {
+      await updateDailyReport(reportId, { status: 'Approved' });
+      loadReports();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to approve report');
     }
   };
 
@@ -112,7 +71,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
 
   const clearFilters = () => {
     setFilters({
-      status: 'Pending',
+      status: '',
       start_date: '',
       end_date: ''
     });
@@ -147,39 +106,34 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     return matchesFilter;
   });
 
-  const handleStatusUpdate = async (reportId: number, newStatus: string) => {
-    try {
-      await updateDailyReport(reportId, { status: newStatus });
-      loadReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update report status');
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Approved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   // Show detail view if a report is selected
-  if (isViewModalOpen && viewingReport) {
+  if (showDetailView && selectedReport) {
     return (
-      <DailyReportViewModal
-        report={viewingReport}
-        isOpen={isViewModalOpen}
-        onClose={() => {
-          setIsViewModalOpen(false);
-          setViewingReport(null);
-        }}
+      <AdminReportDetailView
+        report={selectedReport}
+        onBack={handleBackToList}
+        onReportUpdated={loadReports}
       />
-    );
-  }
-
-  // Show form content if creating/editing
-  if (activeTab === 'create') {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <DailyReportFormTab 
-          report={editingReport} 
-          onSuccess={handleFormSuccess} 
-          onCancel={handleFormCancel} 
-        />
-      </div>
     );
   }
 
@@ -198,27 +152,8 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {viewMode === 'my' ? 'My Daily Reports' : 'All Daily Reports'}
-            </h1>
-            <p className="mt-2 text-gray-600">
-              {viewMode === 'my' 
-                ? 'View and manage your daily reports' 
-                : 'View all daily reports'
-              }
-            </p>
-          </div>
-          {!adminMode && (
-            <Button
-              onClick={() => setActiveTab('create')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Create New Report
-            </Button>
-          )}
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Daily Reports</h1>
+        <p className="mt-2 text-gray-600">Review and manage all custodian daily reports</p>
       </div>
 
       {error && (
@@ -230,7 +165,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
       {/* Filters */}
       <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
             <select
@@ -275,7 +210,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              {viewMode === 'my' ? 'My Daily Reports' : 'All Daily Reports'} 
+              All Daily Reports 
               <span className="ml-2 text-sm text-gray-500">
                 ({filteredReports.length} of {reports.length} total)
               </span>
@@ -289,7 +224,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
         {filteredReports.length === 0 ? (
           <div className="text-center py-12">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2 2v5a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2 2v5a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No reports found</h3>
             <p className="mt-1 text-sm text-gray-500">
@@ -365,7 +300,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => handleView(report)}
+                        onClick={() => handleViewReport(report)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,15 +309,15 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                         </svg>
                         View
                       </button>
-                      {viewMode === 'my' && report.status === 'Pending' && (
+                      {report.status !== 'Approved' && (
                         <button
-                          onClick={() => handleEdit(report)}
-                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => handleQuickApprove(report.report_id)}
+                          className="text-green-600 hover:text-green-900 mr-3"
                         >
                           <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          Edit
+                          Approve
                         </button>
                       )}
                     </td>
@@ -397,4 +332,4 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
   );
 };
 
-export default DailyReportList;
+export default AdminDailyReports;

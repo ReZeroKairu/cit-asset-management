@@ -32,11 +32,6 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       },
       orderBy: { report_date: 'desc' }
@@ -65,19 +60,75 @@ export const getDailyReportById = async (req: Request, res: Response) => {
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
         },
-        report_checklist_items: {
+        report_workstation_items: {
           include: {
-            standard_tasks: true
+            workstations: {
+              select: { workstation_id: true, workstation_name: true }
+            }
+          }
+        },
+        daily_report_procedures: {
+          include: {
+            procedures: {
+              include: {
+                procedure_checklists: true
+              }
+            },
+            daily_report_checklist_responses: {
+              include: {
+                procedure_checklists: true
+              }
+            }
           }
         }
       }
-    });
+    } as any);
 
     if (!report) {
       return res.status(404).json({ error: "Daily report not found" });
     }
 
-    res.json(report);
+    // Format the response to match frontend expectations
+    const formattedReport = {
+      ...report,
+      workstation_items: (report as any).report_workstation_items.map((item: any) => ({
+        workstation_id: item.workstation_id,
+        workstation_name: item.workstations?.workstation_name || 'Unknown',
+        status: item.status,
+        remarks: item.remarks,
+        workstation: item.workstations
+      })),
+      procedures: (report as any).daily_report_procedures.map((rp: any) => {
+        const procedure = rp.procedures;
+        const responses = rp.daily_report_checklist_responses;
+
+        // Attach responses to the corresponding checklists
+        const checklistsWithResponses = procedure.procedure_checklists.map((checklist: any) => {
+          const response = responses.find((r: any) => r.checklist_id === checklist.checklist_id);
+          return {
+            checklist_id: checklist.checklist_id,
+            checklist_name: checklist.checklist_name,
+            status: response?.status || 'Pending',
+            remarks: response?.remarks || null,
+            response_id: response?.response_id || null
+          };
+        });
+
+        return {
+          procedure_id: procedure.procedure_id,
+          procedure_name: procedure.procedure_name,
+          overall_status: rp.overall_status,
+          overall_remarks: rp.overall_remarks,
+          checklists: checklistsWithResponses
+        };
+      })
+    };
+
+    // Remove the original nested data to avoid confusion
+    delete (formattedReport as any).report_workstation_items;
+    delete (formattedReport as any).daily_report_procedures;
+
+    res.json(formattedReport);
   } catch (error) {
     console.error("Error fetching daily report:", error);
     res.status(500).json({ error: "Failed to fetch daily report" });
@@ -149,21 +200,9 @@ export const createDailyReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Create checklist items if provided
-    if (checklist_items && checklist_items.length > 0) {
-      const checklistData = checklist_items.map((item: any) => ({
-        report_id: newReport.report_id,
-        task_id: item.task_id,
-        task_status: item.task_status || 'Done',
-        specific_remarks: item.specific_remarks || null
-      }));
+    // Create checklist items if provided (removed since we no longer use standard tasks)
 
-      await prisma.report_checklist_items.createMany({
-        data: checklistData
-      });
-    }
-
-    // Fetch the complete report with checklist items
+    // Fetch the complete report
     const completeReport = await prisma.daily_reports.findUnique({
       where: { report_id: newReport.report_id },
       include: {
@@ -172,11 +211,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       }
     });
@@ -247,25 +281,7 @@ export const updateDailyReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Update checklist items if provided
-    if (checklist_items && checklist_items.length > 0) {
-      // Delete existing checklist items
-      await prisma.report_checklist_items.deleteMany({
-        where: { report_id: reportId }
-      });
-
-      // Create new checklist items
-      const checklistData = checklist_items.map((item: any) => ({
-        report_id: reportId,
-        task_id: item.task_id,
-        task_status: item.task_status || 'Done',
-        specific_remarks: item.specific_remarks || null
-      }));
-
-      await prisma.report_checklist_items.createMany({
-        data: checklistData
-      });
-    }
+    // Update checklist items if provided (removed since we no longer use standard tasks)
 
     // Fetch the complete updated report
     const completeReport = await prisma.daily_reports.findUnique({
@@ -276,11 +292,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       }
     });
@@ -349,11 +360,6 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       },
       orderBy: { report_date: 'desc' }

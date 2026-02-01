@@ -15,7 +15,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
             location: true,
           },
         },
-        assets: {
+        inventory_assets: {
           include: {
             details: {
               select: {
@@ -82,7 +82,7 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
       },
       include: {
         laboratory: true,
-        assets: {
+        inventory_assets: {
           include: {
             units: true,
           },

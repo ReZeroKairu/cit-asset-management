@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import InventoryPage from "./pages/InventoryPage";
 import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import MainLayout from "./components/layout/MainLayout";
@@ -140,7 +141,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("reports")}
+          onClick={() => handleNavigate(isAdmin ? "admin-reports" : "reports")}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -184,7 +185,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "user-management" | "profile">(
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "user-management" | "profile">(
     "home",
   );
 
@@ -224,6 +225,8 @@ function App() {
         />;
       case "reports":
         return <DailyReportsPage />;
+      case "admin-reports":
+        return <AdminReportsPage />;
       case "user-management":
         return <UserManagementPage 
           createUserData={createUserData}

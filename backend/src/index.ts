@@ -23,6 +23,17 @@ import {
 } from "./controllers/dailyReportController";
 import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory } from "./controllers/labController";
 import { getDashboardStats } from "./controllers/dashboardController";
+import { 
+  getLabWorkstationsForReport, 
+  saveWorkstationChecklist, 
+  getWorkstationChecklist 
+} from "./controllers/workstationReportController";
+import { 
+  getAllProcedures, 
+  getReportProcedures, 
+  saveReportProcedures,
+  getWorkstationProcedures 
+} from "./controllers/proceduresController";
 import { authenticateToken, requireRole } from "./middleware/auth";
 
 const app = express();
@@ -99,16 +110,6 @@ app.get("/device-types", authenticateToken, async (req: Request, res: Response) 
   }
 });
 
-// 2. GET all Standard Tasks
-app.get("/tasks", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const tasks = await prisma.standard_tasks.findMany();
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch tasks" });
-  }
-});
-
 // Daily Report Routes
 app.get("/daily-reports", authenticateToken, getAllDailyReports); // Admin: view all reports
 app.get("/daily-reports/my", authenticateToken, getMyDailyReports); // User: view own reports
@@ -116,6 +117,17 @@ app.get("/daily-reports/:id", authenticateToken, getDailyReportById); // Get sin
 app.post("/daily-reports", authenticateToken, createDailyReport); // Create new report
 app.put("/daily-reports/:id", authenticateToken, updateDailyReport); // Update report
 app.delete("/daily-reports/:id", authenticateToken, requireRole(["Admin"]), deleteDailyReport); // Delete report (Admin only)
+
+// Workstation Report Routes
+app.get("/daily-reports/:id/workstations", authenticateToken, getWorkstationChecklist); // Get existing workstation checklist
+app.get("/lab-workstations", authenticateToken, getLabWorkstationsForReport); // Get workstations for lab (for checkboxes)
+app.post("/daily-reports/:id/workstations", authenticateToken, saveWorkstationChecklist); // Save workstation checklist
+
+// Procedures Routes
+app.get("/procedures", authenticateToken, getAllProcedures); // Get all procedures with checklists
+app.get("/daily-reports/:id/procedures", authenticateToken, getReportProcedures); // Get procedures for a specific report
+app.post("/daily-reports/:id/procedures", authenticateToken, saveReportProcedures); // Save procedures for a report
+app.get("/workstation-procedures", authenticateToken, getWorkstationProcedures); // Get procedures applicable to workstations
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);

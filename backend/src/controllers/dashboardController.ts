@@ -107,7 +107,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       const user = await prisma.users.findUnique({
         where: { user_id: userId },
         include: {
-          assigned_lab: {
+          laboratory: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -116,7 +116,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }
         }
       });
-      userAssignedLab = user?.assigned_lab;
+      userAssignedLab = user?.laboratory;
     }
 
     const dashboardData = {

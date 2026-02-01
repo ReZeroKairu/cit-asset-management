@@ -21,6 +21,28 @@ export interface DailyReport {
     location?: string;
   };
   report_checklist_items?: ChecklistItem[];
+  workstation_items?: {
+    workstation_id: number;
+    workstation_name: string;
+    status: string;
+    remarks?: string;
+    workstation?: {
+      workstation_id: number;
+      workstation_name: string;
+    };
+  }[];
+  procedures?: {
+    procedure_id: number;
+    procedure_name: string;
+    overall_status: string;
+    overall_remarks?: string;
+    checklists?: {
+      checklist_id: number;
+      checklist_name: string;
+      status: string;
+      remarks?: string;
+    }[];
+  }[];
 }
 
 export interface ChecklistItem {
