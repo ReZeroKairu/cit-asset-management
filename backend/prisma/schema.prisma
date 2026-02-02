@@ -151,6 +151,7 @@ model daily_report_checklist_responses {
   @@index([report_procedure_id], map: "report_procedure_id")
 }
 
+
 model daily_report_procedures {
   id              Int       @id @default(autoincrement())
   report_id       Int

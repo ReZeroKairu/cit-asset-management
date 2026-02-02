@@ -10,10 +10,7 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
 
-    console.log("getUserAssignedLab called - userId:", userId);
-
     if (!userId) {
-      console.log("ERROR: No userId in request");
       return res.status(401).json({ error: "User authentication required" });
     }
 
@@ -30,14 +27,8 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
       },
     });
 
-    console.log("Database result:", {
-      user_id: user?.user_id,
-      lab_id: user?.lab_id,
-      laboratory: user?.laboratory,
-    });
 
     if (!user) {
-      console.log("ERROR: User not found");
       return res.status(404).json({ error: "User not found" });
     }
 
@@ -49,7 +40,6 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
       laboratory: user.laboratory
     };
 
-    console.log("Sending response:", response);
     res.json(response);
   } catch (error) {
     console.error("ERROR in getUserAssignedLab:", error);
