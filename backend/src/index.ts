@@ -21,7 +21,7 @@ import {
   deleteDailyReport,
   getMyDailyReports
 } from "./controllers/dailyReportController";
-import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory } from "./controllers/labController";
+import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory, getLaboratoryById } from "./controllers/labController";
 import { getDashboardStats } from "./controllers/dashboardController";
 import { 
   getLabWorkstationsForReport, 
@@ -74,6 +74,7 @@ app.delete("/workstations/:id", authenticateToken, deleteWorkstation);
 
 // Laboratory Routes
 app.get("/laboratories", authenticateToken, getLaboratories);
+app.get("/laboratories/:id", authenticateToken, getLaboratoryById);
 app.post("/laboratories", authenticateToken, requireRole(["Admin"]), createLaboratory);
 app.put("/laboratories/:id", authenticateToken, requireRole(["Admin"]), updateLaboratory);
 app.delete("/laboratories/:id", authenticateToken, requireRole(["Admin"]), deleteLaboratory);

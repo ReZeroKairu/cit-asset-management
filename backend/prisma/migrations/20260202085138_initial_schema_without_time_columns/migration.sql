@@ -12,8 +12,6 @@ CREATE TABLE `daily_reports` (
     `user_id` INTEGER NOT NULL,
     `lab_id` INTEGER NOT NULL,
     `report_date` DATE NOT NULL,
-    `time_in` TIME(0) NULL,
-    `time_out` TIME(0) NULL,
     `general_remarks` TEXT NULL,
     `status` ENUM('Pending', 'Submitted', 'Approved') NULL DEFAULT 'Pending',
     `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
@@ -63,29 +61,6 @@ CREATE TABLE `laboratories` (
     INDEX `dept_id`(`dept_id`),
     INDEX `laboratories_in_charge_id_idx`(`in_charge_id`),
     PRIMARY KEY (`lab_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `report_checklist_items` (
-    `item_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `report_id` INTEGER NOT NULL,
-    `task_id` INTEGER NOT NULL,
-    `task_status` ENUM('Done', 'Issue Found', 'N/A') NULL DEFAULT 'Done',
-    `specific_remarks` VARCHAR(255) NULL,
-
-    INDEX `report_id`(`report_id`),
-    INDEX `task_id`(`task_id`),
-    PRIMARY KEY (`item_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `standard_tasks` (
-    `task_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `task_name` VARCHAR(100) NOT NULL,
-    `category` VARCHAR(50) NULL,
-    `is_active` BOOLEAN NOT NULL DEFAULT true,
-
-    PRIMARY KEY (`task_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -246,12 +221,6 @@ ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_workstation_id_f
 ALTER TABLE `laboratories` ADD CONSTRAINT `laboratories_dept_id_fkey` FOREIGN KEY (`dept_id`) REFERENCES `departments`(`dept_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `report_checklist_items` ADD CONSTRAINT `report_checklist_items_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `daily_reports`(`report_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `report_checklist_items` ADD CONSTRAINT `report_checklist_items_task_id_fkey` FOREIGN KEY (`task_id`) REFERENCES `standard_tasks`(`task_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `users` ADD CONSTRAINT `users_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -259,6 +228,21 @@ ALTER TABLE `workstations` ADD CONSTRAINT `workstations_lab_id_fkey` FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE `asset_details` ADD CONSTRAINT `asset_details_asset_id_fkey` FOREIGN KEY (`asset_id`) REFERENCES `inventory_assets`(`asset_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `daily_report_checklist_responses` ADD CONSTRAINT `daily_report_checklist_responses_checklist_id_fkey` FOREIGN KEY (`checklist_id`) REFERENCES `procedure_checklists`(`checklist_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `daily_report_checklist_responses` ADD CONSTRAINT `daily_report_checklist_responses_report_procedure_id_fkey` FOREIGN KEY (`report_procedure_id`) REFERENCES `daily_report_procedures`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `daily_report_procedures` ADD CONSTRAINT `daily_report_procedures_procedure_id_fkey` FOREIGN KEY (`procedure_id`) REFERENCES `procedures`(`procedure_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `daily_report_procedures` ADD CONSTRAINT `daily_report_procedures_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `daily_reports`(`report_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `procedure_checklists` ADD CONSTRAINT `procedure_checklists_procedure_id_fkey` FOREIGN KEY (`procedure_id`) REFERENCES `procedures`(`procedure_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `report_workstation_items` ADD CONSTRAINT `report_workstation_items_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `daily_reports`(`report_id`) ON DELETE RESTRICT ON UPDATE CASCADE;

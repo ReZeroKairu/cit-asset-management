@@ -18,7 +18,7 @@ interface Laboratory {
     email: string;
     role: string;
   }[];
-  departments?: {
+  department?: {
     dept_id: number;
     dept_name: string;
   };
@@ -180,7 +180,7 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
                         {lab.location || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {lab.departments?.dept_name || 'N/A'}
+                        {lab.department?.dept_name || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {lab.users && lab.users.length > 0 ? (

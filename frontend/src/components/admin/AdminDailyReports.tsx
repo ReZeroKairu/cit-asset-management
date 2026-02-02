@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { DailyReport } from '../../api/dailyReports';
 import { getAllDailyReports, getDailyReportById, updateDailyReport } from '../../api/dailyReports';
 import AdminReportDetailView from '../admin/AdminReportDetailView';
+import { CheckSquare, Square } from 'lucide-react';
 
 interface AdminDailyReportsProps {}
 
@@ -11,6 +12,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const [error, setError] = useState('');
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
   const [showDetailView, setShowDetailView] = useState(false);
+  const [selectedReports, setSelectedReports] = useState<number[]>([]);
   const [filters, setFilters] = useState({
     status: 'Pending',
     start_date: '',
@@ -59,6 +61,45 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
       loadReports();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to approve report');
+    }
+  };
+
+  const handleSelectAll = () => {
+    const pendingReports = filteredReports.filter(report => report.status === 'Pending');
+    if (selectedReports.length === pendingReports.length) {
+      setSelectedReports([]);
+    } else {
+      setSelectedReports(pendingReports.map(report => report.report_id));
+    }
+  };
+
+  const handleSelectReport = (reportId: number) => {
+    setSelectedReports(prev => 
+      prev.includes(reportId) 
+        ? prev.filter(id => id !== reportId)
+        : [...prev, reportId]
+    );
+  };
+
+  const handleApproveAll = async () => {
+    if (selectedReports.length === 0) {
+      alert('Please select at least one report to approve');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const promises = selectedReports.map(reportId => 
+        updateDailyReport(reportId, { status: 'Approved' })
+      );
+      await Promise.all(promises);
+      setSelectedReports([]);
+      loadReports();
+      alert(`Successfully approved ${selectedReports.length} reports`);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to approve reports');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -215,9 +256,40 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                 ({filteredReports.length} of {reports.length} total)
               </span>
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {filters.status || filters.start_date || filters.end_date ? 'Filtered results' : 'Showing all reports'}
-            </p>
+            <div className="flex items-center gap-3">
+              {filteredReports.some(r => r.status === 'Pending') && (
+                <>
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 flex items-center gap-2"
+                  >
+                    {selectedReports.length === filteredReports.filter(r => r.status === 'Pending').length ? (
+                      <>
+                        <Square className="w-4 h-4" />
+                        Deselect All
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="w-4 h-4" />
+                        Select All Pending
+                      </>
+                    )}
+                  </button>
+                  {selectedReports.length > 0 && (
+                    <button
+                      onClick={handleApproveAll}
+                      disabled={loading}
+                      className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                    >
+                      Approve Selected ({selectedReports.length})
+                    </button>
+                  )}
+                </>
+              )}
+              <p className="text-sm text-gray-500">
+                {filters.status || filters.start_date || filters.end_date ? 'Filtered results' : 'Showing all reports'}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -239,6 +311,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedReports.length === filteredReports.filter(r => r.status === 'Pending').length && filteredReports.some(r => r.status === 'Pending')}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Report Info
                   </th>
@@ -262,6 +342,16 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
                   <tr key={report.report_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {report.status === 'Pending' && (
+                        <input
+                          type="checkbox"
+                          checked={selectedReports.includes(report.report_id)}
+                          onChange={() => handleSelectReport(report.report_id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         Report #{report.report_id}

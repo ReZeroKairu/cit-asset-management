@@ -13,12 +13,10 @@ model campuses {
 }
 
 model daily_reports {
-  report_id       Int                   @id @default(autoincrement())
+  report_id       Int     @id @default(autoincrement())
   user_id         Int
   lab_id          Int
   report_date     DateTime              @db.Date
-  time_in         DateTime?             @db.Time(0)
-  time_out        DateTime?             @db.Time(0)
   general_remarks String?               @db.Text
   status          daily_reports_status? @default(Pending)
   created_at      DateTime?             @default(now()) @db.Timestamp(0)

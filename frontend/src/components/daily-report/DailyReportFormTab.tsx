@@ -21,8 +21,12 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({ report, onSucce
   });
 
   const [assignedLab, setAssignedLab] = useState<any>(null);
-  const [workstations, setWorkstations] = useState<any[]>([]);
+  const [selectedReports, setSelectedReports] = useState<number[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProcedureDropdownOpen, setIsProcedureDropdownOpen] = useState(false);
+  const [filters, setFilters] = useState({});
   const [procedures, setProcedures] = useState<ReportProcedure[]>([]);
+  const [workstations, setWorkstations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,6 +41,26 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({ report, onSucce
       console.log('No report object, loading fresh procedures'); // Debug log
     }
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isDropdownOpen) {
+        const dropdown = document.getElementById('workstation-dropdown');
+        if (dropdown && !dropdown.contains(event.target as Node)) {
+          setIsDropdownOpen(false);
+        }
+      }
+      if (isProcedureDropdownOpen) {
+        const dropdown = document.getElementById('procedure-dropdown');
+        if (dropdown && !dropdown.contains(event.target as Node)) {
+          setIsProcedureDropdownOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isDropdownOpen, isProcedureDropdownOpen]);
 
   useEffect(() => {
     if (formData.lab_id) {
@@ -304,94 +328,10 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({ report, onSucce
           </div>
         </div>
 
-        {/* Workstations Section */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Workstation Status</h3>
-            {workstations.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  const allChecked = workstations.every(ws => ws.checked);
-                  const updatedWorkstations = workstations.map(ws => ({
-                    ...ws,
-                    checked: !allChecked
-                  }));
-                  setWorkstations(updatedWorkstations);
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                {workstations.every(ws => ws.checked) ? 'Deselect All' : 'Select All'}
-              </button>
-            )}
-          </div>
-          <div className="space-y-3">
-            {workstations.map((workstation) => (
-              <div key={workstation.workstation_id} className="border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={workstation.checked || false}
-                      onChange={(e) => {
-                        const updatedWorkstations = workstations.map(ws =>
-                          ws.workstation_id === workstation.workstation_id
-                            ? { ...ws, checked: e.target.checked }
-                            : ws
-                        );
-                        setWorkstations(updatedWorkstations);
-                      }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="font-medium text-gray-900">{workstation.workstation_name}</span>
-                  </div>
-                  {workstation.checked && (
-                    <select
-                      value={workstation.status || 'Working'}
-                      onChange={(e) => {
-                        const updatedWorkstations = workstations.map(ws =>
-                          ws.workstation_id === workstation.workstation_id
-                            ? { ...ws, status: e.target.value }
-                            : ws
-                        );
-                        setWorkstations(updatedWorkstations);
-                      }}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Working">Working</option>
-                      <option value="Not Working">Not Working</option>
-                      <option value="Needs Maintenance">Needs Maintenance</option>
-                    </select>
-                  )}
-                </div>
-                {workstation.checked && (
-                  <input
-                    type="text"
-                    placeholder="Add remarks (optional)"
-                    value={workstation.remarks || ''}
-                    onChange={(e) => {
-                      const updatedWorkstations = workstations.map(ws =>
-                        ws.workstation_id === workstation.workstation_id
-                              ? { ...ws, remarks: e.target.value }
-                              : ws
-                      );
-                      setWorkstations(updatedWorkstations);
-                    }}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                )}
-              </div>
-            ))}
-            {workstations.length === 0 && (
-              <p className="text-gray-500 text-sm">No workstations available for this laboratory</p>
-            )}
-          </div>
-        </div>
-
         {/* Procedures Section */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Workstation Procedures</h3>
+            <h3 className="text-lg font-medium text-gray-900">Procedures</h3>
             {procedures.length > 0 && (
               <button
                 type="button"
@@ -409,31 +349,197 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({ report, onSucce
               </button>
             )}
           </div>
-          <div className="space-y-3">
-            {procedures.map((procedure) => (
-              <div key={procedure.procedure_id} className="bg-white rounded border border-gray-200 p-3">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={procedure.overall_status === 'Completed'}
-                    onChange={(e) => {
-                      const updatedProcedures = procedures.map(proc =>
-                        proc.procedure_id === procedure.procedure_id
-                          ? { ...proc, overall_status: e.target.checked ? 'Completed' : 'Pending' }
-                          : proc
-                      );
-                      setProcedures(updatedProcedures);
-                    }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <span className="text-sm font-medium text-gray-900">{procedure.procedure_name}</span>
+          <div className="space-y-4">
+            {/* Custom Procedure Dropdown */}
+            <div className="relative" id="procedure-dropdown">
+              <button
+                type="button"
+                onClick={() => setIsProcedureDropdownOpen(!isProcedureDropdownOpen)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
+              >
+                <span className="text-gray-500">
+                  {procedures.filter(proc => proc.overall_status === 'Completed').length > 0 
+                    ? `${procedures.filter(proc => proc.overall_status === 'Completed').length} procedures selected`
+                    : 'Select procedures...'
+                  }
+                </span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {isProcedureDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {procedures.filter(proc => proc.overall_status !== 'Completed').map((procedure) => (
+                    <button
+                      key={procedure.procedure_id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
+                        const updatedProcedures = procedures.map(proc =>
+                          proc.procedure_id === procedure.procedure_id
+                            ? { ...proc, overall_status: 'Completed' }
+                            : proc
+                        );
+                        setProcedures(updatedProcedures);
+                        // Don't close the dropdown
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                    >
+                      {procedure.procedure_name}
+                    </button>
+                  ))}
+                  {procedures.filter(proc => proc.overall_status !== 'Completed').length === 0 && (
+                    <div className="px-3 py-2 text-gray-500 text-sm">
+                      All procedures selected
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
+
+            {/* Selected Procedures */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Selected Procedures:</h4>
+              <div className="flex flex-wrap gap-2">
+                {procedures.filter(proc => proc.overall_status === 'Completed').map((procedure) => (
+                  <div
+                    key={procedure.procedure_id}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 border border-green-300 rounded-full"
+                  >
+                    <span className="text-sm font-medium text-green-800">{procedure.procedure_name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedProcedures = procedures.map(proc =>
+                          proc.procedure_id === procedure.procedure_id
+                            ? { ...proc, overall_status: 'Pending' }
+                            : proc
+                        );
+                        setProcedures(updatedProcedures);
+                      }}
+                      className="text-green-600 hover:text-green-800 font-bold text-lg leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {procedures.filter(proc => proc.overall_status === 'Completed').length === 0 && (
+                  <p className="text-sm text-gray-500 italic">No procedures selected</p>
+                )}
               </div>
-            ))}
-            {procedures.length === 0 && (
-              <p className="text-gray-500 text-sm">No procedures available</p>
+            </div>
+          </div>
+          {procedures.length === 0 && (
+            <p className="text-gray-500 text-sm">No procedures available for this laboratory</p>
+          )}
+        </div>
+
+        {/* Workstations Section */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-900">Workstations</h3>
+            {workstations.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const allChecked = workstations.every(ws => ws.checked);
+                  const updatedWorkstations = workstations.map(ws => ({
+                    ...ws,
+                    checked: !allChecked
+                  }));
+                  setWorkstations(updatedWorkstations);
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {workstations.every(ws => ws.checked) ? 'Deselect All' : 'Select All'}
+              </button>
             )}
           </div>
+          <div className="space-y-4">
+            {/* Custom Workstation Dropdown */}
+            <div className="relative" id="workstation-dropdown">
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
+              >
+                <span className="text-gray-500">
+                  {workstations.filter(ws => ws.checked).length > 0 
+                    ? `${workstations.filter(ws => ws.checked).length} workstations selected`
+                    : 'Select workstations...'
+                  }
+                </span>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {workstations.filter(ws => !ws.checked).map((workstation) => (
+                    <button
+                      key={workstation.workstation_id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent event bubbling
+                        const updatedWorkstations = workstations.map(ws =>
+                          ws.workstation_id === workstation.workstation_id
+                            ? { ...ws, checked: true }
+                            : ws
+                        );
+                        setWorkstations(updatedWorkstations);
+                        // Don't close the dropdown
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                    >
+                      {workstation.workstation_name}
+                    </button>
+                  ))}
+                  {workstations.filter(ws => !ws.checked).length === 0 && (
+                    <div className="px-3 py-2 text-gray-500 text-sm">
+                      All workstations selected
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Workstations */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Selected Workstations:</h4>
+              <div className="flex flex-wrap gap-2">
+                {workstations.filter(ws => ws.checked).map((workstation) => (
+                  <div
+                    key={workstation.workstation_id}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border border-blue-300 rounded-full"
+                  >
+                    <span className="text-sm font-medium text-blue-800">{workstation.workstation_name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedWorkstations = workstations.map(ws =>
+                          ws.workstation_id === workstation.workstation_id
+                            ? { ...ws, checked: false }
+                            : ws
+                        );
+                        setWorkstations(updatedWorkstations);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {workstations.filter(ws => ws.checked).length === 0 && (
+                  <p className="text-sm text-gray-500 italic">No workstations selected</p>
+                )}
+              </div>
+            </div>
+          </div>
+          {workstations.length === 0 && (
+            <p className="text-gray-500 text-sm">No workstations available for this laboratory</p>
+          )}
         </div>
 
         {/* Remarks Section */}

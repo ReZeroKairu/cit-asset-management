@@ -63,19 +63,6 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
     }
   };
 
-  const getWorkstationStatusColor = (status: string) => {
-    switch (status) {
-      case 'Working':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Not Working':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'Needs Maintenance':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto border-2 border-gray-200 shadow-2xl">
@@ -197,40 +184,6 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
             </div>
           )}
 
-          {/* Workstations */}
-          {report.workstation_items && report.workstation_items.length > 0 && (
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-lg border border-emerald-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Workstation Status
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {report.workstation_items.map((workstation, index) => (
-                  <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center">
-                        <svg className="w-5 h-5 text-emerald-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <h4 className="font-semibold text-gray-900">{workstation.workstation_name}</h4>
-                      </div>
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${getWorkstationStatusColor(workstation.status)}`}>
-                        {workstation.status}
-                      </span>
-                    </div>
-                    {workstation.remarks && (
-                      <div className="p-2 bg-gray-50 rounded text-sm text-gray-600">
-                        <span className="font-medium">Notes:</span> {workstation.remarks}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Procedures */}
           {report.procedures && report.procedures.length > 0 && (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
@@ -276,6 +229,37 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
                     {proc.overall_remarks && (
                       <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600">
                         <span className="font-medium">Notes:</span> {proc.overall_remarks}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Workstations */}
+          {report.workstation_items && report.workstation_items.length > 0 && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-lg border border-emerald-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Workstation Status
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {report.workstation_items.map((workstation, index) => (
+                  <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-emerald-100">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-emerald-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <h4 className="font-semibold text-gray-900">{workstation.workstation_name}</h4>
+                      </div>
+                    </div>
+                    {workstation.remarks && (
+                      <div className="p-2 bg-gray-50 rounded text-sm text-gray-600">
+                        <span className="font-medium">Notes:</span> {workstation.remarks}
                       </div>
                     )}
                   </div>

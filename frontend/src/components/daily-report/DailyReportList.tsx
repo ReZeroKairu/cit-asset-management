@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { getAllDailyReports, getMyDailyReports, updateDailyReport, getDailyReportById } from "../../api/dailyReports";
+import { getAllDailyReports, getMyDailyReports, getDailyReportById } from "../../api/dailyReports";
 import type { DailyReport } from '../../api/dailyReports';
 import DailyReportFormTab from './DailyReportFormTab';
 import DailyReportViewModal from './DailyReportViewModal';
+import DailyAccomplishmentReport from '../reports/DailyAccomplishmentReport';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
+import { FileText } from 'lucide-react';
 
 interface DailyReportListProps {
   viewMode?: 'my' | 'all';
@@ -18,9 +19,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [editingReport, setEditingReport] = useState<DailyReport | undefined>();
-  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [viewingReport, setViewingReport] = useState<DailyReport | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [showDARModal, setShowDARModal] = useState(false);
   const [filters, setFilters] = useState({
     status: 'Pending',
     start_date: '',
@@ -33,25 +34,14 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     loadReports();
   }, [viewMode, filters]);
 
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (activeDropdown !== null) {
-        setActiveDropdown(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [activeDropdown]);
-
   const loadReports = async () => {
     try {
       setLoading(true);
       
       const data = viewMode === 'my' ? await getMyDailyReports() : await getAllDailyReports();
       setReports(data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load reports');
+    } catch (_err: any) {
+      setError(_err.response?.data?.error || 'Failed to load reports');
     } finally {
       setLoading(false);
     }
@@ -78,7 +68,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     getDailyReportById(report.report_id).then(detailedReport => {
       setViewingReport(detailedReport);
       setIsViewModalOpen(true);
-    }).catch(err => {
+    }).catch(_err => {
       setError('Failed to load report details');
     });
   };
@@ -147,15 +137,6 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     return matchesFilter;
   });
 
-  const handleStatusUpdate = async (reportId: number, newStatus: string) => {
-    try {
-      await updateDailyReport(reportId, { status: newStatus });
-      loadReports();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update report status');
-    }
-  };
-
   // Show detail view if a report is selected
   if (isViewModalOpen && viewingReport) {
     return (
@@ -210,14 +191,23 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
               }
             </p>
           </div>
-          {!adminMode && (
+          <div className="flex items-center gap-3">
+            {!adminMode && (
+              <Button
+                onClick={() => setActiveTab('create')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Create New Report
+              </Button>
+            )}
             <Button
-              onClick={() => setActiveTab('create')}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => setShowDARModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
             >
-              Create New Report
+              <FileText className="w-4 h-4" />
+              Generate DAR Report
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -393,6 +383,12 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
           </div>
         )}
       </div>
+
+      {/* Daily Accomplishment Report Modal */}
+      <DailyAccomplishmentReport 
+        show={showDARModal} 
+        onClose={() => setShowDARModal(false)} 
+      />
     </div>
   );
 };

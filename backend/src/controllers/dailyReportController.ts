@@ -141,8 +141,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
     const {
       lab_id,
       report_date,
-      time_in,
-      time_out,
       general_remarks,
       checklist_items
     } = req.body;
@@ -185,8 +183,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
         user_id,
         lab_id,
         report_date: new Date(report_date),
-        time_in: time_in ? new Date(`1970-01-01T${time_in}`) : null,
-        time_out: time_out ? new Date(`1970-01-01T${time_out}`) : null,
         general_remarks,
         status: 'Pending'
       },
@@ -228,8 +224,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
     const { id } = req.params;
     const reportId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
     const {
-      time_in,
-      time_out,
       general_remarks,
       status,
       checklist_items
@@ -266,8 +260,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
     const updatedReport = await prisma.daily_reports.update({
       where: { report_id: reportId },
       data: {
-        time_in: time_in ? new Date(`1970-01-01T${time_in}`) : existingReport.time_in,
-        time_out: time_out ? new Date(`1970-01-01T${time_out}`) : existingReport.time_out,
         general_remarks: general_remarks !== undefined ? general_remarks : existingReport.general_remarks,
         status: status || existingReport.status
       },

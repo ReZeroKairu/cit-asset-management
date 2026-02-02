@@ -91,42 +91,6 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
               </div>
             </div>
 
-            {/* Workstations */}
-            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                💻 Workstations ({report.workstation_items?.length || 0})
-              </h3>
-              {report.workstation_items && report.workstation_items.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {report.workstation_items.map((workstation, index) => (
-                    <div key={index} className="bg-white p-3 rounded border border-emerald-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-900">{workstation.workstation?.workstation_name || workstation.workstation_name}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                          workstation.status === 'Working' 
-                            ? 'bg-green-100 text-green-800'
-                            : workstation.status === 'Not Working'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-orange-100 text-orange-800'
-                        }`}>
-                          {workstation.status}
-                        </span>
-                      </div>
-                      {workstation.remarks && (
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">Notes:</span> {workstation.remarks}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 bg-white rounded border border-emerald-100">
-                  <p className="text-gray-500">No workstations reported</p>
-                </div>
-              )}
-            </div>
-
             {/* Procedures */}
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -157,6 +121,33 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
               ) : (
                 <div className="text-center py-4 bg-white rounded border border-purple-100">
                   <p className="text-gray-500">No procedures reported</p>
+                </div>
+              )}
+            </div>
+
+            {/* Workstations */}
+            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                💻 Workstations ({report.workstation_items?.length || 0})
+              </h3>
+              {report.workstation_items && report.workstation_items.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {report.workstation_items.map((workstation, index) => (
+                    <div key={index} className="bg-white p-3 rounded border border-emerald-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-900">{workstation.workstation?.workstation_name || workstation.workstation_name}</span>
+                      </div>
+                      {workstation.remarks && (
+                        <div className="text-sm text-gray-600">
+                          <span className="font-medium">Notes:</span> {workstation.remarks}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 bg-white rounded border border-emerald-100">
+                  <p className="text-gray-500">No workstations reported</p>
                 </div>
               )}
             </div>
