@@ -41,7 +41,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
   const loadAvailableReports = async () => {
     try {
-      const response = await api.get("/daily-reports");
+      let response;
+      // Admin can see all reports, custodians only see their lab's reports
+      if (user?.role === 'Admin') {
+        response = await api.get("/daily-reports");
+      } else {
+        // For custodians, only get reports from their assigned lab
+        response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
+      }
       setAvailableReports(response.data);
     } catch (error) {
       console.error("Failed to load available reports:", error);
@@ -53,6 +60,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
       setLoading(true);
       const response = await api.get(`/daily-reports/${id}`);
       const report = response.data;
+      
+      // Security check: Custodians can only access reports from their own lab
+      if (user?.role !== 'Admin' && report.lab_id !== user?.lab_id) {
+        throw new Error("Access denied: You can only access reports from your assigned laboratory");
+      }
       
       // Get lab info to find who assigned the custodian
       const labResponse = await api.get(`/laboratories/${report.lab_id}`);
@@ -70,8 +82,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
       
       setReportData({
         lab_name: report.laboratories?.lab_name || "Unknown Lab",
-        custodian_name: report.users?.full_name || user?.name || "Unknown",
-        noted_by: labData.in_charge?.full_name || "Dr. Marco Marvin L. Rado",
+        lab_id: report.lab_id, // Add lab_id for template selection
+        custodian_name: report.users?.full_name?.toUpperCase() || user?.name?.toUpperCase() || "UNKNOWN",
+        noted_by: "DR. MARCO MARVIN L. RADO",
         general_remarks: report.general_remarks || "",
         workstations: processedWorkstations,
         procedures: report.procedures || [], // Add procedures data
@@ -100,14 +113,23 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     try {
       console.log("Original reportData:", reportData);
       
+      // Determine template based on lab_id
+      let templateFile = "/DAR_Template_Final.docx"; // default template
+      if (reportData.lab_id === 2) {
+        templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
+      } else if (reportData.lab_id === 1) {
+        templateFile = "/LAB1_Template.docx"; // Lab 1 template (you'll need to create this)
+      }
+      // Add more lab-specific templates as needed
+      
       // Map the report data to template format
       const templateData = mapReportDataToTemplate(reportData);
       console.log("Final templateData:", templateData);
       
       await generateTemplateReport(
-        "/DAR_Template_Final.docx",
+        templateFile,
         templateData,
-        `Daily_Accomplishment_Report_${reportData.report_id}_${new Date(reportData.report_date).toISOString().split("T")[0]}.docx`,
+        `Daily_Accomplishment_Report_Lab${reportData.lab_id}_${reportData.report_id}_${new Date(reportData.report_date).toISOString().split("T")[0]}.docx`,
       );
     } catch (error) {
       console.error("Download failed:", error);
@@ -142,8 +164,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         // Map the report data to template format
         const templateData = mapReportDataToTemplate({
           lab_name: detailedReport.laboratories?.lab_name || "Unknown Lab",
-          custodian_name: detailedReport.users?.full_name || "Unknown",
-          noted_by: labData.in_charge?.full_name || "Dr. Marco Marvin L. Rado",
+          custodian_name: detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
+          noted_by: "DR. MARCO MARVIN L. RADO",
           general_remarks: detailedReport.general_remarks || "",
           workstations: processedWorkstations,
           procedures: detailedReport.procedures || [], // Include procedures
@@ -152,10 +174,19 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
           report_date: detailedReport.report_date // Add report date
         });
 
+        // Determine template based on lab_id
+        let templateFile = "/DAR_Template_Final.docx"; // default template
+        if (detailedReport.lab_id === 2) {
+          templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
+        } else if (detailedReport.lab_id === 1) {
+          templateFile = "/LAB1_Template.docx"; // Lab 1 template (you'll need to create this)
+        }
+        // Add more lab-specific templates as needed
+
         await generateTemplateReport(
-          "/DAR_Template_Final.docx",
+          templateFile,
           templateData,
-          `Daily_Accomplishment_Report_${detailedReport.report_id}_${new Date(detailedReport.report_date).toISOString().split("T")[0]}.docx`,
+          `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${new Date(detailedReport.report_date).toISOString().split("T")[0]}.docx`,
         );
       }
       alert(`Successfully generated ${availableReports.length} reports!`);

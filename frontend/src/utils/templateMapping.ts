@@ -1,33 +1,7 @@
 // Template mapping for Daily Accomplishment Report
 export const mapReportDataToTemplate = (reportData: any) => {
   console.log("Input reportData:", reportData);
-  
-  // Use the report's creation date for current_datetime
-  let formattedDateTime = "";
-  try {
-    // Try to use created_at first, then report_date as fallback
-    const dateSource = reportData.created_at || reportData.report_date;
-    console.log("Using date source:", dateSource);
-    
-    if (dateSource) {
-      const date = new Date(dateSource);
-      console.log("Created date object:", date);
-      console.log("Date isValid:", !isNaN(date.getTime()));
-      
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date");
-      }
-      formattedDateTime = date.toLocaleString();
-      console.log("Formatted datetime:", formattedDateTime);
-    } else {
-      // Fallback to current date/time
-      formattedDateTime = new Date().toLocaleString();
-      console.log("Using fallback datetime:", formattedDateTime);
-    }
-  } catch (error) {
-    console.error("Date formatting error:", error);
-    formattedDateTime = new Date().toLocaleString(); // Fallback
-  }
+
   // Map procedures to checkmarks
   const procedureChecks = {
     hardware_checks: false,
@@ -68,31 +42,9 @@ export const mapReportDataToTemplate = (reportData: any) => {
     });
   }
 
-  // Combine all workstation remarks with commas
-  const workstationRemarks = reportData.workstations?.map((ws: any) => {
-    const remark = ws.remarks?.trim();
-    return remark ? `${ws.workstation_name}: ${remark}` : null;
-  }).filter(Boolean).join(', ') || '';
-
-  // Map workstations to X marks
-  const workstationMarks: any = {};
-  console.log("Processing workstations:", reportData.workstations);
-  
-  if (reportData.workstations) {
-    reportData.workstations.forEach((ws: any) => {
-      console.log("Processing workstation:", ws);
-      // Extract workstation number from name (e.g., "WS-PC1" -> "PC1")
-      const wsNumber = ws.workstation_name.replace('WS-', '');
-      console.log("Workstation number:", wsNumber);
-      workstationMarks[`workstation_${wsNumber}`] = 'X'; // Place X for each workstation
-    });
-  }
-  console.log("Workstation marks:", workstationMarks);
-
   return {
     // Basic info
     lab_name: reportData.lab_name,
-    current_datetime: formattedDateTime,
     custodian_name: reportData.custodian_name,
     noted_by: reportData.noted_by,
     general_remarks: reportData.general_remarks || "",
@@ -105,15 +57,6 @@ export const mapReportDataToTemplate = (reportData: any) => {
     user_management: procedureChecks.user_management ? "☑" : "☐",
     security_safety: procedureChecks.security_safety ? "☑" : "☐",
     end_day_checks: procedureChecks.end_day_checks ? "☑" : "☐",
-    
-    // Workstation X marks
-    ...workstationMarks,
-    
-    // Combined workstation remarks
-    workstation_remarks: workstationRemarks,
-    
-    // General remarks for Action Taken section
-    remarks_here: reportData.general_remarks || "",
     
     // Keep original data for reference
     original_workstations: reportData.workstations || [],

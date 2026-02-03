@@ -9,10 +9,39 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
   try {
     const { lab_id, user_id, status, start_date, end_date, exclude_status } = req.query;
     
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
     const where: any = {};
     
-    if (lab_id) where.lab_id = parseInt(lab_id as string);
-    if (user_id) where.user_id = parseInt(user_id as string);
+    // Role-based filtering
+    if (userRole === 'Admin') {
+      // Admin can see all reports, can apply additional filters
+      if (lab_id) where.lab_id = parseInt(lab_id as string);
+      if (user_id) where.user_id = parseInt(user_id as string);
+    } else {
+      // Custodians can only see reports from their assigned lab
+      where.lab_id = userLabId;
+      
+      // Additional filtering for custodians (only if they match their own lab)
+      if (lab_id && parseInt(lab_id as string) !== userLabId) {
+        return res.status(403).json({ error: "You can only access reports from your assigned laboratory" });
+      }
+    }
+    
     if (status) where.status = Array.isArray(status) ? status[0] : status;
     if (exclude_status) where.status = { not: String(exclude_status) };
     if (start_date && end_date) {
@@ -48,6 +77,22 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
 export const getDailyReportById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
     
     const reportId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
     
@@ -86,6 +131,11 @@ export const getDailyReportById = async (req: Request, res: Response) => {
 
     if (!report) {
       return res.status(404).json({ error: "Daily report not found" });
+    }
+
+    // Security check: Custodians can only access reports from their own lab
+    if (userRole !== 'Admin' && report.lab_id !== userLabId) {
+      return res.status(403).json({ error: "Access denied: You can only access reports from your assigned laboratory" });
     }
 
     // Format the response to match frontend expectations
