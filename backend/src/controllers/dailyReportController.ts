@@ -4,15 +4,133 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// GET archived daily reports (approved reports only)
+export const getArchivedReports = async (req: Request, res: Response) => {
+  try {
+    const { start_date, end_date, page = 1, limit = 10 } = req.query;
+    
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
+    const where: any = {
+      status: 'Approved' // Only approved reports
+    };
+    
+    // Role-based filtering
+    if (userRole === 'Custodian') {
+      // Custodians can only see reports from their assigned lab
+      where.lab_id = userLabId;
+    }
+    // Admin can see all approved reports
+    
+    if (start_date && end_date) {
+      const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
+      const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;
+      where.report_date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      };
+    }
+
+    // Parse pagination parameters
+    const pageStr = Array.isArray(page) ? page[0] : page;
+    const limitStr = Array.isArray(limit) ? limit[0] : limit;
+    const pageNum = parseInt(String(pageStr || '1'));
+    const limitNum = parseInt(String(limitStr || '10'));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalCount = await prisma.daily_reports.count({ where });
+
+    // Get paginated reports
+    const reports = await prisma.daily_reports.findMany({
+      where,
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      skip,
+      take: limitNum
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPreviousPage = pageNum > 1;
+
+    res.json({
+      reports,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPreviousPage
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching archived reports:", error);
+    res.status(500).json({ error: "Failed to fetch archived reports" });
+  }
+};
+
 // GET all daily reports (with filtering options)
 export const getAllDailyReports = async (req: Request, res: Response) => {
   try {
     const { lab_id, user_id, status, start_date, end_date, exclude_status } = req.query;
     
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
     const where: any = {};
     
-    if (lab_id) where.lab_id = parseInt(lab_id as string);
-    if (user_id) where.user_id = parseInt(user_id as string);
+    // Role-based filtering
+    if (userRole === 'Admin') {
+      // Admin can see all reports, can apply additional filters
+      if (lab_id) where.lab_id = parseInt(lab_id as string);
+      if (user_id) where.user_id = parseInt(user_id as string);
+    } else {
+      // Custodians can only see reports from their assigned lab
+      where.lab_id = userLabId;
+      
+      // Additional filtering for custodians (only if they match their own lab)
+      if (lab_id && parseInt(lab_id as string) !== userLabId) {
+        return res.status(403).json({ error: "You can only access reports from your assigned laboratory" });
+      }
+    }
+    
     if (status) where.status = Array.isArray(status) ? status[0] : status;
     if (exclude_status) where.status = { not: String(exclude_status) };
     if (start_date && end_date) {
@@ -32,11 +150,6 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       },
       orderBy: { report_date: 'desc' }
@@ -54,6 +167,22 @@ export const getDailyReportById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
     const reportId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
     
     const report = await prisma.daily_reports.findUnique({
@@ -65,9 +194,25 @@ export const getDailyReportById = async (req: Request, res: Response) => {
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
         },
-        report_checklist_items: {
+        report_workstation_items: {
           include: {
-            standard_tasks: true
+            workstations: {
+              select: { workstation_id: true, workstation_name: true }
+            }
+          }
+        },
+        daily_report_procedures: {
+          include: {
+            procedures: {
+              include: {
+                procedure_checklists: true
+              }
+            },
+            daily_report_checklist_responses: {
+              include: {
+                procedure_checklists: true
+              }
+            }
           }
         }
       }
@@ -77,7 +222,52 @@ export const getDailyReportById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Daily report not found" });
     }
 
-    res.json(report);
+    // Security check: Custodians can only access reports from their own lab
+    if (userRole !== 'Admin' && report.lab_id !== userLabId) {
+      return res.status(403).json({ error: "Access denied: You can only access reports from your assigned laboratory" });
+    }
+
+    // Format the response to match frontend expectations
+    const formattedReport = {
+      ...report,
+      workstation_items: (report as any).report_workstation_items.map((item: any) => ({
+        workstation_id: item.workstation_id,
+        workstation_name: item.workstations?.workstation_name || 'Unknown',
+        status: item.status,
+        remarks: item.remarks,
+        workstation: item.workstations
+      })),
+      procedures: (report as any).daily_report_procedures.map((rp: any) => {
+        const procedure = rp.procedures;
+        const responses = rp.daily_report_checklist_responses;
+
+        // Attach responses to the corresponding checklists
+        const checklistsWithResponses = procedure.procedure_checklists.map((checklist: any) => {
+          const response = responses.find((r: any) => r.checklist_id === checklist.checklist_id);
+          return {
+            checklist_id: checklist.checklist_id,
+            checklist_name: checklist.checklist_name,
+            status: response?.status || 'Pending',
+            remarks: response?.remarks || null,
+            response_id: response?.response_id || null
+          };
+        });
+
+        return {
+          procedure_id: procedure.procedure_id,
+          procedure_name: procedure.procedure_name,
+          overall_status: rp.overall_status,
+          overall_remarks: rp.overall_remarks,
+          checklists: checklistsWithResponses
+        };
+      })
+    };
+
+    // Remove the original nested data to avoid confusion
+    delete (formattedReport as any).report_workstation_items;
+    delete (formattedReport as any).daily_report_procedures;
+
+    res.json(formattedReport);
   } catch (error) {
     console.error("Error fetching daily report:", error);
     res.status(500).json({ error: "Failed to fetch daily report" });
@@ -90,8 +280,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
     const {
       lab_id,
       report_date,
-      time_in,
-      time_out,
       general_remarks,
       checklist_items
     } = req.body;
@@ -134,8 +322,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
         user_id,
         lab_id,
         report_date: new Date(report_date),
-        time_in: time_in ? new Date(`1970-01-01T${time_in}`) : null,
-        time_out: time_out ? new Date(`1970-01-01T${time_out}`) : null,
         general_remarks,
         status: 'Pending'
       },
@@ -149,21 +335,9 @@ export const createDailyReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Create checklist items if provided
-    if (checklist_items && checklist_items.length > 0) {
-      const checklistData = checklist_items.map((item: any) => ({
-        report_id: newReport.report_id,
-        task_id: item.task_id,
-        task_status: item.task_status || 'Done',
-        specific_remarks: item.specific_remarks || null
-      }));
+    // Create checklist items if provided (removed since we no longer use standard tasks)
 
-      await prisma.report_checklist_items.createMany({
-        data: checklistData
-      });
-    }
-
-    // Fetch the complete report with checklist items
+    // Fetch the complete report
     const completeReport = await prisma.daily_reports.findUnique({
       where: { report_id: newReport.report_id },
       include: {
@@ -172,11 +346,6 @@ export const createDailyReport = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       }
     });
@@ -194,8 +363,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
     const { id } = req.params;
     const reportId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
     const {
-      time_in,
-      time_out,
       general_remarks,
       status,
       checklist_items
@@ -232,8 +399,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
     const updatedReport = await prisma.daily_reports.update({
       where: { report_id: reportId },
       data: {
-        time_in: time_in ? new Date(`1970-01-01T${time_in}`) : existingReport.time_in,
-        time_out: time_out ? new Date(`1970-01-01T${time_out}`) : existingReport.time_out,
         general_remarks: general_remarks !== undefined ? general_remarks : existingReport.general_remarks,
         status: status || existingReport.status
       },
@@ -247,25 +412,7 @@ export const updateDailyReport = async (req: Request, res: Response) => {
       }
     });
 
-    // Update checklist items if provided
-    if (checklist_items && checklist_items.length > 0) {
-      // Delete existing checklist items
-      await prisma.report_checklist_items.deleteMany({
-        where: { report_id: reportId }
-      });
-
-      // Create new checklist items
-      const checklistData = checklist_items.map((item: any) => ({
-        report_id: reportId,
-        task_id: item.task_id,
-        task_status: item.task_status || 'Done',
-        specific_remarks: item.specific_remarks || null
-      }));
-
-      await prisma.report_checklist_items.createMany({
-        data: checklistData
-      });
-    }
+    // Update checklist items if provided (removed since we no longer use standard tasks)
 
     // Fetch the complete updated report
     const completeReport = await prisma.daily_reports.findUnique({
@@ -276,11 +423,6 @@ export const updateDailyReport = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       }
     });
@@ -327,11 +469,29 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User authentication required" });
     }
 
-    const { status, start_date, end_date } = req.query;
+    const { status, start_date, end_date, exclude_status } = req.query;
     
-    const where: any = { user_id };
+    // Get user's lab assignment for proper filtering
+    const user = await prisma.users.findUnique({
+      where: { user_id },
+      select: { lab_id: true }
+    });
     
-    if (status) where.status = Array.isArray(status) ? status[0] : status;
+    const where: any = { lab_id: user?.lab_id };
+    
+    // Exclude approved reports by default (they go to archived)
+    if (exclude_status) {
+      where.status = { not: String(exclude_status) };
+    } else {
+      // Default to excluding approved reports
+      where.status = { not: 'Approved' };
+    }
+    
+    // Allow status override if explicitly provided
+    if (status) {
+      where.status = Array.isArray(status) ? status[0] : status;
+    }
+    
     if (start_date && end_date) {
       const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
       const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;
@@ -349,11 +509,6 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_checklist_items: {
-          include: {
-            standard_tasks: true
-          }
         }
       },
       orderBy: { report_date: 'desc' }

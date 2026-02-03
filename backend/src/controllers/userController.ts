@@ -5,22 +5,25 @@ import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// GET: Get current user's assigned laboratory
-export const getUserAssignedLab = async (req: Request, res: Response) => {
+// GET: Get current user profile
+export const getUserProfile = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
 
-    console.log("getUserAssignedLab called - userId:", userId);
-
     if (!userId) {
-      console.log("ERROR: No userId in request");
       return res.status(401).json({ error: "User authentication required" });
     }
 
     const user = await prisma.users.findUnique({
       where: { user_id: userId },
-      include: {
-        assigned_lab: {
+      select: {
+        user_id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        lab_id: true,
+        created_at: true,
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -30,23 +33,65 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
       },
     });
 
-    console.log("Database result:", {
-      user_id: user?.user_id,
-      lab_id: user?.lab_id,
-      assigned_lab: user?.assigned_lab,
-    });
-
     if (!user) {
-      console.log("ERROR: User not found");
       return res.status(404).json({ error: "User not found" });
     }
 
-    const response = {
-      assigned_lab: user.assigned_lab,
-      has_lab: !!user.assigned_lab,
+    // Transform the data to match frontend expectations
+    const userProfile = {
+      id: user.user_id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      lab_id: user.lab_id,
+      laboratory: user.laboratories,
+      created_at: user.created_at
     };
 
-    console.log("Sending response:", response);
+    res.json(userProfile);
+  } catch (error) {
+    console.error("ERROR in getUserProfile:", error);
+    res.status(500).json({ error: "Failed to fetch user profile" });
+  }
+};
+
+// GET: Get current user's assigned laboratory
+export const getUserAssignedLab = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let assignedLab = null;
+    if (user.lab_id) {
+      assignedLab = await prisma.laboratories.findUnique({
+        where: { lab_id: user.lab_id },
+        select: {
+          lab_id: true,
+          lab_name: true,
+          location: true,
+        },
+      });
+    }
+
+    const response = {
+      assigned_lab: assignedLab,
+      has_lab: !!assignedLab,
+      // Also include the lab_id for compatibility
+      lab_id: user.lab_id,
+      laboratory: assignedLab
+    };
+
     res.json(response);
   } catch (error) {
     console.error("ERROR in getUserAssignedLab:", error);
@@ -61,21 +106,32 @@ export const getAllUsersWithAssignments = async (
 ) => {
   try {
     const users = await prisma.users.findMany({
-      include: {
-        assigned_lab: {
-          select: {
-            lab_id: true,
-            lab_name: true,
-            location: true,
-          },
-        },
-      },
       orderBy: {
         full_name: "asc",
       },
     });
 
-    res.json(users);
+    // Get all laboratories for reference
+    const laboratories = await prisma.laboratories.findMany({
+      select: {
+        lab_id: true,
+        lab_name: true,
+        location: true,
+      },
+    });
+
+    // Transform the data to match frontend expectations
+    const transformedUsers = users.map(user => {
+      const assignedLab = laboratories.find(lab => lab.lab_id === user.lab_id);
+      return {
+        ...user,
+        laboratories: assignedLab || null,
+        assigned_lab: assignedLab || null,
+        has_lab: !!assignedLab,
+      };
+    });
+
+    res.json(transformedUsers);
   } catch (error) {
     console.error("Error fetching users with assignments:", error);
     res.status(500).json({ error: "Failed to fetch users with assignments" });
@@ -106,7 +162,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
         where: { user_id: parseInt(userId) },
         data: { lab_id: null },
         include: {
-          assigned_lab: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -115,7 +171,15 @@ export const assignUserToLab = async (req: Request, res: Response) => {
           },
         },
       });
-      return res.json(updatedUser);
+      
+      // Transform the response to match frontend expectations
+      const transformedUser = {
+        ...updatedUser,
+        assigned_lab: updatedUser.laboratories,
+        has_lab: !!updatedUser.laboratories,
+      };
+      
+      return res.json(transformedUser);
     }
 
     // Verify lab exists
@@ -146,7 +210,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       where: { user_id: parseInt(userId) },
       data: { lab_id: parseInt(labId) },
       include: {
-        assigned_lab: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -156,7 +220,14 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       },
     });
 
-    res.json(updatedUser);
+    // Transform the response to match frontend expectations
+    const transformedUser = {
+      ...updatedUser,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
+    };
+
+    res.json(transformedUser);
   } catch (error) {
     console.error("Error assigning user to lab:", error);
     res.status(500).json({ error: "Failed to assign user to laboratory" });
@@ -202,7 +273,7 @@ export const updateUser = async (req: Request, res: Response) => {
         role: role || existingUser.role,
       },
       include: {
-        assigned_lab: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -212,7 +283,14 @@ export const updateUser = async (req: Request, res: Response) => {
       },
     });
 
-    res.json(updatedUser);
+    // Transform the response to match frontend expectations
+    const transformedUser = {
+      ...updatedUser,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
+    };
+
+    res.json(transformedUser);
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ error: "Failed to update user" });
@@ -281,7 +359,10 @@ export const createUser = async (req: Request, res: Response) => {
     if (existingUser)
       return res.status(400).json({ error: "Email already exists" });
 
-    // 2. Check if laboratory already has a custodian (if assigning to lab and role is Custodian)
+    // 2. Hash Password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Check if lab already has a custodian assigned (only for custodian role)
     if (lab_id && (role === "Custodian" || !role)) {
       const existingCustodian = await prisma.users.findFirst({
         where: {
@@ -297,9 +378,6 @@ export const createUser = async (req: Request, res: Response) => {
       }
     }
 
-    // 3. Hash Password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // 4. Create User and update laboratory in_charge_id in a single transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the user
@@ -310,6 +388,15 @@ export const createUser = async (req: Request, res: Response) => {
           password_hash: hashedPassword,
           role: role || "Custodian",
           lab_id: lab_id ? Number(lab_id) : null,
+        },
+        include: {
+          laboratories: {
+            select: {
+              lab_id: true,
+              lab_name: true,
+              location: true,
+            },
+          },
         },
       });
 
@@ -324,11 +411,18 @@ export const createUser = async (req: Request, res: Response) => {
       return newUser;
     });
 
-    // Exclude password from response
+    // Exclude password from response and transform for frontend
     const { password_hash, ...userWithoutPassword } = result;
+    
+    // Transform the response to match frontend expectations
+    const transformedUser = {
+      ...userWithoutPassword,
+      assigned_lab: result.laboratories || null,
+      has_lab: !!result.laboratories,
+    };
 
     res.status(201).json({
-      ...userWithoutPassword,
+      ...transformedUser,
       message:
         role === "Custodian" || !role
           ? "Custodian created and assigned as laboratory manager successfully"

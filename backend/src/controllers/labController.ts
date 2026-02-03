@@ -193,3 +193,64 @@ export const deleteLaboratory = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to delete laboratory" });
   }
 };
+
+// GET: Get single laboratory by ID
+export const getLaboratoryById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const labId = parseInt(Array.isArray(id) ? id[0] : id);
+
+    if (isNaN(labId)) {
+      return res.status(400).json({ error: "Invalid laboratory ID" });
+    }
+
+    const laboratory = await prisma.laboratories.findUnique({
+      where: { lab_id: labId },
+      include: {
+        users: {
+          select: {
+            user_id: true,
+            full_name: true,
+            email: true,
+            role: true,
+          },
+        },
+        departments: {
+          select: {
+            dept_id: true,
+            dept_name: true,
+          },
+        },
+      },
+    });
+
+    if (!laboratory) {
+      return res.status(404).json({ error: "Laboratory not found" });
+    }
+
+    // Get the in-charge user separately
+    let inCharge = null;
+    if (laboratory.in_charge_id) {
+      inCharge = await prisma.users.findUnique({
+        where: { user_id: laboratory.in_charge_id },
+        select: {
+          user_id: true,
+          full_name: true,
+          email: true,
+          role: true,
+        },
+      });
+    }
+
+    // Add in_charge to the response
+    const response = {
+      ...laboratory,
+      in_charge: inCharge,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching laboratory:", error);
+    res.status(500).json({ error: "Failed to fetch laboratory" });
+  }
+};

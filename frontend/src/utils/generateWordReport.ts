@@ -87,7 +87,7 @@ export const generateWorkstationReport = (workstations: Workstation[]) => {
                   ].map(
                     (text) =>
                       new TableCell({
-                        children: [new Paragraph({ text, bold: true })],
+                        children: [new Paragraph({ children: [new TextRun({ text, bold: true })] })],
                         shading: { fill: "E0E0E0" }, // Light gray background
                         borders: {
                           bottom: { style: BorderStyle.SINGLE, size: 2 },

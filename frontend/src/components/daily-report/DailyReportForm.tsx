@@ -21,6 +21,7 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
   const [assignedLab, setAssignedLab] = useState<any>(null);
   const [standardTasks, setStandardTasks] = useState<any[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
+  const [workstations, setWorkstations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,6 +32,12 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
       loadReportTasks(report.report_id);
     }
   }, []);
+
+  useEffect(() => {
+    if (formData.lab_id) {
+      loadWorkstations(formData.lab_id);
+    }
+  }, [formData.lab_id, report]);
 
   const loadStandardTasks = async () => {
     try {
@@ -47,6 +54,20 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
       setSelectedTasks(response.data.map((task: any) => task.task_id));
     } catch (err: any) {
       console.error('Failed to load report tasks:', err);
+    }
+  };
+
+  const loadWorkstations = async (labId: number) => {
+    try {
+      const response = await api.get('/lab-workstations', {
+        params: { 
+          lab_id: labId,
+          ...(report ? { reportId: report.report_id } : {})
+        }
+      });
+      setWorkstations(response.data);
+    } catch (err: any) {
+      console.error('Failed to load workstations:', err);
     }
   };
 
@@ -84,13 +105,32 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
 
     try {
       const submitData = {
-        ...formData
+        ...formData,
+        checklist_items: selectedTasks.map(taskId => ({
+          task_id: taskId,
+          task_status: 'Done' as const
+        }))
       };
 
+      let createdReport;
       if (report) {
         await updateDailyReport(report.report_id, submitData);
+        createdReport = { report_id: report.report_id };
       } else {
-        await createDailyReport(submitData);
+        createdReport = await createDailyReport(submitData);
+      }
+
+      // Save workstation data if any workstations are checked
+      const checkedWorkstations = workstations.filter(ws => ws.checked);
+      if (checkedWorkstations.length > 0) {
+        await api.post(`/daily-reports/${createdReport.report_id}/workstations`, {
+          reportId: createdReport.report_id,
+          workstations: checkedWorkstations.map(ws => ({
+            workstation_id: ws.workstation_id,
+            status: ws.status || 'Working',
+            remarks: ws.remarks || null
+          }))
+        });
       }
 
       onSuccess();
@@ -208,6 +248,72 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({ report, onSuccess, on
               ))}
               {standardTasks.length === 0 && (
                 <p className="text-gray-500 text-sm">No standard tasks available</p>
+              )}
+            </div>
+          </div>
+
+          {/* Workstations Section */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Workstation Status</h3>
+            <div className="space-y-3">
+              {workstations.map((workstation) => (
+                <div key={workstation.workstation_id} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={workstation.checked || false}
+                        onChange={(e) => {
+                          const updatedWorkstations = workstations.map(ws =>
+                            ws.workstation_id === workstation.workstation_id
+                              ? { ...ws, checked: e.target.checked }
+                              : ws
+                          );
+                          setWorkstations(updatedWorkstations);
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="font-medium text-gray-900">{workstation.workstation_name}</span>
+                    </div>
+                    {workstation.checked && (
+                      <select
+                        value={workstation.status || 'Working'}
+                        onChange={(e) => {
+                          const updatedWorkstations = workstations.map(ws =>
+                            ws.workstation_id === workstation.workstation_id
+                              ? { ...ws, status: e.target.value }
+                              : ws
+                          );
+                          setWorkstations(updatedWorkstations);
+                        }}
+                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Working">Working</option>
+                        <option value="Not Working">Not Working</option>
+                        <option value="Needs Maintenance">Needs Maintenance</option>
+                      </select>
+                    )}
+                  </div>
+                  {workstation.checked && (
+                    <input
+                      type="text"
+                      placeholder="Add remarks (optional)"
+                      value={workstation.remarks || ''}
+                      onChange={(e) => {
+                        const updatedWorkstations = workstations.map(ws =>
+                          ws.workstation_id === workstation.workstation_id
+                                ? { ...ws, remarks: e.target.value }
+                                : ws
+                        );
+                        setWorkstations(updatedWorkstations);
+                      }}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  )}
+                </div>
+              ))}
+              {workstations.length === 0 && (
+                <p className="text-gray-500 text-sm">No workstations available for this laboratory</p>
               )}
             </div>
           </div>

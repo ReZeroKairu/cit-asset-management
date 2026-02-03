@@ -21,6 +21,28 @@ export interface DailyReport {
     location?: string;
   };
   report_checklist_items?: ChecklistItem[];
+  workstation_items?: {
+    workstation_id: number;
+    workstation_name: string;
+    status: string;
+    remarks?: string;
+    workstation?: {
+      workstation_id: number;
+      workstation_name: string;
+    };
+  }[];
+  procedures?: {
+    procedure_id: number;
+    procedure_name: string;
+    overall_status: string;
+    overall_remarks?: string;
+    checklists?: {
+      checklist_id: number;
+      checklist_name: string;
+      status: string;
+      remarks?: string;
+    }[];
+  }[];
 }
 
 export interface ChecklistItem {
@@ -52,18 +74,16 @@ export interface Laboratory {
 export const getAllDailyReports = async (params?: {
   lab_id?: number;
   user_id?: number;
-  status?: string;
   start_date?: string;
   end_date?: string;
-  exclude_status?: string;
 }) => {
   const queryParams = new URLSearchParams();
   if (params?.lab_id) queryParams.append('lab_id', params.lab_id.toString());
   if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
-  if (params?.status) queryParams.append('status', params.status);
   if (params?.start_date) queryParams.append('start_date', params.start_date);
   if (params?.end_date) queryParams.append('end_date', params.end_date);
-  if (params?.exclude_status) queryParams.append('exclude_status', params.exclude_status);
+  // Always exclude approved reports - they go to archived
+  queryParams.append('exclude_status', 'Approved');
 
   const response = await api.get(`/daily-reports?${queryParams}`);
   return response.data;
@@ -75,16 +95,47 @@ export const getUserAssignedLab = async () => {
   return response.data;
 };
 
-// Get current user's daily reports
-export const getMyDailyReports = async (filters?: {
-  status?: string;
-  start_date?: string;
-  end_date?: string;
-}) => {
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface ArchivedReportsResponse {
+  reports: DailyReport[];
+  pagination: PaginationInfo;
+}
+
+// Get archived daily reports
+export const getArchivedReports = async (filters?: { 
+  start_date?: string; 
+  end_date?: string; 
+  page?: number; 
+  limit?: number;
+}): Promise<ArchivedReportsResponse> => {
   const params = new URLSearchParams();
-  if (filters?.status) params.append('status', filters.status);
   if (filters?.start_date) params.append('start_date', filters.start_date);
   if (filters?.end_date) params.append('end_date', filters.end_date);
+  if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.limit) params.append('limit', filters.limit.toString());
+  
+  const response = await api.get(`/daily-reports/archived?${params}`);
+  return response.data;
+};
+
+// Get current user's daily reports
+export const getMyDailyReports = async (filters?: {
+  start_date?: string;
+  end_date?: string;
+}): Promise<DailyReport[]> => {
+  const params = new URLSearchParams();
+  if (filters?.start_date) params.append('start_date', filters.start_date);
+  if (filters?.end_date) params.append('end_date', filters.end_date);
+  // Always exclude approved reports - they go to archived
+  params.append('exclude_status', 'Approved');
 
   const response = await api.get(`/daily-reports/my?${params}`);
   return response.data;

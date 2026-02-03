@@ -4,6 +4,8 @@ import LoginPage from "./pages/LoginPage";
 import InventoryPage from "./pages/InventoryPage";
 import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
+import AdminReportsPage from "./pages/AdminReportsPage";
+import ArchivedReportsPage from "./pages/ArchivedReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import MainLayout from "./components/layout/MainLayout";
@@ -84,7 +86,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
     );
   }
 
-  const { stats, userAssignedLab, userRole } = dashboardData;
+  const { stats, userAssignedLab, userRole, assetsByLab } = dashboardData;
   const isAdmin = userRole === "Admin";
 
   return (
@@ -101,7 +103,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? 'lg:grid-cols-2' : ''}`}>
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate("inventory")}
@@ -120,27 +122,29 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("labs")}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Laboratories</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalLaboratories}</p>
-                <p className="text-xs text-green-600 mt-1">Click to view labs →</p>
+        {isAdmin && (
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("labs")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Laboratories</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalLaboratories}</p>
+                  <p className="text-xs text-green-600 mt-1">Click to view labs →</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <Building className="w-6 h-6 text-green-600" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Building className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("reports")}
+          onClick={() => handleNavigate(isAdmin ? "admin-reports" : "reports")}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -156,35 +160,34 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        <Card 
-          className={`cursor-pointer hover:shadow-lg transition-shadow duration-200 ${
-            !isAdmin ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-          onClick={() => handleNavigate("user-management")}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Users</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-                <p className={`text-xs mt-1 ${isAdmin ? 'text-orange-600' : 'text-gray-400'}`}>
-                  {isAdmin ? 'Click to manage users →' : 'Admin only'}
-                </p>
+        {isAdmin && (
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("user-management")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Users</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                  <p className="text-xs text-orange-600 mt-1">Click to manage users →</p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Users className="w-6 h-6 text-orange-600" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <Users className={`w-6 h-6 ${isAdmin ? 'text-orange-600' : 'text-gray-400'}`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
     </div>
   );
 };
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "user-management" | "profile">(
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archived-reports" | "user-management" | "profile">(
     "home",
   );
 
@@ -224,6 +227,10 @@ function App() {
         />;
       case "reports":
         return <DailyReportsPage />;
+      case "admin-reports":
+        return <AdminReportsPage />;
+      case "archived-reports":
+        return <ArchivedReportsPage />;
       case "user-management":
         return <UserManagementPage 
           createUserData={createUserData}

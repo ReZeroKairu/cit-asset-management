@@ -6,7 +6,7 @@ import { saveAs } from "file-saver";
 const loadFile = async (url: string) => {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to load template: ${response.statusText}`);
+    throw new Error(`Failed to load template: ${response.statusText} (${response.status})`);
   }
   return await response.arrayBuffer();
 };
@@ -43,8 +43,9 @@ export const generateTemplateReport = async (
     saveAs(out, fileName);
   } catch (error) {
     console.error("Error generating document:", error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     alert(
-      "Could not generate report. Please ensure the template file exists in src/assets/.",
+      `Could not generate report. Please ensure the template file exists in the public folder. Error: ${errorMessage}`,
     );
   }
 };

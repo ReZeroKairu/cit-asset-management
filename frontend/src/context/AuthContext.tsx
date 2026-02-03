@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import api from "../api/axios";
 
 interface User {
   id: number;
@@ -13,6 +14,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -45,8 +47,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await api.get("/users/profile");
+      
+      const updatedUser = response.data;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      console.log("User data refreshed successfully:", updatedUser);
+    } catch (error: any) {
+      console.error("Failed to refresh user data:", error);
+      
+      // Only logout on authentication errors (401/403), not on server errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log("Authentication error, logging out...");
+        logout();
+      } else {
+        // For other errors, just log them but don't logout
+        console.error("Server error during refresh:", error.response?.data || error.message);
+        throw error; // Re-throw to let the caller handle it
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
