@@ -15,8 +15,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalAssets,
       totalLaboratories,
       totalDailyReports,
-      totalUsers,
-      userLabReports
+      totalUsers
     ] = await Promise.all([
       // Total assets count - filtered by user role
       userRole === "Custodian" && userId
@@ -57,10 +56,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }),
       
       // Total users count - only for admins
-      userRole === "Admin" ? prisma.users.count() : 0,
-      
-      // If custodian, get their lab's pending reports only (already calculated above)
-      0
+      userRole === "Admin" ? prisma.users.count() : 0
     ]);
 
     // Get recent pending daily reports (last 5) - filtered by user role
@@ -200,7 +196,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       stats: {
         totalAssets,
         totalLaboratories,
-        totalDailyReports: userRole === "Custodian" ? userLabReports : totalDailyReports,
+        totalDailyReports,
         totalUsers
       },
       recentReports,

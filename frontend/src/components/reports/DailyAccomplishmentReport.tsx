@@ -28,6 +28,28 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [generateMode, setGenerateMode] = useState<'single' | 'all'>('single');
 
+  // Format date for display in modal
+  const formatDisplayDateTime = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      // Format as MM/DD/YYYY HH:MM AM/PM
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const formattedHours = String(hours % 12 || 12).padStart(2, '0');
+      
+      return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return '';
+    }
+  };
+
   useEffect(() => {
     if (show) {
       setGenerateMode(mode || 'single');
@@ -49,7 +71,15 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         // For custodians, only get reports from their assigned lab
         response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
       }
-      setAvailableReports(response.data);
+      
+      // Sort reports by newest to oldest (using created_at or report_date)
+      const sortedReports = response.data.sort((a: any, b: any) => {
+        const dateA = new Date(a.created_at || a.report_date);
+        const dateB = new Date(b.created_at || b.report_date);
+        return dateB.getTime() - dateA.getTime(); // Newest first
+      });
+      
+      setAvailableReports(sortedReports);
     } catch (error) {
       console.error("Failed to load available reports:", error);
     }
@@ -89,8 +119,15 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         workstations: processedWorkstations,
         procedures: report.procedures || [], // Add procedures data
         report_id: report.report_id,
-        created_at: report.created_at, // Add creation timestamp
-        report_date: report.report_date // Add report date
+        created_at: report.created_at || report.report_date, // Add creation timestamp with fallback
+        report_date: report.report_date, // Add report date
+        current_datetime: formatDisplayDateTime(report.created_at || report.report_date) // Add formatted display date
+      });
+      
+      console.log("Report data set:", {
+        created_at: report.created_at,
+        report_date: report.report_date,
+        full_report: report
       });
     } catch (error) {
       console.error("Failed to load report:", error);
@@ -114,11 +151,12 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
       console.log("Original reportData:", reportData);
       
       // Determine template based on lab_id
-      let templateFile = "/DAR_Template_Final.docx"; // default template
-      if (reportData.lab_id === 2) {
+      let templateFile = "/DAR_Template_Final.docx"; // default template (Lab 2)
+      if (reportData.lab_id === 1) {
+        // TODO: Create LAB1_Template.docx - using Lab 2 template for now
+        templateFile = "/DAR_Template_Final.docx"; // Using Lab 2 template until Lab 1 template is created
+      } else if (reportData.lab_id === 2) {
         templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
-      } else if (reportData.lab_id === 1) {
-        templateFile = "/LAB1_Template.docx"; // Lab 1 template (you'll need to create this)
       }
       // Add more lab-specific templates as needed
       
@@ -170,16 +208,17 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
           workstations: processedWorkstations,
           procedures: detailedReport.procedures || [], // Include procedures
           report_id: detailedReport.report_id,
-          created_at: detailedReport.created_at, // Add creation timestamp
+          created_at: detailedReport.created_at || detailedReport.report_date, // Add creation timestamp with fallback
           report_date: detailedReport.report_date // Add report date
         });
 
         // Determine template based on lab_id
-        let templateFile = "/DAR_Template_Final.docx"; // default template
-        if (detailedReport.lab_id === 2) {
+        let templateFile = "/DAR_Template_Final.docx"; // default template (Lab 2)
+        if (detailedReport.lab_id === 1) {
+          // TODO: Create LAB1_Template.docx - using Lab 2 template for now
+          templateFile = "/DAR_Template_Final.docx"; // Using Lab 2 template until Lab 1 template is created
+        } else if (detailedReport.lab_id === 2) {
           templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
-        } else if (detailedReport.lab_id === 1) {
-          templateFile = "/LAB1_Template.docx"; // Lab 1 template (you'll need to create this)
         }
         // Add more lab-specific templates as needed
 

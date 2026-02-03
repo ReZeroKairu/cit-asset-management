@@ -52,6 +52,20 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // Format as MM/DD/YYYY HH:MM AM/PM
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = String(hours % 12 || 12).padStart(2, '0');
+    
+    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -64,7 +78,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
             Back to Reports
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Daily Report Details</h1>
-          <p className="mt-2 text-gray-600">Report #{report.report_id} • {formatDate(report.report_date)}</p>
+          <p className="mt-2 text-gray-600">Report #{report.report_id} • Created {formatDateTime(report.created_at || report.report_date)}</p>
         </div>
       </div>
 
@@ -91,7 +105,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Report Header */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-sm font-medium text-gray-600">Report ID</div>
               <div className="text-xl font-bold text-gray-900">#{report.report_id}</div>
@@ -107,13 +121,9 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
               </span>
             </div>
             <div>
-              <div className="text-sm font-medium text-gray-600">Report Date</div>
-              <div className="text-xl font-bold text-gray-900">{formatDate(report.report_date)}</div>
-            </div>
-            <div>
               <div className="text-sm font-medium text-gray-600">Created</div>
               <div className="text-xl font-bold text-gray-900">
-                {report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}
+                {formatDateTime(report.created_at || report.report_date)}
               </div>
             </div>
           </div>

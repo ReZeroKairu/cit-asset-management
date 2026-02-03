@@ -82,6 +82,20 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // Format as MM/DD/YYYY HH:MM AM/PM
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = String(hours % 12 || 12).padStart(2, '0');
+    
+    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Approved':
@@ -307,7 +321,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -351,7 +365,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(report.report_date)}
+                      {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button

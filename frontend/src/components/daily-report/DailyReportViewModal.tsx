@@ -15,12 +15,18 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
 }) => {
   if (!report || !isOpen) return null;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // Format as MM/DD/YYYY HH:MM AM/PM
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = String(hours % 12 || 12).padStart(2, '0');
+    
+    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
   };
 
   return (
@@ -35,7 +41,7 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
               Back to Reports
             </button>
             <h1 className="text-3xl font-bold text-gray-900">Daily Report Details</h1>
-            <p className="mt-2 text-gray-600">Report #{report.report_id} • {formatDate(report.report_date)}</p>
+            <p className="mt-2 text-gray-600">Report #{report.report_id} • Created {formatDateTime(report.created_at || report.report_date)}</p>
           </div>
         </div>
 
@@ -43,7 +49,7 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
           {/* Report Header */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div>
                 <div className="text-sm font-medium text-gray-600">Report ID</div>
                 <div className="text-xl font-bold text-gray-900">#{report.report_id}</div>
@@ -59,13 +65,9 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
                 </span>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-600">Report Date</div>
-                <div className="text-xl font-bold text-gray-900">{formatDate(report.report_date)}</div>
-              </div>
-              <div>
                 <div className="text-sm font-medium text-gray-600">Created</div>
                 <div className="text-xl font-bold text-gray-900">
-                  {report.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}
+                  {formatDateTime(report.created_at || report.report_date)}
                 </div>
               </div>
             </div>
@@ -166,7 +168,7 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
             <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
               <div className="flex justify-between items-center">
                 <div className="text-sm text-gray-500">
-                  Report submitted on {formatDate(report.report_date)}
+                  Report created on {formatDateTime(report.created_at || report.report_date)}
                 </div>
                 <div className="flex space-x-3">
                   <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white">

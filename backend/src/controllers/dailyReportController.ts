@@ -127,7 +127,7 @@ export const getDailyReportById = async (req: Request, res: Response) => {
           }
         }
       }
-    } as any);
+    });
 
     if (!report) {
       return res.status(404).json({ error: "Daily report not found" });

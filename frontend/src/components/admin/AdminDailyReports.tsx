@@ -156,6 +156,20 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    // Format as MM/DD/YYYY HH:MM AM/PM
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = String(hours % 12 || 12).padStart(2, '0');
+    
+    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Approved':
@@ -251,10 +265,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              All Daily Reports 
-              <span className="ml-2 text-sm text-gray-500">
-                ({filteredReports.length} of {reports.length} total)
-              </span>
+              All Daily Reports
             </h2>
             <div className="flex items-center gap-3">
               {filteredReports.some(r => r.status === 'Pending') && (
@@ -332,7 +343,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Created
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -386,7 +397,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(report.report_date)}
+                      {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
