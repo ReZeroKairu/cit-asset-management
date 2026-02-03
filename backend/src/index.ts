@@ -19,7 +19,8 @@ import {
   createDailyReport,
   updateDailyReport,
   deleteDailyReport,
-  getMyDailyReports
+  getMyDailyReports,
+  getArchivedReports
 } from "./controllers/dailyReportController";
 import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory, getLaboratoryById } from "./controllers/labController";
 import { getDashboardStats } from "./controllers/dashboardController";
@@ -114,6 +115,7 @@ app.get("/device-types", authenticateToken, async (req: Request, res: Response) 
 // Daily Report Routes
 app.get("/daily-reports", authenticateToken, getAllDailyReports); // Admin: view all reports
 app.get("/daily-reports/my", authenticateToken, getMyDailyReports); // User: view own reports
+app.get("/daily-reports/archived", authenticateToken, getArchivedReports); // View approved/archived reports
 app.get("/daily-reports/:id", authenticateToken, getDailyReportById); // Get single report
 app.post("/daily-reports", authenticateToken, createDailyReport); // Create new report
 app.put("/daily-reports/:id", authenticateToken, updateDailyReport); // Update report

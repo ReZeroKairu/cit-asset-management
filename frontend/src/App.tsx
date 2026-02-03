@@ -5,6 +5,7 @@ import InventoryPage from "./pages/InventoryPage";
 import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
 import AdminReportsPage from "./pages/AdminReportsPage";
+import ArchivedReportsPage from "./pages/ArchivedReportsPage";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import MainLayout from "./components/layout/MainLayout";
@@ -186,7 +187,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "user-management" | "profile">(
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archived-reports" | "user-management" | "profile">(
     "home",
   );
 
@@ -228,6 +229,8 @@ function App() {
         return <DailyReportsPage />;
       case "admin-reports":
         return <AdminReportsPage />;
+      case "archived-reports":
+        return <ArchivedReportsPage />;
       case "user-management":
         return <UserManagementPage 
           createUserData={createUserData}

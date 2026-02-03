@@ -4,6 +4,95 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// GET archived daily reports (approved reports only)
+export const getArchivedReports = async (req: Request, res: Response) => {
+  try {
+    const { start_date, end_date, page = 1, limit = 10 } = req.query;
+    
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
+    const where: any = {
+      status: 'Approved' // Only approved reports
+    };
+    
+    // Role-based filtering
+    if (userRole === 'Custodian') {
+      // Custodians can only see reports from their assigned lab
+      where.lab_id = userLabId;
+    }
+    // Admin can see all approved reports
+    
+    if (start_date && end_date) {
+      const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
+      const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;
+      where.report_date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      };
+    }
+
+    // Parse pagination parameters
+    const pageStr = Array.isArray(page) ? page[0] : page;
+    const limitStr = Array.isArray(limit) ? limit[0] : limit;
+    const pageNum = parseInt(String(pageStr || '1'));
+    const limitNum = parseInt(String(limitStr || '10'));
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalCount = await prisma.daily_reports.count({ where });
+
+    // Get paginated reports
+    const reports = await prisma.daily_reports.findMany({
+      where,
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      },
+      orderBy: { report_date: 'desc' },
+      skip,
+      take: limitNum
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPreviousPage = pageNum > 1;
+
+    res.json({
+      reports,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPreviousPage
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching archived reports:", error);
+    res.status(500).json({ error: "Failed to fetch archived reports" });
+  }
+};
+
 // GET all daily reports (with filtering options)
 export const getAllDailyReports = async (req: Request, res: Response) => {
   try {
@@ -380,11 +469,29 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "User authentication required" });
     }
 
-    const { status, start_date, end_date } = req.query;
+    const { status, start_date, end_date, exclude_status } = req.query;
     
-    const where: any = { user_id };
+    // Get user's lab assignment for proper filtering
+    const user = await prisma.users.findUnique({
+      where: { user_id },
+      select: { lab_id: true }
+    });
     
-    if (status) where.status = Array.isArray(status) ? status[0] : status;
+    const where: any = { lab_id: user?.lab_id };
+    
+    // Exclude approved reports by default (they go to archived)
+    if (exclude_status) {
+      where.status = { not: String(exclude_status) };
+    } else {
+      // Default to excluding approved reports
+      where.status = { not: 'Approved' };
+    }
+    
+    // Allow status override if explicitly provided
+    if (status) {
+      where.status = Array.isArray(status) ? status[0] : status;
+    }
+    
     if (start_date && end_date) {
       const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
       const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;

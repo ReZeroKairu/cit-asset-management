@@ -1,0 +1,1089 @@
+{
+  "exportDate": "2026-02-03T06:02:04.658Z",
+  "campuses": [
+    {
+      "campus_id": 1,
+      "campus_name": "Main Campus"
+    },
+    {
+      "campus_id": 2,
+      "campus_name": "RNP Campus"
+    },
+    {
+      "campus_id": 3,
+      "campus_name": "Paseo Campus"
+    }
+  ],
+  "officeTypes": [
+    {
+      "type_id": 3,
+      "type_name": "ACADEMIC"
+    },
+    {
+      "type_id": 1,
+      "type_name": "ADMINISTRATIVE"
+    },
+    {
+      "type_id": 2,
+      "type_name": "SUPPORT SERVICE"
+    }
+  ],
+  "departments": [
+    {
+      "dept_id": 1,
+      "dept_name": "College of Information Technology",
+      "campus_id": 1,
+      "office_type_id": 3,
+      "designee_name": "Dean IT"
+    },
+    {
+      "dept_id": 2,
+      "dept_name": "Senior High School",
+      "campus_id": 1,
+      "office_type_id": 3,
+      "designee_name": "SHS Principal"
+    },
+    {
+      "dept_id": 3,
+      "dept_name": "College of Pharmacy",
+      "campus_id": 3,
+      "office_type_id": 3,
+      "designee_name": "Dean Pharmacy"
+    },
+    {
+      "dept_id": 4,
+      "dept_name": "Junior High School",
+      "campus_id": 2,
+      "office_type_id": 3,
+      "designee_name": "JHS Principal"
+    }
+  ],
+  "deviceTypes": [
+    {
+      "device_type_id": 1,
+      "device_type_name": "Other Devices"
+    },
+    {
+      "device_type_id": 2,
+      "device_type_name": "PC Devices"
+    },
+    {
+      "device_type_id": 3,
+      "device_type_name": "Network Devices"
+    }
+  ],
+  "units": [
+    {
+      "unit_id": 1,
+      "unit_name": "Monitor",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 2,
+      "unit_name": "SSD",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 3,
+      "unit_name": "PSU",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 4,
+      "unit_name": "RAM",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 5,
+      "unit_name": "Printer",
+      "device_type_id": 1
+    },
+    {
+      "unit_id": 6,
+      "unit_name": "Keyboard",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 7,
+      "unit_name": "Router",
+      "device_type_id": 3
+    },
+    {
+      "unit_id": 8,
+      "unit_name": "Projector",
+      "device_type_id": 1
+    },
+    {
+      "unit_id": 9,
+      "unit_name": "Switch",
+      "device_type_id": 3
+    },
+    {
+      "unit_id": 10,
+      "unit_name": "CPU",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 11,
+      "unit_name": "Smart TV",
+      "device_type_id": 1
+    },
+    {
+      "unit_id": 12,
+      "unit_name": "Hard Disk Drive",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 13,
+      "unit_name": "Case",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 14,
+      "unit_name": "Mouse",
+      "device_type_id": 2
+    },
+    {
+      "unit_id": 15,
+      "unit_name": "AVR",
+      "device_type_id": 2
+    }
+  ],
+  "procedures": [
+    {
+      "procedure_id": 1,
+      "procedure_name": "Software Checks",
+      "description": "Verification of software functionality and updates",
+      "category": "Software",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 2,
+      "procedure_name": "Network & Connectivity Checks",
+      "description": "Testing network connections and internet access",
+      "category": "Network",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 3,
+      "procedure_name": "Cleanliness & Organization",
+      "description": "Maintaining clean and organized workstation area",
+      "category": "Maintenance",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 4,
+      "procedure_name": "Hardware Checks",
+      "description": "Physical inspection and verification of hardware components",
+      "category": "Hardware",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 5,
+      "procedure_name": "End of Day Checks",
+      "description": "Final checks and shutdown procedures",
+      "category": "Procedures",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 6,
+      "procedure_name": "Security & Safety",
+      "description": "Ensuring security protocols and safety measures",
+      "category": "Security",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    },
+    {
+      "procedure_id": 7,
+      "procedure_name": "User Management",
+      "description": "Managing user accounts and access permissions",
+      "category": "Administration",
+      "is_active": true,
+      "created_at": "2026-02-01T12:51:46.000Z"
+    }
+  ],
+  "procedureChecklists": [
+    {
+      "checklist_id": 1,
+      "procedure_id": 4,
+      "checklist_name": "Monitor power and display functionality",
+      "description": "Check if monitor turns on and displays correctly",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 2,
+      "procedure_id": 4,
+      "checklist_name": "Printer and peripheral devices",
+      "description": "Check printer and other connected devices",
+      "order_sequence": 4,
+      "is_required": true
+    },
+    {
+      "checklist_id": 3,
+      "procedure_id": 1,
+      "checklist_name": "Antivirus software status",
+      "description": "Verify antivirus is running and updated",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 4,
+      "procedure_id": 2,
+      "checklist_name": "Internet connection speed",
+      "description": "Test internet connectivity and speed",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 5,
+      "procedure_id": 4,
+      "checklist_name": "Keyboard and mouse functionality",
+      "description": "Test keyboard and mouse input devices",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 6,
+      "procedure_id": 2,
+      "checklist_name": "Local network access",
+      "description": "Verify access to local network resources",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 7,
+      "procedure_id": 4,
+      "checklist_name": "CPU power and startup",
+      "description": "Verify CPU powers on and boots properly",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 8,
+      "procedure_id": 1,
+      "checklist_name": "Required software functionality",
+      "description": "Test essential software applications",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 9,
+      "procedure_id": 2,
+      "checklist_name": "WiFi connectivity",
+      "description": "Check WiFi signal strength and stability",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 10,
+      "procedure_id": 6,
+      "checklist_name": "Physical security checks",
+      "description": "Check locks and physical security measures",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 11,
+      "procedure_id": 5,
+      "checklist_name": "Equipment power off",
+      "description": "Turn off all equipment and devices",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 12,
+      "procedure_id": 6,
+      "checklist_name": "Data backup verification",
+      "description": "Verify important data is backed up",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 13,
+      "procedure_id": 6,
+      "checklist_name": "Emergency procedures knowledge",
+      "description": "Review emergency response procedures",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 14,
+      "procedure_id": 5,
+      "checklist_name": "Area security check",
+      "description": "Ensure area is secure before leaving",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 15,
+      "procedure_id": 5,
+      "checklist_name": "Proper shutdown of systems",
+      "description": "Shut down all systems properly",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 16,
+      "procedure_id": 7,
+      "checklist_name": "User login functionality",
+      "description": "Test user login and logout processes",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 17,
+      "procedure_id": 3,
+      "checklist_name": "Workstation surface cleaning",
+      "description": "Clean desk and computer surfaces",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 18,
+      "procedure_id": 3,
+      "checklist_name": "Equipment arrangement",
+      "description": "Ensure equipment is properly arranged",
+      "order_sequence": 3,
+      "is_required": true
+    },
+    {
+      "checklist_id": 19,
+      "procedure_id": 3,
+      "checklist_name": "Cable management",
+      "description": "Organize and secure cables properly",
+      "order_sequence": 2,
+      "is_required": true
+    },
+    {
+      "checklist_id": 20,
+      "procedure_id": 1,
+      "checklist_name": "Operating system updates",
+      "description": "Check for and install OS updates if needed",
+      "order_sequence": 1,
+      "is_required": true
+    },
+    {
+      "checklist_id": 21,
+      "procedure_id": 7,
+      "checklist_name": "Account access permissions",
+      "description": "Verify user access levels and permissions",
+      "order_sequence": 2,
+      "is_required": true
+    }
+  ],
+  "users": [
+    {
+      "user_id": 1,
+      "full_name": "CIT Administrator",
+      "email": "admin@cit.edu",
+      "password_hash": "$2b$10$Z2CMRwfKrwuNKgem8P/e2OiHy73HaQVMr/96sMhu6p6CH85PgOJeu",
+      "role": "Admin",
+      "created_at": "2026-02-01T12:51:46.000Z",
+      "lab_id": null
+    },
+    {
+      "user_id": 2,
+      "full_name": "Jun Brian",
+      "email": "jun@cit.edu",
+      "password_hash": "$2b$10$Z2CMRwfKrwuNKgem8P/e2OiHy73HaQVMr/96sMhu6p6CH85PgOJeu",
+      "role": "Admin",
+      "created_at": "2026-02-01T12:51:46.000Z",
+      "lab_id": null
+    },
+    {
+      "user_id": 3,
+      "full_name": "Kyle Rana",
+      "email": "kyle@cit.edu",
+      "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+      "role": "Custodian",
+      "created_at": "2026-02-01T12:51:46.000Z",
+      "lab_id": 3
+    },
+    {
+      "user_id": 4,
+      "full_name": "Jes Masuangat",
+      "email": "jes@cit.edu",
+      "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+      "role": "Custodian",
+      "created_at": "2026-02-01T12:51:46.000Z",
+      "lab_id": 2
+    }
+  ],
+  "laboratories": [
+    {
+      "lab_id": 1,
+      "lab_name": "CIT-Lab 1",
+      "location": "WAC Building 3rd Floor",
+      "dept_id": 1,
+      "in_charge_id": 2
+    },
+    {
+      "lab_id": 2,
+      "lab_name": "CIT-Lab 2",
+      "location": "WAC Building 3rd Floor",
+      "dept_id": 1,
+      "in_charge_id": 4
+    },
+    {
+      "lab_id": 3,
+      "lab_name": "CIT-CISCO Lab",
+      "location": "WAC Building 2nd Floor",
+      "dept_id": 1,
+      "in_charge_id": null
+    }
+  ],
+  "workstations": [
+    {
+      "workstation_id": 1,
+      "workstation_name": "WS-PC1",
+      "lab_id": 2,
+      "created_at": "2026-02-01T12:51:46.199Z"
+    },
+    {
+      "workstation_id": 2,
+      "workstation_name": "WS-PC3",
+      "lab_id": 2,
+      "created_at": "2026-02-01T12:51:46.199Z"
+    },
+    {
+      "workstation_id": 3,
+      "workstation_name": "WS-PC2",
+      "lab_id": 2,
+      "created_at": "2026-02-01T12:51:46.199Z"
+    },
+    {
+      "workstation_id": 4,
+      "workstation_name": "WS-120",
+      "lab_id": 3,
+      "created_at": "2026-02-02T09:12:14.594Z"
+    },
+    {
+      "workstation_id": 5,
+      "workstation_name": "WS-123",
+      "lab_id": 3,
+      "created_at": "2026-02-02T09:18:50.452Z"
+    }
+  ],
+  "inventoryAssets": [
+    {
+      "asset_id": 1,
+      "lab_id": 2,
+      "workstation_id": 3,
+      "unit_id": 12,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 1,
+        "asset_id": 1,
+        "property_tag_no": "TAG-331412",
+        "quantity": 1,
+        "description": "HDD Desc",
+        "serial_number": "SN-31554",
+        "date_of_purchase": null
+      }
+    },
+    {
+      "asset_id": 2,
+      "lab_id": 2,
+      "workstation_id": 1,
+      "unit_id": 14,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 3,
+        "asset_id": 2,
+        "property_tag_no": "123",
+        "quantity": 1,
+        "description": "Mouse Desc",
+        "serial_number": "123",
+        "date_of_purchase": "2026-01-21T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 3,
+      "lab_id": 2,
+      "workstation_id": 3,
+      "unit_id": 13,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 2,
+        "asset_id": 3,
+        "property_tag_no": "TAG-333",
+        "quantity": 1,
+        "description": "Case ATX",
+        "serial_number": "SN-3312",
+        "date_of_purchase": "2026-01-21T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 4,
+      "lab_id": 2,
+      "workstation_id": 2,
+      "unit_id": 15,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 5,
+        "asset_id": 4,
+        "property_tag_no": "TAG-554",
+        "quantity": 1,
+        "description": "Desc",
+        "serial_number": "SN-144",
+        "date_of_purchase": "2025-12-31T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 5,
+      "lab_id": 2,
+      "workstation_id": 1,
+      "unit_id": 1,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 4,
+        "asset_id": 5,
+        "property_tag_no": "132",
+        "quantity": 1,
+        "description": "Monitor Desc",
+        "serial_number": "132",
+        "date_of_purchase": "2026-01-20T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 6,
+      "lab_id": 2,
+      "workstation_id": 2,
+      "unit_id": 4,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 6,
+        "asset_id": 6,
+        "property_tag_no": "CIT-1112",
+        "quantity": 1,
+        "description": "Desc RAM",
+        "serial_number": "SN-551",
+        "date_of_purchase": "2026-01-06T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 7,
+      "lab_id": 2,
+      "workstation_id": null,
+      "unit_id": 5,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 7,
+        "asset_id": 7,
+        "property_tag_no": "441234",
+        "quantity": 1,
+        "description": "Brother Printer",
+        "serial_number": "441234",
+        "date_of_purchase": "2026-01-21T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 8,
+      "lab_id": 2,
+      "workstation_id": null,
+      "unit_id": 7,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 8,
+        "asset_id": 8,
+        "property_tag_no": "441626",
+        "quantity": 1,
+        "description": "Tenda Router",
+        "serial_number": "113532",
+        "date_of_purchase": "2026-01-21T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 9,
+      "lab_id": 2,
+      "workstation_id": null,
+      "unit_id": 11,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 9,
+        "asset_id": 9,
+        "property_tag_no": "535624",
+        "quantity": 1,
+        "description": "Smart TV desc",
+        "serial_number": "11123",
+        "date_of_purchase": "2026-01-20T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 10,
+      "lab_id": 2,
+      "workstation_id": 3,
+      "unit_id": 15,
+      "added_by_user_id": 4,
+      "date_added": "2026-02-02T09:17:52.000Z",
+      "details": {
+        "detail_id": 10,
+        "asset_id": 10,
+        "property_tag_no": "TAG-3112",
+        "quantity": 1,
+        "description": "AVR desc",
+        "serial_number": "SN-321",
+        "date_of_purchase": "2026-01-20T00:00:00.000Z"
+      }
+    },
+    {
+      "asset_id": 11,
+      "lab_id": 3,
+      "workstation_id": 4,
+      "unit_id": 8,
+      "added_by_user_id": 1,
+      "date_added": "2026-02-02T09:19:10.000Z",
+      "details": {
+        "detail_id": 11,
+        "asset_id": 11,
+        "property_tag_no": "wrew",
+        "quantity": 1,
+        "description": "",
+        "serial_number": "wer",
+        "date_of_purchase": "2026-02-02T00:00:00.000Z"
+      }
+    }
+  ],
+  "dailyReports": [
+    {
+      "report_id": 1,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "no way sdfs",
+      "status": "Approved",
+      "created_at": "2026-02-01T05:14:13.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 2,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "here",
+      "status": "Approved",
+      "created_at": "2026-02-01T05:29:20.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 3,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "nn",
+      "status": "Approved",
+      "created_at": "2026-02-01T05:39:35.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 4,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "no",
+      "status": "Approved",
+      "created_at": "2026-02-01T05:44:14.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 5,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "no",
+      "status": "Approved",
+      "created_at": "2026-02-01T06:30:59.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 6,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "hey",
+      "status": "Approved",
+      "created_at": "2026-02-01T06:48:58.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 7,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "something wrokn",
+      "status": "Approved",
+      "created_at": "2026-02-01T07:09:45.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 8,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "done here",
+      "status": "Approved",
+      "created_at": "2026-02-01T07:22:10.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 9,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-01T00:00:00.000Z",
+      "general_remarks": "HERE",
+      "status": "Approved",
+      "created_at": "2026-02-01T07:32:02.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 10,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-02T00:00:00.000Z",
+      "general_remarks": "here total",
+      "status": "Approved",
+      "created_at": "2026-02-01T17:07:43.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 11,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "Hey there it is okay",
+      "status": "Approved",
+      "created_at": "2026-02-03T01:32:38.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 12,
+      "user_id": 3,
+      "lab_id": 3,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "hey",
+      "status": "Approved",
+      "created_at": "2026-02-03T02:46:21.000Z",
+      "users": {
+        "user_id": 3,
+        "full_name": "Kyle Rana",
+        "email": "kyle@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 3
+      },
+      "laboratories": {
+        "lab_id": 3,
+        "lab_name": "CIT-CISCO Lab",
+        "location": "WAC Building 2nd Floor",
+        "dept_id": 1,
+        "in_charge_id": null
+      }
+    },
+    {
+      "report_id": 13,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "hey therey adlkdaj klfajkd fadjflkajdlkfja djlkadsflka fdjadk falkl",
+      "status": "Approved",
+      "created_at": "2026-02-03T03:30:24.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 14,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "h",
+      "status": "Approved",
+      "created_at": "2026-02-03T03:33:12.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 15,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "hey",
+      "status": "Approved",
+      "created_at": "2026-02-03T03:34:46.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 16,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "eer",
+      "status": "Approved",
+      "created_at": "2026-02-03T03:42:14.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    },
+    {
+      "report_id": 17,
+      "user_id": 4,
+      "lab_id": 2,
+      "report_date": "2026-02-03T00:00:00.000Z",
+      "general_remarks": "rrtertwer",
+      "status": "Pending",
+      "created_at": "2026-02-03T05:30:57.000Z",
+      "users": {
+        "user_id": 4,
+        "full_name": "Jes Masuangat",
+        "email": "jes@cit.edu",
+        "password_hash": "$2b$10$fB2jCGW1g9irZQDYe.2GRuJmXST3N0e.XEDRBeSEqQK/fPLsgN..6",
+        "role": "Custodian",
+        "created_at": "2026-02-01T12:51:46.000Z",
+        "lab_id": 2
+      },
+      "laboratories": {
+        "lab_id": 2,
+        "lab_name": "CIT-Lab 2",
+        "location": "WAC Building 3rd Floor",
+        "dept_id": 1,
+        "in_charge_id": 4
+      }
+    }
+  ]
+}

@@ -13,17 +13,13 @@ model campuses {
 }
 
 model daily_reports {
-  report_id       Int     @id @default(autoincrement())
+  report_id       Int                   @id @default(autoincrement())
   user_id         Int
   lab_id          Int
   report_date     DateTime              @db.Date
   general_remarks String?               @db.Text
   status          daily_reports_status? @default(Pending)
   created_at      DateTime?             @default(now()) @db.Timestamp(0)
-  users            users                 @relation(fields: [user_id], references: [user_id])
-  laboratories    laboratories         @relation(fields: [lab_id], references: [lab_id])
-  report_workstation_items report_workstation_items[]
-  daily_report_procedures daily_report_procedures[]
 
   @@index([lab_id], map: "lab_id")
   @@index([user_id], map: "user_id")
@@ -35,7 +31,6 @@ model departments {
   campus_id      Int?
   office_type_id Int?
   designee_name  String? @db.VarChar(100)
-  laboratories   laboratories[]
 
   @@index([campus_id], map: "campus_id")
   @@index([office_type_id], map: "office_type_id")
@@ -48,11 +43,6 @@ model inventory_assets {
   unit_id          Int?
   added_by_user_id Int?
   date_added       DateTime? @default(now()) @db.Timestamp(0)
-  details          asset_details?
-  laboratories     laboratories? @relation(fields: [lab_id], references: [lab_id])
-  units            units?        @relation(fields: [unit_id], references: [unit_id])
-  users            users?        @relation(fields: [added_by_user_id], references: [user_id])
-  workstation      workstations? @relation(fields: [workstation_id], references: [workstation_id])
 
   @@index([added_by_user_id], map: "added_by_user_id")
   @@index([lab_id], map: "lab_id")
@@ -66,11 +56,6 @@ model laboratories {
   location     String? @db.VarChar(50)
   dept_id      Int?
   in_charge_id Int?
-  users        users[]
-  workstations workstations[]
-  inventory_assets inventory_assets[]
-  daily_reports  daily_reports[]
-  department     departments?         @relation(fields: [dept_id], references: [dept_id])
 
   @@index([dept_id], map: "dept_id")
   @@index([in_charge_id])
@@ -84,9 +69,6 @@ model users {
   role          users_role? @default(Custodian)
   created_at    DateTime?   @default(now()) @db.Timestamp(0)
   lab_id        Int?
-  laboratory    laboratories? @relation(fields: [lab_id], references: [lab_id])
-  inventory_assets inventory_assets[]
-  daily_reports  daily_reports[]
 
   @@index([lab_id], map: "users_lab_id_fkey")
 }
@@ -105,7 +87,6 @@ model units {
   unit_id        Int    @id @default(autoincrement())
   unit_name      String @db.VarChar(50)
   device_type_id Int
-  inventory_assets inventory_assets[]
 
   @@index([device_type_id], map: "device_type_id")
 }
@@ -115,9 +96,6 @@ model workstations {
   workstation_name String   @db.VarChar(100)
   lab_id           Int?
   created_at       DateTime @default(now())
-  laboratory       laboratories? @relation(fields: [lab_id], references: [lab_id])
-  inventory_assets inventory_assets[]
-  report_workstation_items report_workstation_items[]
 
   @@unique([workstation_name, lab_id])
   @@index([lab_id])
@@ -131,7 +109,6 @@ model asset_details {
   description      String?   @db.Text
   serial_number    String?   @db.VarChar(100)
   date_of_purchase DateTime? @db.Date
-  inventory_asset  inventory_assets @relation(fields: [asset_id], references: [asset_id])
 }
 
 model daily_report_checklist_responses {
@@ -141,14 +118,10 @@ model daily_report_checklist_responses {
   status              String    @default("Done") @db.VarChar(50)
   remarks             String?   @db.VarChar(255)
   created_at          DateTime? @default(now()) @db.Timestamp(0)
-  
-  procedure_checklists procedure_checklists @relation(fields: [checklist_id], references: [checklist_id])
-  daily_report_procedures daily_report_procedures @relation(fields: [report_procedure_id], references: [id])
 
   @@index([checklist_id], map: "checklist_id")
   @@index([report_procedure_id], map: "report_procedure_id")
 }
-
 
 model daily_report_procedures {
   id              Int       @id @default(autoincrement())
@@ -157,10 +130,6 @@ model daily_report_procedures {
   overall_status  String    @default("Pending") @db.VarChar(50)
   overall_remarks String?   @db.Text
   created_at      DateTime? @default(now()) @db.Timestamp(0)
-  
-  procedures procedures @relation(fields: [procedure_id], references: [procedure_id])
-  daily_report_checklist_responses daily_report_checklist_responses[]
-  daily_reports daily_reports @relation(fields: [report_id], references: [report_id])
 
   @@index([procedure_id], map: "procedure_id")
   @@index([report_id], map: "report_id")
@@ -173,9 +142,6 @@ model procedure_checklists {
   description    String? @db.Text
   order_sequence Int     @default(0)
   is_required    Boolean @default(true)
-  
-  procedures procedures @relation(fields: [procedure_id], references: [procedure_id])
-  daily_report_checklist_responses daily_report_checklist_responses[]
 
   @@index([procedure_id], map: "procedure_id")
 }
@@ -187,9 +153,6 @@ model procedures {
   category       String?   @db.VarChar(50)
   is_active      Boolean   @default(true)
   created_at     DateTime? @default(now()) @db.Timestamp(0)
-  
-  procedure_checklists procedure_checklists[]
-  daily_report_procedures daily_report_procedures[]
 }
 
 model report_workstation_items {
@@ -199,8 +162,6 @@ model report_workstation_items {
   status         String    @default("Working") @db.VarChar(50)
   remarks        String?   @db.Text
   created_at     DateTime? @default(now()) @db.Timestamp(0)
-  daily_reports  daily_reports @relation(fields: [report_id], references: [report_id])
-  workstations   workstations  @relation(fields: [workstation_id], references: [workstation_id])
 
   @@index([report_id], map: "report_id")
   @@index([workstation_id], map: "workstation_id")
