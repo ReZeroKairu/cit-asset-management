@@ -9,7 +9,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const workstations = await prisma.workstations.findMany({
       include: {
-        laboratory: {
+        laboratories: {
           select: {
             lab_name: true,
             location: true,
@@ -59,7 +59,7 @@ export const createWorkstation = async (req: Request, res: Response) => {
         lab_id: lab_id ? Number(lab_id) : null,
       },
       include: {
-        laboratory: true,
+        laboratories: true,
       },
     });
 
@@ -81,7 +81,7 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
         workstation_name: workstationName,
       },
       include: {
-        laboratory: true,
+        laboratories: true,
         inventory_assets: {
           include: {
             units: true,
@@ -127,12 +127,12 @@ export const updateWorkstation = async (req: Request, res: Response) => {
       where: { workstation_id: workstationId },
       data: {
         workstation_name,
-        laboratory: lab_id
+        laboratories: lab_id
           ? { connect: { lab_id: Number(lab_id) } }
           : { disconnect: true },
       },
       include: {
-        laboratory: true,
+        laboratories: true,
       },
     });
 
@@ -243,7 +243,7 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       select: {
         workstation_name: true,
         lab_id: true,
-        laboratory: {
+        laboratories: {
           select: { lab_name: true },
         },
       },
@@ -252,7 +252,7 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
     if (existingWorkstations.length > 0) {
       const duplicates = existingWorkstations.map(
         (ws) =>
-          `"${ws.workstation_name}" in ${ws.laboratory?.lab_name || `Lab ID: ${ws.lab_id}`}`,
+          `"${ws.workstation_name}" in ${ws.laboratories?.lab_name || `Lab ID: ${ws.lab_id}`}`,
       );
       return res.status(409).json({
         error: "Duplicate workstation names found",

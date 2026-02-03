@@ -5,6 +5,56 @@ import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+// GET: Get current user profile
+export const getUserProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { user_id: userId },
+      select: {
+        user_id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        lab_id: true,
+        created_at: true,
+        laboratories: {
+          select: {
+            lab_id: true,
+            lab_name: true,
+            location: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Transform the data to match frontend expectations
+    const userProfile = {
+      id: user.user_id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      lab_id: user.lab_id,
+      laboratory: user.laboratories,
+      created_at: user.created_at
+    };
+
+    res.json(userProfile);
+  } catch (error) {
+    console.error("ERROR in getUserProfile:", error);
+    res.status(500).json({ error: "Failed to fetch user profile" });
+  }
+};
+
 // GET: Get current user's assigned laboratory
 export const getUserAssignedLab = async (req: Request, res: Response) => {
   try {
@@ -16,28 +66,30 @@ export const getUserAssignedLab = async (req: Request, res: Response) => {
 
     const user = await prisma.users.findUnique({
       where: { user_id: userId },
-      include: {
-        laboratory: {
-          select: {
-            lab_id: true,
-            lab_name: true,
-            location: true,
-          },
-        },
-      },
     });
-
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    let assignedLab = null;
+    if (user.lab_id) {
+      assignedLab = await prisma.laboratories.findUnique({
+        where: { lab_id: user.lab_id },
+        select: {
+          lab_id: true,
+          lab_name: true,
+          location: true,
+        },
+      });
+    }
+
     const response = {
-      assigned_lab: user.laboratory,
-      has_lab: !!user.laboratory,
+      assigned_lab: assignedLab,
+      has_lab: !!assignedLab,
       // Also include the lab_id for compatibility
       lab_id: user.lab_id,
-      laboratory: user.laboratory
+      laboratory: assignedLab
     };
 
     res.json(response);
@@ -54,26 +106,30 @@ export const getAllUsersWithAssignments = async (
 ) => {
   try {
     const users = await prisma.users.findMany({
-      include: {
-        laboratory: {
-          select: {
-            lab_id: true,
-            lab_name: true,
-            location: true,
-          },
-        },
-      },
       orderBy: {
         full_name: "asc",
       },
     });
 
+    // Get all laboratories for reference
+    const laboratories = await prisma.laboratories.findMany({
+      select: {
+        lab_id: true,
+        lab_name: true,
+        location: true,
+      },
+    });
+
     // Transform the data to match frontend expectations
-    const transformedUsers = users.map(user => ({
-      ...user,
-      assigned_lab: user.laboratory,
-      has_lab: !!user.laboratory,
-    }));
+    const transformedUsers = users.map(user => {
+      const assignedLab = laboratories.find(lab => lab.lab_id === user.lab_id);
+      return {
+        ...user,
+        laboratories: assignedLab || null,
+        assigned_lab: assignedLab || null,
+        has_lab: !!assignedLab,
+      };
+    });
 
     res.json(transformedUsers);
   } catch (error) {
@@ -106,7 +162,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
         where: { user_id: parseInt(userId) },
         data: { lab_id: null },
         include: {
-          laboratory: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -119,8 +175,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       // Transform the response to match frontend expectations
       const transformedUser = {
         ...updatedUser,
-        assigned_lab: updatedUser.laboratory,
-        has_lab: !!updatedUser.laboratory,
+        assigned_lab: updatedUser.laboratories,
+        has_lab: !!updatedUser.laboratories,
       };
       
       return res.json(transformedUser);
@@ -154,7 +210,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       where: { user_id: parseInt(userId) },
       data: { lab_id: parseInt(labId) },
       include: {
-        laboratory: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -167,8 +223,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.laboratory,
-      has_lab: !!updatedUser.laboratory,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
     };
 
     res.json(transformedUser);
@@ -217,7 +273,7 @@ export const updateUser = async (req: Request, res: Response) => {
         role: role || existingUser.role,
       },
       include: {
-        laboratory: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -230,8 +286,8 @@ export const updateUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.laboratory,
-      has_lab: !!updatedUser.laboratory,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
     };
 
     res.json(transformedUser);
@@ -334,7 +390,7 @@ export const createUser = async (req: Request, res: Response) => {
           lab_id: lab_id ? Number(lab_id) : null,
         },
         include: {
-          laboratory: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -361,8 +417,8 @@ export const createUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...userWithoutPassword,
-      assigned_lab: result.laboratory || null,
-      has_lab: !!result.laboratory,
+      assigned_lab: result.laboratories || null,
+      has_lab: !!result.laboratories,
     };
 
     res.status(201).json({

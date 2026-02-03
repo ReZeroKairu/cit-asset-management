@@ -4,7 +4,7 @@ import cors from "cors";
 import { PrismaClient } from "@prisma/client";
 import { getInventory, createAsset, deleteAsset, updateAsset, batchCreateAssets } from "./controllers/inventoryController";
 import { login } from "./controllers/authController";
-import { getOrganizationData, createUser, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab, updateUser, deleteUser } from "./controllers/userController";
+import { getOrganizationData, createUser, getUserProfile, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab, updateUser, deleteUser } from "./controllers/userController";
 import {
   getAllWorkstations,
   createWorkstation,
@@ -48,13 +48,16 @@ app.use(express.json());
 app.post("/login", login);
 
 // Protected routes (authentication required)
-app.get("/organization-data", authenticateToken, getOrganizationData);
+app.get("/users/profile", authenticateToken, getUserProfile);
 app.get("/users/assigned-lab", authenticateToken, getUserAssignedLab);
 app.get("/users/assignments", authenticateToken, requireRole(["Admin"]), getAllUsersWithAssignments);
 app.put("/users/assign-lab", authenticateToken, requireRole(["Admin"]), assignUserToLab);
 app.post("/users", authenticateToken, requireRole(["Admin"]), createUser);
 app.put("/users/:id", authenticateToken, requireRole(["Admin"]), updateUser);
 app.delete("/users/:id", authenticateToken, requireRole(["Admin"]), deleteUser);
+
+// Organization data route
+app.get("/organization-data", authenticateToken, getOrganizationData);
 
 // Dashboard route
 app.get("/dashboard/stats", authenticateToken, getDashboardStats);

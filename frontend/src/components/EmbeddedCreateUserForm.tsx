@@ -279,7 +279,7 @@ const EmbeddedCreateUserForm: React.FC<Props> = ({ onSuccess, formData, setFormD
                     <option 
                       key={l.lab_id} 
                       value={l.lab_id}
-                      disabled={hasCustodian}
+                      disabled={!!hasCustodian}
                       className={hasCustodian ? "text-gray-400" : ""}
                     >
                       {l.lab_name} {hasCustodian ? `(Already assigned to ${hasCustodian})` : ""}

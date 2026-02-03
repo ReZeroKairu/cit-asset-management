@@ -144,21 +144,28 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     }
   };
 
+  const getLabTemplate = (labId: number): string => {
+    switch (labId) {
+      case 1:
+        return "/Lab1_DAR.docx"; // CIT-Lab 1 template
+      case 2:
+        return "/Lab2_DAR.docx"; // CIT-Lab 2 template
+      case 3:
+        return "/CiscoLab_DAR.docx"; // CIT-CISCO Lab template
+      default:
+        return "/Lab2_DAR.docx"; // Default template
+    }
+  };
+
   const generateSingleReport = async () => {
     if (!reportData) return;
 
     try {
       console.log("Original reportData:", reportData);
       
-      // Determine template based on lab_id
-      let templateFile = "/DAR_Template_Final.docx"; // default template (Lab 2)
-      if (reportData.lab_id === 1) {
-        // TODO: Create LAB1_Template.docx - using Lab 2 template for now
-        templateFile = "/DAR_Template_Final.docx"; // Using Lab 2 template until Lab 1 template is created
-      } else if (reportData.lab_id === 2) {
-        templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
-      }
-      // Add more lab-specific templates as needed
+      // Determine template based on lab_id using helper function
+      const templateFile = getLabTemplate(reportData.lab_id);
+      console.log(`Using template: ${templateFile} for Lab ${reportData.lab_id}`);
       
       // Map the report data to template format
       const templateData = mapReportDataToTemplate(reportData);
@@ -212,15 +219,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
           report_date: detailedReport.report_date // Add report date
         });
 
-        // Determine template based on lab_id
-        let templateFile = "/DAR_Template_Final.docx"; // default template (Lab 2)
-        if (detailedReport.lab_id === 1) {
-          // TODO: Create LAB1_Template.docx - using Lab 2 template for now
-          templateFile = "/DAR_Template_Final.docx"; // Using Lab 2 template until Lab 1 template is created
-        } else if (detailedReport.lab_id === 2) {
-          templateFile = "/DAR_Template_Final.docx"; // Lab 2 template
-        }
-        // Add more lab-specific templates as needed
+        // Determine template based on lab_id using helper function
+        const templateFile = getLabTemplate(detailedReport.lab_id);
 
         await generateTemplateReport(
           templateFile,

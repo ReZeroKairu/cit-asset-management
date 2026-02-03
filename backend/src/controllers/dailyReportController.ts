@@ -66,7 +66,7 @@ export const getArchivedReports = async (req: Request, res: Response) => {
           select: { lab_id: true, lab_name: true, location: true }
         }
       },
-      orderBy: { report_date: 'desc' },
+      orderBy: { created_at: 'desc' },
       skip,
       take: limitNum
     });

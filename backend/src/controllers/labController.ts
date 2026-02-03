@@ -20,7 +20,7 @@ export const getLaboratories = async (req: Request, res: Response) => {
             role: "Custodian",
           },
         },
-        department: {
+        departments: {
           select: {
             dept_id: true,
             dept_name: true,
@@ -215,7 +215,7 @@ export const getLaboratoryById = async (req: Request, res: Response) => {
             role: true,
           },
         },
-        department: {
+        departments: {
           select: {
             dept_id: true,
             dept_name: true,

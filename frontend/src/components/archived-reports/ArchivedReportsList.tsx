@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { getArchivedReports } from "../../api/dailyReports";
+import { getArchivedReports, getDailyReportById } from "../../api/dailyReports";
 import type { ArchivedReportsResponse, DailyReport } from '../../api/dailyReports';
-import { useAuth } from '../../context/AuthContext';
+import { Archive, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import AdminReportDetailView from '../admin/AdminReportDetailView';
+import DailyAccomplishmentReport from '../reports/DailyAccomplishmentReport';
 import { Button } from '../ui/button';
-import { Archive, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ArchivedReportsList: React.FC = () => {
   const [archivedData, setArchivedData] = useState<ArchivedReportsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [showDARModal, setShowDARModal] = useState(false);
   const [filters, setFilters] = useState({
     start_date: '',
     end_date: ''
@@ -17,8 +21,6 @@ const ArchivedReportsList: React.FC = () => {
     currentPage: 1,
     limit: 10
   });
-
-  const { user } = useAuth();
 
   useEffect(() => {
     loadReports();
@@ -40,10 +42,24 @@ const ArchivedReportsList: React.FC = () => {
     }
   };
 
-  const handleView = (report: DailyReport) => {
-    // For now, just open in a new tab or show details
-    // Could add a modal view later if needed
-    console.log('View archived report:', report);
+  const handleViewReport = async (report: DailyReport) => {
+    try {
+      // Fetch detailed report data including workstations and procedures
+      const detailedReport = await getDailyReportById(report.report_id);
+      setSelectedReport(detailedReport);
+      setShowDetailView(true);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load report details');
+    }
+  };
+
+  const handleBackToList = () => {
+    setShowDetailView(false);
+    setSelectedReport(null);
+  };
+
+  const handleReportUpdated = () => {
+    loadReports();
   };
 
   const handlePageChange = (newPage: number) => {
@@ -88,6 +104,17 @@ const ArchivedReportsList: React.FC = () => {
   const reports = archivedData?.reports || [];
   const paginationInfo = archivedData?.pagination;
 
+  // Show detail view if a report is selected
+  if (showDetailView && selectedReport) {
+    return (
+      <AdminReportDetailView
+        report={selectedReport}
+        onBack={handleBackToList}
+        onReportUpdated={handleReportUpdated}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -116,6 +143,13 @@ const ArchivedReportsList: React.FC = () => {
               <Archive className="w-4 h-4" />
               <span>{paginationInfo?.totalCount || 0} archived reports</span>
             </div>
+            <Button
+              onClick={() => setShowDARModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Generate Report
+            </Button>
           </div>
         </div>
       </div>
@@ -183,26 +217,26 @@ const ArchivedReportsList: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-hidden">
+            <table className="w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Report Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                     Custodian
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                     Laboratory
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
                 </tr>
@@ -210,52 +244,52 @@ const ArchivedReportsList: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {reports.map((report: DailyReport) => (
                   <tr key={report.report_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         Report #{report.report_id}
                       </div>
                       {report.general_remarks && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                        <div className="text-sm text-gray-500 mt-1 truncate">
                           {report.general_remarks}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         {report.users?.full_name || 'Unknown'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 truncate">
                         {report.users?.email || 'No email'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         {report.laboratories?.lab_name || 'Unknown Lab'}
                       </div>
                       {report.laboratories?.location && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 truncate">
                           {report.laboratories.location}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full border bg-green-100 text-green-800 border-green-200">
                         Approved
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => handleView(report)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        onClick={() => handleViewReport(report)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
                       >
-                        <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        View
+                        <span>View</span>
                       </button>
                     </td>
                   </tr>
@@ -328,6 +362,12 @@ const ArchivedReportsList: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Daily Accomplishment Report Modal */}
+      <DailyAccomplishmentReport 
+        show={showDARModal} 
+        onClose={() => setShowDARModal(false)} 
+      />
     </div>
   );
 };

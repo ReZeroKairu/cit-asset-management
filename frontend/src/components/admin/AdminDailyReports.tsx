@@ -140,13 +140,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     return matchesFilter;
   });
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const handleReportUpdated = () => {
+    loadReports();
   };
 
   const formatDateTime = (dateString: string) => {
@@ -246,9 +241,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              All Daily Reports
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-gray-900">
+                All Daily Reports
+              </h2>
+              <p className="text-sm text-gray-500">
+                {filters.start_date || filters.end_date ? 'Filtered results' : 'Showing all pending reports'}
+              </p>
+            </div>
             <div className="flex items-center gap-3">
               {filteredReports.some(r => r.status === 'Pending') && (
                 <>
@@ -279,9 +279,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                   )}
                 </>
               )}
-              <p className="text-sm text-gray-500">
-                {filters.start_date || filters.end_date ? 'Filtered results' : 'Showing all pending reports'}
-              </p>
             </div>
           </div>
         </div>
@@ -300,11 +297,11 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-hidden">
+            <table className="w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                     <input
                       type="checkbox"
                       checked={selectedReports.length === filteredReports.filter(r => r.status === 'Pending').length && filteredReports.some(r => r.status === 'Pending')}
@@ -312,22 +309,22 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Report Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                     Custodian
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                     Laboratory
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Actions
                   </th>
                 </tr>
@@ -335,7 +332,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
                   <tr key={report.report_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       {report.status === 'Pending' && (
                         <input
                           type="checkbox"
@@ -345,64 +342,66 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         />
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         Report #{report.report_id}
                       </div>
                       {report.general_remarks && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                        <div className="text-sm text-gray-500 mt-1 truncate">
                           {report.general_remarks}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         {report.users?.full_name || 'Unknown'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 truncate">
                         {report.users?.email || 'No email'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         {report.laboratories?.lab_name || 'Unknown Lab'}
                       </div>
                       {report.laboratories?.location && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 truncate">
                           {report.laboratories.location}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status || 'Pending')}`}>
                         {report.status || 'Pending'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleViewReport(report)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View
-                      </button>
-                      {report.status !== 'Approved' && (
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleQuickApprove(report.report_id)}
-                          className="text-green-600 hover:text-green-900 mr-3"
+                          onClick={() => handleViewReport(report)}
+                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
                         >
-                          <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
-                          Approve
+                          <span>View</span>
                         </button>
-                      )}
+                        {report.status !== 'Approved' && (
+                          <button
+                            onClick={() => handleQuickApprove(report.report_id)}
+                            className="text-green-600 hover:text-green-900 flex items-center gap-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Approve</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
