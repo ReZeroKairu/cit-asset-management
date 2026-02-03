@@ -279,10 +279,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({ viewMode = 'my', admi
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              {viewMode === 'my' ? 'My Daily Reports' : 'All Daily Reports'} 
-              <span className="ml-2 text-sm text-gray-500">
-                ({filteredReports.length} of {reports.length} total)
-              </span>
+              {viewMode === 'my' ? 'My Daily Reports' : 'All Daily Reports'}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               {filters.status || filters.start_date || filters.end_date ? 'Filtered results' : 'Showing all reports'}
