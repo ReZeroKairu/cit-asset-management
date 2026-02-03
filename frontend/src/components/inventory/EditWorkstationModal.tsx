@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
+import { useAuth } from "../../context/AuthContext";
 
 interface Props {
   show: boolean;
@@ -8,7 +9,13 @@ interface Props {
   onSuccess: () => void;
 }
 
-const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onSuccess }) => {
+const EditWorkstationModal: React.FC<Props> = ({
+  show,
+  workstation,
+  onClose,
+  onSuccess,
+}) => {
+  const { user } = useAuth();
   const [labs, setLabs] = useState<{ lab_id: number; lab_name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,14 +23,16 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
   const [formData, setFormData] = useState({
     workstation_name: "",
     lab_id: "",
+    workstation_remarks: "", // ✅ 1. Added Remarks State
   });
 
   useEffect(() => {
     if (show && workstation) {
-      // Set form data from workstation
+      // ✅ 2. Load existing remarks
       setFormData({
         workstation_name: workstation.workstation_name || "",
         lab_id: workstation.lab_id?.toString() || "",
+        workstation_remarks: workstation.workstation_remarks || "",
       });
 
       // Load labs
@@ -39,7 +48,11 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
     }
   }, [show, workstation]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -54,7 +67,10 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
         lab_id: formData.lab_id ? parseInt(formData.lab_id) : null,
       };
 
-      await api.put(`/workstations/${workstation.workstation_id}`, submissionData);
+      await api.put(
+        `/workstations/${workstation.workstation_id}`,
+        submissionData,
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -79,8 +95,18 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                 className="text-white hover:text-gray-200 transition-colors"
                 onClick={onClose}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -94,6 +120,7 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                 )}
 
                 <div className="space-y-4">
+                  {/* Workstation Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Workstation Name <span className="text-red-500">*</span>
@@ -108,16 +135,22 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                     />
                   </div>
 
+                  {/* Laboratory Select */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Laboratory <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="lab_id"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        user?.role === "Custodian"
+                          ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                          : ""
+                      }`}
                       value={formData.lab_id}
                       onChange={handleChange}
                       required
+                      disabled={user?.role === "Custodian"}
                     >
                       <option value="">Select Laboratory...</option>
                       {labs.map((lab) => (
@@ -126,9 +159,30 @@ const EditWorkstationModal: React.FC<Props> = ({ show, workstation, onClose, onS
                         </option>
                       ))}
                     </select>
+                    {user?.role === "Custodian" && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Locked to your assigned lab.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ✅ 3. Remarks Field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Remarks
+                    </label>
+                    <textarea
+                      name="workstation_remarks"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      rows={3}
+                      placeholder="Enter notes (e.g., specific location in room, condition issues)"
+                      value={formData.workstation_remarks}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
+
               <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button
                   type="button"

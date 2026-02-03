@@ -37,22 +37,19 @@ model departments {
 }
 
 model laboratories {
-  lab_id        Int     @id @default(autoincrement())
-  lab_name      String  @db.VarChar(50)
-  location      String? @db.VarChar(50)
-  dept_id       Int?
+  lab_id       Int     @id @default(autoincrement())
+  lab_name     String  @db.VarChar(50)
+  location     String? @db.VarChar(50)
+  dept_id      Int?
   
-  // Manager Link (The User in charge)
-  in_charge_id  Int?
-  manager       users?  @relation("LabManager", fields: [in_charge_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
+  in_charge_id Int?
+  manager      users?  @relation("LabManager", fields: [in_charge_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
 
-  // Relations
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
-  departments      departments?     @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
+  departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
   
-  // Workers Link (Custodians working here)
-  users            users[]          @relation("LabAssignment") 
+  users            users[]           @relation("LabAssignment") 
   workstations     workstations[]
 
   @@index([dept_id], map: "dept_id")
@@ -60,33 +57,39 @@ model laboratories {
 }
 
 model workstations {
-  workstation_id   Int              @id @default(autoincrement())
-  workstation_name String           @db.VarChar(100) 
-  lab_id           Int?      
-  created_at       DateTime         @default(now())
-
-  laboratory       laboratories?    @relation(fields: [lab_id], references: [lab_id])
-  assets           inventory_assets[] 
+  workstation_id      Int              @id @default(autoincrement())
+  workstation_name    String           @db.VarChar(100) 
+  lab_id              Int?      
+  created_at          DateTime         @default(now())
+  
+  // ✅ NEW: Remarks and Status Link
+  workstation_remarks String?          @db.Text
+  status_id           Int?             @default(1) // Default to 1 (Functional)
+  
+  laboratory          laboratories?    @relation(fields: [lab_id], references: [lab_id])
+  // Link to the shared status table
+  current_status      asset_statuses?  @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+  
+  assets              inventory_assets[] 
 
   @@index([lab_id])
+  @@index([status_id])
   @@unique([workstation_name, lab_id]) 
 }
 
 // --- USERS ---
 
 model users {
-  user_id       Int         @id @default(autoincrement())
-  full_name     String      @db.VarChar(100)
-  email         String      @unique(map: "email") @db.VarChar(100)
-  password_hash String      @db.VarChar(255)
+  user_id       Int       @id @default(autoincrement())
+  full_name     String    @db.VarChar(100)
+  email         String    @unique(map: "email") @db.VarChar(100)
+  password_hash String    @db.VarChar(255)
   role          users_role? @default(Custodian)
   created_at    DateTime?   @default(now()) @db.Timestamp(0)
   
-  // Worker Relation (Where they work)
   lab_id        Int?       
   assigned_lab  laboratories? @relation("LabAssignment", fields: [lab_id], references: [lab_id])
 
-  // Manager Relation (What they manage)
   managed_labs  laboratories[] @relation("LabManager")
 
   daily_reports    daily_reports[]
@@ -113,47 +116,51 @@ model daily_reports {
   @@index([user_id], map: "user_id")
 }
 
+// --- TASKS & CATEGORIES ---
+
+model task_categories {
+  category_id    Int              @id @default(autoincrement())
+  category_name  String           @unique @db.VarChar(50)
+  standard_tasks standard_tasks[]
+}
+
 model standard_tasks {
-  task_id                Int                      @id @default(autoincrement())
-  task_name              String                   @db.VarChar(100)
-  category               String?                  @db.VarChar(50)
+  task_id                Int                    @id @default(autoincrement())
+  task_name              String                 @db.VarChar(100)
+  category_id            Int
+  task_category          task_categories        @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
   report_checklist_items report_checklist_items[]
+
+  @@index([category_id], map: "category_id")
 }
 
 model report_checklist_items {
-  item_id          Int                                 @id @default(autoincrement())
+  item_id          Int                                     @id @default(autoincrement())
   report_id        Int
   task_id          Int
   task_status      report_checklist_items_task_status? @default(Done)
-  specific_remarks String?                             @db.VarChar(255)
-  daily_reports    daily_reports                       @relation(fields: [report_id], references: [report_id], onDelete: Cascade, onUpdate: NoAction)
-  standard_tasks   standard_tasks                      @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction)
+  specific_remarks String?                                 @db.VarChar(255)
+  daily_reports    daily_reports                           @relation(fields: [report_id], references: [report_id], onDelete: Cascade, onUpdate: NoAction)
+  standard_tasks   standard_tasks                          @relation(fields: [task_id], references: [task_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([report_id], map: "report_id")
   @@index([task_id], map: "task_id")
 }
 
-// --- INVENTORY (PARTITIONED) ---
+// --- INVENTORY ---
 
-// 1. Logistics Table (Lightweight - Links & Audit)
 model inventory_assets {
   asset_id         Int       @id @default(autoincrement())
   
-  // Location
   lab_id           Int?
   workstation_id   Int?    
-
-  // Classification
   unit_id          Int?
   
-  // Audit
   added_by_user_id Int?
   date_added       DateTime? @default(now()) @db.Timestamp(0)
   
-  // --- RELATIONSHIP TO DETAILS ---
-  details          asset_details?  // 1:1 link to the details table
+  details          asset_details?
   
-  // Standard Relations
   laboratories     laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
   units            units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
   users            users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
@@ -165,22 +172,34 @@ model inventory_assets {
   @@index([workstation_id])
 }
 
-// 2. Details Table (Heavy Info - Specs, Tags, Purchasing)
 model asset_details {
   detail_id        Int       @id @default(autoincrement())
-  
-  // Foreign Key to Main Asset (Must be unique for 1:1)
   asset_id         Int       @unique 
   
-  // Detailed Fields
   property_tag_no  String?   @unique(map: "property_tag_no") @db.VarChar(50)
   quantity         Int?      @default(1)
   description      String?   @db.Text
   serial_number    String?   @db.VarChar(100)
   date_of_purchase DateTime? @db.Date
+  
+  // ✅ NEW: Remarks and Status Link
+  asset_remarks    String?   @db.Text
+  status_id        Int?      @default(1) // Default to 1 (Functional)
 
-  // Relation back to main asset
   asset            inventory_assets @relation(fields: [asset_id], references: [asset_id], onDelete: Cascade)
+  // Link to the shared status table
+  current_status   asset_statuses?  @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status_id])
+}
+
+// ✅ NEW TABLE: Shared Statuses
+model asset_statuses {
+  status_id        Int             @id @default(autoincrement())
+  status_name      String          @unique @db.VarChar(50) // "Functional", "For Repair"
+  
+  asset_details    asset_details[]
+  workstations     workstations[]
 }
 
 model device_types {
@@ -199,8 +218,6 @@ model units {
   @@index([device_type_id], map: "device_type_id")
 }
 
-// --- ENUMS ---
-
 enum report_checklist_items_task_status {
   Done
   Issue_Found @map("Issue Found")
@@ -217,4 +234,3 @@ enum daily_reports_status {
   Submitted
   Approved
 }
-

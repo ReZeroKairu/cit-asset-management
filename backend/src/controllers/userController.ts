@@ -281,26 +281,10 @@ export const createUser = async (req: Request, res: Response) => {
     if (existingUser)
       return res.status(400).json({ error: "Email already exists" });
 
-    // 2. Check if laboratory already has a custodian (if assigning to lab and role is Custodian)
-    if (lab_id && (role === "Custodian" || !role)) {
-      const existingCustodian = await prisma.users.findFirst({
-        where: {
-          lab_id: Number(lab_id),
-          role: "Custodian"
-        }
-      });
-
-      if (existingCustodian) {
-        return res.status(400).json({ 
-          error: "This laboratory already has a custodian assigned. Only one custodian per laboratory is allowed." 
-        });
-      }
-    }
-
-    // 3. Hash Password
+    // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Create User and update laboratory in_charge_id in a single transaction
+    // 3. Create User and update laboratory in_charge_id in a single transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the user
       const newUser = await tx.users.create({

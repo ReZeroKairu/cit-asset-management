@@ -11,6 +11,7 @@ interface WorkstationAsset {
   description: string | null;
   quantity: number | null;
   unit_name: string | null;
+  remarks: string | null;
 }
 
 interface Workstation {
@@ -18,6 +19,7 @@ interface Workstation {
   workstation_name: string;
   lab_name: string | null;
   location: string | null;
+  lab_id: number;
   assets: WorkstationAsset[];
 }
 
@@ -33,7 +35,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
   const [selectedLab, setSelectedLab] = useState<string>("");
   const [labs, setLabs] = useState<{ lab_id: number; lab_name: string }[]>([]);
 
-  // 1. Auto-select and lock lab for Custodians
   useEffect(() => {
     if (show && user?.role === "Custodian" && user.lab_id) {
       setSelectedLab(user.lab_id.toString());
@@ -59,8 +60,7 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
   const fetchWorkstations = async () => {
     try {
       setLoading(true);
-      let endpoint = "/workstations";
-
+      const endpoint = "/workstations";
       const response = await api.get(endpoint);
 
       let data: Workstation[] = response.data.map((ws: any) => ({
@@ -77,10 +77,10 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
           description: asset.details?.description || asset.description,
           quantity: asset.details?.quantity || asset.quantity,
           unit_name: asset.units?.unit_name,
+          remarks: asset.details?.asset_remarks || "",
         })),
       }));
 
-      // 2. Sort Alphabetically by Workstation Name
       data.sort((a, b) =>
         a.workstation_name.localeCompare(b.workstation_name, undefined, {
           numeric: true,
@@ -88,7 +88,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
         }),
       );
 
-      // Filter client-side
       if (selectedLab) {
         data = data.filter((ws: any) => ws.lab_id === Number(selectedLab));
       }
@@ -113,30 +112,69 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
     }, 0);
   };
 
-  // 3. Updated Download Handler (Nested Structure)
   const handleDownload = async () => {
     if (workstations.length === 0) return;
 
-    // A. Structure the data for Nested Loops (Workstation -> Assets)
+    // 1. Prepare dynamic suffixes (Lab Name)
+    let labSuffix = "";
+    if (selectedLab) {
+      const selectedLabObj = labs.find((l) => l.lab_id === Number(selectedLab));
+      if (selectedLabObj) {
+        labSuffix = ` - ${selectedLabObj.lab_name.trim()}`;
+      }
+    }
+
+    // 2. Get Current Date & Time
+    const now = new Date();
+
+    // A. Format for the Document Content (e.g., "February 3, 2026 - 10:30 AM")
+    const reportDateContent = now.toLocaleString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    // B. Format for the Filename (Safe characters, e.g., "Feb-03-2026_10-30AM")
+    const dateFileStr = now
+      .toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      })
+      .replace(/[\/,\s]/g, "-"); // Replaces slashes/spaces with dashes
+
+    const timeFileStr = now
+      .toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(/[:\s]/g, ""); // Removes colons and spaces
+
+    const fileName = `LDCU-Forms-CIT-032-Laboratory Equipment Inventory${labSuffix} - ${dateFileStr}_${timeFileStr}.docx`;
+
+    // 3. Structure data for the document
     const structuredWorkstations = workstations.map((ws) => ({
       workstation_name: ws.workstation_name,
-      // Inner loop data
       assets: ws.assets.map((asset) => ({
         property_tag: asset.property_tag_no || "N/A",
         serial_number: asset.serial_number || "N/A",
         description: `${asset.unit_name || "Device"} - ${asset.description || ""}`,
-        remarks: "Good Condition",
+        remarks: asset.remarks || "",
       })),
     }));
 
-    // B. Create the final report object
     const reportData = {
       lab_name: workstations[0]?.lab_name || "Unassigned Laboratory",
       custodian_name: (user?.name || "Unknown Custodian").toUpperCase(),
-      report_date: new Date().toLocaleDateString(),
-      location: workstations[0]?.location || "Main Campus",
 
-      // Pass the LIST of workstations (Outer Loop)
+      // ✅ Updated to include Time and Month Name
+      report_date: reportDateContent,
+
+      location: workstations[0]?.location || "Main Campus",
       workstations: structuredWorkstations,
     };
 
@@ -144,7 +182,7 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
       await generateTemplateReport(
         "/inventory_template.docx",
         reportData,
-        `Inventory_Report_${new Date().toISOString().split("T")[0]}.docx`,
+        fileName,
       );
     } catch (error) {
       console.error("Download failed:", error);
@@ -159,12 +197,10 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
       {show && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-0 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]">
-            {/* Header */}
             <div className="flex justify-between items-center p-5 border-b bg-gray-50 rounded-t-md">
               <h3 className="text-xl font-semibold text-gray-900">
                 Workstation Inventory Report
               </h3>
-
               <button
                 onClick={handleDownload}
                 disabled={loading || workstations.length === 0}
@@ -175,7 +211,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
               </button>
             </div>
 
-            {/* Filter Section */}
             <div className="p-4 border-b bg-white">
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-700">
@@ -206,7 +241,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
               </div>
             </div>
 
-            {/* Content - Scrollable */}
             <div className="p-6 overflow-y-auto flex-1">
               <div className="space-y-8">
                 {loading ? (
@@ -244,22 +278,30 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
                           No assets assigned to this workstation
                         </div>
                       ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
+                        // ✅ TABLE LAYOUT: Using "table-fixed" for strict sizing
+                        <table className="min-w-full table-fixed divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              {/* ✅ FIXED WIDTHS: 
+                                 These classes force every column to stay the same size 
+                                 across all tables.
+                              */}
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">
                                 Property Tag
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">
                                 Serial No.
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">
                                 Unit
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[30%]">
                                 Description
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">
+                                Remarks
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[5%]">
                                 Qty
                               </th>
                             </tr>
@@ -270,20 +312,23 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
                                 key={asset.asset_id}
                                 className="hover:bg-gray-50"
                               >
-                                <td className="px-4 py-2 text-sm font-medium text-blue-600">
+                                <td className="px-4 py-2 text-sm font-medium text-blue-600 truncate">
                                   {asset.property_tag_no || "-"}
                                 </td>
-                                <td className="px-4 py-2 text-sm text-gray-500">
+                                <td className="px-4 py-2 text-sm text-gray-500 truncate">
                                   {asset.serial_number || "-"}
                                 </td>
-                                <td className="px-4 py-2 text-sm text-gray-900">
+                                <td className="px-4 py-2 text-sm text-gray-900 truncate">
                                   {asset.unit_name || "-"}
                                 </td>
                                 <td
-                                  className="px-4 py-2 text-sm text-gray-500 max-w-xs truncate"
+                                  className="px-4 py-2 text-sm text-gray-500 truncate"
                                   title={asset.description || ""}
                                 >
                                   {asset.description || "-"}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-500 truncate">
+                                  {asset.remarks || "-"}
                                 </td>
                                 <td className="px-4 py-2 text-sm text-gray-900">
                                   {asset.quantity || 1}
@@ -297,7 +342,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
                   ))
                 )}
 
-                {/* Summary Section */}
                 {!loading && workstations.length > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-8">
                     <h4 className="font-bold text-blue-900 mb-2">
@@ -334,7 +378,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
               </div>
             </div>
 
-            {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end">
               <button
                 onClick={onClose}
