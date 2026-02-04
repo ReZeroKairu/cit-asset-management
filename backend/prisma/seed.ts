@@ -1,475 +1,440 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import { PrismaClient, users_role } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Start seeding...');
+  console.log('🔄 Starting database seeding with backup data...');
 
-  // Clean up existing data
-  await prisma.daily_report_procedures.deleteMany();
-  await prisma.daily_reports.deleteMany();
-  await prisma.asset_details.deleteMany();
-  await prisma.inventory_assets.deleteMany();
-  await prisma.workstations.deleteMany();
-  await prisma.users.deleteMany();
-  await prisma.laboratories.deleteMany();
-  await prisma.units.deleteMany();
-  await prisma.device_types.deleteMany();
-  await prisma.departments.deleteMany();
-  await prisma.office_types.deleteMany();
-  await prisma.campuses.deleteMany();
-  await prisma.procedure_checklists.deleteMany();
-  await prisma.procedures.deleteMany();
-
-  // Create campuses
-  const campuses = await Promise.all([
-    prisma.campuses.create({ data: { campus_name: 'Main Campus' } }),
-    prisma.campuses.create({ data: { campus_name: 'Paseo Campus' } }),
-    prisma.campuses.create({ data: { campus_name: 'RNP Campus' } }),
-  ]);
-
-  // Create office types
-  const officeTypes = await Promise.all([
-    prisma.office_types.create({ data: { type_name: 'ACADEMIC' } }),
-    prisma.office_types.create({ data: { type_name: 'SUPPORT SERVICE' } }),
-    prisma.office_types.create({ data: { type_name: 'ADMINISTRATIVE' } }),
-  ]);
-
-  // Create departments
-  const departments = await Promise.all([
-    prisma.departments.create({ 
-      data: { 
-        dept_name: 'College of Information Technology', 
-        campus_id: campuses[0].campus_id, 
-        office_type_id: officeTypes[0].type_id,
-        designee_name: 'Dean IT'
-      } 
-    }),
-    prisma.departments.create({ 
-      data: { 
-        dept_name: 'College of Pharmacy', 
-        campus_id: campuses[1].campus_id, 
-        office_type_id: officeTypes[0].type_id,
-        designee_name: 'Dean Pharmacy'
-      } 
-    }),
-    prisma.departments.create({ 
-      data: { 
-        dept_name: 'Junior High School', 
-        campus_id: campuses[2].campus_id, 
-        office_type_id: officeTypes[0].type_id,
-        designee_name: 'JHS Principal'
-      } 
-    }),
-    prisma.departments.create({ 
-      data: { 
-        dept_name: 'Senior High School', 
-        campus_id: campuses[0].campus_id, 
-        office_type_id: officeTypes[0].type_id,
-        designee_name: 'SHS Principal'
-      } 
-    }),
-  ]);
-
-  // Create device types
-  const deviceTypes = await Promise.all([
-    prisma.device_types.create({ data: { device_type_name: 'PC Devices' } }),
-    prisma.device_types.create({ data: { device_type_name: 'Network Devices' } }),
-    prisma.device_types.create({ data: { device_type_name: 'Other Devices' } }),
-  ]);
-
-  // Create procedures
-  const procedures = await Promise.all([
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'Hardware Checks', 
-        description: 'Physical inspection and verification of hardware components',
-        category: 'Hardware'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'Software Checks', 
-        description: 'Verification of software functionality and updates',
-        category: 'Software'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'Network & Connectivity Checks', 
-        description: 'Testing network connections and internet access',
-        category: 'Network'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'Cleanliness & Organization', 
-        description: 'Maintaining clean and organized workstation area',
-        category: 'Maintenance'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'User Management', 
-        description: 'Managing user accounts and access permissions',
-        category: 'Administration'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'Security & Safety', 
-        description: 'Ensuring security protocols and safety measures',
-        category: 'Security'
-      } 
-    }),
-    prisma.procedures.create({ 
-      data: { 
-        procedure_name: 'End of Day Checks', 
-        description: 'Final checks and shutdown procedures',
-        category: 'Procedures'
-      } 
-    }),
-  ]);
-
-  // Create procedure checklists
-  const procedureChecklists = await Promise.all([
-    // Hardware Checks
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[0].procedure_id, checklist_name: 'Monitor power and display functionality', description: 'Check if monitor turns on and displays correctly', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[0].procedure_id, checklist_name: 'CPU power and startup', description: 'Verify CPU powers on and boots properly', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[0].procedure_id, checklist_name: 'Keyboard and mouse functionality', description: 'Test keyboard and mouse input devices', order_sequence: 3 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[0].procedure_id, checklist_name: 'Printer and peripheral devices', description: 'Check printer and other connected devices', order_sequence: 4 } }),
-    
-    // Software Checks
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[1].procedure_id, checklist_name: 'Operating system updates', description: 'Check for and install OS updates if needed', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[1].procedure_id, checklist_name: 'Antivirus software status', description: 'Verify antivirus is running and updated', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[1].procedure_id, checklist_name: 'Required software functionality', description: 'Test essential software applications', order_sequence: 3 } }),
-    
-    // Network & Connectivity Checks
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[2].procedure_id, checklist_name: 'Internet connection speed', description: 'Test internet connectivity and speed', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[2].procedure_id, checklist_name: 'Local network access', description: 'Verify access to local network resources', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[2].procedure_id, checklist_name: 'WiFi connectivity', description: 'Check WiFi signal strength and stability', order_sequence: 3 } }),
-    
-    // Cleanliness & Organization
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[3].procedure_id, checklist_name: 'Workstation surface cleaning', description: 'Clean desk and computer surfaces', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[3].procedure_id, checklist_name: 'Cable management', description: 'Organize and secure cables properly', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[3].procedure_id, checklist_name: 'Equipment arrangement', description: 'Ensure equipment is properly arranged', order_sequence: 3 } }),
-    
-    // User Management
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[4].procedure_id, checklist_name: 'User login functionality', description: 'Test user login and logout processes', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[4].procedure_id, checklist_name: 'Account access permissions', description: 'Verify user access levels and permissions', order_sequence: 2 } }),
-    
-    // Security & Safety
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[5].procedure_id, checklist_name: 'Physical security checks', description: 'Check locks and physical security measures', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[5].procedure_id, checklist_name: 'Data backup verification', description: 'Verify important data is backed up', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[5].procedure_id, checklist_name: 'Emergency procedures knowledge', description: 'Review emergency response procedures', order_sequence: 3 } }),
-    
-    // End of Day Checks
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[6].procedure_id, checklist_name: 'Proper shutdown of systems', description: 'Shut down all systems properly', order_sequence: 1 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[6].procedure_id, checklist_name: 'Equipment power off', description: 'Turn off all equipment and devices', order_sequence: 2 } }),
-    prisma.procedure_checklists.create({ data: { procedure_id: procedures[6].procedure_id, checklist_name: 'Area security check', description: 'Ensure area is secure before leaving', order_sequence: 3 } }),
-  ]);
-
-  // Create units
-  const units = await Promise.all([
-    prisma.units.create({ data: { unit_name: 'SSD', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Hard Disk Drive', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Mouse', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Monitor', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Keyboard', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'AVR', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'PSU', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'RAM', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'CPU', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Case', device_type_id: deviceTypes[0].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Router', device_type_id: deviceTypes[1].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Switch', device_type_id: deviceTypes[1].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Printer', device_type_id: deviceTypes[2].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Smart TV', device_type_id: deviceTypes[2].device_type_id } }),
-    prisma.units.create({ data: { unit_name: 'Projector', device_type_id: deviceTypes[2].device_type_id } }),
-  ]);
-
-  // Hash passwords
-  const adminPassword = await bcrypt.hash('admin123', 10);
-  const custodianPassword = await bcrypt.hash('custodian123', 10);
-
-  // Create users
-  const users = await Promise.all([
-    prisma.users.create({ 
-      data: { 
-        full_name: 'CIT Administrator', 
-        email: 'admin@cit.edu', 
-        password_hash: adminPassword,
-        role: 'Admin'
-      } 
-    }),
-    prisma.users.create({ 
-      data: { 
-        full_name: 'Jes Masuangat', 
-        email: 'jes@cit.edu', 
-        password_hash: custodianPassword,
-        role: 'Custodian'
-      } 
-    }),
-    prisma.users.create({ 
-      data: { 
-        full_name: 'Kyle Rana', 
-        email: 'kyle@cit.edu', 
-        password_hash: custodianPassword,
-        role: 'Custodian'
-      } 
-    }),
-    prisma.users.create({ 
-      data: { 
-        full_name: 'Jun Brian', 
-        email: 'jun@cit.edu', 
-        password_hash: adminPassword,
-        role: 'Admin'
-      } 
-    }),
-  ]);
-
-  // Create laboratories
-  const laboratories = await Promise.all([
-    prisma.laboratories.create({ 
-      data: { 
-        lab_name: 'CIT-Lab 1', 
-        location: 'WAC Building 3rd Floor', 
-        dept_id: departments[0].dept_id,
-        in_charge_id: users[3].user_id // Kyle Rana
-      } 
-    }),
-    prisma.laboratories.create({ 
-      data: { 
-        lab_name: 'CIT-Lab 2', 
-        location: 'WAC Building 3rd Floor', 
-        dept_id: departments[0].dept_id,
-        in_charge_id: users[1].user_id // Jes Masuangat
-      } 
-    }),
-    prisma.laboratories.create({ 
-      data: { 
-        lab_name: 'CIT-CISCO Lab', 
-        location: 'WAC Building 2nd Floor', 
-        dept_id: departments[0].dept_id
-      } 
-    }),
-  ]);
-
-  // Update users with lab assignments
-  await Promise.all([
-    prisma.users.update({ 
-      where: { user_id: users[1].user_id }, 
-      data: { lab_id: laboratories[1].lab_id } 
-    }),
-    prisma.users.update({ 
-      where: { user_id: users[3].user_id }, 
-      data: { lab_id: laboratories[0].lab_id } 
-    }),
-  ]);
-
-  // Create workstations
-  const workstations = await Promise.all([
-    prisma.workstations.create({ 
-      data: { 
-        workstation_name: 'WS-PC1', 
-        lab_id: laboratories[1].lab_id 
-      } 
-    }),
-    prisma.workstations.create({ 
-      data: { 
-        workstation_name: 'WS-PC2', 
-        lab_id: laboratories[1].lab_id 
-      } 
-    }),
-    prisma.workstations.create({ 
-      data: { 
-        workstation_name: 'WS-PC3', 
-        lab_id: laboratories[1].lab_id 
-      } 
-    }),
-  ]);
-
-  // Create inventory assets with details
-  const assets = await Promise.all([
-    // WS-PC1 assets
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[0].workstation_id,
-        unit_id: units[2].unit_id, // Mouse
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: '123',
-            quantity: 1,
-            description: 'Mouse Desc',
-            serial_number: '123',
-            date_of_purchase: new Date('2026-01-21')
-          }
-        }
+  // Current database backup data
+  const backupData = {
+    users: [
+      {
+        user_id: 1,
+        full_name: "System Administrator",
+        email: "admin@cit.edu",
+        role: users_role.Admin,
+        lab_id: null,
+        password_hash: await bcrypt.hash('admin123', 10)
+      },
+      {
+        user_id: 2,
+        full_name: "John Custodian",
+        email: "custodian1@cit.edu",
+        role: users_role.Custodian,
+        lab_id: 1,
+        password_hash: await bcrypt.hash('custodian123', 10)
+      },
+      {
+        user_id: 3,
+        full_name: "Jane Custodian",
+        email: "custodian2@cit.edu",
+        role: users_role.Custodian,
+        lab_id: 3,
+        password_hash: await bcrypt.hash('custodian123', 10)
+      },
+      {
+        user_id: 4,
+        full_name: "Someone",
+        email: "new@cit.edu",
+        role: users_role.Custodian,
+        lab_id: 2,
+        password_hash: await bcrypt.hash('custodian123', 10)
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[0].workstation_id,
-        unit_id: units[3].unit_id, // Monitor
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: '132',
-            quantity: 1,
-            description: 'Monitor Desc',
-            serial_number: '132',
-            date_of_purchase: new Date('2026-01-20')
-          }
-        }
+    ],
+    laboratories: [
+      {
+        lab_id: 1,
+        lab_name: "CIT-Lab 1",
+        location: "WAC Building 3rd Floor",
+        dept_id: 1,
+        in_charge_id: null
+      },
+      {
+        lab_id: 2,
+        lab_name: "CIT-Lab 2",
+        location: "WAC Building 3rd Floor",
+        dept_id: 1,
+        in_charge_id: 4
+      },
+      {
+        lab_id: 3,
+        lab_name: "CIT-CISCO Lab",
+        location: "WAC Building 2nd Floor",
+        dept_id: 1,
+        in_charge_id: null
       }
-    }),
-    // WS-PC2 assets
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[1].workstation_id,
-        unit_id: units[9].unit_id, // Case
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: 'TAG-333',
-            quantity: 1,
-            description: 'Case ATX',
-            serial_number: 'SN-3312',
-            date_of_purchase: new Date('2026-01-21')
-          }
-        }
+    ],
+    workstations: [
+      {
+        workstation_id: 1,
+        workstation_name: "WS-01",
+        lab_id: 3,
+        workstation_remarks: null,
+        status_id: 1
+      },
+      {
+        workstation_id: 2,
+        workstation_name: "WS-02",
+        lab_id: 3,
+        workstation_remarks: null,
+        status_id: 1
+      },
+      {
+        workstation_id: 3,
+        workstation_name: "WS-03",
+        lab_id: 3,
+        workstation_remarks: null,
+        status_id: 1
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[1].workstation_id,
-        unit_id: units[5].unit_id, // AVR
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: 'TAG-3112',
-            quantity: 1,
-            description: 'AVR desc',
-            serial_number: 'SN-321',
-            date_of_purchase: new Date('2026-01-20')
-          }
-        }
+    ],
+    inventoryAssets: [
+      {
+        asset_id: 1,
+        lab_id: 3,
+        workstation_id: 1,
+        unit_id: 13,
+        added_by_user_id: 2
+      },
+      {
+        asset_id: 2,
+        lab_id: 3,
+        workstation_id: 2,
+        unit_id: 9,
+        added_by_user_id: 2
+      },
+      {
+        asset_id: 3,
+        lab_id: 3,
+        workstation_id: 3,
+        unit_id: 6,
+        added_by_user_id: 2
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[1].workstation_id,
-        unit_id: units[1].unit_id, // Hard Disk Drive
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: 'TAG-331412',
-            quantity: 1,
-            description: 'HDD Desc',
-            serial_number: 'SN-31554'
-          }
-        }
+    ],
+    assetDetails: [
+      {
+        detail_id: 1,
+        asset_id: 1,
+        property_tag_no: "2342",
+        quantity: 1,
+        description: "soe",
+        serial_number: "342",
+        date_of_purchase: null,
+        asset_remarks: "good",
+        status_id: 1
+      },
+      {
+        detail_id: 2,
+        asset_id: 2,
+        property_tag_no: "234",
+        quantity: 1,
+        description: "so",
+        serial_number: "243",
+        date_of_purchase: null,
+        asset_remarks: null,
+        status_id: 1
+      },
+      {
+        detail_id: 3,
+        asset_id: 3,
+        property_tag_no: null,
+        quantity: 1,
+        description: "",
+        serial_number: "342",
+        date_of_purchase: new Date("2026-02-03"),
+        asset_remarks: null,
+        status_id: 1
       }
-    }),
-    // WS-PC3 assets
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[2].workstation_id,
-        unit_id: units[5].unit_id, // AVR
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: 'TAG-554',
-            quantity: 1,
-            description: 'Desc',
-            serial_number: 'SN-144',
-            date_of_purchase: new Date('2025-12-31')
-          }
-        }
+    ],
+    procedures: [
+      {
+        procedure_id: 1,
+        procedure_name: "Software Checks",
+        category: "Software",
+        is_active: true
+      },
+      {
+        procedure_id: 2,
+        procedure_name: "Network & Connectivity Checks",
+        category: "Network",
+        is_active: true
+      },
+      {
+        procedure_id: 3,
+        procedure_name: "Cleanliness & Organization",
+        category: "Maintenance",
+        is_active: true
+      },
+      {
+        procedure_id: 4,
+        procedure_name: "Hardware Checks",
+        category: "Hardware",
+        is_active: true
+      },
+      {
+        procedure_id: 5,
+        procedure_name: "End of Day Checks",
+        category: "Procedures",
+        is_active: true
+      },
+      {
+        procedure_id: 6,
+        procedure_name: "Security & Safety",
+        category: "Security",
+        is_active: true
+      },
+      {
+        procedure_id: 7,
+        procedure_name: "User Management",
+        category: "Administration",
+        is_active: true
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        workstation_id: workstations[2].workstation_id,
-        unit_id: units[7].unit_id, // RAM
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: 'CIT-1112',
-            quantity: 1,
-            description: 'Desc RAM',
-            serial_number: 'SN-551',
-            date_of_purchase: new Date('2026-01-06')
-          }
-        }
+    ],
+    assetStatuses: [
+      {
+        status_id: 1,
+        status_name: "Functional"
+      },
+      {
+        status_id: 2,
+        status_name: "For Repair"
+      },
+      {
+        status_id: 3,
+        status_name: "For Replacement"
+      },
+      {
+        status_id: 4,
+        status_name: "Lost"
       }
-    }),
-    // Lab assets (not assigned to workstations)
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        unit_id: units[12].unit_id, // Printer
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: '441234',
-            quantity: 1,
-            description: 'Brother Printer',
-            serial_number: '441234',
-            date_of_purchase: new Date('2026-01-21')
-          }
-        }
+    ],
+    departments: [
+      {
+        dept_id: 1,
+        dept_name: "College of Information Technology",
+        campus_id: 1,
+        office_type_id: 3,
+        designee_name: "Dean IT"
+      },
+      {
+        dept_id: 2,
+        dept_name: "Senior High School",
+        campus_id: 1,
+        office_type_id: 3,
+        designee_name: "SHS Principal"
+      },
+      {
+        dept_id: 3,
+        dept_name: "College of Pharmacy",
+        campus_id: 3,
+        office_type_id: 3,
+        designee_name: "Dean Pharmacy"
+      },
+      {
+        dept_id: 4,
+        dept_name: "Junior High School",
+        campus_id: 2,
+        office_type_id: 3,
+        designee_name: "JHS Principal"
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        unit_id: units[10].unit_id, // Router
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: '441626',
-            quantity: 1,
-            description: 'Tenda Router',
-            serial_number: '113532',
-            date_of_purchase: new Date('2026-01-21')
-          }
-        }
+    ],
+    campuses: [
+      {
+        campus_id: 1,
+        campus_name: "Main Campus"
+      },
+      {
+        campus_id: 2,
+        campus_name: "RNP Campus"
+      },
+      {
+        campus_id: 3,
+        campus_name: "Paseo Campus"
       }
-    }),
-    prisma.inventory_assets.create({
-      data: {
-        lab_id: laboratories[1].lab_id,
-        unit_id: units[13].unit_id, // Smart TV
-        added_by_user_id: users[1].user_id,
-        details: {
-          create: {
-            property_tag_no: '535624',
-            quantity: 1,
-            description: 'Smart TV desc',
-            serial_number: '11123',
-            date_of_purchase: new Date('2026-01-20')
-          }
-        }
+    ],
+    officeTypes: [
+      {
+        type_id: 1,
+        type_name: "ADMINISTRATIVE"
+      },
+      {
+        type_id: 2,
+        type_name: "SUPPORT SERVICE"
+      },
+      {
+        type_id: 3,
+        type_name: "ACADEMIC"
       }
-    }),
-  ]);
+    ],
+    units: [
+      { unit_id: 1, unit_name: "Monitor", device_type_id: 2 },
+      { unit_id: 2, unit_name: "SSD", device_type_id: 2 },
+      { unit_id: 3, unit_name: "PSU", device_type_id: 2 },
+      { unit_id: 4, unit_name: "RAM", device_type_id: 2 },
+      { unit_id: 5, unit_name: "Printer", device_type_id: 1 },
+      { unit_id: 6, unit_name: "Keyboard", device_type_id: 2 },
+      { unit_id: 7, unit_name: "Router", device_type_id: 3 },
+      { unit_id: 8, unit_name: "Projector", device_type_id: 1 },
+      { unit_id: 9, unit_name: "Switch", device_type_id: 3 },
+      { unit_id: 10, unit_name: "CPU", device_type_id: 2 },
+      { unit_id: 11, unit_name: "Smart TV", device_type_id: 1 },
+      { unit_id: 12, unit_name: "Hard Disk Drive", device_type_id: 2 },
+      { unit_id: 13, unit_name: "Case", device_type_id: 2 },
+      { unit_id: 14, unit_name: "Mouse", device_type_id: 2 },
+      { unit_id: 15, unit_name: "AVR", device_type_id: 2 }
+    ],
+    deviceTypes: [
+      {
+        device_type_id: 1,
+        device_type_name: "Other Devices"
+      },
+      {
+        device_type_id: 2,
+        device_type_name: "PC Devices"
+      },
+      {
+        device_type_id: 3,
+        device_type_name: "Network Devices"
+      }
+    ]
+  };
 
-  console.log('Seeding finished.');
+  // Seed data in order to respect foreign key constraints
+  console.log('📝 Seeding reference data...');
+
+  // 1. Campuses
+  for (const campus of backupData.campuses) {
+    await prisma.campuses.upsert({
+      where: { campus_id: campus.campus_id },
+      update: campus,
+      create: campus,
+    });
+    console.log(`✅ Campus: ${campus.campus_name}`);
+  }
+
+  // 2. Office Types
+  for (const officeType of backupData.officeTypes) {
+    await prisma.office_types.upsert({
+      where: { type_id: officeType.type_id },
+      update: officeType,
+      create: officeType,
+    });
+    console.log(`✅ Office Type: ${officeType.type_name}`);
+  }
+
+  // 3. Departments
+  for (const dept of backupData.departments) {
+    await prisma.departments.upsert({
+      where: { dept_id: dept.dept_id },
+      update: dept,
+      create: dept,
+    });
+    console.log(`✅ Department: ${dept.dept_name}`);
+  }
+
+  // 4. Device Types
+  for (const deviceType of backupData.deviceTypes) {
+    await prisma.device_types.upsert({
+      where: { device_type_id: deviceType.device_type_id },
+      update: deviceType,
+      create: deviceType,
+    });
+    console.log(`✅ Device Type: ${deviceType.device_type_name}`);
+  }
+
+  // 5. Units
+  for (const unit of backupData.units) {
+    await prisma.units.upsert({
+      where: { unit_id: unit.unit_id },
+      update: unit,
+      create: unit,
+    });
+    console.log(`✅ Unit: ${unit.unit_name}`);
+  }
+
+  // 6. Asset Statuses
+  for (const status of backupData.assetStatuses) {
+    await prisma.asset_statuses.upsert({
+      where: { status_id: status.status_id },
+      update: status,
+      create: status,
+    });
+    console.log(`✅ Asset Status: ${status.status_name}`);
+  }
+
+  // 7. Users
+  for (const user of backupData.users) {
+    await prisma.users.upsert({
+      where: { email: user.email },
+      update: user,
+      create: user,
+    });
+    console.log(`✅ User: ${user.full_name} (${user.email})`);
+  }
+
+  // 8. Laboratories
+  for (const lab of backupData.laboratories) {
+    await prisma.laboratories.upsert({
+      where: { lab_id: lab.lab_id },
+      update: lab,
+      create: lab,
+    });
+    console.log(`✅ Laboratory: ${lab.lab_name}`);
+  }
+
+  // 9. Workstations
+  for (const ws of backupData.workstations) {
+    await prisma.workstations.upsert({
+      where: { workstation_id: ws.workstation_id },
+      update: ws,
+      create: ws,
+    });
+    console.log(`✅ Workstation: ${ws.workstation_name}`);
+  }
+
+  // 10. Procedures
+  for (const proc of backupData.procedures) {
+    await prisma.procedures.upsert({
+      where: { procedure_id: proc.procedure_id },
+      update: proc,
+      create: proc,
+    });
+    console.log(`✅ Procedure: ${proc.procedure_name}`);
+  }
+
+  // 11. Inventory Assets
+  for (const asset of backupData.inventoryAssets) {
+    await prisma.inventory_assets.upsert({
+      where: { asset_id: asset.asset_id },
+      update: asset,
+      create: asset,
+    });
+    console.log(`✅ Inventory Asset: ${asset.asset_id}`);
+  }
+
+  // 12. Asset Details
+  for (const detail of backupData.assetDetails) {
+    await prisma.asset_details.upsert({
+      where: { detail_id: detail.detail_id },
+      update: detail,
+      create: detail,
+    });
+    console.log(`✅ Asset Detail: ${detail.property_tag_no || 'No Tag'}`);
+  }
+
+  console.log('🎉 Database seeding completed successfully!');
+  console.log('📊 Summary:');
+  console.log(`   - Users: ${backupData.users.length}`);
+  console.log(`   - Laboratories: ${backupData.laboratories.length}`);
+  console.log(`   - Workstations: ${backupData.workstations.length}`);
+  console.log(`   - Inventory Assets: ${backupData.inventoryAssets.length}`);
+  console.log(`   - Procedures: ${backupData.procedures.length}`);
+  console.log(`   - Asset Details: ${backupData.assetDetails.length}`);
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {
