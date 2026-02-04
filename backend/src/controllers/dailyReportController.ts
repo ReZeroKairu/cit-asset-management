@@ -209,37 +209,8 @@ export const getDailyReportById = async (req: Request, res: Response) => {
     // Format the response to match frontend expectations
     const formattedReport = {
       ...report,
-      workstation_items: (report as any).report_workstation_items.map((item: any) => ({
-        workstation_id: item.workstation_id,
-        workstation_name: item.workstations?.workstation_name || 'Unknown',
-        status: item.status,
-        remarks: item.remarks,
-        workstation: item.workstations
-      })),
-      procedures: (report as any).daily_report_procedures.map((rp: any) => {
-        const procedure = rp.procedures;
-        const responses = rp.daily_report_checklist_responses;
-
-        // Attach responses to the corresponding checklists
-        const checklistsWithResponses = procedure.procedure_checklists.map((checklist: any) => {
-          const response = responses.find((r: any) => r.checklist_id === checklist.checklist_id);
-          return {
-            checklist_id: checklist.checklist_id,
-            checklist_name: checklist.checklist_name,
-            status: response?.status || 'Pending',
-            remarks: response?.remarks || null,
-            response_id: response?.response_id || null
-          };
-        });
-
-        return {
-          procedure_id: procedure.procedure_id,
-          procedure_name: procedure.procedure_name,
-          overall_status: rp.overall_status,
-          overall_remarks: rp.overall_remarks,
-          checklists: checklistsWithResponses
-        };
-      })
+      workstation_items: [],
+      procedures: []
     };
 
     // Remove the original nested data to avoid confusion
