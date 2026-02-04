@@ -210,7 +210,6 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
               },
             },
           },
-<<<<<<< HEAD
           include: {
             details: true,
             laboratories: true,
@@ -218,8 +217,6 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
             users: true,
             workstations: true,
           },
-=======
->>>>>>> origin/jesi-branch
         });
         results.push(newAsset);
       }

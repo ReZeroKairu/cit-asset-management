@@ -10,5 +10,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node"
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "prisma", "*.js"]
 }

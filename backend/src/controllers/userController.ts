@@ -23,7 +23,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
         role: true,
         lab_id: true,
         created_at: true,
-        laboratories: {
+        assigned_lab: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -44,7 +44,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       lab_id: user.lab_id,
-      laboratory: user.laboratories,
+        laboratory: user.assigned_lab,
       created_at: user.created_at
     };
 
@@ -125,7 +125,6 @@ export const getAllUsersWithAssignments = async (
       const assignedLab = laboratories.find(lab => lab.lab_id === user.lab_id);
       return {
         ...user,
-        laboratories: assignedLab || null,
         assigned_lab: assignedLab || null,
         has_lab: !!assignedLab,
       };
@@ -175,8 +174,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       // Transform the response to match frontend expectations
       const transformedUser = {
         ...updatedUser,
-        assigned_lab: updatedUser.laboratories,
-        has_lab: !!updatedUser.laboratories,
+        assigned_lab: updatedUser.assigned_lab,
+        has_lab: !!updatedUser.assigned_lab,
       };
       
       return res.json(transformedUser);
@@ -210,7 +209,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       where: { user_id: parseInt(userId) },
       data: { lab_id: parseInt(labId) },
       include: {
-        laboratories: {
+        assigned_lab: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -223,8 +222,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.laboratories,
-      has_lab: !!updatedUser.laboratories,
+      assigned_lab: updatedUser.assigned_lab,
+      has_lab: !!updatedUser.assigned_lab,
     };
 
     res.json(transformedUser);
@@ -273,7 +272,7 @@ export const updateUser = async (req: Request, res: Response) => {
         role: role || existingUser.role,
       },
       include: {
-        laboratories: {
+        assigned_lab: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -286,8 +285,8 @@ export const updateUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.laboratories,
-      has_lab: !!updatedUser.laboratories,
+      assigned_lab: updatedUser.assigned_lab,
+      has_lab: !!updatedUser.assigned_lab,
     };
 
     res.json(transformedUser);
@@ -362,7 +361,6 @@ export const createUser = async (req: Request, res: Response) => {
     // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-<<<<<<< HEAD
     // 3. Check if lab already has a custodian assigned (only for custodian role)
     if (lab_id && (role === "Custodian" || !role)) {
       const existingCustodian = await prisma.users.findFirst({
@@ -380,9 +378,6 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     // 4. Create User and update laboratory in_charge_id in a single transaction
-=======
-    // 3. Create User and update laboratory in_charge_id in a single transaction
->>>>>>> origin/jesi-branch
     const result = await prisma.$transaction(async (tx) => {
       // Create the user
       const newUser = await tx.users.create({
@@ -394,7 +389,7 @@ export const createUser = async (req: Request, res: Response) => {
           lab_id: lab_id ? Number(lab_id) : null,
         },
         include: {
-          laboratories: {
+          assigned_lab: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -421,8 +416,8 @@ export const createUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...userWithoutPassword,
-      assigned_lab: result.laboratories || null,
-      has_lab: !!result.laboratories,
+      assigned_lab: result.assigned_lab || null,
+      has_lab: !!result.assigned_lab,
     };
 
     res.status(201).json({
