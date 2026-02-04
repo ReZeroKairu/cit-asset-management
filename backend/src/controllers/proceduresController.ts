@@ -32,22 +32,25 @@ export const getReportProcedures = async (req: Request, res: Response) => {
     console.log('Backend: Looking for procedures with report_id:', Number(reportId)); // Debug log
 
     const reportProcedures = await prisma.daily_report_procedures.findMany({
-      where: { report_id: Number(reportId) },
-      include: {
-        procedure: true
-      }
+      where: { report_id: Number(reportId) }
     });
 
     console.log('Backend: Found reportProcedures:', reportProcedures.length); // Debug log
 
+    // Get procedure details separately
+    const procedureIds = reportProcedures.map(rp => rp.procedure_id);
+    const procedures = await prisma.procedures.findMany({
+      where: { procedure_id: { in: procedureIds } }
+    });
+
     // Format the response
     const formattedProcedures = reportProcedures.map(rp => {
-      const procedure = rp.procedure;
-
+      const procedure = procedures.find(p => p.procedure_id === rp.procedure_id);
+      
       return {
-        procedure_id: procedure.procedure_id,
-        procedure_name: procedure.procedure_name,
-        category: procedure.category,
+        procedure_id: rp.procedure_id,
+        procedure_name: procedure?.procedure_name || 'Unknown Procedure',
+        category: procedure?.category || null,
         overall_status: rp.overall_status,
         overall_remarks: rp.overall_remarks
       };

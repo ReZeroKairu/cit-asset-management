@@ -30,7 +30,6 @@ export const getInventory = async (req: Request, res: Response) => {
         laboratories: true,
         units: true,
         users: true,
-        workstations: true,
       },
       orderBy: {
         date_added: "desc",
@@ -87,7 +86,7 @@ export const createAsset = async (req: Request, res: Response) => {
         laboratories: true,
         units: true,
         users: true,
-        workstations: true,
+        workstation: true,
       },
     });
     res.json(newAsset);
@@ -215,7 +214,7 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
             laboratories: true,
             units: true,
             users: true,
-            workstations: true,
+            workstation: true,
           },
         });
         results.push(newAsset);
@@ -296,7 +295,7 @@ export const updateAsset = async (req: Request, res: Response) => {
         laboratories: true,
         units: true,
         users: true,
-        workstations: true,
+        workstation: true,
       },
     });
 

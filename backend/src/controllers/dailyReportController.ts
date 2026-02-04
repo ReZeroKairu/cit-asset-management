@@ -193,27 +193,6 @@ export const getDailyReportById = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
-        },
-        report_workstation_items: {
-          include: {
-            workstations: {
-              select: { workstation_id: true, workstation_name: true }
-            }
-          }
-        },
-        daily_report_procedures: {
-          include: {
-            procedures: {
-              include: {
-                procedure_checklists: true
-              }
-            },
-            daily_report_checklist_responses: {
-              include: {
-                procedure_checklists: true
-              }
-            }
-          }
         }
       }
     });

@@ -17,9 +17,7 @@ export const getLabWorkstationsForReport = async (req: Request, res: Response) =
     const workstations = await prisma.workstations.findMany({
       where: { lab_id: Number(lab_id) },
       include: {
-        report_workstation_items: reportId ? {
-          where: { report_id: Number(reportId) }
-        } : false
+        current_status: true,
       },
       orderBy: { workstation_name: 'asc' }
     });
@@ -28,9 +26,9 @@ export const getLabWorkstationsForReport = async (req: Request, res: Response) =
     const formattedWorkstations = workstations.map(ws => ({
       workstation_id: ws.workstation_id,
       workstation_name: ws.workstation_name,
-      status: ws.report_workstation_items?.[0]?.status || 'Working',
-      remarks: ws.report_workstation_items?.[0]?.remarks || null,
-      checked: !!ws.report_workstation_items?.length
+      status: 'Working',
+      remarks: null,
+      checked: false
     }));
 
     res.json(formattedWorkstations);
@@ -93,15 +91,7 @@ export const getWorkstationChecklist = async (req: Request, res: Response) => {
     }
 
     const checklistItems = await prisma.report_workstation_items.findMany({
-      where: { report_id: Number(reportId) },
-      include: {
-        workstations: {
-          select: {
-            workstation_id: true,
-            workstation_name: true
-          }
-        }
-      }
+      where: { report_id: Number(reportId) }
     });
 
     res.json(checklistItems);

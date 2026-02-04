@@ -9,33 +9,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const workstations = await prisma.workstations.findMany({
       include: {
-        laboratories: {
-          select: {
-            lab_name: true,
-            location: true,
-          },
-        },
-        current_status: true, // ✅ Include status
-        assets: {
-          include: {
-            details: {
-              select: {
-                property_tag_no: true,
-                serial_number: true,
-                description: true,
-                asset_remarks: true,
-              },
-            },
-            units: {
-              select: {
-                unit_name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        created_at: "desc",
+        current_status: true,
       },
     });
 
@@ -64,7 +38,6 @@ export const createWorkstation = async (req: Request, res: Response) => {
         status_id: status_id ? Number(status_id) : 1, // Default to 1
       },
       include: {
-        laboratory: true,
         current_status: true,
       },
     });
@@ -144,10 +117,7 @@ export const updateWorkstation = async (req: Request, res: Response) => {
 
     // Handle Laboratory Relation
     if (lab_id) {
-      updateData.laboratory = { connect: { lab_id: Number(lab_id) } };
-    } else {
-      // If lab_id is missing or null, disconnect the relationship
-      updateData.laboratory = { disconnect: true };
+      updateData.lab_id = Number(lab_id);
     }
 
     // Update the workstation
@@ -155,7 +125,6 @@ export const updateWorkstation = async (req: Request, res: Response) => {
       where: { workstation_id: workstationId },
       data: updateData,
       include: {
-        laboratory: true,
         current_status: true,
       },
     });
@@ -264,16 +233,13 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       select: {
         workstation_name: true,
         lab_id: true,
-        laboratories: {
-          select: { lab_name: true },
-        },
       },
     });
 
     if (existingWorkstations.length > 0) {
       const duplicates = existingWorkstations.map(
         (ws) =>
-          `"${ws.workstation_name}" in ${ws.laboratories?.lab_name || `Lab ID: ${ws.lab_id}`}`,
+          `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
       );
       return res.status(409).json({
         error: "Duplicate workstation names found",

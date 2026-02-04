@@ -161,7 +161,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
         where: { user_id: parseInt(userId) },
         data: { lab_id: null },
         include: {
-          laboratories: {
+          assigned_lab: {
             select: {
               lab_id: true,
               lab_name: true,
