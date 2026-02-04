@@ -362,7 +362,8 @@ export const createUser = async (req: Request, res: Response) => {
     // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-// 3. Check if lab already has a custodian assigned (only for custodian role)
+<<<<<<< HEAD
+    // 3. Check if lab already has a custodian assigned (only for custodian role)
     if (lab_id && (role === "Custodian" || !role)) {
       const existingCustodian = await prisma.users.findFirst({
         where: {
@@ -379,6 +380,9 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     // 4. Create User and update laboratory in_charge_id in a single transaction
+=======
+    // 3. Create User and update laboratory in_charge_id in a single transaction
+>>>>>>> origin/jesi-branch
     const result = await prisma.$transaction(async (tx) => {
       // Create the user
       const newUser = await tx.users.create({

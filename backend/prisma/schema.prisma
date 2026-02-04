@@ -21,6 +21,10 @@ model daily_reports {
   status          daily_reports_status? @default(Pending)
   created_at      DateTime?             @default(now()) @db.Timestamp(0)
 
+  // Relations
+  users            users?                @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  laboratories    laboratories?         @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
+
   @@index([lab_id], map: "lab_id")
   @@index([user_id], map: "user_id")
 }
@@ -31,6 +35,9 @@ model departments {
   campus_id      Int?
   office_type_id Int?
   designee_name  String? @db.VarChar(100)
+  
+  // Relations
+  laboratories   laboratories[]
 
   @@index([campus_id], map: "campus_id")
   @@index([office_type_id], map: "office_type_id")
@@ -43,6 +50,13 @@ model inventory_assets {
   unit_id          Int?
   added_by_user_id Int?
   date_added       DateTime? @default(now()) @db.Timestamp(0)
+  
+  // Relations
+  details          asset_details?
+  laboratories     laboratories? @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
+  units            units?        @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
+  users            users?        @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  workstation      workstations? @relation(fields: [workstation_id], references: [workstation_id])
 
   @@index([added_by_user_id], map: "added_by_user_id")
   @@index([lab_id], map: "lab_id")
@@ -57,6 +71,17 @@ model laboratories {
   dept_id      Int?
   in_charge_id Int?
 
+  // Relations for users
+  users            users[]           @relation("LabAssignment")
+  
+  // Relations for reports and inventory
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+  workstations     workstations[]
+  
+  // Department relation
+  departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
+
   @@index([dept_id], map: "dept_id")
   @@index([in_charge_id])
 }
@@ -70,12 +95,20 @@ model users {
   created_at    DateTime?   @default(now()) @db.Timestamp(0)
   lab_id        Int?
 
+  // Relations
+  assigned_lab  laboratories? @relation("LabAssignment", fields: [lab_id], references: [lab_id])
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+
   @@index([lab_id], map: "users_lab_id_fkey")
 }
 
 model device_types {
   device_type_id   Int    @id @default(autoincrement())
   device_type_name String @db.VarChar(50)
+  
+  // Relations
+  units            units[]
 }
 
 model office_types {
@@ -87,18 +120,32 @@ model units {
   unit_id        Int    @id @default(autoincrement())
   unit_name      String @db.VarChar(50)
   device_type_id Int
+  
+  // Relations
+  inventory_assets inventory_assets[]
+  device_types     device_types       @relation(fields: [device_type_id], references: [device_type_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([device_type_id], map: "device_type_id")
 }
 
 model workstations {
-  workstation_id   Int      @id @default(autoincrement())
-  workstation_name String   @db.VarChar(100)
-  lab_id           Int?
-  created_at       DateTime @default(now())
+  workstation_id      Int              @id @default(autoincrement())
+  workstation_name    String           @db.VarChar(100) 
+  lab_id              Int?      
+  created_at          DateTime         @default(now())
+  
+  // Optional: Remarks and Status fields
+  workstation_remarks String?          @db.Text
+  status_id           Int?             @default(1) // Default to 1 (Functional)
+  
+  // Relations
+  laboratory          laboratories?    @relation(fields: [lab_id], references: [lab_id])
+  current_status      asset_statuses?  @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+  assets              inventory_assets[] 
 
-  @@unique([workstation_name, lab_id])
   @@index([lab_id])
+  @@index([status_id])
+  @@unique([workstation_name, lab_id]) 
 }
 
 model asset_details {
@@ -106,8 +153,19 @@ model asset_details {
   asset_id         Int       @unique
   property_tag_no  String?   @unique(map: "property_tag_no") @db.VarChar(50)
   quantity         Int?      @default(1)
+  description      String?   @db.Text
   serial_number    String?   @db.VarChar(100)
   date_of_purchase DateTime? @db.Date
+  
+  // Optional: Remarks and Status fields
+  asset_remarks    String?   @db.Text
+  status_id        Int?      @default(1) // Default to 1 (Functional)
+  
+  // Relations
+  asset            inventory_assets @relation(fields: [asset_id], references: [asset_id], onDelete: Cascade)
+  current_status   asset_statuses?  @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status_id])
 }
 
 model daily_report_checklist_responses {
@@ -153,6 +211,16 @@ model report_workstation_items {
 
   @@index([report_id], map: "report_id")
   @@index([workstation_id], map: "workstation_id")
+}
+
+// ✅ NEW TABLE: Shared Statuses
+model asset_statuses {
+  status_id        Int             @id @default(autoincrement())
+  status_name      String          @unique @db.VarChar(50) // "Functional", "For Repair"
+  
+  // Relations
+  asset_details    asset_details[]
+  workstations     workstations[]
 }
 
 enum users_role {

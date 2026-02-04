@@ -15,8 +15,12 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
             location: true,
           },
         },
+<<<<<<< HEAD
+        inventory_assets: {
+=======
         current_status: true, // ✅ Include status
         assets: {
+>>>>>>> origin/jesi-branch
           include: {
             details: {
               select: {
@@ -64,8 +68,12 @@ export const createWorkstation = async (req: Request, res: Response) => {
         status_id: status_id ? Number(status_id) : 1, // Default to 1
       },
       include: {
+<<<<<<< HEAD
+        laboratories: true,
+=======
         laboratory: true,
         current_status: true,
+>>>>>>> origin/jesi-branch
       },
     });
 
@@ -87,9 +95,14 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
         workstation_name: workstationName,
       },
       include: {
+<<<<<<< HEAD
+        laboratories: true,
+        inventory_assets: {
+=======
         laboratory: true,
         current_status: true,
         assets: {
+>>>>>>> origin/jesi-branch
           include: {
             units: true,
             details: true,
@@ -153,10 +166,21 @@ export const updateWorkstation = async (req: Request, res: Response) => {
     // Update the workstation
     const updatedWorkstation = await prisma.workstations.update({
       where: { workstation_id: workstationId },
+<<<<<<< HEAD
+      data: {
+        workstation_name,
+        laboratories: lab_id
+          ? { connect: { lab_id: Number(lab_id) } }
+          : { disconnect: true },
+      },
+      include: {
+        laboratories: true,
+=======
       data: updateData,
       include: {
         laboratory: true,
         current_status: true,
+>>>>>>> origin/jesi-branch
       },
     });
 

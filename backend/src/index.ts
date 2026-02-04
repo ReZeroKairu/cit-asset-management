@@ -10,7 +10,19 @@ import {
   batchCreateAssets,
 } from "./controllers/inventoryController";
 import { login } from "./controllers/authController";
+<<<<<<< HEAD
 import { getOrganizationData, createUser, getUserProfile, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab, updateUser, deleteUser } from "./controllers/userController";
+=======
+import {
+  getOrganizationData,
+  createUser,
+  getUserAssignedLab,
+  getAllUsersWithAssignments,
+  assignUserToLab,
+  updateUser,
+  deleteUser,
+} from "./controllers/userController";
+>>>>>>> origin/jesi-branch
 import {
   getAllWorkstations,
   createWorkstation,
@@ -26,9 +38,19 @@ import {
   updateDailyReport,
   deleteDailyReport,
   getMyDailyReports,
+<<<<<<< HEAD
   getArchivedReports
 } from "./controllers/dailyReportController";
 import { getLaboratories, createLaboratory, updateLaboratory, deleteLaboratory, getLaboratoryById } from "./controllers/labController";
+=======
+} from "./controllers/dailyReportController";
+import {
+  getLaboratories,
+  createLaboratory,
+  updateLaboratory,
+  deleteLaboratory,
+} from "./controllers/labController";
+>>>>>>> origin/jesi-branch
 import { getDashboardStats } from "./controllers/dashboardController";
 import { 
   getLabWorkstationsForReport, 
@@ -94,10 +116,31 @@ app.delete("/workstations/:id", authenticateToken, deleteWorkstation);
 
 // Laboratory Routes
 app.get("/laboratories", authenticateToken, getLaboratories);
+<<<<<<< HEAD
 app.get("/laboratories/:id", authenticateToken, getLaboratoryById);
 app.post("/laboratories", authenticateToken, requireRole(["Admin"]), createLaboratory);
 app.put("/laboratories/:id", authenticateToken, requireRole(["Admin"]), updateLaboratory);
 app.delete("/laboratories/:id", authenticateToken, requireRole(["Admin"]), deleteLaboratory);
+=======
+app.post(
+  "/laboratories",
+  authenticateToken,
+  requireRole(["Admin"]),
+  createLaboratory,
+);
+app.put(
+  "/laboratories/:id",
+  authenticateToken,
+  requireRole(["Admin"]),
+  updateLaboratory,
+);
+app.delete(
+  "/laboratories/:id",
+  authenticateToken,
+  requireRole(["Admin"]),
+  deleteLaboratory,
+);
+>>>>>>> origin/jesi-branch
 
 app.get("/units", authenticateToken, async (req: Request, res: Response) => {
   try {
