@@ -3,16 +3,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// GET: Get all procedures with their checklists
+// GET: Get all procedures
 export const getAllProcedures = async (req: Request, res: Response) => {
   try {
     const procedures = await prisma.procedures.findMany({
       where: { is_active: true },
-      include: {
-        procedure_checklists: {
-          orderBy: { order_sequence: 'asc' }
-        }
-      },
       orderBy: { procedure_name: 'asc' }
     });
 
@@ -39,47 +34,22 @@ export const getReportProcedures = async (req: Request, res: Response) => {
     const reportProcedures = await prisma.daily_report_procedures.findMany({
       where: { report_id: Number(reportId) },
       include: {
-        procedures: {
-          include: {
-            procedure_checklists: {
-              orderBy: { order_sequence: 'asc' }
-            }
-          }
-        },
-        daily_report_checklist_responses: {
-          include: {
-            procedure_checklists: true
-          }
-        }
+        procedure: true
       }
     });
 
     console.log('Backend: Found reportProcedures:', reportProcedures.length); // Debug log
 
-    // Format the response to include checklist responses
+    // Format the response
     const formattedProcedures = reportProcedures.map(rp => {
-      const procedure = rp.procedures;
-      const responses = rp.daily_report_checklist_responses;
-
-      // Attach responses to the corresponding checklists
-      const checklistsWithResponses = procedure.procedure_checklists.map(checklist => {
-        const response = responses.find(r => r.checklist_id === checklist.checklist_id);
-        return {
-          ...checklist,
-          status: response?.status || 'Pending',
-          remarks: response?.remarks || null,
-          response_id: response?.response_id || null
-        };
-      });
+      const procedure = rp.procedure;
 
       return {
         procedure_id: procedure.procedure_id,
         procedure_name: procedure.procedure_name,
-        description: procedure.description,
         category: procedure.category,
         overall_status: rp.overall_status,
-        overall_remarks: rp.overall_remarks,
-        checklists: checklistsWithResponses
+        overall_remarks: rp.overall_remarks
       };
     });
 
@@ -105,17 +75,6 @@ export const saveReportProcedures = async (req: Request, res: Response) => {
     // Use transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       // Delete existing procedure data for this report
-      await tx.daily_report_checklist_responses.deleteMany({
-        where: { 
-          report_procedure_id: {
-            in: await tx.daily_report_procedures.findMany({
-              where: { report_id: Number(reportId) },
-              select: { id: true }
-            }).then(items => items.map(item => item.id))
-          }
-        }
-      });
-
       await tx.daily_report_procedures.deleteMany({
         where: { report_id: Number(reportId) }
       });
@@ -132,22 +91,6 @@ export const saveReportProcedures = async (req: Request, res: Response) => {
               overall_remarks: proc.overall_remarks || null
             }
           });
-
-          // Create checklist responses
-          if (proc.checklists && Array.isArray(proc.checklists)) {
-            await Promise.all(
-              proc.checklists.map((checklist: any) => 
-                tx.daily_report_checklist_responses.create({
-                  data: {
-                    report_procedure_id: dailyReportProcedure.id,
-                    checklist_id: checklist.checklist_id,
-                    status: checklist.status || 'Pending',
-                    remarks: checklist.remarks || null
-                  }
-                })
-              )
-            );
-          }
 
           return dailyReportProcedure;
         })
@@ -175,11 +118,6 @@ export const getWorkstationProcedures = async (req: Request, res: Response) => {
         is_active: true,
         category: {
           in: ['Hardware', 'Software', 'Network', 'Security', 'Maintenance']
-        }
-      },
-      include: {
-        procedure_checklists: {
-          orderBy: { order_sequence: 'asc' }
         }
       },
       orderBy: { procedure_name: 'asc' }
