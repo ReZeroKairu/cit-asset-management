@@ -48,6 +48,8 @@ const AssignmentsPage: React.FC = () => {
 
   const handleAssignmentChange = async (userId: number, labId: number | null) => {
     try {
+<<<<<<< HEAD
+=======
       // If assigning to a lab, check if user is a custodian and lab already has one
       if (labId !== null) {
         const user = users.find(u => u.user_id === userId);
@@ -65,6 +67,7 @@ const AssignmentsPage: React.FC = () => {
         }
       }
       
+>>>>>>> 971b93b86c5c0a71b19cebccf80ba228d51119e6
       await assignUserToLab(userId, labId);
       await loadData(); // Refresh data
     } catch (err: any) {

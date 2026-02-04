@@ -2,7 +2,13 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { PrismaClient } from "@prisma/client";
-import { getInventory, createAsset, deleteAsset, updateAsset, batchCreateAssets } from "./controllers/inventoryController";
+import {
+  getInventory,
+  createAsset,
+  deleteAsset,
+  updateAsset,
+  batchCreateAssets,
+} from "./controllers/inventoryController";
 import { login } from "./controllers/authController";
 import { getOrganizationData, createUser, getUserProfile, getUserAssignedLab, getAllUsersWithAssignments, assignUserToLab, updateUser, deleteUser } from "./controllers/userController";
 import {
@@ -39,7 +45,7 @@ import { authenticateToken, requireRole } from "./middleware/auth";
 
 const app = express();
 const prisma = new PrismaClient();
-const port = 3000;
+const port = 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -50,8 +56,18 @@ app.post("/login", login);
 // Protected routes (authentication required)
 app.get("/users/profile", authenticateToken, getUserProfile);
 app.get("/users/assigned-lab", authenticateToken, getUserAssignedLab);
-app.get("/users/assignments", authenticateToken, requireRole(["Admin"]), getAllUsersWithAssignments);
-app.put("/users/assign-lab", authenticateToken, requireRole(["Admin"]), assignUserToLab);
+app.get(
+  "/users/assignments",
+  authenticateToken,
+  requireRole(["Admin"]),
+  getAllUsersWithAssignments,
+);
+app.put(
+  "/users/assign-lab",
+  authenticateToken,
+  requireRole(["Admin"]),
+  assignUserToLab,
+);
 app.post("/users", authenticateToken, requireRole(["Admin"]), createUser);
 app.put("/users/:id", authenticateToken, requireRole(["Admin"]), updateUser);
 app.delete("/users/:id", authenticateToken, requireRole(["Admin"]), deleteUser);
@@ -86,34 +102,38 @@ app.delete("/laboratories/:id", authenticateToken, requireRole(["Admin"]), delet
 app.get("/units", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { device_type_id } = req.query;
-    
+
     let units;
     if (device_type_id) {
       // Filter units by device type
       units = await prisma.units.findMany({
         where: {
-          device_type_id: Number(device_type_id)
-        }
+          device_type_id: Number(device_type_id),
+        },
       });
     } else {
       // Get all units
       units = await prisma.units.findMany();
     }
-    
+
     res.json(units);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch units" });
   }
 });
 
-app.get("/device-types", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const deviceTypes = await prisma.device_types.findMany();
-    res.json(deviceTypes);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch device types" });
-  }
-});
+app.get(
+  "/device-types",
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const deviceTypes = await prisma.device_types.findMany();
+      res.json(deviceTypes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch device types" });
+    }
+  },
+);
 
 // Daily Report Routes
 app.get("/daily-reports", authenticateToken, getAllDailyReports); // Admin: view all reports
@@ -122,7 +142,12 @@ app.get("/daily-reports/archived", authenticateToken, getArchivedReports); // Vi
 app.get("/daily-reports/:id", authenticateToken, getDailyReportById); // Get single report
 app.post("/daily-reports", authenticateToken, createDailyReport); // Create new report
 app.put("/daily-reports/:id", authenticateToken, updateDailyReport); // Update report
-app.delete("/daily-reports/:id", authenticateToken, requireRole(["Admin"]), deleteDailyReport); // Delete report (Admin only)
+app.delete(
+  "/daily-reports/:id",
+  authenticateToken,
+  requireRole(["Admin"]),
+  deleteDailyReport,
+); // Delete report (Admin only)
 
 // Workstation Report Routes
 app.get("/daily-reports/:id/workstations", authenticateToken, getWorkstationChecklist); // Get existing workstation checklist

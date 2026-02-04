@@ -15,13 +15,15 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
             location: true,
           },
         },
-        inventory_assets: {
+        current_status: true, // ✅ Include status
+        assets: {
           include: {
             details: {
               select: {
                 property_tag_no: true,
                 serial_number: true,
                 description: true,
+                asset_remarks: true,
               },
             },
             units: {
@@ -47,7 +49,8 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
 // 2. CREATE WORKSTATION
 export const createWorkstation = async (req: Request, res: Response) => {
   try {
-    const { workstation_name, lab_id } = req.body;
+    const { workstation_name, lab_id, workstation_remarks, status_id } =
+      req.body;
 
     if (!workstation_name) {
       return res.status(400).json({ error: "Workstation name is required" });
@@ -57,9 +60,12 @@ export const createWorkstation = async (req: Request, res: Response) => {
       data: {
         workstation_name,
         lab_id: lab_id ? Number(lab_id) : null,
+        workstation_remarks: workstation_remarks || null,
+        status_id: status_id ? Number(status_id) : 1, // Default to 1
       },
       include: {
-        laboratories: true,
+        laboratory: true,
+        current_status: true,
       },
     });
 
@@ -81,10 +87,12 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
         workstation_name: workstationName,
       },
       include: {
-        laboratories: true,
-        inventory_assets: {
+        laboratory: true,
+        current_status: true,
+        assets: {
           include: {
             units: true,
+            details: true,
           },
         },
       },
@@ -101,13 +109,14 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
   }
 };
 
-// 4. UPDATE WORKSTATION
+// 4. UPDATE WORKSTATION (FIXED TS ERROR)
 export const updateWorkstation = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const workstationId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
 
-    const { workstation_name, lab_id } = req.body;
+    const { workstation_name, lab_id, workstation_remarks, status_id } =
+      req.body;
 
     if (!workstationId) {
       return res.status(400).json({ error: "Workstation ID is required" });
@@ -122,17 +131,32 @@ export const updateWorkstation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Workstation not found" });
     }
 
+    // ✅ FIX: Construct data object dynamically to avoid Type 'number | undefined' error
+    const updateData: any = {
+      workstation_name,
+      workstation_remarks, // Pass as is; Prisma handles undefined by ignoring it
+    };
+
+    // Only set status_id if it explicitly exists (truthy or 0)
+    if (status_id) {
+      updateData.status_id = Number(status_id);
+    }
+
+    // Handle Laboratory Relation
+    if (lab_id) {
+      updateData.laboratory = { connect: { lab_id: Number(lab_id) } };
+    } else {
+      // If lab_id is missing or null, disconnect the relationship
+      updateData.laboratory = { disconnect: true };
+    }
+
     // Update the workstation
     const updatedWorkstation = await prisma.workstations.update({
       where: { workstation_id: workstationId },
-      data: {
-        workstation_name,
-        laboratories: lab_id
-          ? { connect: { lab_id: Number(lab_id) } }
-          : { disconnect: true },
-      },
+      data: updateData,
       include: {
-        laboratories: true,
+        laboratory: true,
+        current_status: true,
       },
     });
 
@@ -156,7 +180,6 @@ export const deleteWorkstation = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Workstation ID is required" });
     }
 
-    // Check if workstation exists
     const existingWorkstation = await prisma.workstations.findUnique({
       where: { workstation_id: workstationId },
     });
@@ -165,7 +188,6 @@ export const deleteWorkstation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Workstation not found" });
     }
 
-    // Delete the workstation
     await prisma.workstations.delete({
       where: { workstation_id: workstationId },
     });
@@ -177,16 +199,15 @@ export const deleteWorkstation = async (req: Request, res: Response) => {
   }
 };
 
+// 6. BATCH CREATE WORKSTATIONS
 export const batchCreateWorkstations = async (req: Request, res: Response) => {
   try {
     const { workstations } = req.body;
 
     if (!Array.isArray(workstations) || workstations.length === 0) {
-      return res
-        .status(400)
-        .json({
-          error: "Invalid data format. Expected an array of workstations.",
-        });
+      return res.status(400).json({
+        error: "Invalid data format. Expected an array of workstations.",
+      });
     }
 
     // Validate input data
@@ -228,7 +249,7 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       });
     }
 
-    // Check for existing workstations in the same labs
+    // Check for duplicates
     const existingWorkstations = await prisma.workstations.findMany({
       where: {
         AND: [
@@ -265,6 +286,8 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       data: workstations.map((ws: any) => ({
         workstation_name: ws.workstation_name.trim(),
         lab_id: Number(ws.lab_id),
+        workstation_remarks: ws.workstation_remarks || null,
+        status_id: ws.status_id ? Number(ws.status_id) : 1,
       })),
     });
 
