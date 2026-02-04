@@ -207,15 +207,55 @@ export const getDailyReportById = async (req: Request, res: Response) => {
     }
 
     // Format the response to match frontend expectations
+    // Fetch related data separately since relations were removed from schema
+    const [workstationItems, reportProcedures] = await Promise.all([
+      // Get workstation items for this report
+      prisma.report_workstation_items.findMany({
+        where: { report_id: reportId }
+      }),
+      // Get procedures for this report
+      prisma.daily_report_procedures.findMany({
+        where: { report_id: reportId },
+        include: {
+          procedure: true
+        }
+      })
+    ]);
+
+    // Fetch workstation details for the items
+    const workstationIds = workstationItems.map(item => item.workstation_id);
+    const workstationDetails = workstationIds.length > 0 
+      ? await prisma.workstations.findMany({
+          where: { workstation_id: { in: workstationIds } },
+          select: { workstation_id: true, workstation_name: true }
+        })
+      : [];
+
+    const workstationMap = new Map(workstationDetails.map(ws => [ws.workstation_id, ws]));
+
     const formattedReport = {
       ...report,
-      workstation_items: [],
-      procedures: []
+      workstation_items: workstationItems.map((item: any) => {
+        const ws = workstationMap.get(item.workstation_id);
+        return {
+          workstation_id: item.workstation_id,
+          workstation_name: ws?.workstation_name || 'Unknown',
+          status: item.status || 'Working',
+          remarks: item.remarks || null
+        };
+      }),
+      procedures: reportProcedures.map((rp: any) => {
+        const procedure = rp.procedure;
+        return {
+          procedure_id: rp.procedure_id,
+          procedure_name: procedure?.procedure_name || 'Unknown Procedure',
+          category: procedure?.category || null,
+          overall_status: rp.overall_status || 'Pending',
+          overall_remarks: rp.overall_remarks || null,
+          checklists: [] // Empty since procedure_checklists was removed
+        };
+      })
     };
-
-    // Remove the original nested data to avoid confusion
-    delete (formattedReport as any).report_workstation_items;
-    delete (formattedReport as any).daily_report_procedures;
 
     res.json(formattedReport);
   } catch (error) {

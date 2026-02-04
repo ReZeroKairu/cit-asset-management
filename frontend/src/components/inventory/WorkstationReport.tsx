@@ -69,7 +69,7 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
         lab_name: ws.laboratory?.lab_name || null,
         location: ws.laboratory?.location || null,
         lab_id: ws.lab_id,
-        assets: ws.inventory_assets.map((asset: any) => ({
+        assets: ws.assets.map((asset: any) => ({
           asset_id: asset.asset_id,
           property_tag_no:
             asset.details?.property_tag_no || asset.property_tag_no,

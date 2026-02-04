@@ -17,6 +17,12 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
           },
         },
         current_status: true,
+        assets: {
+          include: {
+            details: true,
+            units: true,
+          },
+        },
       },
     });
 
@@ -75,6 +81,12 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
           },
         },
         current_status: true,
+        assets: {
+          include: {
+            details: true,
+            units: true,
+          },
+        },
       },
     });
 
