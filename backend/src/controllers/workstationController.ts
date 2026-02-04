@@ -9,6 +9,13 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const workstations = await prisma.workstations.findMany({
       include: {
+        laboratory: {
+          select: {
+            lab_id: true,
+            lab_name: true,
+            location: true,
+          },
+        },
         current_status: true,
       },
     });
@@ -60,14 +67,14 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
         workstation_name: workstationName,
       },
       include: {
-        laboratory: true,
-        current_status: true,
-        assets: {
-          include: {
-            units: true,
-            details: true,
+        laboratory: {
+          select: {
+            lab_id: true,
+            lab_name: true,
+            location: true,
           },
         },
+        current_status: true,
       },
     });
 
