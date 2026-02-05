@@ -66,8 +66,12 @@ export const mapReportDataToTemplate = (reportData: any) => {
 
   // Check which procedures are completed
   if (reportData.procedures) {
-    reportData.procedures.forEach((procedure: any) => {
-      switch (procedure.procedure_name.toLowerCase()) {
+    console.log("Procedures data:", reportData.procedures);
+    reportData.procedures.forEach((procedure: any, index: number) => {
+      console.log(`Procedure ${index}:`, procedure);
+      const procedureName = procedure.procedure_name || procedure.name || '';
+      console.log(`Procedure name: "${procedureName}"`);
+      switch (procedureName.toLowerCase()) {
         case "hardware checks":
           procedureChecks.hardware_checks = true;
           break;
@@ -89,9 +93,31 @@ export const mapReportDataToTemplate = (reportData: any) => {
         case "end of day checks":
           procedureChecks.end_day_checks = true;
           break;
+        default:
+          console.log(`Unknown procedure: "${procedureName}"`);
+          // Try to match by partial name
+          if (procedureName.toLowerCase().includes('hardware')) {
+            procedureChecks.hardware_checks = true;
+          } else if (procedureName.toLowerCase().includes('software')) {
+            procedureChecks.software_checks = true;
+          } else if (procedureName.toLowerCase().includes('network')) {
+            procedureChecks.network_checks = true;
+          } else if (procedureName.toLowerCase().includes('cleanliness')) {
+            procedureChecks.cleanliness_checks = true;
+          } else if (procedureName.toLowerCase().includes('user')) {
+            procedureChecks.user_management = true;
+          } else if (procedureName.toLowerCase().includes('security')) {
+            procedureChecks.security_safety = true;
+          } else if (procedureName.toLowerCase().includes('end')) {
+            procedureChecks.end_day_checks = true;
+          }
       }
     });
+  } else {
+    console.log("No procedures found in report data");
   }
+  
+  console.log("Final procedure checks:", procedureChecks);
 
   return {
     // Basic info

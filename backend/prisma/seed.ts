@@ -310,7 +310,7 @@ async function main() {
   };
 
   // Seed data in order to respect foreign key constraints
-  console.log("📝 Seeding reference data...");
+  console.log('📝 Seeding reference data...');
 
   // 1. Campuses
   for (const campus of backupData.campuses) {
@@ -372,17 +372,7 @@ async function main() {
     console.log(`✅ Asset Status: ${status.status_name}`);
   }
 
-  // 7. Users
-  for (const user of backupData.users) {
-    await prisma.users.upsert({
-      where: { email: user.email },
-      update: user,
-      create: user,
-    });
-    console.log(`✅ User: ${user.full_name} (${user.email})`);
-  }
-
-  // 8. Laboratories
+  // 7. Laboratories (must be seeded before users that reference them)
   for (const lab of backupData.laboratories) {
     await prisma.laboratories.upsert({
       where: { lab_id: lab.lab_id },
@@ -390,6 +380,16 @@ async function main() {
       create: lab,
     });
     console.log(`✅ Laboratory: ${lab.lab_name}`);
+  }
+
+  // 8. Users (now that labs exist)
+  for (const user of backupData.users) {
+    await prisma.users.upsert({
+      where: { email: user.email },
+      update: user,
+      create: user,
+    });
+    console.log(`✅ User: ${user.full_name} (${user.email})`);
   }
 
   // 9. Workstations

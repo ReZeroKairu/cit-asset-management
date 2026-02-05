@@ -395,28 +395,6 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     </div>
                   </div>
 
-                  {/* Workstations */}
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Workstation Status</h4>
-                    <div className="space-y-2">
-                      {workstations.map((ws) => (
-                        <div key={ws.workstation_id} className="flex gap-3 items-center border rounded p-3 bg-gray-50">
-                          <span className="font-medium min-w-[120px]">{ws.workstation_name}</span>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            ws.status === 'Working' ? 'bg-green-100 text-green-800' :
-                            ws.status === 'Not Working' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {ws.status}
-                          </span>
-                          <span className="flex-1 text-sm text-gray-600">
-                            {ws.remarks || 'No remarks'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Procedures Section */}
                   {reportData.procedures && reportData.procedures.length > 0 && (
                     <div>
@@ -444,6 +422,28 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       </div>
                     </div>
                   )}
+
+                  {/* Workstations */}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Workstation Status</h4>
+                    <div className="space-y-2">
+                      {workstations.map((ws) => (
+                        <div key={ws.workstation_id} className="flex gap-3 items-center border rounded p-3 bg-gray-50">
+                          <span className="font-medium min-w-[120px]">{ws.workstation_name}</span>
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            ws.status === 'Working' ? 'bg-green-100 text-green-800' :
+                            ws.status === 'Not Working' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {ws.status}
+                          </span>
+                          <span className="flex-1 text-sm text-gray-600">
+                            {ws.remarks || 'No remarks'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* General Remarks */}
                   <div>
