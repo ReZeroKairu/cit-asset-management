@@ -1,0 +1,570 @@
+import { useState, useEffect } from "react";
+import api from "../api/axios";
+import { getLaboratories } from "../api/laboratories";
+import { getInventory, deleteAsset } from "../api/inventory";
+import { getAllWorkstations } from "../api/workstations";
+import AddAssetModal from "../components/inventory/AddAssetModal";
+import EditAssetModal from "../components/inventory/EditAssetModal";
+import ViewWorkstationModal from "../components/inventory/ViewWorkstationModal";
+import EditWorkstationModal from "../components/inventory/EditWorkstationModal";
+import { useAuth } from "../context/AuthContext";
+import AddWorkstationModal from "../components/inventory/AddWorkstationModal";
+import WorkstationReport from "../components/inventory/WorkstationReport";
+import { Eye, Edit, Trash2 } from "lucide-react";
+
+interface Asset {
+  asset_id: number;
+  lab_id?: number;
+  property_tag_no: string;
+  item_name: string;
+  description: string;
+  serial_number: string;
+  quantity: number;
+  date_of_purchase: string;
+  laboratories?: { lab_id: number; lab_name: string };
+  units?: { unit_name: string };
+  workstation?: { workstation_name: string };
+  details?: {
+    property_tag_no: string;
+    item_name: string;
+    description: string;
+    serial_number: string;
+    quantity: number;
+    date_of_purchase: string;
+  };
+}
+
+interface Workstation {
+  workstation_id: number;
+  workstation_name: string;
+  lab_id: number | null;
+  created_at: string;
+  workstation_remarks?: string;
+  current_status?: {
+    status_name: string;
+  };
+  laboratory?: {
+    lab_name: string;
+    location?: string;
+  };
+  assets?: {
+    asset_id: number;
+    item_name: string;
+    property_tag_no: string;
+    serial_number: string;
+    units: {
+      unit_name: string;
+    };
+  }[];
+}
+
+interface Laboratory {
+  lab_id: number;
+  lab_name: string;
+  location?: string;
+}
+
+const InventoryPage = () => {
+  const { user } = useAuth();
+  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [workstations, setWorkstations] = useState<Workstation[]>([]);
+  const [showWSModal, setShowWSModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [viewingWorkstation, setViewingWorkstation] =
+    useState<Workstation | null>(null);
+  const [editingWorkstation, setEditingWorkstation] =
+    useState<Workstation | null>(null);
+  const [showViewWSModal, setShowViewWSModal] = useState(false);
+  const [showEditWSModal, setShowEditWSModal] = useState(false);
+  const [showUnassignedAssets, setShowUnassignedAssets] = useState(false);
+  const [showWorkstationReport, setShowWorkstationReport] = useState(false);
+  const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
+  const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchInventory();
+    fetchWorkstations();
+    fetchLaboratories();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const data = await getInventory();
+      setAssets(data);
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+    }
+  };
+
+  const fetchWorkstations = async () => {
+    try {
+      const data = await getAllWorkstations();
+      setWorkstations(data);
+    } catch (err) {
+      console.error("Error fetching workstations:", err);
+    }
+  };
+
+  const fetchLaboratories = async () => {
+    try {
+      const labs = await getLaboratories();
+      setLaboratories(labs);
+    } catch (err) {
+      console.error("Error fetching laboratories:", err);
+    }
+  };
+
+  const handleEdit = (asset: Asset) => {
+    setEditingAsset(asset);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = async (assetId: number) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this asset? This action cannot be undone.",
+      )
+    )
+      return;
+    try {
+      await deleteAsset(assetId);
+      await fetchInventory();
+      await fetchWorkstations();
+    } catch (err: any) {
+      console.error("Failed to delete asset:", err);
+      alert(err.response?.data?.error || "Failed to delete asset");
+    }
+  };
+
+  const handleViewWorkstation = (workstation: Workstation) => {
+    setViewingWorkstation(workstation);
+    setShowViewWSModal(true);
+  };
+
+  const handleEditWorkstation = (workstation: Workstation) => {
+    setEditingWorkstation(workstation);
+    setShowEditWSModal(true);
+  };
+
+  const handleDeleteWorkstation = async (workstationId: number) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this workstation? This will also remove all asset assignments.",
+      )
+    )
+      return;
+    try {
+      await api.delete(`/workstations/${workstationId}`);
+      await fetchWorkstations();
+      await fetchInventory();
+    } catch (err: any) {
+      console.error("Failed to delete workstation:", err);
+      alert(err.response?.data?.error || "Failed to delete workstation");
+    }
+  };
+
+  const handleWorkstationModalSuccess = () => {
+    setShowViewWSModal(false);
+    setViewingWorkstation(null);
+    fetchWorkstations();
+    fetchInventory();
+  };
+
+  const handleEditWorkstationModalSuccess = () => {
+    setShowEditWSModal(false);
+    setEditingWorkstation(null);
+    fetchWorkstations();
+  };
+
+  // --- Filtering Logic ---
+
+  // ✅ 1. Only include assets that have NO workstation assigned
+  // We check both the .workstation object (if present) and the workstation_id field
+  const unassignedAssets = assets.filter(
+    (asset: any) => !asset.workstation && !asset.workstation_id,
+  );
+
+  const filteredWorkstations = (
+    selectedLabId
+      ? workstations.filter((ws) => ws.lab_id === selectedLabId)
+      : [...workstations]
+  ).sort((a, b) =>
+    a.workstation_name.localeCompare(b.workstation_name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+
+  // ✅ 2. Filter unassigned assets by selected lab
+  const filteredUnassignedAssets = selectedLabId
+    ? unassignedAssets.filter((asset) => asset.lab_id === selectedLabId)
+    : unassignedAssets;
+
+  const availableLabs =
+    user?.role === "Admin"
+      ? laboratories
+      : user?.lab_id
+        ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
+        : [];
+
+  useEffect(() => {
+    if (user?.role === "Custodian" && user.lab_id && !selectedLabId) {
+      setSelectedLabId(user.lab_id);
+    }
+  }, [user, selectedLabId]);
+
+  const getStatusColor = (statusName?: string) => {
+    switch (statusName) {
+      case "Functional":
+        return "bg-green-100 text-green-800";
+      case "For Repair":
+        return "bg-yellow-100 text-yellow-800";
+      case "For Replacement":
+        return "bg-red-100 text-red-800";
+      case "For Upgrade":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Inventory Management
+        </h1>
+        <p className="text-gray-600">
+          Manage workstations and their assigned inventory assets
+        </p>
+      </div>
+
+      {/* Filter Toggle & Controls */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowUnassignedAssets(false)}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                !showUnassignedAssets
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              🖥️ Workstations ({filteredWorkstations.length})
+            </button>
+            <button
+              onClick={() => setShowUnassignedAssets(true)}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                showUnassignedAssets
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              📦 Other Assets ({filteredUnassignedAssets.length})
+            </button>
+
+            {/* Lab Filter */}
+            {(user?.role === "Admin" ||
+              (user?.role === "Custodian" && availableLabs.length > 1)) && (
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="lab-filter"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Filter by Lab:
+                </label>
+                <select
+                  id="lab-filter"
+                  value={selectedLabId || ""}
+                  onChange={(e) =>
+                    setSelectedLabId(
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Laboratories</option>
+                  {availableLabs.map((lab) => (
+                    <option key={lab.lab_id} value={lab.lab_id}>
+                      {lab.lab_name} {lab.location && `(${lab.location})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {!showUnassignedAssets && (
+              <button
+                className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center"
+                onClick={() => setShowWSModal(true)}
+              >
+                <span className="mr-1 text-lg">+</span> Add Workstation
+              </button>
+            )}
+
+            {(user?.role === "Admin" || user?.role === "Custodian") && (
+              <>
+                <button
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
+                  onClick={() => setShowModal(true)}
+                >
+                  <span className="mr-1 text-lg">+</span> Add Asset
+                </button>
+                <button
+                  className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center"
+                  onClick={() => setShowWorkstationReport(true)}
+                >
+                  Workstation Report
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {!showUnassignedAssets ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Workstation Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Laboratory
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Remarks
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredWorkstations.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-gray-500"
+                    >
+                      No workstations found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredWorkstations.map((workstation) => (
+                    <tr
+                      key={workstation.workstation_id}
+                      className="hover:bg-gray-50"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-semibold text-blue-600">
+                          {workstation.workstation_name}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                          {workstation.laboratory?.lab_name || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {workstation.laboratory?.location || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(workstation.current_status?.status_name)}`}
+                        >
+                          {workstation.current_status?.status_name || "Unknown"}
+                        </span>
+                      </td>
+                      <td
+                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
+                        title={workstation.workstation_remarks}
+                      >
+                        {workstation.workstation_remarks || "-"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => handleViewWorkstation(workstation)}
+                          title="View"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="text-gray-600 hover:text-gray-800"
+                          onClick={() => handleEditWorkstation(workstation)}
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() =>
+                            handleDeleteWorkstation(workstation.workstation_id)
+                          }
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Property Tag
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Unit Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Serial No.
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Qty
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUnassignedAssets.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-6 py-4 text-center text-gray-500"
+                    >
+                      No unassigned assets found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUnassignedAssets.map((asset) => (
+                    <tr key={asset.asset_id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
+                        {asset.details?.property_tag_no ||
+                          asset.property_tag_no}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {asset.units?.unit_name || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {asset.details?.description || asset.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {asset.details?.serial_number || asset.serial_number}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                          {asset.laboratories?.lab_name || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {asset.details?.quantity || asset.quantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => handleEdit(asset)}
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => handleDelete(asset.asset_id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modals remain exactly the same as your previous working file */}
+      <AddAssetModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={() => {
+          fetchInventory();
+          fetchWorkstations();
+        }}
+      />
+      <EditAssetModal
+        show={showEditModal}
+        asset={editingAsset}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingAsset(null);
+        }}
+        onSuccess={() => {
+          fetchInventory();
+          fetchWorkstations();
+        }}
+      />
+      <AddWorkstationModal
+        show={showWSModal}
+        onClose={() => setShowWSModal(false)}
+        onSuccess={() => fetchWorkstations()}
+      />
+      <ViewWorkstationModal
+        show={showViewWSModal}
+        workstation={viewingWorkstation}
+        onClose={() => {
+          setShowViewWSModal(false);
+          setViewingWorkstation(null);
+        }}
+        onSuccess={handleWorkstationModalSuccess}
+      />
+      <EditWorkstationModal
+        show={showEditWSModal}
+        workstation={editingWorkstation}
+        onClose={() => {
+          setShowEditWSModal(false);
+          setEditingWorkstation(null);
+        }}
+        onSuccess={handleEditWorkstationModalSuccess}
+      />
+      <WorkstationReport
+        show={showWorkstationReport}
+        onClose={() => setShowWorkstationReport(false)}
+      />
+    </div>
+  );
+};
+
+export default InventoryPage;
