@@ -11,6 +11,7 @@ import workstationRoutes from "./routes/workstationRoutes";
 import labRoutes from "./routes/labRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
+import maintenanceRoutes from "./routes/maintenanceRoutes";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/workstations", workstationRoutes);
 app.use("/laboratories", labRoutes);
 app.use("/daily-reports", reportRoutes); // handles reports and procedures
 app.use("/dashboard", dashboardRoutes);
+app.use("/maintenance-reports", maintenanceRoutes); // New route for maintenance reports
 
 // 404 Handler (Optional but good practice)
 app.use((req, res) => {

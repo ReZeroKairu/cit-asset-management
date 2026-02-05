@@ -13,6 +13,7 @@ export interface Asset {
     property_tag_no: string | null;
     serial_number: string | null;
     description: string | null;
+    asset_remarks?: string | null;
     status_id: number;
     current_status?: {
       status_name: string;
@@ -78,4 +79,23 @@ export const getUnits = async (deviceTypeId?: number) => {
 export const getDeviceTypes = async () => {
   const response = await api.get("/inventory/device-types");
   return response.data;
+};
+
+// ✅ UPDATED FUNCTION: Correctly maps the current remarks
+export const getWorkstationAssets = async (workstationId: number) => {
+  const data = await getInventory({ workstation_id: workstationId });
+
+  return data.map((asset: Asset) => ({
+    asset_id: asset.asset_id,
+    unit_name: asset.units?.unit_name || "Unknown",
+    property_tag_no: asset.details?.property_tag_no || "N/A",
+    serial_number: asset.details?.serial_number || "N/A",
+
+    // ✅ FIX: Explicitly map the current remarks from the DB
+    // (Previously this might have been mapped to description)
+    asset_remarks: asset.details?.asset_remarks || "",
+
+    status: asset.details?.current_status?.status_name || "Unknown",
+    status_id: asset.details?.status_id || 1,
+  }));
 };

@@ -12,6 +12,7 @@ import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import { Package, Building, FileText, Users } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
+import MaintenancePage from "./pages/MaintenancePage";
 
 interface CreateUserData {
   full_name: string;
@@ -32,7 +33,9 @@ interface LabFormData {
 
 // Home Page Component with Real Data
 const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -42,7 +45,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
         const data = await getDashboardStats();
         setDashboardData(data);
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+        console.error("Failed to fetch dashboard data:", error);
       } finally {
         setLoading(false);
       }
@@ -93,27 +96,36 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Welcome to CIT Asset Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome to CIT Asset Management
+        </h1>
         <p className="text-gray-600">
-          {userRole === "Custodian" && userAssignedLab 
+          {userRole === "Custodian" && userAssignedLab
             ? `Manage your laboratory assets and daily reports efficiently for ${userAssignedLab.lab_name}`
-            : "Manage your laboratory assets and daily reports efficiently"
-          }
+            : "Manage your laboratory assets and daily reports efficiently"}
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? 'lg:grid-cols-2' : ''}`}>
-        <Card 
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? "lg:grid-cols-2" : ""}`}
+      >
+        <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate("inventory")}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Assets</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalAssets}</p>
-                <p className="text-xs text-blue-600 mt-1">Click to view assets →</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Assets
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalAssets}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Click to view assets →
+                </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <Package className="w-6 h-6 text-blue-600" />
@@ -123,16 +135,22 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
         </Card>
 
         {isAdmin && (
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
             onClick={() => handleNavigate("labs")}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Laboratories</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalLaboratories}</p>
-                  <p className="text-xs text-green-600 mt-1">Click to view labs →</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Laboratories
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.totalLaboratories}
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Click to view labs →
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                   <Building className="w-6 h-6 text-green-600" />
@@ -142,16 +160,22 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </Card>
         )}
 
-        <Card 
+        <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate(isAdmin ? "admin-reports" : "reports")}
         >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Daily Reports</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalDailyReports}</p>
-                <p className="text-xs text-purple-600 mt-1">Click to view reports →</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Daily Reports
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalDailyReports}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  Click to view reports →
+                </p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <FileText className="w-6 h-6 text-purple-600" />
@@ -161,16 +185,22 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
         </Card>
 
         {isAdmin && (
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
             onClick={() => handleNavigate("user-management")}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
-                  <p className="text-xs text-orange-600 mt-1">Click to manage users →</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Active Users
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.totalUsers}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    Click to manage users →
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                   <Users className="w-6 h-6 text-orange-600" />
@@ -180,16 +210,23 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </Card>
         )}
       </div>
-
     </div>
   );
 };
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archived-reports" | "user-management" | "profile">(
-    "home",
-  );
+  const [currentPage, setCurrentPage] = useState<
+    | "home"
+    | "inventory"
+    | "labs"
+    | "reports"
+    | "admin-reports"
+    | "archived-reports"
+    | "user-management"
+    | "profile"
+    | "maintenance"
+  >("home");
 
   // Create user form state that persists across navigation
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
@@ -221,21 +258,27 @@ function App() {
       case "inventory":
         return <InventoryPage />;
       case "labs":
-        return <LaboratoriesPage 
-          labFormData={labFormData}
-          setLabFormData={setLabFormData}
-        />;
+        return (
+          <LaboratoriesPage
+            labFormData={labFormData}
+            setLabFormData={setLabFormData}
+          />
+        );
       case "reports":
         return <DailyReportsPage />;
       case "admin-reports":
         return <AdminReportsPage />;
       case "archived-reports":
         return <ArchivedReportsPage />;
+      case "maintenance":
+        return <MaintenancePage />;
       case "user-management":
-        return <UserManagementPage 
-          createUserData={createUserData}
-          setCreateUserData={setCreateUserData}
-        />;
+        return (
+          <UserManagementPage
+            createUserData={createUserData}
+            setCreateUserData={setCreateUserData}
+          />
+        );
       case "profile":
         return <ProfilePage />;
       default:

@@ -7,10 +7,9 @@ import {
 } from "../../api/dailyReports";
 import {
   getAllProcedures,
-  getReportProcedures, // We can use this now if the API is ready
+  getReportProcedures,
   saveReportProcedures,
 } from "../../api/procedures";
-// ✅ IMPORT THE NEW WORKSTATION SERVICE
 import { getLabWorkstationsForReport } from "../../api/workstationReports";
 import api from "../../api/axios";
 import type { DailyReport } from "../../api/dailyReports";
@@ -80,7 +79,11 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
   const loadProcedures = async () => {
     try {
       const data = await getAllProcedures();
-      const initializedProcedures = data.map((proc: Procedure) => ({
+
+      // ✅ FILTER: Only show DAR category procedures
+      const darProcedures = data.filter((proc: any) => proc.category === "DAR");
+
+      const initializedProcedures = darProcedures.map((proc: Procedure) => ({
         ...proc,
         overall_status: "Pending",
         overall_remarks: "",
@@ -97,13 +100,18 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
       // Load all available procedures
       const allProcedures = await getAllProcedures();
 
+      // ✅ FILTER: Only keep DAR category procedures
+      const darProcedures = allProcedures.filter(
+        (proc: any) => proc.category === "DAR",
+      );
+
       try {
         // Fetch saved data for this report
         const reportData = await api.get(`/daily-reports/${reportId}`);
         const savedProcedures = reportData.data.procedures || [];
 
-        // Merge all procedures with their saved status
-        const mergedProcedures = allProcedures.map((proc: Procedure) => {
+        // Merge filtered DAR procedures with their saved status
+        const mergedProcedures = darProcedures.map((proc: Procedure) => {
           const savedProc = savedProcedures.find(
             (sp: any) => sp.procedure_id === proc.procedure_id,
           );
@@ -119,8 +127,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
         setProcedures(mergedProcedures);
       } catch (apiError: any) {
         console.error("API Error fetching specific report details:", apiError);
-        // Fallback: just use default procedures
-        const fallbackProcedures = allProcedures.map((proc: Procedure) => ({
+        // Fallback: just use default DAR procedures
+        const fallbackProcedures = darProcedures.map((proc: Procedure) => ({
           ...proc,
           overall_status: "Pending",
           overall_remarks: "",
@@ -133,16 +141,13 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
     }
   };
 
-  // ✅ FIXED: Use the new API service function
   const loadWorkstations = async (labId: number) => {
     try {
       const reportId = report?.report_id;
-      // This calls the correct endpoint: /daily-reports/utils/lab-workstations
       const data = await getLabWorkstationsForReport(labId, reportId);
       setWorkstations(data);
     } catch (err: any) {
       console.error("Failed to load workstations:", err);
-      // Optional: Add UI feedback if loading fails
     }
   };
 

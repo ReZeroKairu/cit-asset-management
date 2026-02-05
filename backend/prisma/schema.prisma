@@ -23,6 +23,8 @@ model daily_reports {
   general_remarks String?               @db.Text
   status          daily_reports_status? @default(Pending)
   created_at      DateTime?             @default(now()) @db.Timestamp(0)
+  // ✅ ADD THIS LINE:
+  report_type     String   @default("DAILY") // Values: "DAILY" or "QPMC"
 
   // Relations
   users            users?                @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
