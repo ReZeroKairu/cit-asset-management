@@ -13,9 +13,14 @@ export const getAllMaintenanceReports = async (req: Request, res: Response) => {
       include: {
         users: { select: { full_name: true } },
         laboratories: { select: { lab_name: true, location: true } },
-        // ✅ ADD THIS: Include workstation items so we know what was checked
+
+        // ⚠️ THIS IS THE IMPORTANT PART THAT WAS MISSING DATA ⚠️
         workstation_items: {
-          select: { workstation_id: true },
+          select: {
+            workstation_id: true,
+            remarks: true, // ✅ You must select this column
+            status: true, // ✅ You must select this column
+          },
         },
       },
       orderBy: { report_date: "desc" },

@@ -9,7 +9,12 @@ export interface MaintenanceReport {
   lab_name?: string;
   user_name?: string;
   procedures?: any[];
-  workstation_items?: { workstation_id: number }[];
+  // ✅ UPDATED: Add remarks and status here
+  workstation_items?: {
+    workstation_id: number;
+    remarks?: string;
+    status?: string;
+  }[];
 }
 
 // Get all maintenance reports

@@ -12,15 +12,18 @@ import { getLabWorkstationsForReport } from "../api/workstationReports";
 import { getUserAssignedLab } from "../api/dailyReports";
 
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
+// ✅ IMPORT NEW VIEW
+import MaintenanceView from "../components/maintenance/MaintenanceView";
 import { Plus, CheckCircle, XCircle, Filter, Monitor } from "lucide-react";
 
 const MaintenancePage = () => {
-  // 'list' now refers to the Workstation List, not Report List
-  const [view, setView] = useState<"list" | "create" | "edit">("list");
+  // ✅ UPDATED: Added "view" to state types
+  const [view, setView] = useState<"list" | "view" | "create" | "edit">("list");
 
   // Data State
   const [reports, setReports] = useState<MaintenanceReport[]>([]);
   const [labWorkstations, setLabWorkstations] = useState<any[]>([]);
+
   const [selectedReport, setSelectedReport] = useState<
     MaintenanceReport | undefined
   >(undefined);
@@ -31,16 +34,15 @@ const MaintenancePage = () => {
   } | null>(null);
 
   // Filter State
-  const [selectedQuarter, setSelectedQuarter] = useState<string>("1"); // 1, 2, 3, 4
+  const [selectedQuarter, setSelectedQuarter] = useState<string>("1");
   const [userLabId, setUserLabId] = useState<number | null>(null);
   const [assignedLabName, setAssignedLabName] = useState<string>("");
 
   useEffect(() => {
     fetchUserLabInfo();
-    fetchReports(); // Still need reports to calculate status!
+    fetchReports();
   }, []);
 
-  // 1. Fetch User's Lab & Workstations
   const fetchUserLabInfo = async () => {
     try {
       const data = await getUserAssignedLab();
@@ -48,7 +50,6 @@ const MaintenancePage = () => {
         setUserLabId(data.assigned_lab.lab_id);
         setAssignedLabName(data.assigned_lab.lab_name);
 
-        // Fetch ALL workstations for this lab
         const wsData = await getLabWorkstationsForReport(
           data.assigned_lab.lab_id,
         );
@@ -59,7 +60,6 @@ const MaintenancePage = () => {
     }
   };
 
-  // 2. Fetch Reports (Used for Status Calculation)
   const fetchReports = async () => {
     try {
       const data = await getAllMaintenanceReports();
@@ -69,10 +69,9 @@ const MaintenancePage = () => {
     }
   };
 
-  // Helper: Check if a date is in the selected quarter
   const isInSelectedQuarter = (dateString: string) => {
     const date = new Date(dateString);
-    const month = date.getMonth() + 1; // 1-12
+    const month = date.getMonth() + 1;
     const year = date.getFullYear();
     const currentYear = new Date().getFullYear();
 
@@ -85,28 +84,66 @@ const MaintenancePage = () => {
     return false;
   };
 
-  // Logic: Determine Red/Green status
-  const getWorkstationStatus = (workstationId: number) => {
-    if (!userLabId) return false;
-
-    // Filter reports for this lab AND selected quarter
-    const relevantReports = reports.filter(
-      (r) => r.lab_id === userLabId && isInSelectedQuarter(r.report_date),
-    );
-
-    // Check if workstation ID exists in any of those reports
-    return relevantReports.some((report) =>
-      report.workstation_items?.some(
-        (item) => item.workstation_id === workstationId,
-      ),
+  // Helper to find specific report for a workstation in current quarter
+  const findReportForWorkstation = (workstationId: number) => {
+    if (!userLabId) return undefined;
+    return reports.find(
+      (r) =>
+        r.lab_id === userLabId &&
+        isInSelectedQuarter(r.report_date) &&
+        r.workstation_items?.some(
+          (item) => item.workstation_id === workstationId,
+        ),
     );
   };
 
+  const getMaintenanceStatus = (workstationId: number) => {
+    return !!findReportForWorkstation(workstationId);
+  };
+
+  const getStatusColor = (statusName?: string) => {
+    switch (statusName) {
+      case "Functional":
+      case "Working":
+      case "Operational":
+        return "bg-green-100 text-green-800";
+      case "For Repair":
+        return "bg-yellow-100 text-yellow-800";
+      case "For Replacement":
+      case "Defective":
+      case "Condemned":
+        return "bg-red-100 text-red-800";
+      case "For Upgrade":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // ✅ UPDATED: Clicking a row now opens "view" mode
   const handleWorkstationClick = (ws: any) => {
     setTargetWorkstation({ id: ws.workstation_id, name: ws.workstation_name });
-    setSelectedReport(undefined); // Ensure we aren't in "Edit Mode" of an old report
+
+    // Find if there is already a report for this workstation
+    const existingReport = findReportForWorkstation(ws.workstation_id);
+    setSelectedReport(existingReport);
+
+    setView("view");
+  };
+
+  // ✅ NEW: Handle clicking "Service" button in View mode
+  const handleServiceClick = () => {
+    // We keep targetWorkstation and selectedReport as they are
+    // Just switch view to create/edit form
     setView("create");
   };
+
+  const sortedWorkstations = [...labWorkstations].sort((a, b) =>
+    a.workstation_name.localeCompare(b.workstation_name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
 
   return (
     <div className="p-6">
@@ -134,10 +171,8 @@ const MaintenancePage = () => {
         )}
       </div>
 
-      {/* VIEW: Workstation Status Table (Default) */}
       {view === "list" && (
         <div className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-          {/* Table Header / Filter Toolbar */}
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
               <Monitor className="w-5 h-5 text-gray-500 mr-2" />
@@ -148,7 +183,6 @@ const MaintenancePage = () => {
               </h3>
             </div>
 
-            {/* Quarter Filter */}
             <div className="flex items-center space-x-2 bg-white px-3 py-1 rounded-md border border-gray-300">
               <Filter className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-600">Quarter:</span>
@@ -172,15 +206,21 @@ const MaintenancePage = () => {
                   Workstation Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Remarks
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Workstation Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Maintenance Status
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {labWorkstations.length === 0 ? (
+              {sortedWorkstations.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={2}
+                    colSpan={4}
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     {userLabId
@@ -189,18 +229,35 @@ const MaintenancePage = () => {
                   </td>
                 </tr>
               ) : (
-                labWorkstations.map((ws) => {
-                  const isChecked = getWorkstationStatus(ws.workstation_id);
+                sortedWorkstations.map((ws) => {
+                  const isServiced = getMaintenanceStatus(ws.workstation_id);
+
                   return (
                     <tr
+                      key={ws.workstation_id}
                       onClick={() => handleWorkstationClick(ws)}
                       className="hover:bg-blue-50 transition-colors cursor-pointer group"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 group-hover:text-blue-700">
                         {ws.workstation_name}
                       </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {ws.workstation_remarks || "-"}
+                      </td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {isChecked ? (
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                            ws.current_status?.status_name,
+                          )}`}
+                        >
+                          {ws.current_status?.status_name || "Unknown"}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {isServiced ? (
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <CheckCircle className="w-4 h-4 mr-1.5" />
                             Serviced
@@ -218,22 +275,45 @@ const MaintenancePage = () => {
               )}
             </tbody>
           </table>
-
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 text-xs text-gray-500">
-            Showing status for {labWorkstations.length} workstations in Quarter{" "}
-            {selectedQuarter} of {new Date().getFullYear()}
+            Showing status for {sortedWorkstations.length} workstations in
+            Quarter {selectedQuarter} of {new Date().getFullYear()}
           </div>
         </div>
       )}
 
-      {/* VIEW: Create/Edit Form */}
+      {/* ✅ NEW VIEW MODE */}
+      {view === "view" && targetWorkstation && (
+        <MaintenanceView
+          workstation={{
+            id: targetWorkstation.id,
+            name: targetWorkstation.name,
+            lab_name: assignedLabName,
+          }}
+          reportSummary={selectedReport}
+          quarter={
+            selectedQuarter === "1"
+              ? "1st"
+              : selectedQuarter === "2"
+                ? "2nd"
+                : selectedQuarter === "3"
+                  ? "3rd"
+                  : "4th"
+          }
+          onService={handleServiceClick}
+          onBack={() => setView("list")}
+        />
+      )}
+
+      {/* CREATE/EDIT FORM */}
       {(view === "create" || view === "edit") && (
         <MaintenanceForm
           report={selectedReport}
           targetWorkstation={targetWorkstation}
           onSuccess={() => {
             setView("list");
-            fetchReports(); // Refresh data after submit
+            fetchReports();
+            fetchUserLabInfo();
           }}
           onCancel={() => setView("list")}
         />

@@ -18,7 +18,7 @@ import { getLabWorkstationsForReport } from "../../api/workstationReports";
 import { getWorkstationAssets, updateAsset } from "../../api/inventory";
 
 import api from "../../api/axios";
-import { Monitor } from "lucide-react";
+import { Monitor, Cpu, Keyboard, Network } from "lucide-react";
 
 // Local Interface for Table
 interface WorkstationAssetItem {
@@ -29,6 +29,13 @@ interface WorkstationAssetItem {
   status: string;
 }
 
+// Interface for the "Others" items
+interface OtherItem {
+  name: string;
+  remarks: string;
+  status: string;
+}
+
 interface Props {
   report?: MaintenanceReport;
   targetWorkstation?: { id: number; name: string } | null;
@@ -36,13 +43,27 @@ interface Props {
   onCancel: () => void;
 }
 
+// System Unit Components List
+const SYSTEM_UNIT_TYPES = [
+  "SSD",
+  "PSU",
+  "RAM",
+  "CPU",
+  "HDD",
+  "Case",
+  "CPU Fan",
+  "Motherboard",
+  "System Fan",
+  "GPU",
+  "Video Card",
+];
+
 const MaintenanceForm: React.FC<Props> = ({
   report,
   targetWorkstation,
   onSuccess,
   onCancel,
 }) => {
-  // Helper to determine current quarter
   const getCurrentQuarter = () => {
     const month = new Date().getMonth() + 1;
     if (month <= 3) return "1st";
@@ -54,7 +75,6 @@ const MaintenanceForm: React.FC<Props> = ({
   const [formData, setFormData] = useState({
     lab_id: report?.lab_id || 0,
     report_date: report?.report_date || new Date().toISOString().split("T")[0],
-    // ✅ NEW: Add Quarter to state (default to current)
     quarter: getCurrentQuarter(),
     general_remarks: report?.general_remarks || "",
   });
@@ -67,6 +87,13 @@ const MaintenanceForm: React.FC<Props> = ({
     WorkstationAssetItem[]
   >([]);
 
+  // State for "Other" items (Software, Connectivity)
+  const [otherItems, setOtherItems] = useState<OtherItem[]>([
+    { name: "Software", remarks: "", status: "Functional" },
+    { name: "Connectivity Type", remarks: "", status: "Functional" },
+    { name: "Connectivity Speed", remarks: "", status: "Functional" },
+  ]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isProcedureDropdownOpen, setIsProcedureDropdownOpen] = useState(false);
@@ -76,12 +103,9 @@ const MaintenanceForm: React.FC<Props> = ({
     loadProcedures();
     if (report) {
       loadReportProcedures(report.report_id);
-      // If editing, try to extract quarter from remarks if it was saved there
-      // (Optional simple logic to keeping existing remarks)
     }
   }, []);
 
-  // ... (Keep existing useEffects for click outside and workstation loading) ...
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isProcedureDropdownOpen) {
@@ -135,7 +159,34 @@ const MaintenanceForm: React.FC<Props> = ({
     );
   };
 
-  // ... (Keep loadProcedures, loadReportProcedures, loadWorkstations, loadAssignedLab exactly as they were) ...
+  const handleOtherItemChange = (
+    index: number,
+    field: keyof OtherItem,
+    value: string,
+  ) => {
+    setOtherItems((prev) =>
+      prev.map((item, i) => {
+        if (i === index) {
+          return { ...item, [field]: value };
+        }
+        return item;
+      }),
+    );
+  };
+
+  const systemAssets = workstationAssets.filter((asset) =>
+    SYSTEM_UNIT_TYPES.some(
+      (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+    ),
+  );
+
+  const peripheralAssets = workstationAssets.filter(
+    (asset) =>
+      !SYSTEM_UNIT_TYPES.some(
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+      ),
+  );
+
   const loadProcedures = async () => {
     try {
       const data = await getAllProcedures();
@@ -217,21 +268,13 @@ const MaintenanceForm: React.FC<Props> = ({
     e.preventDefault();
     setLoading(true);
     try {
-      // ✅ LOGIC: Append Quarter to remarks if not already there
-      // This ensures the quarter is saved in the database without adding a new column
       let finalRemarks = formData.general_remarks;
       const quarterTag = `[Quarter: ${formData.quarter}]`;
-
       if (!finalRemarks.includes("[Quarter:")) {
         finalRemarks = `${quarterTag} ${finalRemarks}`;
       }
+      const submitData = { ...formData, general_remarks: finalRemarks };
 
-      const submitData = {
-        ...formData,
-        general_remarks: finalRemarks,
-      };
-
-      // 1. Create/Update Report
       let createdReport;
       if (report) {
         await updateMaintenanceReport(report.report_id, submitData);
@@ -240,7 +283,11 @@ const MaintenanceForm: React.FC<Props> = ({
         createdReport = await createMaintenanceReport(submitData);
       }
 
-      // 2. Save Workstations Checked
+      const otherInfoString = otherItems
+        .filter((i) => i.remarks || i.status !== "Functional")
+        .map((i) => `[${i.name}: ${i.remarks || i.status}]`)
+        .join(" ");
+
       const checkedWorkstations = workstations.filter((ws) => ws.checked);
       if (checkedWorkstations.length > 0) {
         await api.post(
@@ -250,13 +297,14 @@ const MaintenanceForm: React.FC<Props> = ({
             workstations: checkedWorkstations.map((ws) => ({
               workstation_id: ws.workstation_id,
               status: ws.status || "Working",
-              remarks: ws.remarks,
+              remarks: ws.remarks
+                ? `${ws.remarks} ${otherInfoString}`
+                : otherInfoString,
             })),
           },
         );
       }
 
-      // 3. Save Procedures
       const checkedProcedures = procedures.filter(
         (p) => p.overall_status === "Completed",
       );
@@ -269,7 +317,6 @@ const MaintenanceForm: React.FC<Props> = ({
         await saveReportProcedures(createdReport.report_id, procData);
       }
 
-      // 4. Update Assets
       if (targetWorkstation && workstationAssets.length > 0) {
         await Promise.all(
           workstationAssets.map((asset) => {
@@ -277,7 +324,6 @@ const MaintenanceForm: React.FC<Props> = ({
             if (asset.status === "For Repair") statusId = 2;
             if (asset.status === "Defective") statusId = 3;
             if (asset.status === "Condemned") statusId = 4;
-
             return updateAsset(asset.asset_id, {
               asset_remarks: asset.asset_remarks,
               description: asset.asset_remarks,
@@ -285,7 +331,6 @@ const MaintenanceForm: React.FC<Props> = ({
           }),
         );
       }
-
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -294,6 +339,44 @@ const MaintenanceForm: React.FC<Props> = ({
       setLoading(false);
     }
   };
+
+  const AssetRow = ({ asset }: { asset: WorkstationAssetItem }) => (
+    <tr key={asset.asset_id}>
+      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+        {asset.unit_name}
+      </td>
+      <td className="px-6 py-4 text-sm text-gray-500">
+        {asset.property_tag_no}
+      </td>
+      <td className="px-6 py-4 text-sm">
+        <input
+          type="text"
+          value={asset.asset_remarks || ""}
+          onChange={(e) =>
+            handleAssetChange(asset.asset_id, "asset_remarks", e.target.value)
+          }
+          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none"
+          placeholder="Remarks..."
+        />
+      </td>
+      <td className="px-6 py-4 text-sm">
+        <select
+          value={asset.status}
+          onChange={(e) =>
+            handleAssetChange(asset.asset_id, "status", e.target.value)
+          }
+          className={`block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none ${asset.status === "Functional" || asset.status === "Working" ? "text-green-700 bg-green-50" : "text-red-700 bg-red-50"}`}
+        >
+          <option value="Functional">Functional</option>
+          <option value="Working">Working</option>
+          <option value="For Repair">For Repair</option>
+          <option value="Defective">Defective</option>
+          <option value="Condemned">Condemned</option>
+          <option value="Missing">Missing</option>
+        </select>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="bg-white rounded-lg p-6">
@@ -308,7 +391,7 @@ const MaintenanceForm: React.FC<Props> = ({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Lab, Date, and Quarter Info */}
+        {/* Lab, Date, Quarter */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -332,10 +415,9 @@ const MaintenanceForm: React.FC<Props> = ({
               onChange={(e) =>
                 setFormData({ ...formData, report_date: e.target.value })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
             />
           </div>
-          {/* ✅ NEW: Quarter Dropdown */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Service Quarter
@@ -345,7 +427,7 @@ const MaintenanceForm: React.FC<Props> = ({
               onChange={(e) =>
                 setFormData({ ...formData, quarter: e.target.value })
               }
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
             >
               <option value="1st">1st Quarter (Jan-Mar)</option>
               <option value="2nd">2nd Quarter (Apr-Jun)</option>
@@ -355,7 +437,6 @@ const MaintenanceForm: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* ... (Procedures, Assets Table, and Buttons remain exactly the same) ... */}
         {/* Procedures Selection */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="flex justify-between items-center mb-4">
@@ -367,11 +448,12 @@ const MaintenanceForm: React.FC<Props> = ({
                   const allCompleted = procedures.every(
                     (proc) => proc.overall_status === "Completed",
                   );
-                  const updatedProcedures = procedures.map((proc) => ({
-                    ...proc,
-                    overall_status: allCompleted ? "Pending" : "Completed",
-                  }));
-                  setProcedures(updatedProcedures);
+                  setProcedures(
+                    procedures.map((proc) => ({
+                      ...proc,
+                      overall_status: allCompleted ? "Pending" : "Completed",
+                    })),
+                  );
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
               >
@@ -396,7 +478,6 @@ const MaintenanceForm: React.FC<Props> = ({
                     ? `${procedures.filter((p) => p.overall_status === "Completed").length} procedures selected`
                     : "Select procedures..."}
                 </span>
-                {/* Icon */}
                 <svg
                   className="w-4 h-4 text-gray-400"
                   fill="none"
@@ -432,16 +513,9 @@ const MaintenanceForm: React.FC<Props> = ({
                         {proc.procedure_name}
                       </button>
                     ))}
-                  {procedures.filter((p) => p.overall_status !== "Completed")
-                    .length === 0 && (
-                    <div className="px-3 py-2 text-gray-500 text-sm">
-                      All selected
-                    </div>
-                  )}
                 </div>
               )}
             </div>
-            {/* Tags */}
             <div className="flex flex-wrap gap-2">
               {procedures
                 .filter((p) => p.overall_status === "Completed")
@@ -474,92 +548,210 @@ const MaintenanceForm: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Workstation Assets Table */}
         {targetWorkstation && (
-          <div className="border rounded-md overflow-hidden">
-            <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex items-center">
-              <Monitor className="w-5 h-5 text-blue-600 mr-2" />
-              <h3 className="font-medium text-blue-900">
-                Assets in {targetWorkstation.name}
-              </h3>
-            </div>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Asset Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Property Tag
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Asset Remarks
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {workstationAssets.length === 0 ? (
+          <>
+            {/* TABLE 1: SYSTEM UNIT COMPONENTS */}
+            <div className="border rounded-md overflow-hidden mb-6">
+              <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex items-center">
+                <Cpu className="w-5 h-5 text-blue-600 mr-2" />
+                <h3 className="font-medium text-blue-900">
+                  System Unit Components
+                </h3>
+              </div>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No assets assigned.
-                    </td>
+                    {/* ✅ ORGANIZED COLUMN WIDTHS */}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/4">
+                      Component
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/5">
+                      Property Tag
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[35%]">
+                      Remarks
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">
+                      Status
+                    </th>
                   </tr>
-                ) : (
-                  workstationAssets.map((asset) => (
-                    <tr key={asset.asset_id}>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {systemAssets.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
+                        No system unit components found.
+                      </td>
+                    </tr>
+                  ) : (
+                    systemAssets.map((asset) => (
+                      <AssetRow key={asset.asset_id} asset={asset} />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* TABLE 2: PERIPHERALS */}
+            <div className="border rounded-md overflow-hidden mb-6">
+              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center">
+                <Keyboard className="w-5 h-5 text-gray-600 mr-2" />
+                <h3 className="font-medium text-gray-900">
+                  Peripherals & External Devices
+                </h3>
+              </div>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {/* ✅ ORGANIZED COLUMN WIDTHS (MATCHING TABLE 1) */}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/4">
+                      Asset Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/5">
+                      Property Tag
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[35%]">
+                      Remarks
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {peripheralAssets.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
+                        No peripheral assets found.
+                      </td>
+                    </tr>
+                  ) : (
+                    peripheralAssets.map((asset) => (
+                      <AssetRow key={asset.asset_id} asset={asset} />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* TABLE 3: NETWORK & SOFTWARE (OTHERS) */}
+            <div className="border rounded-md overflow-hidden">
+              <div className="bg-purple-50 px-4 py-2 border-b border-purple-100 flex items-center">
+                <Network className="w-5 h-5 text-purple-600 mr-2" />
+                <h3 className="font-medium text-purple-900">
+                  Network & Software
+                </h3>
+              </div>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {/* ✅ ORGANIZED COLUMN WIDTHS (MATCHING TABLE 1) */}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/4">
+                      Item Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-1/5">
+                      Property Tag
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[35%]">
+                      Remarks
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {otherItems.map((item, index) => (
+                    <tr key={index}>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {asset.unit_name}
+                        {item.name}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {asset.property_tag_no}
-                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">N/A</td>
                       <td className="px-6 py-4 text-sm">
-                        <input
-                          type="text"
-                          value={asset.asset_remarks || ""}
-                          onChange={(e) =>
-                            handleAssetChange(
-                              asset.asset_id,
-                              "asset_remarks",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:border-blue-500 outline-none"
-                          placeholder="Remarks..."
-                        />
+                        {/* CONDITIONAL INPUT: If "Connectivity Type", show Checkboxes */}
+                        {item.name === "Connectivity Type" ? (
+                          <div className="flex items-center space-x-4">
+                            <label className="inline-flex items-center">
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                checked={item.remarks === "Wired"}
+                                onChange={() =>
+                                  handleOtherItemChange(
+                                    index,
+                                    "remarks",
+                                    "Wired",
+                                  )
+                                }
+                              />
+                              <span className="ml-2 text-sm text-gray-700">
+                                Wired
+                              </span>
+                            </label>
+                            <label className="inline-flex items-center">
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                checked={item.remarks === "Wireless"}
+                                onChange={() =>
+                                  handleOtherItemChange(
+                                    index,
+                                    "remarks",
+                                    "Wireless",
+                                  )
+                                }
+                              />
+                              <span className="ml-2 text-sm text-gray-700">
+                                Wireless
+                              </span>
+                            </label>
+                          </div>
+                        ) : (
+                          // Default Text Input
+                          <input
+                            type="text"
+                            value={item.remarks}
+                            onChange={(e) =>
+                              handleOtherItemChange(
+                                index,
+                                "remarks",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:border-purple-500 outline-none"
+                            placeholder="Remarks..."
+                          />
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <select
-                          value={asset.status}
+                          value={item.status}
                           onChange={(e) =>
-                            handleAssetChange(
-                              asset.asset_id,
+                            handleOtherItemChange(
+                              index,
                               "status",
                               e.target.value,
                             )
                           }
-                          className={`block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none ${asset.status === "Functional" || asset.status === "Working" ? "text-green-700 bg-green-50" : "text-red-700 bg-red-50"}`}
+                          className="block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none text-green-700 bg-green-50"
                         >
                           <option value="Functional">Functional</option>
-                          <option value="Working">Working</option>
-                          <option value="For Repair">For Repair</option>
-                          <option value="Defective">Defective</option>
-                          <option value="Condemned">Condemned</option>
-                          <option value="Missing">Missing</option>
+                          <option value="Not Functional">Not Functional</option>
+                          <option value="N/A">N/A</option>
                         </select>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         <div className="flex justify-end space-x-3 pt-4 border-t">

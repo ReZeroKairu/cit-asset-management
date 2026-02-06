@@ -257,8 +257,7 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
 
     if (existingWorkstations.length > 0) {
       const duplicates = existingWorkstations.map(
-        (ws) =>
-          `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
+        (ws) => `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
       );
       return res.status(409).json({
         error: "Duplicate workstation names found",
@@ -296,5 +295,30 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       error: "Failed to create workstations",
       details: error.message,
     });
+  }
+};
+
+// 7. GET WORKSTATIONS BY LAB (For Maintenance Page)
+export const getWorkstationsByLab = async (req: Request, res: Response) => {
+  const { labId } = req.params;
+
+  try {
+    const workstations = await prisma.workstations.findMany({
+      where: {
+        lab_id: Number(labId),
+      },
+      include: {
+        current_status: true, // ✅ Fetches "Functional", "For Repair", etc.
+        assets: true,
+      },
+      orderBy: {
+        workstation_name: "asc",
+      },
+    });
+
+    res.json(workstations);
+  } catch (error) {
+    console.error("Error fetching lab workstations:", error);
+    res.status(500).json({ error: "Failed to fetch workstations" });
   }
 };
