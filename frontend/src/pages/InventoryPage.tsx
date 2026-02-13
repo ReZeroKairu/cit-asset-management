@@ -7,10 +7,15 @@ import AddAssetModal from "../components/inventory/AddAssetModal";
 import EditAssetModal from "../components/inventory/EditAssetModal";
 import ViewWorkstationModal from "../components/inventory/ViewWorkstationModal";
 import EditWorkstationModal from "../components/inventory/EditWorkstationModal";
-import { useAuth } from "../context/AuthContext";
 import AddWorkstationModal from "../components/inventory/AddWorkstationModal";
 import WorkstationReport from "../components/inventory/WorkstationReport";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+// ✅ IMPORT ICONS HERE
+import { Plus, FileText } from "lucide-react";
+
+// Import our newly extracted table components
+import WorkstationTable from "../components/inventory/WorkstationTable";
+import UnassignedAssetTable from "../components/inventory/UnassignedAssetTable";
 
 interface Asset {
   asset_id: number;
@@ -179,9 +184,6 @@ const InventoryPage = () => {
   };
 
   // --- Filtering Logic ---
-
-  // ✅ 1. Only include assets that have NO workstation assigned
-  // We check both the .workstation object (if present) and the workstation_id field
   const unassignedAssets = assets.filter(
     (asset: any) => !asset.workstation && !asset.workstation_id,
   );
@@ -197,7 +199,6 @@ const InventoryPage = () => {
     }),
   );
 
-  // ✅ 2. Filter unassigned assets by selected lab
   const filteredUnassignedAssets = selectedLabId
     ? unassignedAssets.filter((asset) => asset.lab_id === selectedLabId)
     : unassignedAssets;
@@ -301,26 +302,26 @@ const InventoryPage = () => {
           <div className="flex items-center space-x-2">
             {!showUnassignedAssets && (
               <button
-                className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center"
+                className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
                 onClick={() => setShowWSModal(true)}
               >
-                <span className="mr-1 text-lg">+</span> Add Workstation
+                <Plus className="w-4 h-4 mr-2" /> Add Workstation
               </button>
             )}
 
             {(user?.role === "Admin" || user?.role === "Custodian") && (
               <>
                 <button
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center"
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
                   onClick={() => setShowModal(true)}
                 >
-                  <span className="mr-1 text-lg">+</span> Add Asset
+                  <Plus className="w-4 h-4 mr-2" /> Add Asset
                 </button>
                 <button
-                  className="px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center"
+                  className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors"
                   onClick={() => setShowWorkstationReport(true)}
                 >
-                  Workstation Report
+                  <FileText className="w-4 h-4 mr-2" /> Workstation Report
                 </button>
               </>
             )}
@@ -328,194 +329,26 @@ const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Main Content Table */}
+      {/* Main Content Rendered via Components */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {!showUnassignedAssets ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Workstation Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Laboratory
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Remarks
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredWorkstations.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No workstations found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredWorkstations.map((workstation) => (
-                    <tr
-                      key={workstation.workstation_id}
-                      className="hover:bg-gray-50"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-blue-600">
-                          {workstation.workstation_name}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          {workstation.laboratory?.lab_name || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {workstation.laboratory?.location || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(workstation.current_status?.status_name)}`}
-                        >
-                          {workstation.current_status?.status_name || "Unknown"}
-                        </span>
-                      </td>
-                      <td
-                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
-                        title={workstation.workstation_remarks}
-                      >
-                        {workstation.workstation_remarks || "-"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleViewWorkstation(workstation)}
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="text-gray-600 hover:text-gray-800"
-                          onClick={() => handleEditWorkstation(workstation)}
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() =>
-                            handleDeleteWorkstation(workstation.workstation_id)
-                          }
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <WorkstationTable
+            workstations={filteredWorkstations}
+            onView={handleViewWorkstation}
+            onEdit={handleEditWorkstation}
+            onDelete={handleDeleteWorkstation}
+            getStatusColor={getStatusColor}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Property Tag
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Unit Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Serial No.
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Qty
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUnassignedAssets.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No unassigned assets found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUnassignedAssets.map((asset) => (
-                    <tr key={asset.asset_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
-                        {asset.details?.property_tag_no ||
-                          asset.property_tag_no}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {asset.units?.unit_name || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {asset.details?.description || asset.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {asset.details?.serial_number || asset.serial_number}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          {asset.laboratories?.lab_name || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {asset.details?.quantity || asset.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
-                        <button
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={() => handleEdit(asset)}
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleDelete(asset.asset_id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <UnassignedAssetTable
+            assets={filteredUnassignedAssets}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         )}
       </div>
 
-      {/* Modals remain exactly the same as your previous working file */}
+      {/* Modals remain exactly the same */}
       <AddAssetModal
         show={showModal}
         onClose={() => setShowModal(false)}

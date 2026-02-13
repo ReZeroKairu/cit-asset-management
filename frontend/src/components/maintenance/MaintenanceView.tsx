@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getPMCReport } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
+import { useAuth } from "../../context/AuthContext"; // ✅ Imported to get Custodian Name
 import {
   Monitor,
   Calendar,
@@ -11,7 +12,10 @@ import {
   Keyboard,
   Network,
   AlignLeft,
+  Download, // ✅ Added Download Icon
 } from "lucide-react";
+// ✅ Import the generator utility we will create below
+import { generateQPMCReport } from "../../utils/reportGenerator";
 
 interface Props {
   workstation: { id: number; name: string; lab_name?: string };
@@ -40,6 +44,7 @@ const MaintenanceView: React.FC<Props> = ({
   onService,
   onBack,
 }) => {
+  const { user } = useAuth(); // ✅ Get logged-in user (Custodian)
   const [pmcReport, setPmcReport] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,10 +52,8 @@ const MaintenanceView: React.FC<Props> = ({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch Assets
       const assetData = await getWorkstationAssets(workstation.id);
 
-      // Flatten the nested Prisma relations so the table can read them
       const formattedAssets = assetData.map((item: any) => ({
         asset_id: item.asset_id,
         unit_name: item.units?.unit_name || item.unit_name || "Unknown",
@@ -65,12 +68,11 @@ const MaintenanceView: React.FC<Props> = ({
       }));
       setAssets(formattedAssets);
 
-      // 2. Fetch PMC Report for this Quarter
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);
     } catch (error) {
       console.error("Failed to load details", error);
-      setPmcReport(null); // Ensure null if not found
+      setPmcReport(null);
     } finally {
       setLoading(false);
     }
@@ -79,6 +81,117 @@ const MaintenanceView: React.FC<Props> = ({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // --- REPORT GENERATION HANDLER ---
+  const handleDownloadReport = () => {
+    if (!pmcReport) return;
+
+    // 1. Format the Database Report Date (e.g., "February 13, 2026")
+    const reportDate = new Date(pmcReport.report_date);
+    const formattedDate = reportDate.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    // 2. Get the ACTUAL Current Time right now for the report generation
+    const currentTime = new Date();
+    const formattedTime = currentTime.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const completedProcedures = pmcReport.procedures || [];
+
+    // 1. Map Procedures to Checkmarks (Keeping these as boxes for the top section)
+    const checkProc = (name: string) =>
+      completedProcedures.some((p: any) => p.procedure.procedure_name === name)
+        ? "☑"
+        : "☐";
+
+    // 2. Map Statuses to Table Checkmarks (✅ CHANGED: Now uses ✓ and blank)
+    const mapStatus = (status: string) => ({
+      func: ["Functional", "Working", "Operational"].includes(status)
+        ? "✓"
+        : "",
+      rep: status === "For Repair" ? "✓" : "",
+      upg: status === "For Upgrade" ? "✓" : "",
+      repl: status === "For Replacement" ? "✓" : "",
+    });
+
+    // 3. Build the Components List (Physical Assets)
+    const componentsList = assets.map((asset) => ({
+      name: asset.unit_name,
+      ...mapStatus(asset.status),
+      tag: asset.property_tag_no || "N/A",
+      remarks: asset.asset_remarks || "",
+    }));
+
+    // Add Software & Network Items explicitly as required by template
+    componentsList.push({
+      name: "Software",
+      ...mapStatus(pmcReport.software_status),
+      tag: "N/A",
+      remarks: pmcReport.software_name || "",
+    });
+
+    componentsList.push({
+      name: "System Unit",
+      ...mapStatus(pmcReport.workstation_status),
+      tag: "N/A",
+      remarks: "",
+    });
+
+    const connTypeStr =
+      pmcReport.connectivity_type === "Wired"
+        ? "☑ Wired   ☐ Wireless"
+        : pmcReport.connectivity_type === "Wireless"
+          ? "☐ Wired   ☑ Wireless"
+          : "☐ Wired   ☐ Wireless";
+
+    componentsList.push({
+      name: "Connectivity Type",
+      ...mapStatus(pmcReport.connectivity_type_status),
+      tag: "N/A",
+      remarks: connTypeStr,
+    });
+
+    componentsList.push({
+      name: "Connectivity Speed",
+      ...mapStatus(pmcReport.connectivity_speed_status),
+      tag: "N/A",
+      remarks: pmcReport.connectivity_speed || "",
+    });
+
+    // ✅ FIX: Find the correct property for the Custodian Name
+    // This checks multiple possible variable names in case your Auth context uses a different one
+    const rawCustodianName =
+      pmcReport?.user?.full_name ||
+      (user as any)?.full_name ||
+      (user as any)?.name ||
+      (user as any)?.fullName ||
+      "YOUR NAME HERE";
+
+    // 4. Construct Final Payload
+    const templateData = {
+      date: formattedDate, // ✅ Uses "February 13, 2026" format
+      time: formattedTime, // ✅ Uses the exact time they clicked download
+      lab: workstation.lab_name || "N/A",
+      workstation: workstation.name,
+      hw_main: checkProc("Hardware Maintenance"),
+      sw_main: checkProc("Software Maintenance"),
+      sec_main: checkProc("Security Maintenance"),
+      net_main: checkProc("Network Maintenance"),
+      sys_perf: checkProc("System Performance"),
+      reg_clean: checkProc("Regular Cleaning"),
+      components: componentsList,
+      overall_remarks: pmcReport.overall_remarks || "N/A",
+      custodian: rawCustodianName.toUpperCase(), // ✅ Formats the name to uppercase
+    };
+
+    // Trigger Download
+    generateQPMCReport(templateData);
+  };
 
   // --- Data Processing ---
   const systemAssets = assets.filter((asset) =>
@@ -93,7 +206,6 @@ const MaintenanceView: React.FC<Props> = ({
       ),
   );
 
-  // Parent Status Logic
   const allSystemFunctional = systemAssets.every((asset) =>
     ["Functional", "Working", "Operational"].includes(asset.status),
   );
@@ -107,7 +219,6 @@ const MaintenanceView: React.FC<Props> = ({
   const displaySystemAssets =
     systemAssets.length > 0 ? [parentSystemUnit, ...systemAssets] : [];
 
-  // Construct Network Items from Schema Columns
   const networkItems = [
     {
       name: "Software",
@@ -128,7 +239,6 @@ const MaintenanceView: React.FC<Props> = ({
 
   const completedProcedures = pmcReport?.procedures || [];
 
-  // --- Internal Table for Assets/Network ---
   const ReadOnlyTable = ({
     title,
     icon,
@@ -211,13 +321,7 @@ const MaintenanceView: React.FC<Props> = ({
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        ["Functional", "Working", "Operational"].includes(
-                          item.status,
-                        )
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${["Functional", "Working", "Operational"].includes(item.status) ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
                     >
                       {item.status}
                     </span>
@@ -260,6 +364,17 @@ const MaintenanceView: React.FC<Props> = ({
             <Wrench className="w-4 h-4 mr-2" />
             Service Workstation
           </button>
+
+          {/* ✅ Download Report Button (Only shows if report exists) */}
+          {pmcReport && (
+            <button
+              onClick={handleDownloadReport}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center shadow-sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              QPMC Report
+            </button>
+          )}
         </div>
       </div>
 
@@ -284,11 +399,7 @@ const MaintenanceView: React.FC<Props> = ({
           </h3>
           {pmcReport ? (
             <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                pmcReport.workstation_status === "For Repair"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-green-100 text-green-800"
-              }`}
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${pmcReport.workstation_status === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
             >
               {pmcReport.workstation_status}
             </span>
@@ -299,7 +410,7 @@ const MaintenanceView: React.FC<Props> = ({
       </div>
 
       <div className="space-y-8">
-        {/* ✅ NEW: Procedures Card (Horizontal Layout) */}
+        {/* Procedures Card */}
         <div className="border rounded-md overflow-hidden shadow-sm bg-white">
           <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex items-center">
             <ListChecks className="w-5 h-5 text-blue-600" />
@@ -348,6 +459,7 @@ const MaintenanceView: React.FC<Props> = ({
           emptyMsg="No network info recorded."
           isNetwork={true}
         />
+
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
           <div className="flex items-center mb-2">
             <AlignLeft className="w-5 h-5 text-gray-500 mr-2" />

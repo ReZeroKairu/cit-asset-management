@@ -181,14 +181,38 @@ export const deleteWorkstation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Workstation not found" });
     }
 
-    await prisma.workstations.delete({
-      where: { workstation_id: workstationId },
+    // ✅ FIX: Use a transaction to handle all foreign key constraints before deleting
+    await prisma.$transaction(async (tx) => {
+      // 1. Unassign all assets linked to this workstation (moves them to Unassigned Assets)
+      await tx.inventory_assets.updateMany({
+        where: { workstation_id: workstationId },
+        data: { workstation_id: null },
+      });
+
+      // 2. Delete related Daily Report items for this workstation
+      await tx.report_workstation_items.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 3. Delete related PMC Reports for this workstation
+      // (This will also automatically delete pmc_report_procedures due to the Cascade rule in your schema)
+      await tx.pmc_reports.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 4. Now that dependencies are cleared, delete the workstation itself
+      await tx.workstations.delete({
+        where: { workstation_id: workstationId },
+      });
     });
 
-    res.json({ message: "Workstation deleted successfully" });
-  } catch (error) {
+    res.json({ message: "Workstation and its relations deleted successfully" });
+  } catch (error: any) {
     console.error("Error deleting workstation:", error);
-    res.status(500).json({ error: "Failed to delete workstation" });
+    res.status(500).json({
+      error: "Failed to delete workstation",
+      details: error.message,
+    });
   }
 };
 

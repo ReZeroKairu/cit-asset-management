@@ -1,4 +1,3 @@
-// frontend/src/components/inventory/AddAssetModal.tsx
 import React, { useState, useEffect } from "react";
 import {
   getDeviceTypes,
@@ -8,6 +7,10 @@ import {
 import { getAllWorkstations } from "../../api/workstations";
 import { getLaboratories } from "../../api/laboratories";
 import { useAuth } from "../../context/AuthContext";
+
+// Import our new sub-components
+import AssetFormInputs from "./add-asset/AssetFormInputs";
+import PendingAssetsTable from "./add-asset/PendingAssetsTable";
 
 interface Props {
   show: boolean;
@@ -22,7 +25,7 @@ interface Unit {
   device_type_id: number;
 }
 
-interface AssetEntry {
+export interface AssetEntry {
   id: string;
   property_tag_no: string;
   quantity: number;
@@ -47,19 +50,9 @@ const AddAssetModal: React.FC<Props> = ({
   const { user } = useAuth();
 
   const [workstations, setWorkstations] = useState<any[]>([]);
-  const [labs, setLabs] = useState<
-    {
-      lab_id: number;
-      lab_name: string;
-      in_charge_id?: number;
-      in_charge_name?: string;
-    }[]
-  >([]);
-
+  const [labs, setLabs] = useState<any[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [deviceTypes, setDeviceTypes] = useState<
-    { device_type_id: number; device_type_name: string }[]
-  >([]);
+  const [deviceTypes, setDeviceTypes] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     property_tag_no: "",
@@ -89,7 +82,6 @@ const AddAssetModal: React.FC<Props> = ({
               getLaboratories(),
             ],
           );
-
           setDeviceTypes(deviceTypeData);
           setWorkstations(wsData);
           setUnits(unitData);
@@ -115,7 +107,7 @@ const AddAssetModal: React.FC<Props> = ({
       } else if (user && user.role === "Custodian" && user.lab_id) {
         setFormData((prev) => ({
           ...prev,
-          lab_id: user.lab_id.toString(),
+          lab_id: user.lab_id?.toString() || "",
         }));
       }
     }
@@ -129,9 +121,8 @@ const AddAssetModal: React.FC<Props> = ({
     const { name, value } = e.target;
     setFormData((prev) => {
       const newData = { ...prev, [name]: value };
-      if (name === "device_type") {
-        newData.unit_id = "";
-      }
+      if (name === "device_type") newData.unit_id = ""; // Reset unit when device type changes
+      if (name === "lab_id") newData.workstation_id = ""; // Reset workstation when lab changes
       return newData;
     });
   };
@@ -157,7 +148,6 @@ const AddAssetModal: React.FC<Props> = ({
       return;
     }
 
-    // ✅ VALIDATION: Check for duplicate Property Tags in the PENDING list
     if (
       formData.property_tag_no.trim() !== "" &&
       assets.some((a) => a.property_tag_no === formData.property_tag_no.trim())
@@ -206,18 +196,13 @@ const AddAssetModal: React.FC<Props> = ({
 
     setAssets([...assets, newAsset]);
 
+    // ✅ FIX: We no longer reset device_type, unit_id, lab_id, workstation_id, or description.
+    // They are "frozen" to make batch adding much faster!
     setFormData((prev) => ({
       ...prev,
       property_tag_no: "",
-      quantity: 1,
-      description: "",
       serial_number: "",
-      date_of_purchase: "",
-      unit_id: "",
-      device_type: "",
-      lab_id:
-        preselectedWorkstation || user?.role === "Custodian" ? prev.lab_id : "",
-      workstation_id: preselectedWorkstation ? prev.workstation_id : "",
+      quantity: 1,
     }));
   };
 
@@ -229,7 +214,6 @@ const AddAssetModal: React.FC<Props> = ({
     if (assets.length === 0) return;
     setSubmitting(true);
     try {
-      // ✅ FIX: Convert empty strings to NULL to avoid "Unique Constraint" errors on empty fields
       const payload = assets.map((asset) => ({
         property_tag_no: asset.property_tag_no.trim() || null,
         quantity: asset.quantity,
@@ -250,10 +234,9 @@ const AddAssetModal: React.FC<Props> = ({
       onSuccess();
     } catch (err: any) {
       console.error("Save Error:", err);
-      // Detailed error handling
       if (err.response?.data?.error?.includes("Unique constraint")) {
         alert(
-          "Error: One of the Property Tag Numbers you entered already exists in the database. Please check your tags.",
+          "Error: One of the Property Tag Numbers you entered already exists in the database.",
         );
       } else {
         alert(
@@ -291,7 +274,6 @@ const AddAssetModal: React.FC<Props> = ({
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] transition-opacity"></div>
-
       <div className="fixed inset-0 z-[90] overflow-y-auto">
         <div className="flex items-center justify-center min-h-screen px-4 py-6">
           <div className="bg-white rounded-xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100">
@@ -325,187 +307,17 @@ const AddAssetModal: React.FC<Props> = ({
 
             {/* Scrollable Content */}
             <div className="p-6 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8 bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-inner">
-                {/* Device Type */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Device Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="device_type"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white"
-                    value={formData.device_type}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select Device Type...</option>
-                    {deviceTypes.map((dt) => (
-                      <option key={dt.device_type_id} value={dt.device_type_id}>
-                        {dt.device_type_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Unit Name */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Unit Name <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="unit_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                    value={formData.unit_id}
-                    onChange={handleChange}
-                    disabled={!formData.device_type}
-                  >
-                    <option value="">
-                      {!formData.device_type
-                        ? "Select Device Type First..."
-                        : "Select Unit..."}
-                    </option>
-                    {filteredUnits
-                      .sort((a, b) => a.unit_name.localeCompare(b.unit_name))
-                      .map((unit) => (
-                        <option key={unit.unit_id} value={unit.unit_id}>
-                          {unit.unit_name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Laboratory */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Laboratory <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="lab_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:text-gray-600 bg-white"
-                    value={formData.lab_id}
-                    onChange={handleChange}
-                    disabled={
-                      !!preselectedWorkstation || user?.role === "Custodian"
-                    }
-                  >
-                    <option value="">Select Lab...</option>
-                    {labs.map((lab) => (
-                      <option key={lab.lab_id} value={lab.lab_id}>
-                        {lab.lab_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Workstation */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Workstation{" "}
-                    <span className="text-xs font-normal text-gray-500">
-                      (Optional)
-                    </span>
-                  </label>
-                  <select
-                    name="workstation_id"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:text-gray-600 bg-white"
-                    value={formData.workstation_id}
-                    onChange={handleChange}
-                    disabled={!!preselectedWorkstation}
-                  >
-                    <option value="">Select Workstation...</option>
-                    {workstations
-                      .filter(
-                        (ws) =>
-                          !formData.lab_id ||
-                          ws.lab_id === Number(formData.lab_id),
-                      )
-                      .sort((a, b) =>
-                        a.workstation_name.localeCompare(b.workstation_name),
-                      )
-                      .map((ws) => (
-                        <option
-                          key={ws.workstation_id}
-                          value={ws.workstation_id}
-                        >
-                          {ws.workstation_name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Quantity */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </div>
-
-                {/* Property Tag */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Property Tag
-                  </label>
-                  <input
-                    type="text"
-                    name="property_tag_no"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
-                    value={formData.property_tag_no}
-                    onChange={handleChange}
-                    placeholder="e.g. CIT-2024-001"
-                  />
-                </div>
-
-                {/* Serial Number */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Serial Number
-                  </label>
-                  <input
-                    type="text"
-                    name="serial_number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
-                    value={formData.serial_number}
-                    onChange={handleChange}
-                    placeholder="e.g. SN123456"
-                  />
-                </div>
-
-                {/* Purchase Date */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Purchase Date
-                  </label>
-                  <input
-                    type="date"
-                    name="date_of_purchase"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
-                    value={formData.date_of_purchase}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2 lg:col-span-3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
-                    rows={2}
-                    value={formData.description}
-                    onChange={handleChange}
-                    placeholder="Enter details..."
-                  />
-                </div>
-              </div>
+              {/* Form Inputs Component */}
+              <AssetFormInputs
+                formData={formData}
+                handleChange={handleChange}
+                deviceTypes={deviceTypes}
+                filteredUnits={filteredUnits}
+                labs={labs}
+                workstations={workstations}
+                preselectedWorkstation={preselectedWorkstation}
+                userRole={user?.role}
+              />
 
               <div className="flex justify-between items-center mb-4">
                 <button
@@ -529,68 +341,14 @@ const AddAssetModal: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* List Table */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 font-medium text-sm flex justify-between">
-                  <span className="text-gray-700">
-                    Pending Assets ({assets.length})
-                  </span>
-                </div>
-                {assets.length > 0 ? (
-                  <div className="max-h-60 overflow-y-auto bg-white">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-50 text-gray-600 sticky top-0 shadow-sm">
-                        <tr>
-                          <th className="px-4 py-3 font-semibold">Unit</th>
-                          <th className="px-4 py-3 font-semibold">Tag</th>
-                          <th className="px-4 py-3 font-semibold">Qty</th>
-                          <th className="px-4 py-3 font-semibold">
-                            Workstation
-                          </th>
-                          <th className="px-4 py-3 font-semibold text-center">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {assets.map((asset) => (
-                          <tr
-                            key={asset.id}
-                            className="hover:bg-gray-50 transition-colors"
-                          >
-                            <td className="px-4 py-3 text-gray-800 font-medium">
-                              {asset.unit_name}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {asset.property_tag_no || "-"}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {asset.quantity}
-                            </td>
-                            <td className="px-4 py-3 text-gray-600">
-                              {asset.workstation_name || "None"}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                onClick={() => handleRemoveFromList(asset.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-md transition-colors"
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-gray-400 text-sm bg-white">
-                    No assets added yet.
-                  </div>
-                )}
-              </div>
+              {/* Pending Assets Table Component */}
+              <PendingAssetsTable
+                assets={assets}
+                onRemove={handleRemoveFromList}
+              />
             </div>
 
+            {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3 border-t border-gray-200">
               <button
                 onClick={handleClose}
