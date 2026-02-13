@@ -99,3 +99,8 @@ export const getWorkstationAssets = async (workstationId: number) => {
     status_id: asset.details?.status_id || 1,
   }));
 };
+
+export const getAssetStatuses = async () => {
+  const response = await api.get("/inventory/statuses");
+  return response.data;
+};

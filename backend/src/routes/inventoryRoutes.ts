@@ -6,6 +6,7 @@ import {
   batchCreateAssets,
   updateAsset,
   deleteAsset,
+  getAssetStatuses, // ✅ IMPORT THIS
 } from "../controllers/inventoryController";
 import { authenticateToken } from "../middleware/auth";
 
@@ -21,7 +22,10 @@ router.post("/batch", batchCreateAssets);
 router.put("/:id", updateAsset);
 router.delete("/:id", deleteAsset);
 
-// Resources (Moved from index.ts)
+// ✅ ADD THIS ROUTE
+router.get("/statuses", getAssetStatuses);
+
+// Resources
 router.get("/units", async (req: Request, res: Response) => {
   try {
     const { device_type_id } = req.query;

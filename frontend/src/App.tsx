@@ -10,7 +10,8 @@ import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
-import { Package, Building, FileText, Users } from "lucide-react";
+// ✅ UPDATED: Added Wrench icon
+import { Package, Building, FileText, Users, Wrench } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
 import MaintenancePage from "./pages/MaintenancePage";
 
@@ -55,7 +56,6 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   }, []);
 
   const handleNavigate = (page: string) => {
-    // Role-based navigation restrictions
     if (page === "user-management" && user?.role !== "Admin") {
       console.log("Access denied: Admin only");
       return;
@@ -89,7 +89,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
     );
   }
 
-  const { stats, userAssignedLab, userRole, assetsByLab } = dashboardData;
+  const { stats, userAssignedLab, userRole } = dashboardData;
   const isAdmin = userRole === "Admin";
 
   return (
@@ -107,9 +107,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
       </div>
 
       {/* Stats Cards */}
-      <div
-        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? "lg:grid-cols-2" : ""}`}
-      >
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6`}>
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate("inventory")}
@@ -134,31 +132,26 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {isAdmin && (
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-            onClick={() => handleNavigate("labs")}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Laboratories
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.totalLaboratories}
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    Click to view labs →
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <Building className="w-6 h-6 text-green-600" />
-                </div>
+        {/* ✅ NEW: Maintenance Card */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => handleNavigate("maintenance")}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Maintenance</p>
+                <p className="text-2xl font-bold text-gray-900">QPMC</p>
+                <p className="text-xs text-indigo-600 mt-1">
+                  Preventive Checks →
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                <Wrench className="w-6 h-6 text-indigo-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -184,28 +177,35 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {isAdmin && (
+        {isAdmin ? (
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-            onClick={() => handleNavigate("user-management")}
+            onClick={() => handleNavigate("labs")}
           >
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">
-                    Active Users
+                    Laboratories
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {stats.totalUsers}
+                    {stats.totalLaboratories}
                   </p>
-                  <p className="text-xs text-orange-600 mt-1">
-                    Click to manage users →
+                  <p className="text-xs text-green-600 mt-1">
+                    Click to view labs →
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <Building className="w-6 h-6 text-green-600" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Placeholder or another user card for Custodians if needed */
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-gray-50">
+            <CardContent className="pt-6 flex items-center justify-center h-full">
+              <p className="text-gray-400 text-sm">System Status: Active</p>
             </CardContent>
           </Card>
         )}
@@ -215,7 +215,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 };
 
 function App() {
-  const { user } = useAuth(); // Check if user is logged in
+  const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<
     | "home"
     | "inventory"
@@ -228,7 +228,6 @@ function App() {
     | "maintenance"
   >("home");
 
-  // Create user form state that persists across navigation
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
     full_name: "",
     email: "",
@@ -240,7 +239,6 @@ function App() {
     selectedDept: "",
   });
 
-  // Lab form state that persists across navigation
   const [labFormData, setLabFormData] = useState<LabFormData>({
     lab_name: "",
     location: "",
@@ -286,12 +284,10 @@ function App() {
     }
   };
 
-  // 1. IF NOT LOGGED IN -> SHOW LOGIN PAGE
   if (!user) {
     return <LoginPage />;
   }
 
-  // 2. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
   return (
     <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

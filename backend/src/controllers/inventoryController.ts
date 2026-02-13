@@ -173,12 +173,10 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
           !existingWorkstations.find((ws: any) => ws.workstation_id === id),
       );
       if (missingWorkstations.length > 0) {
-        return res
-          .status(400)
-          .json({
-            error: "Invalid workstation IDs",
-            details: missingWorkstations,
-          });
+        return res.status(400).json({
+          error: "Invalid workstation IDs",
+          details: missingWorkstations,
+        });
       }
     }
 
@@ -263,30 +261,47 @@ export const updateAsset = async (req: Request, res: Response) => {
       unit_id,
       workstation_id,
       date_of_purchase,
-      asset_remarks, // NEW
-      status_id, // NEW
+      asset_remarks,
+      status_id,
     } = req.body;
+
+    // ✅ FIX: We build an update object dynamically.
+    // It only includes fields that were actually sent by the frontend.
+    const updateData: any = {};
+    if (lab_id !== undefined)
+      updateData.lab_id = lab_id ? Number(lab_id) : null;
+    if (unit_id !== undefined)
+      updateData.unit_id = unit_id ? Number(unit_id) : null;
+    if (workstation_id !== undefined)
+      updateData.workstation_id = workstation_id
+        ? Number(workstation_id)
+        : null;
+
+    const detailsData: any = {};
+    if (description !== undefined) detailsData.description = description;
+    if (property_tag_no !== undefined)
+      detailsData.property_tag_no = property_tag_no;
+    if (serial_number !== undefined) detailsData.serial_number = serial_number;
+    if (quantity !== undefined) detailsData.quantity = Number(quantity) || 1;
+    if (date_of_purchase !== undefined)
+      detailsData.date_of_purchase = date_of_purchase
+        ? new Date(date_of_purchase)
+        : null;
+    if (asset_remarks !== undefined)
+      detailsData.asset_remarks = asset_remarks || null;
+    if (status_id !== undefined)
+      detailsData.status_id = status_id ? Number(status_id) : undefined;
 
     const updatedAsset = await prisma.inventory_assets.update({
       where: { asset_id: assetId },
       data: {
-        lab_id: lab_id ? Number(lab_id) : null,
-        unit_id: unit_id ? Number(unit_id) : null,
-        workstation_id: workstation_id ? Number(workstation_id) : null,
-
-        details: {
-          update: {
-            description,
-            property_tag_no,
-            serial_number,
-            quantity: Number(quantity) || 1,
-            date_of_purchase: date_of_purchase
-              ? new Date(date_of_purchase)
-              : null,
-            asset_remarks: asset_remarks || null, // NEW
-            status_id: status_id ? Number(status_id) : undefined, // NEW
+        ...updateData,
+        // Only update details if there is details data to update
+        ...(Object.keys(detailsData).length > 0 && {
+          details: {
+            update: detailsData,
           },
-        },
+        }),
       },
       include: {
         details: {
@@ -303,5 +318,15 @@ export const updateAsset = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error updating asset:", error);
     res.status(500).json({ error: "Failed to update asset" });
+  }
+};
+
+// ✅ NEW: Get all asset statuses
+export const getAssetStatuses = async (req: Request, res: Response) => {
+  try {
+    const statuses = await prisma.asset_statuses.findMany();
+    res.json(statuses);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch asset statuses" });
   }
 };

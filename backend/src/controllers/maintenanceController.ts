@@ -3,115 +3,120 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// GET all Maintenance Reports (Filtered by type 'QPMC')
-export const getAllMaintenanceReports = async (req: Request, res: Response) => {
+// 1. GET Reports for a Lab & Quarter
+export const getLabPMCReports = async (req: Request, res: Response) => {
   try {
-    const reports = await prisma.daily_reports.findMany({
+    const { lab_id, quarter } = req.query;
+
+    if (!lab_id || !quarter) {
+      return res.status(400).json({ error: "Lab ID and Quarter are required" });
+    }
+
+    const reports = await prisma.pmc_reports.findMany({
       where: {
-        report_type: "QPMC",
+        lab_id: Number(lab_id),
+        quarter: String(quarter),
       },
       include: {
-        users: { select: { full_name: true } },
-        laboratories: { select: { lab_name: true, location: true } },
-
-        // ⚠️ THIS IS THE IMPORTANT PART THAT WAS MISSING DATA ⚠️
-        workstation_items: {
-          select: {
-            workstation_id: true,
-            remarks: true, // ✅ You must select this column
-            status: true, // ✅ You must select this column
-          },
+        procedures: {
+          include: { procedure: true },
         },
       },
-      orderBy: { report_date: "desc" },
     });
+
     res.json(reports);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Failed to fetch maintenance reports" });
+    res.status(500).json({ error: "Failed to fetch reports" });
   }
 };
 
-// GET single Maintenance Report
-export const getMaintenanceReportById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+// 2. GET Single Report Details (For the View)
+export const getPMCReportDetail = async (req: Request, res: Response) => {
   try {
-    const report = await prisma.daily_reports.findUnique({
-      where: { report_id: Number(id) },
+    const { workstation_id, quarter } = req.query;
+
+    const report = await prisma.pmc_reports.findFirst({
+      where: {
+        workstation_id: Number(workstation_id),
+        quarter: String(quarter),
+      },
       include: {
-        // ✅ FIXED: Changed report_procedures to procedures (as defined in your schema)
         procedures: {
-          include: {
-            procedure: true, // ✅ FIXED: Changed procedures to procedure (singular relation name)
-          },
-        },
-        workstation_items: {
-          // ✅ FIXED: Changed workstation_reports to workstation_items
-          include: {
-            workstation: true, // ✅ FIXED: Changed workstations to workstation
-          },
+          include: { procedure: true },
         },
       },
     });
-    if (!report) return res.status(404).json({ error: "Report not found" });
+
+    if (!report) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+
     res.json(report);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch report" });
+    res.status(500).json({ error: "Failed to fetch report detail" });
   }
 };
 
-// CREATE Maintenance Report
-export const createMaintenanceReport = async (req: Request, res: Response) => {
-  const { lab_id, report_date, general_remarks } = req.body;
-  const userId = (req as any).user?.userId;
-
+// 3. CREATE/SAVE A Report
+export const createPMCReport = async (req: Request, res: Response) => {
   try {
-    const newReport = await prisma.daily_reports.create({
-      data: {
-        lab_id: Number(lab_id),
-        user_id: userId,
-        report_date: new Date(report_date),
-        general_remarks,
-        report_type: "QPMC",
-        status: "Pending",
-      },
-    });
-    res.json(newReport);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to create maintenance report" });
-  }
-};
+    const {
+      lab_id,
+      workstation_id,
+      report_date,
+      quarter,
+      workstation_status,
+      overall_remarks,
+      software_name,
+      software_status,
+      connectivity_type,
+      connectivity_type_status,
+      connectivity_speed,
+      connectivity_speed_status,
+      procedure_ids, // Array of IDs [8, 9, 10]
+    } = req.body;
 
-// UPDATE Maintenance Report
-export const updateMaintenanceReport = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { report_date, general_remarks } = req.body;
+    const user_id = req.user?.userId; // Assumes auth middleware adds this
 
-  try {
-    const updatedReport = await prisma.daily_reports.update({
-      where: { report_id: Number(id) },
-      data: {
-        report_date: new Date(report_date),
-        general_remarks,
-      },
-    });
-    res.json(updatedReport);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to update report" });
-  }
-};
+    // Transaction: Create Report -> Link Procedures
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create the main report
+      const newReport = await tx.pmc_reports.create({
+        data: {
+          lab_id: Number(lab_id),
+          workstation_id: Number(workstation_id),
+          user_id: Number(user_id),
+          report_date: new Date(report_date),
+          quarter,
+          workstation_status,
+          overall_remarks,
+          software_name,
+          software_status,
+          connectivity_type,
+          connectivity_type_status,
+          connectivity_speed,
+          connectivity_speed_status,
+        },
+      });
 
-// DELETE Maintenance Report
-export const deleteMaintenanceReport = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    await prisma.daily_reports.delete({
-      where: { report_id: Number(id) },
+      // 2. Create procedure entries if any are checked
+      if (procedure_ids && procedure_ids.length > 0) {
+        await tx.pmc_report_procedures.createMany({
+          data: procedure_ids.map((id: number) => ({
+            pmc_id: newReport.pmc_id,
+            procedure_id: id,
+            is_checked: true,
+          })),
+        });
+      }
+
+      return newReport;
     });
-    res.json({ message: "Maintenance report deleted successfully" });
+
+    res.status(201).json(result);
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete report" });
+    console.error("Create PMC Error:", error);
+    res.status(500).json({ error: "Failed to create report" });
   }
 };

@@ -62,16 +62,21 @@ export const createWorkstation = async (req: Request, res: Response) => {
   }
 };
 
-// 3. GET WORKSTATION DETAILS
+// 3. GET WORKSTATION DETAILS (By ID or Name)
 export const getWorkstationDetails = async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    const workstationName = Array.isArray(name) ? name[0] : name;
+
+    // ✅ FIX: Explicitly convert to string to satisfy TypeScript
+    // This handles the "string | string[]" error
+    const searchParam = String(name);
+
+    const isId = !isNaN(Number(searchParam));
 
     const workstation = await prisma.workstations.findFirst({
-      where: {
-        workstation_name: workstationName,
-      },
+      where: isId
+        ? { workstation_id: Number(searchParam) }
+        : { workstation_name: searchParam },
       include: {
         laboratory: {
           select: {

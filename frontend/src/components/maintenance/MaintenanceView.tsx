@@ -1,77 +1,241 @@
-import React, { useState, useEffect } from "react";
-import { getMaintenanceReportById } from "../../api/maintenance";
-import type { MaintenanceReport } from "../../api/maintenance";
+import React, { useState, useEffect, useCallback } from "react";
+import { getPMCReport } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
 import {
   Monitor,
   Calendar,
   CheckCircle2,
-  AlertCircle,
   Wrench,
+  ListChecks,
+  Cpu,
+  Keyboard,
+  Network,
+  AlignLeft,
 } from "lucide-react";
 
 interface Props {
   workstation: { id: number; name: string; lab_name?: string };
-  reportSummary?: MaintenanceReport; // The summary we have from the list
-  quarter: string; // The selected quarter from the parent
+  quarter: string;
   onService: () => void;
   onBack: () => void;
 }
 
+const SYSTEM_UNIT_TYPES = [
+  "SSD",
+  "PSU",
+  "RAM",
+  "CPU",
+  "HDD",
+  "Case",
+  "CPU Fan",
+  "Motherboard",
+  "System Fan",
+  "GPU",
+  "Video Card",
+];
+
 const MaintenanceView: React.FC<Props> = ({
   workstation,
-  reportSummary,
   quarter,
   onService,
   onBack,
 }) => {
-  const [fullReport, setFullReport] = useState<MaintenanceReport | null>(null);
+  const [pmcReport, setPmcReport] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [workstation.id, reportSummary]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Fetch Assets (Always needed)
+      // 1. Fetch Assets
       const assetData = await getWorkstationAssets(workstation.id);
-      setAssets(assetData);
 
-      // 2. Fetch Full Report Procedures (If a report exists)
-      if (reportSummary?.report_id) {
-        const reportData = await getMaintenanceReportById(
-          reportSummary.report_id,
-        );
-        setFullReport(reportData);
-      }
+      // Flatten the nested Prisma relations so the table can read them
+      const formattedAssets = assetData.map((item: any) => ({
+        asset_id: item.asset_id,
+        unit_name: item.units?.unit_name || item.unit_name || "Unknown",
+        property_tag_no:
+          item.details?.property_tag_no || item.property_tag_no || "N/A",
+        asset_remarks: item.details?.asset_remarks || item.asset_remarks || "",
+        status:
+          item.details?.current_status?.status_name ||
+          item.status ||
+          "Functional",
+        description: item.details?.description || item.description || "",
+      }));
+      setAssets(formattedAssets);
+
+      // 2. Fetch PMC Report for this Quarter
+      const reportData = await getPMCReport(workstation.id, quarter);
+      setPmcReport(reportData);
     } catch (error) {
       console.error("Failed to load details", error);
+      setPmcReport(null); // Ensure null if not found
     } finally {
       setLoading(false);
     }
-  };
+  }, [workstation.id, quarter]);
 
-  // Helper to format date
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  // Find specific remarks/status for this workstation from the report items
-  const wsItem = fullReport?.workstation_items?.find(
-    (item) => item.workstation_id === workstation.id,
+  // --- Data Processing ---
+  const systemAssets = assets.filter((asset) =>
+    SYSTEM_UNIT_TYPES.some(
+      (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+    ),
   );
+  const peripheralAssets = assets.filter(
+    (asset) =>
+      !SYSTEM_UNIT_TYPES.some(
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+      ),
+  );
+
+  // Parent Status Logic
+  const allSystemFunctional = systemAssets.every((asset) =>
+    ["Functional", "Working", "Operational"].includes(asset.status),
+  );
+  const parentSystemUnit = {
+    asset_id: -1,
+    unit_name: "System Unit (Overall)",
+    property_tag_no: "-",
+    description: "Auto-calculated based on components",
+    status: allSystemFunctional ? "Functional" : "For Repair",
+  };
+  const displaySystemAssets =
+    systemAssets.length > 0 ? [parentSystemUnit, ...systemAssets] : [];
+
+  // Construct Network Items from Schema Columns
+  const networkItems = [
+    {
+      name: "Software",
+      value: pmcReport?.software_name || "N/A",
+      status: pmcReport?.software_status || "N/A",
+    },
+    {
+      name: "Connectivity Type",
+      value: pmcReport?.connectivity_type || "N/A",
+      status: pmcReport?.connectivity_type_status || "N/A",
+    },
+    {
+      name: "Connectivity Speed",
+      value: pmcReport?.connectivity_speed || "N/A",
+      status: pmcReport?.connectivity_speed_status || "N/A",
+    },
+  ];
+
+  const completedProcedures = pmcReport?.procedures || [];
+
+  // --- Internal Table for Assets/Network ---
+  const ReadOnlyTable = ({
+    title,
+    icon,
+    items,
+    emptyMsg,
+    isNetwork = false,
+    isSystemParentIncluded = false,
+  }: any) => (
+    <div className="border rounded-md overflow-hidden shadow-sm bg-white">
+      <div
+        className={`px-4 py-3 border-b flex items-center ${isNetwork ? "bg-purple-50 border-purple-100" : "bg-gray-50 border-gray-200"}`}
+      >
+        {icon}
+        <h3
+          className={`font-medium ml-2 ${isNetwork ? "text-purple-900" : "text-gray-900"}`}
+        >
+          {title}
+        </h3>
+      </div>
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase w-1/4">
+              {isNetwork ? "Item Name" : "Asset"}
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase w-1/5">
+              Property Tag
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase w-[35%]">
+              Remarks
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase w-[20%]">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {items.length === 0 ? (
+            <tr>
+              <td
+                colSpan={4}
+                className="px-6 py-6 text-center text-sm text-gray-500"
+              >
+                {emptyMsg}
+              </td>
+            </tr>
+          ) : (
+            items.map((item: any, idx: number) => {
+              const isParentRow = isSystemParentIncluded && idx === 0;
+              return (
+                <tr
+                  key={item.asset_id || idx}
+                  className={`transition-colors ${isParentRow ? "bg-blue-50 font-medium border-b border-blue-100" : "hover:bg-gray-50"}`}
+                >
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {isParentRow
+                      ? ""
+                      : !isNetwork && (
+                          <span className="text-gray-400 mr-2">↳</span>
+                        )}
+                    {item.unit_name || item.name}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                    {item.property_tag_no || "N/A"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {isNetwork ? (
+                      item.value !== "N/A" ? (
+                        item.value
+                      ) : (
+                        "-"
+                      )
+                    ) : isParentRow ? (
+                      <span className="italic text-xs text-gray-500">
+                        {item.description}
+                      </span>
+                    ) : (
+                      item.asset_remarks || item.description || "-"
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        ["Functional", "Working", "Operational"].includes(
+                          item.status,
+                        )
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  if (loading)
+    return <div className="p-12 text-center text-gray-500">Loading...</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      {/* Header */}
       <div className="flex justify-between items-start mb-8 border-b pb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
@@ -89,7 +253,6 @@ const MaintenanceView: React.FC<Props> = ({
           >
             Back to List
           </button>
-          {/* ✅ SERVICE BUTTON */}
           <button
             onClick={onService}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center shadow-sm"
@@ -100,9 +263,8 @@ const MaintenanceView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Status Overview Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 h-fit">
           <h3 className="text-sm font-medium text-gray-500 mb-1">
             Maintenance Period
           </h3>
@@ -111,160 +273,89 @@ const MaintenanceView: React.FC<Props> = ({
           </p>
           <div className="flex items-center mt-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4 mr-1.5" />
-            {fullReport
-              ? formatDate(fullReport.report_date)
+            {pmcReport
+              ? new Date(pmcReport.report_date).toLocaleDateString()
               : "Not yet serviced"}
           </div>
         </div>
-
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 h-fit">
           <h3 className="text-sm font-medium text-gray-500 mb-1">
             Workstation Status
           </h3>
-          {fullReport ? (
+          {pmcReport ? (
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                wsItem?.status === "Pending"
+                pmcReport.workstation_status === "For Repair"
                   ? "bg-red-100 text-red-800"
                   : "bg-green-100 text-green-800"
               }`}
             >
-              {wsItem?.status || "Functional"}
+              {pmcReport.workstation_status}
             </span>
           ) : (
             <span className="text-gray-500 italic">Pending Maintenance</span>
           )}
-          <p className="text-sm text-gray-600 mt-2">
-            Remarks: {wsItem?.remarks || "No remarks recorded"}
-          </p>
-        </div>
-
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-          <h3 className="text-sm font-medium text-gray-500 mb-1">
-            Procedures Checked
-          </h3>
-          {fullReport && fullReport.procedures ? (
-            <div className="text-lg font-semibold text-gray-900">
-              {
-                fullReport.procedures.filter(
-                  (p: any) => p.overall_status === "Completed",
-                ).length
-              }{" "}
-              / {fullReport.procedures.length}
-            </div>
-          ) : (
-            <div className="text-gray-500 italic">N/A</div>
-          )}
-          <p className="text-sm text-gray-500 mt-1">Completed items</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Procedures List */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-            <CheckCircle2 className="w-5 h-5 mr-2 text-green-600" />
-            Performed Procedures
-          </h3>
-          <div className="bg-white border rounded-md overflow-hidden">
-            {!fullReport ? (
-              <div className="p-6 text-center text-gray-500 bg-gray-50">
-                No procedures recorded for this quarter yet.
-              </div>
+      <div className="space-y-8">
+        {/* ✅ NEW: Procedures Card (Horizontal Layout) */}
+        <div className="border rounded-md overflow-hidden shadow-sm bg-white">
+          <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex items-center">
+            <ListChecks className="w-5 h-5 text-blue-600" />
+            <h3 className="font-medium text-blue-900 ml-2">
+              Completed Procedures
+            </h3>
+          </div>
+          <div className="p-4">
+            {completedProcedures.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-2">
+                No procedures recorded.
+              </p>
             ) : (
-              <ul className="divide-y divide-gray-100">
-                {fullReport.procedures
-                  ?.filter((p: any) => p.overall_status === "Completed")
-                  .map((proc: any) => (
-                    <li
-                      key={proc.procedure_id}
-                      className="px-4 py-3 flex items-start"
-                    >
-                      <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 mt-0.5" />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {proc.procedure?.procedure_name ||
-                            "Unknown Procedure"}
-                        </span>
-                        {proc.overall_remarks && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {proc.overall_remarks}
-                          </p>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                {fullReport.procedures?.filter(
-                  (p: any) => p.overall_status === "Completed",
-                ).length === 0 && (
-                  <li className="px-4 py-3 text-sm text-gray-500 italic">
-                    No procedures marked as completed.
-                  </li>
-                )}
-              </ul>
+              <div className="flex flex-wrap gap-3">
+                {completedProcedures.map((p: any) => (
+                  <div
+                    key={p.procedure.procedure_id}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                    {p.procedure.procedure_name}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Assets List */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-            <AlertCircle className="w-5 h-5 mr-2 text-blue-600" />
-            Assigned Assets
-          </h3>
-          <div className="bg-white border rounded-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Asset
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Property Tag
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {assets.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="px-4 py-4 text-center text-sm text-gray-500"
-                    >
-                      No assets found.
-                    </td>
-                  </tr>
-                ) : (
-                  assets.map((asset) => (
-                    <tr key={asset.asset_id}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {asset.unit_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {asset.property_tag_no}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex px-2 text-xs font-semibold rounded-full ${
-                            asset.status === "Functional" ||
-                            asset.status === "Working" ||
-                            asset.status === "Operational"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {asset.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <ReadOnlyTable
+          title="System Unit Components"
+          icon={<Cpu className="w-5 h-5 text-blue-600" />}
+          items={displaySystemAssets}
+          emptyMsg="No system unit components found."
+          isSystemParentIncluded={true}
+        />
+        <ReadOnlyTable
+          title="Peripherals & External Devices"
+          icon={<Keyboard className="w-5 h-5 text-gray-600" />}
+          items={peripheralAssets}
+          emptyMsg="No peripheral assets found."
+        />
+        <ReadOnlyTable
+          title="Network & Software"
+          icon={<Network className="w-5 h-5 text-purple-600" />}
+          items={networkItems}
+          emptyMsg="No network info recorded."
+          isNetwork={true}
+        />
+        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center mb-2">
+            <AlignLeft className="w-5 h-5 text-gray-500 mr-2" />
+            <h3 className="font-medium text-gray-900">Overall Remarks</h3>
           </div>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap pl-7">
+            {pmcReport?.overall_remarks || "No overall remarks provided."}
+          </p>
         </div>
       </div>
     </div>
