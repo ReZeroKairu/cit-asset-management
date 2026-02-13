@@ -169,7 +169,10 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
       orderBy: { report_date: 'desc' }
     });
 
-    res.json(reports);
+    res.json({
+      success: true,
+      data: reports
+    });
   } catch (error) {
     console.error("Error fetching daily reports:", error);
     res.status(500).json({ error: "Failed to fetch daily reports" });
@@ -518,7 +521,10 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
       orderBy: { report_date: 'desc' }
     });
 
-    res.json(reports);
+    res.json({
+      success: true,
+      data: reports
+    });
   } catch (error) {
     console.error("Error fetching user daily reports:", error);
     res.status(500).json({ error: "Failed to fetch daily reports" });

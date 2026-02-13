@@ -77,14 +77,18 @@ export const getAllDailyReports = async (params?: {
   user_id?: number;
   start_date?: string;
   end_date?: string;
+  exclude_status?: string;
+  status?: string;
 }) => {
   const queryParams = new URLSearchParams();
   if (params?.lab_id) queryParams.append("lab_id", params.lab_id.toString());
   if (params?.user_id) queryParams.append("user_id", params.user_id.toString());
   if (params?.start_date) queryParams.append("start_date", params.start_date);
   if (params?.end_date) queryParams.append("end_date", params.end_date);
-  // Always exclude approved reports - they go to archived
-  queryParams.append("exclude_status", "Approved");
+  // Only add exclude_status if it's provided
+  if (params?.exclude_status !== undefined) queryParams.append("exclude_status", params.exclude_status);
+  // Add status filter if provided
+  if (params?.status) queryParams.append("status", params.status);
 
   const response = await api.get(`/daily-reports?${queryParams}`);
   return response.data;

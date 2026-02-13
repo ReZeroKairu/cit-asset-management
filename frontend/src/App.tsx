@@ -5,9 +5,13 @@ import InventoryPage from "./pages/InventoryPage";
 import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
 import AdminReportsPage from "./pages/AdminReportsPage";
-import ArchivedReportsPage from "./pages/ArchivedReportsPage";
+import { ArchivesPage } from "./pages/ArchivesPage";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
+import FormsPage from "./pages/FormsPage";
+import PublicFormsPage from "./pages/PublicFormsPage";
+import PublicLandingPage from "./pages/PublicLandingPage";
+import OneTimeFormPage from "./pages/OneTimeFormPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import { Package, Building, FileText, Users } from "lucide-react";
@@ -86,7 +90,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
     );
   }
 
-  const { stats, userAssignedLab, userRole, assetsByLab } = dashboardData;
+  const { stats, userAssignedLab, userRole } = dashboardData;
   const isAdmin = userRole === "Admin";
 
   return (
@@ -187,10 +191,52 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archived-reports" | "user-management" | "profile">(
-    "home",
-  );
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archives" | "user-management" | "profile" | "forms" | "public-forms" | "public-landing" | "one-time-form">(() => {
+    // Check URL path on initial load
+    const path = window.location.pathname;
+    console.log('Current pathname:', path);
+    console.log('Current search:', window.location.search);
+    console.log('Current full URL:', window.location.href);
+    
+    if (path === '/public-forms') {
+      return "public-forms";
+    }
+    if (path === '/one-time' || path.startsWith('/one-time')) {
+      console.log('Detected one-time form path');
+      return "one-time-form";
+    }
+    return "home";
+  });
 
+  // Check if we're on the public forms page (no auth required)
+  const isPublicFormsPage = currentPage === "public-forms";
+  const isPublicLandingPage = currentPage === "public-landing";
+  const isOneTimeFormPage = currentPage === "one-time-form";
+
+  // Handle URL path changes
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      console.log('Popstate pathname:', path);
+      if (path === '/public-forms') {
+        setCurrentPage('public-forms');
+      } else if (path === '/one-time' || path.startsWith('/one-time')) {
+        console.log('Popstate detected one-time form path');
+        setCurrentPage('one-time-form');
+      } else {
+        // For public users, show a landing page instead of login
+        if (!user) {
+          setCurrentPage('public-landing');
+        } else {
+          setCurrentPage('home');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+  
   // Create user form state that persists across navigation
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
     full_name: "",
@@ -212,6 +258,14 @@ function App() {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as any);
+    // Update URL when navigating
+    if (page === 'public-forms') {
+      window.history.pushState(null, '', '/public-forms');
+    } else if (page === 'one-time-form') {
+      window.history.pushState(null, '', '/one-time');
+    } else {
+      window.history.pushState(null, '', '/');
+    }
   };
 
   const renderPage = () => {
@@ -229,13 +283,21 @@ function App() {
         return <DailyReportsPage />;
       case "admin-reports":
         return <AdminReportsPage />;
-      case "archived-reports":
-        return <ArchivedReportsPage />;
+      case "archives":
+        return <ArchivesPage />;
       case "user-management":
         return <UserManagementPage 
           createUserData={createUserData}
           setCreateUserData={setCreateUserData}
         />;
+      case "forms":
+        return <FormsPage />;
+      case "public-forms":
+        return <PublicFormsPage />;
+      case "public-landing":
+        return <PublicLandingPage />;
+      case "one-time-form":
+        return <OneTimeFormPage />;
       case "profile":
         return <ProfilePage />;
       default:
@@ -243,12 +305,27 @@ function App() {
     }
   };
 
-  // 1. IF NOT LOGGED IN -> SHOW LOGIN PAGE
+  // 1. IF PUBLIC FORMS PAGE -> SHOW PUBLIC FORMS (NO AUTH REQUIRED)
+  if (isPublicFormsPage) {
+    return <PublicFormsPage />;
+  }
+
+  // 2. IF PUBLIC LANDING PAGE -> SHOW LANDING PAGE (NO AUTH REQUIRED)
+  if (isPublicLandingPage) {
+    return <PublicLandingPage />;
+  }
+
+  // 3. IF ONE-TIME FORM PAGE -> SHOW ONE-TIME FORM (NO AUTH REQUIRED)
+  if (isOneTimeFormPage) {
+    return <OneTimeFormPage />;
+  }
+
+  // 4. IF NOT LOGGED IN -> SHOW LOGIN PAGE
   if (!user) {
     return <LoginPage />;
   }
 
-  // 2. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
+  // 4. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
   return (
     <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

@@ -11,13 +11,16 @@ import workstationRoutes from "./routes/workstationRoutes";
 import labRoutes from "./routes/labRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
+import formsRoutes from "./routes/formsRoutes";
+import publicFormsRoutes from "./routes/publicFormsRoutes";
+import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
 
 const app = express();
 
-// Security: Restrict CORS to your frontend
+// Security: Restrict CORS to your frontend and network IP
 app.use(
   cors({
-    origin: config.frontendUrl,
+    origin: true, // Allow all origins for development
     credentials: true,
   }),
 );
@@ -32,12 +35,26 @@ app.use("/workstations", workstationRoutes);
 app.use("/laboratories", labRoutes);
 app.use("/daily-reports", reportRoutes); // handles reports and procedures
 app.use("/dashboard", dashboardRoutes);
+app.use("/forms", formsRoutes); // handles forms submissions
+app.use("/public-forms", publicFormsRoutes); // handles public form submissions (no auth)
+app.use("/api/one-time-forms", oneTimeFormsRoutes); // handles one-time QR form tokens
 
 // 404 Handler (Optional but good practice)
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-app.listen(config.port, () => {
+// Global Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('🚨 Global error handler caught:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: err.message || 'Unknown error'
+  });
+});
+
+app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${config.port}`);
+  console.log(`Server also accessible on network: http://192.168.111.21:${config.port}`);
 });

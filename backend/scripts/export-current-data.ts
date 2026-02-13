@@ -6,61 +6,39 @@ import * as path from "path";
 const prisma = new PrismaClient();
 
 async function exportData() {
-  console.log("Exporting current data...");
+  console.log("Exporting current data...\n");
 
   try {
-    // Export all data
+    // Export core data that exists
     const campuses = await prisma.campuses.findMany();
-    const officeTypes = await prisma.office_types.findMany();
     const departments = await prisma.departments.findMany();
-    const deviceTypes = await prisma.device_types.findMany();
-    const units = await prisma.units.findMany();
-    const procedures = await prisma.procedures.findMany();
-    const procedureChecklists = await prisma.procedure_checklists.findMany();
-    const users = await prisma.users.findMany();
     const laboratories = await prisma.laboratories.findMany();
-    const workstations = await prisma.workstations.findMany();
-    const inventoryAssets = await prisma.inventory_assets.findMany({
-      include: { details: true },
-    });
-    const dailyReports = await prisma.daily_reports.findMany({
-      include: {
-        users: true,
-        laboratories: true,
-      },
-    });
+    const users = await prisma.users.findMany();
+    const daily_reports = await prisma.daily_reports.findMany();
 
     const exportData = {
       exportDate: new Date().toISOString(),
       campuses,
-      officeTypes,
       departments,
-      deviceTypes,
-      units,
-      procedures,
-      procedureChecklists,
-      users,
       laboratories,
-      workstations,
-      inventoryAssets,
-      dailyReports,
+      users,
+      daily_reports,
     };
 
     // Save to file
     const exportPath = path.join(__dirname, "../data-export.json");
     fs.writeFileSync(exportPath, JSON.stringify(exportData, null, 2));
 
-    console.log(`Data exported to: ${exportPath}`);
-    console.log(`Summary:`);
-    console.log(`- Campuses: ${campuses.length}`);
-    console.log(`- Departments: ${departments.length}`);
-    console.log(`- Users: ${users.length}`);
-    console.log(`- Laboratories: ${laboratories.length}`);
-    console.log(`- Workstations: ${workstations.length}`);
-    console.log(`- Inventory Assets: ${inventoryAssets.length}`);
-    console.log(`- Daily Reports: ${dailyReports.length}`);
+    console.log(`✅ Data exported successfully!\n`);
+    console.log(`📁 Export file: ${exportPath}\n`);
+    console.log(`📊 Summary:`);
+    console.log(`   - Campuses: ${campuses.length}`);
+    console.log(`   - Departments: ${departments.length}`);
+    console.log(`   - Laboratories: ${laboratories.length}`);
+    console.log(`   - Users: ${users.length}`);
+    console.log(`   - Daily Reports: ${daily_reports.length}\n`);
   } catch (error) {
-    console.error("Error exporting data:", error);
+    console.error("❌ Error exporting data:", error);
   } finally {
     await prisma.$disconnect();
   }

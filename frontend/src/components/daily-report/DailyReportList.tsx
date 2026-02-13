@@ -19,11 +19,13 @@ import { mapReportDataToTemplate } from "../../utils/templateMapping";
 interface DailyReportListProps {
   viewMode?: "my" | "all";
   adminMode?: boolean;
+  archiveMode?: boolean;
 }
 
 const DailyReportList: React.FC<DailyReportListProps> = ({
   viewMode = "my",
   adminMode = false,
+  archiveMode = false,
 }) => {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +50,20 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     try {
       setLoading(true);
 
-      const data =
-        viewMode === "my"
-          ? await getMyDailyReports()
-          : await getAllDailyReports();
-      setReports(data);
+      let data;
+      if (viewMode === "my") {
+        data = await getMyDailyReports();
+      } else if (archiveMode) {
+        // For archive mode, show only approved reports
+        data = await getAllDailyReports({ status: "Approved" });
+      } else if (adminMode) {
+        // For regular admin daily reports, show only pending reports
+        data = await getAllDailyReports({ status: "Pending" });
+      } else {
+        // For regular admin daily reports, show all reports
+        data = await getAllDailyReports({});
+      }
+      setReports(data.data || data);
     } catch (_err: any) {
       setError(_err.response?.data?.error || "Failed to load reports");
     } finally {
@@ -292,16 +303,22 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {viewMode === "my" ? "My Daily Reports" : "All Daily Reports"}
+              {viewMode === "my" 
+                ? "My Daily Reports" 
+                : adminMode 
+                  ? "Archived Reports" 
+                  : "All Daily Reports"}
             </h1>
             <p className="mt-2 text-gray-600">
               {viewMode === "my"
                 ? "View and manage your daily reports"
-                : "View all daily reports"}
+                : adminMode
+                  ? "View approved and archived daily reports"
+                  : "View all daily reports"}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {!adminMode && (
+            {!adminMode && !archiveMode && (
               <Button
                 onClick={() => setActiveTab("create")}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -471,16 +488,15 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleView(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                           title="View Report Details"
                         >
                           <Eye className="w-4 h-4" />
-                          <span className="text-xs">View</span>
                         </button>
                         {viewMode === "my" && report.status === "Pending" && (
                           <button
                             onClick={() => handleEdit(report)}
-                            className="text-gray-600 hover:text-gray-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                            className="text-gray-600 hover:text-gray-800 flex items-center px-2 py-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
                             title="Edit Report"
                           >
                             <svg
@@ -496,16 +512,14 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                               />
                             </svg>
-                            <span className="text-xs">Edit</span>
                           </button>
                         )}
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />
-                          <span className="text-xs">Generate</span>
                         </button>
                       </div>
                     </td>

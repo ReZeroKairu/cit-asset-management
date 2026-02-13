@@ -13,7 +13,7 @@ CREATE TABLE `daily_reports` (
     `lab_id` INTEGER NOT NULL,
     `report_date` DATE NOT NULL,
     `general_remarks` TEXT NULL,
-    `status` ENUM('Pending', 'Submitted', 'Approved') NULL DEFAULT 'Pending',
+    `status` ENUM('Pending', 'Approved') NULL DEFAULT 'Pending',
     `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
 
     INDEX `lab_id`(`lab_id`),
@@ -111,8 +111,11 @@ CREATE TABLE `workstations` (
     `workstation_name` VARCHAR(100) NOT NULL,
     `lab_id` INTEGER NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `status_id` INTEGER NULL DEFAULT 1,
+    `workstation_remarks` TEXT NULL,
 
     INDEX `workstations_lab_id_idx`(`lab_id`),
+    INDEX `workstations_status_id_idx`(`status_id`),
     UNIQUE INDEX `workstations_workstation_name_lab_id_key`(`workstation_name`, `lab_id`),
     PRIMARY KEY (`workstation_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -126,24 +129,13 @@ CREATE TABLE `asset_details` (
     `description` TEXT NULL,
     `serial_number` VARCHAR(100) NULL,
     `date_of_purchase` DATE NULL,
+    `asset_remarks` TEXT NULL,
+    `status_id` INTEGER NULL DEFAULT 1,
 
     UNIQUE INDEX `asset_details_asset_id_key`(`asset_id`),
     UNIQUE INDEX `property_tag_no`(`property_tag_no`),
+    INDEX `asset_details_status_id_idx`(`status_id`),
     PRIMARY KEY (`detail_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `daily_report_checklist_responses` (
-    `response_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `report_procedure_id` INTEGER NOT NULL,
-    `checklist_id` INTEGER NOT NULL,
-    `status` VARCHAR(50) NOT NULL DEFAULT 'Done',
-    `remarks` VARCHAR(255) NULL,
-    `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
-
-    INDEX `checklist_id`(`checklist_id`),
-    INDEX `report_procedure_id`(`report_procedure_id`),
-    PRIMARY KEY (`response_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -161,27 +153,14 @@ CREATE TABLE `daily_report_procedures` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `procedure_checklists` (
-    `checklist_id` INTEGER NOT NULL AUTO_INCREMENT,
-    `procedure_id` INTEGER NOT NULL,
-    `checklist_name` VARCHAR(100) NOT NULL,
-    `description` TEXT NULL,
-    `order_sequence` INTEGER NOT NULL DEFAULT 0,
-    `is_required` BOOLEAN NOT NULL DEFAULT true,
-
-    INDEX `procedure_id`(`procedure_id`),
-    PRIMARY KEY (`checklist_id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
 CREATE TABLE `procedures` (
     `procedure_id` INTEGER NOT NULL AUTO_INCREMENT,
     `procedure_name` VARCHAR(100) NOT NULL,
-    `description` TEXT NULL,
     `category` VARCHAR(50) NULL,
     `is_active` BOOLEAN NOT NULL DEFAULT true,
     `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
 
+    INDEX `procedures_procedure_id_idx`(`procedure_id`),
     PRIMARY KEY (`procedure_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -199,11 +178,94 @@ CREATE TABLE `report_workstation_items` (
     PRIMARY KEY (`item_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `asset_statuses` (
+    `status_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `status_name` VARCHAR(50) NOT NULL,
+
+    UNIQUE INDEX `asset_statuses_status_name_key`(`status_name`),
+    PRIMARY KEY (`status_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `lab_requests` (
+    `request_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NULL,
+    `date` DATE NOT NULL,
+    `usage_type` VARCHAR(20) NOT NULL,
+    `faculty_student_name` VARCHAR(100) NOT NULL,
+    `year_level` VARCHAR(20) NULL,
+    `laboratory` VARCHAR(20) NOT NULL,
+    `printing_pages` VARCHAR(50) NULL,
+    `ws_number` VARCHAR(50) NULL,
+    `time_in` VARCHAR(10) NULL,
+    `time_out` VARCHAR(10) NULL,
+    `purpose` TEXT NOT NULL,
+    `requested_by` VARCHAR(100) NOT NULL,
+    `remarks` TEXT NULL,
+    `monitored_by` VARCHAR(100) NULL,
+    `status` ENUM('Pending', 'Admin_Approved', 'Custodian_Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+
+    INDEX `lab_requests_user_id_idx`(`user_id`),
+    PRIMARY KEY (`request_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `equipment_borrows` (
+    `borrow_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NULL,
+    `date` DATE NOT NULL,
+    `laboratory` VARCHAR(20) NOT NULL,
+    `faculty_student_name` VARCHAR(100) NOT NULL,
+    `year_level` VARCHAR(20) NULL,
+    `release_time` VARCHAR(10) NOT NULL,
+    `returned_time` VARCHAR(10) NULL,
+    `equipment_list` JSON NOT NULL,
+    `purpose` TEXT NOT NULL,
+    `requested_by` VARCHAR(100) NOT NULL,
+    `remarks` TEXT NULL,
+    `monitored_by` VARCHAR(100) NULL,
+    `status` ENUM('Pending', 'Admin_Approved', 'Custodian_Approved', 'Rejected', 'Returned') NOT NULL DEFAULT 'Pending',
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+
+    INDEX `equipment_borrows_user_id_idx`(`user_id`),
+    PRIMARY KEY (`borrow_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `software_installations` (
+    `installation_id` INTEGER NOT NULL AUTO_INCREMENT,
+    `user_id` INTEGER NULL,
+    `faculty_name` VARCHAR(100) NOT NULL,
+    `date` DATE NOT NULL,
+    `laboratory` VARCHAR(20) NOT NULL,
+    `software_list` TEXT NOT NULL,
+    `requested_by` VARCHAR(100) NOT NULL,
+    `installation_remarks` TEXT NULL,
+    `prepared_by` VARCHAR(100) NULL,
+    `feedback_date` DATE NULL,
+    `status` ENUM('Pending', 'Admin_Approved', 'Custodian_Approved', 'Rejected', 'Completed') NOT NULL DEFAULT 'Pending',
+    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+
+    INDEX `software_installations_user_id_idx`(`user_id`),
+    PRIMARY KEY (`installation_id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `daily_reports` ADD CONSTRAINT `daily_reports_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE `daily_reports` ADD CONSTRAINT `daily_reports_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `daily_reports` ADD CONSTRAINT `daily_reports_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `departments` ADD CONSTRAINT `departments_campus_id_fkey` FOREIGN KEY (`campus_id`) REFERENCES `campuses`(`campus_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `departments` ADD CONSTRAINT `departments_office_type_id_fkey` FOREIGN KEY (`office_type_id`) REFERENCES `office_types`(`type_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_added_by_user_id_fkey` FOREIGN KEY (`added_by_user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE SET NULL ON UPDATE CASCADE;
@@ -212,28 +274,28 @@ ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_lab_id_fkey` FOR
 ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_unit_id_fkey` FOREIGN KEY (`unit_id`) REFERENCES `units`(`unit_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_added_by_user_id_fkey` FOREIGN KEY (`added_by_user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `inventory_assets` ADD CONSTRAINT `inventory_assets_workstation_id_fkey` FOREIGN KEY (`workstation_id`) REFERENCES `workstations`(`workstation_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `laboratories` ADD CONSTRAINT `laboratories_dept_id_fkey` FOREIGN KEY (`dept_id`) REFERENCES `departments`(`dept_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `laboratories` ADD CONSTRAINT `fk_lab_dept` FOREIGN KEY (`dept_id`) REFERENCES `departments`(`dept_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `users` ADD CONSTRAINT `users_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `units` ADD CONSTRAINT `units_device_type_id_fkey` FOREIGN KEY (`device_type_id`) REFERENCES `device_types`(`device_type_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `workstations` ADD CONSTRAINT `workstations_lab_id_fkey` FOREIGN KEY (`lab_id`) REFERENCES `laboratories`(`lab_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `workstations` ADD CONSTRAINT `workstations_status_id_fkey` FOREIGN KEY (`status_id`) REFERENCES `asset_statuses`(`status_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `asset_details` ADD CONSTRAINT `asset_details_asset_id_fkey` FOREIGN KEY (`asset_id`) REFERENCES `inventory_assets`(`asset_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `daily_report_checklist_responses` ADD CONSTRAINT `daily_report_checklist_responses_checklist_id_fkey` FOREIGN KEY (`checklist_id`) REFERENCES `procedure_checklists`(`checklist_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `daily_report_checklist_responses` ADD CONSTRAINT `daily_report_checklist_responses_report_procedure_id_fkey` FOREIGN KEY (`report_procedure_id`) REFERENCES `daily_report_procedures`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `asset_details` ADD CONSTRAINT `asset_details_status_id_fkey` FOREIGN KEY (`status_id`) REFERENCES `asset_statuses`(`status_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `daily_report_procedures` ADD CONSTRAINT `daily_report_procedures_procedure_id_fkey` FOREIGN KEY (`procedure_id`) REFERENCES `procedures`(`procedure_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -242,10 +304,16 @@ ALTER TABLE `daily_report_procedures` ADD CONSTRAINT `daily_report_procedures_pr
 ALTER TABLE `daily_report_procedures` ADD CONSTRAINT `daily_report_procedures_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `daily_reports`(`report_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `procedure_checklists` ADD CONSTRAINT `procedure_checklists_procedure_id_fkey` FOREIGN KEY (`procedure_id`) REFERENCES `procedures`(`procedure_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE `report_workstation_items` ADD CONSTRAINT `report_workstation_items_report_id_fkey` FOREIGN KEY (`report_id`) REFERENCES `daily_reports`(`report_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `report_workstation_items` ADD CONSTRAINT `report_workstation_items_workstation_id_fkey` FOREIGN KEY (`workstation_id`) REFERENCES `workstations`(`workstation_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `lab_requests` ADD CONSTRAINT `lab_requests_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `equipment_borrows` ADD CONSTRAINT `equipment_borrows_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `software_installations` ADD CONSTRAINT `software_installations_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
