@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { getLabPMCReports, type PMCReport } from "../api/maintenance";
 
 // Import workstation helper

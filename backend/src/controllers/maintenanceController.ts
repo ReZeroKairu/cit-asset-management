@@ -58,7 +58,7 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
   }
 };
 
-// 3. CREATE/SAVE A Report
+// 3. CREATE OR UPDATE A Report
 export const createPMCReport = async (req: Request, res: Response) => {
   try {
     const {
@@ -74,44 +74,77 @@ export const createPMCReport = async (req: Request, res: Response) => {
       connectivity_type_status,
       connectivity_speed,
       connectivity_speed_status,
-      procedure_ids, // Array of IDs [8, 9, 10]
+      procedure_ids,
     } = req.body;
 
-    const user_id = req.user?.userId; // Assumes auth middleware adds this
+    const user_id = req.user?.userId;
 
-    // Transaction: Create Report -> Link Procedures
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create the main report
-      const newReport = await tx.pmc_reports.create({
-        data: {
-          lab_id: Number(lab_id),
+      // Check if a report already exists for this workstation + quarter
+      const existingReport = await tx.pmc_reports.findFirst({
+        where: {
           workstation_id: Number(workstation_id),
-          user_id: Number(user_id),
-          report_date: new Date(report_date),
-          quarter,
-          workstation_status,
-          overall_remarks,
-          software_name,
-          software_status,
-          connectivity_type,
-          connectivity_type_status,
-          connectivity_speed,
-          connectivity_speed_status,
+          quarter: String(quarter),
         },
       });
 
-      // 2. Create procedure entries if any are checked
+      let report;
+
+      if (existingReport) {
+        // UPDATE the existing report
+        report = await tx.pmc_reports.update({
+          where: { pmc_id: existingReport.pmc_id },
+          data: {
+            report_date: new Date(report_date),
+            workstation_status,
+            overall_remarks,
+            software_name,
+            software_status,
+            connectivity_type,
+            connectivity_type_status,
+            connectivity_speed,
+            connectivity_speed_status,
+            user_id: Number(user_id),
+          },
+        });
+
+        // Delete old procedures and re-create
+        await tx.pmc_report_procedures.deleteMany({
+          where: { pmc_id: existingReport.pmc_id },
+        });
+      } else {
+        // CREATE a new report
+        report = await tx.pmc_reports.create({
+          data: {
+            lab_id: Number(lab_id),
+            workstation_id: Number(workstation_id),
+            user_id: Number(user_id),
+            report_date: new Date(report_date),
+            quarter,
+            workstation_status,
+            overall_remarks,
+            software_name,
+            software_status,
+            connectivity_type,
+            connectivity_type_status,
+            connectivity_speed,
+            connectivity_speed_status,
+          },
+        });
+      }
+
+      // Link procedures
       if (procedure_ids && procedure_ids.length > 0) {
         await tx.pmc_report_procedures.createMany({
           data: procedure_ids.map((id: number) => ({
-            pmc_id: newReport.pmc_id,
+            pmc_id: report.pmc_id,
             procedure_id: id,
             is_checked: true,
           })),
         });
       }
 
-      return newReport;
+      return report;
     });
 
     res.status(201).json(result);
