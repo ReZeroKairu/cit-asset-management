@@ -119,27 +119,57 @@ const MaintenanceView: React.FC<Props> = ({
       repl: status === "For Replacement" ? "✓" : "",
     });
 
-    // 3. Build the Components List (Physical Assets)
-    const componentsList = assets.map((asset) => ({
+    // 3. Separate Assets into Peripherals and System Components
+    const systemComponents = assets.filter((asset) =>
+      SYSTEM_UNIT_TYPES.some(
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+      ),
+    );
+    const peripheralComponents = assets.filter(
+      (asset) =>
+        !SYSTEM_UNIT_TYPES.some(
+          (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
+        ),
+    );
+
+    // 4. Start building the list with Peripherals first
+    const componentsList = peripheralComponents.map((asset) => ({
       name: asset.unit_name,
       ...mapStatus(asset.status),
       tag: asset.property_tag_no || "N/A",
       remarks: asset.asset_remarks || "",
     }));
 
-    // Add Software & Network Items explicitly as required by template
-    componentsList.push({
-      name: "Software",
-      ...mapStatus(pmcReport.software_status),
-      tag: "N/A",
-      remarks: pmcReport.software_name || "",
-    });
+    // 5. Add the "System Unit" Parent row
+    const isAllFunctional =
+      systemComponents.length > 0 &&
+      systemComponents.every((asset) =>
+        ["Functional", "Working", "Operational"].includes(asset.status),
+      );
 
     componentsList.push({
       name: "System Unit",
       ...mapStatus(pmcReport.workstation_status),
       tag: "N/A",
-      remarks: "",
+      remarks: isAllFunctional ? "Functional" : "",
+    });
+
+    // 6. Add the System Unit Components right under it (with an indent arrow!)
+    systemComponents.forEach((asset) => {
+      componentsList.push({
+        name: `   ↳ ${asset.unit_name}`,
+        ...mapStatus(asset.status),
+        tag: asset.property_tag_no || "N/A",
+        remarks: asset.asset_remarks || "",
+      });
+    });
+
+    // 7. Add Software & Network Items explicitly at the bottom
+    componentsList.push({
+      name: "Software",
+      ...mapStatus(pmcReport.software_status),
+      tag: "N/A",
+      remarks: pmcReport.software_name || "",
     });
 
     const connTypeStr =
@@ -294,11 +324,10 @@ const MaintenanceView: React.FC<Props> = ({
                   className={`transition-colors ${isParentRow ? "bg-blue-50 font-medium border-b border-blue-100" : "hover:bg-gray-50"}`}
                 >
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {isParentRow
-                      ? ""
-                      : !isNetwork && (
-                          <span className="text-gray-400 mr-2">↳</span>
-                        )}
+                    {/* ✅ FIX: Only show the arrow if it's a child inside the System Unit table */}
+                    {isSystemParentIncluded && !isParentRow && (
+                      <span className="text-gray-400 mr-2">↳</span>
+                    )}
                     {item.unit_name || item.name}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 font-mono">
