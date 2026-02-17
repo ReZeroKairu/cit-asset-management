@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { createPMCReport } from "../../api/maintenance";
+import { createPMCReport, getPMCReport } from "../../api/maintenance";
 import {
   getAllProcedures,
   type Procedure,
@@ -76,6 +76,9 @@ const MaintenanceForm: React.FC<Props> = ({
   const [workstationAssets, setWorkstationAssets] = useState<
     WorkstationAssetItem[]
   >([]);
+  const [originalAssetStatuses, setOriginalAssetStatuses] = useState<{
+    [key: number]: string;
+  }>({});
   const [statusOptions, setStatusOptions] = useState<
     { status_id: number; status_name: string }[]
   >([]);
@@ -99,6 +102,72 @@ const MaintenanceForm: React.FC<Props> = ({
   useEffect(() => {
     if (targetWorkstation) loadWorkstationAssets(targetWorkstation.id);
   }, [targetWorkstation]);
+
+  // ✅ NEW: Pre-populate Network & Software items and Overall Remarks from existing report
+  useEffect(() => {
+    if (targetWorkstation) {
+      loadExistingReportData(targetWorkstation.id, formData.quarter);
+    }
+  }, [targetWorkstation, formData.quarter]);
+
+  const loadExistingReportData = async (
+    workstationId: number,
+    quarter: string,
+  ) => {
+    try {
+      const existingReport = await getPMCReport(workstationId, quarter);
+      if (existingReport) {
+        // Pre-fill Network & Software items from existing report
+        setNetworkItems([
+          {
+            name: "Software",
+            remarks: existingReport.software_name || "",
+            status: existingReport.software_status || "Functional",
+          },
+          {
+            name: "Connectivity Type",
+            remarks: existingReport.connectivity_type || "",
+            status: existingReport.connectivity_type_status || "Functional",
+          },
+          {
+            name: "Connectivity Speed",
+            remarks: existingReport.connectivity_speed || "",
+            status: existingReport.connectivity_speed_status || "Functional",
+          },
+        ]);
+
+        // Pre-fill Overall Remarks from existing report
+        setFormData((prev) => ({
+          ...prev,
+          general_remarks: existingReport.overall_remarks || "",
+        }));
+
+        // Pre-fill procedures from existing report
+        if (existingReport.procedures && existingReport.procedures.length > 0) {
+          setProcedures((prev) =>
+            prev.map((proc) => {
+              const wasCompleted = existingReport.procedures?.some(
+                (p) =>
+                  p.procedure.procedure_id === proc.procedure_id &&
+                  p.is_checked,
+              );
+              return {
+                ...proc,
+                overall_status: wasCompleted
+                  ? "Completed"
+                  : proc.overall_status,
+              };
+            }),
+          );
+        }
+      }
+    } catch (err) {
+      // No existing report found — that's fine, use defaults
+      console.log(
+        "No existing report for this workstation/quarter — using defaults.",
+      );
+    }
+  };
 
   const loadAssignedLab = async () => {
     try {
@@ -157,6 +226,13 @@ const MaintenanceForm: React.FC<Props> = ({
           "Functional",
       }));
       setWorkstationAssets(mappedAssets);
+
+      // Store original statuses
+      const originalStatuses: { [key: number]: string } = {};
+      mappedAssets.forEach((asset: any) => {
+        originalStatuses[asset.asset_id] = asset.status;
+      });
+      setOriginalAssetStatuses(originalStatuses);
     } catch (err) {
       console.error(err);
     }
@@ -210,6 +286,14 @@ const MaintenanceForm: React.FC<Props> = ({
     e.preventDefault();
     setLoading(true);
     try {
+      // Build asset_actions array
+      const asset_actions = workstationAssets.map((asset) => ({
+        asset_id: asset.asset_id,
+        action: "CHECKED",
+        status_before: originalAssetStatuses[asset.asset_id] || "Unknown",
+        status_after: asset.status,
+      }));
+
       const reportPayload = {
         lab_id: formData.lab_id,
         workstation_id: targetWorkstation?.id,
@@ -226,6 +310,8 @@ const MaintenanceForm: React.FC<Props> = ({
         procedure_ids: procedures
           .filter((p) => p.overall_status === "Completed")
           .map((p) => p.procedure_id),
+        service_type: "ROUTINE",
+        asset_actions,
       };
 
       await createPMCReport(reportPayload);

@@ -3,6 +3,8 @@ import {
   getLabPMCReports,
   getPMCReportDetail,
   createPMCReport,
+  getServiceHistory,
+  createRepairLog,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
 
@@ -24,5 +26,13 @@ router.get("/pmc/detail", getPMCReportDetail);
 // 3. Create a new PMC Report
 // POST /api/maintenance/pmc
 router.post("/pmc", createPMCReport);
+
+// 4. Get service history for a workstation
+// GET /api/maintenance/pmc/history?workstation_id=5&quarter=1st
+router.get("/pmc/history", getServiceHistory);
+
+// 5. Create a repair/replacement log
+// POST /api/maintenance/pmc/repair
+router.post("/pmc/repair", createRepairLog);
 
 export default router;

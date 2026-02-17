@@ -58,6 +58,9 @@ model inventory_assets {
   units            units?         @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
   users            users?         @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
   workstation      workstations?  @relation(fields: [workstation_id], references: [workstation_id])
+  
+  // ✅ ADDED: Back-relation for Service Log Assets
+  service_actions  service_log_assets[]
 
   @@index([added_by_user_id], map: "added_by_user_id")
   @@index([lab_id], map: "lab_id")
@@ -100,7 +103,10 @@ model users {
   inventory_assets inventory_assets[]
   
   // ✅ ADDED: Back-relation for PMC Reports
-  pmc_reports      pmc_reports[]      
+  pmc_reports      pmc_reports[]
+  
+  // ✅ ADDED: Back-relation for Service Logs
+  service_logs     service_logs[]
 
   @@index([lab_id], map: "users_lab_id_fkey")
 }
@@ -192,6 +198,9 @@ model procedures {
   
   // ✅ ADDED: Back-relation for PMC Report Procedures
   pmc_report_procedures   pmc_report_procedures[]
+  
+  // ✅ ADDED: Back-relation for Service Log Procedures
+  service_log_procedures  service_log_procedures[]
 
   @@index([procedure_id])
 }
@@ -253,6 +262,10 @@ model pmc_reports {
   connectivity_speed        String? @db.VarChar(50)
   connectivity_speed_status String? @default("Functional") @db.VarChar(50)
 
+  // ✅ ADDED: Service tracking fields
+  service_count   Int      @default(1)
+  updated_at      DateTime @updatedAt
+
   created_at      DateTime @default(now())
 
   laboratory      laboratories @relation(fields: [lab_id], references: [lab_id])
@@ -260,10 +273,14 @@ model pmc_reports {
   workstation     workstations @relation(fields: [workstation_id], references: [workstation_id])
   
   procedures      pmc_report_procedures[]
+  
+  // ✅ ADDED: Back-relation for Service Logs
+  service_logs    service_logs[]
 
   @@index([lab_id])
   @@index([workstation_id])
   @@index([user_id])
+  @@unique([workstation_id, quarter])
 }
 
 model pmc_report_procedures {
@@ -278,5 +295,63 @@ model pmc_report_procedures {
   procedure      procedures  @relation(fields: [procedure_id], references: [procedure_id])
 
   @@index([pmc_id])
+  @@index([procedure_id])
+}
+
+// ==========================================
+// ✅ NEW SERVICE HISTORY MODELS
+// ==========================================
+
+model service_logs {
+  log_id          Int      @id @default(autoincrement())
+  pmc_id          Int
+  service_type    String   @db.VarChar(30)  // "ROUTINE" | "REPAIR" | "UPGRADE" | "REPLACEMENT"
+  service_date    DateTime @db.Date
+  performed_by    Int
+  remarks         String?  @db.Text
+  workstation_status_before String? @db.VarChar(50)
+  workstation_status_after  String? @db.VarChar(50)
+  created_at      DateTime @default(now())
+
+  pmc_report      pmc_reports @relation(fields: [pmc_id], references: [pmc_id], onDelete: Cascade)
+  user            users       @relation(fields: [performed_by], references: [user_id])
+  asset_actions   service_log_assets[]
+  log_procedures  service_log_procedures[]
+
+  @@index([pmc_id])
+  @@index([performed_by])
+  @@index([service_date])
+}
+
+model service_log_assets {
+  id              Int      @id @default(autoincrement())
+  log_id          Int
+  asset_id        Int
+  action          String   @db.VarChar(30)  // "CHECKED" | "REPAIRED" | "REPLACED" | "UPGRADED"
+  status_before   String?  @db.VarChar(50)
+  status_after    String?  @db.VarChar(50)
+  remarks         String?  @db.Text
+  old_property_tag  String? @db.VarChar(50)
+  new_property_tag  String? @db.VarChar(50)
+  replacement_asset_id Int?
+
+  service_log     service_logs     @relation(fields: [log_id], references: [log_id], onDelete: Cascade)
+  asset           inventory_assets @relation(fields: [asset_id], references: [asset_id])
+
+  @@index([log_id])
+  @@index([asset_id])
+}
+
+model service_log_procedures {
+  id              Int      @id @default(autoincrement())
+  log_id          Int
+  procedure_id    Int
+  is_checked      Boolean  @default(true)
+  remarks         String?  @db.VarChar(255)
+
+  service_log     service_logs @relation(fields: [log_id], references: [log_id], onDelete: Cascade)
+  procedure       procedures   @relation(fields: [procedure_id], references: [procedure_id])
+
+  @@index([log_id])
   @@index([procedure_id])
 }
