@@ -70,7 +70,7 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
           <div className="flex gap-4">
             {/* Icon Circle */}
             <div
-              className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getServiceTypeBadgeColor(
+              className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getServiceTypeBadgeColor(
                 log.service_type,
               )} border-2`}
             >
