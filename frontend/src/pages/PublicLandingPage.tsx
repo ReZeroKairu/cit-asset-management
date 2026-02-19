@@ -76,33 +76,10 @@ const PublicLandingPage = () => {
             </CardContent>
           </Card>
         </div>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">About This System</h3>
-          <p className="text-blue-800 mb-4">
-            This system manages laboratory reservations, equipment borrowing, and software installation requests 
-            for the College of Information Technology. Students and faculty can submit forms publicly, 
-            while staff can review and manage all requests through the secure portal.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-blue-700">
-            <div>
-              <strong>🔬 Laboratory Usage:</strong>
-              <p className="mt-1">Request lab access for printing, set-in, or reservations</p>
-            </div>
-            <div>
-              <strong>💻 Equipment Borrowing:</strong>
-              <p className="mt-1">Borrow equipment for academic and research purposes</p>
-            </div>
-            <div>
-              <strong>⚙️ Software Installation:</strong>
-              <p className="mt-1">Request software installation on laboratory computers</p>
-            </div>
-          </div>
-        </div>
-
+        
         <div className="mt-8 text-center text-gray-500 text-sm">
           <p>College of Information Technology</p>
-          <p>© 2026 CIT Asset Management System</p>
+          <p>&copy; 2026 CIT Asset Management System</p>
         </div>
       </div>
     </div>

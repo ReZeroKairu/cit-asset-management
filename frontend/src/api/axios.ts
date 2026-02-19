@@ -11,7 +11,6 @@ const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    const API_BASE_URL = 'http://192.168.110.72:3001';
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -31,11 +30,11 @@ api.interceptors.response.use(
       // Token expired or invalid, logout user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      // Only redirect to login if not on public pages
-      const publicPages = ['/public-forms', '/public-landing', '/one-time'];
+      
+      // Only redirect to login if not already on login page
       const currentPath = window.location.pathname;
-      if (!publicPages.includes(currentPath)) {
-        window.location.href = "/";
+      if (currentPath !== '/login') {
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);

@@ -228,11 +228,22 @@ function App() {
       console.log('Detected one-time form path');
       return "one-time-form";
     }
-    // For root path, show landing page (not redirect to forms)
+    
+    // Check if user is logged in (from localStorage should be available by now)
+    const storedUser = localStorage.getItem("user");
+    const isLoggedIn = storedUser && storedUser !== 'null';
+    
+    // For root path, decide based on auth status
     if (path === '/') {
-      return "public-landing"; // Show landing page, let users choose
+      if (isLoggedIn) {
+        return "home"; // Logged in users go to dashboard
+      } else {
+        return "public-landing"; // Public users see landing page
+      }
     }
-    return "home";
+    
+    // For other paths, default to home for logged in users
+    return isLoggedIn ? "home" : "public-landing";
   });
 
   // If the user is already logged in and refreshes at '/', don't keep them on the public landing page.

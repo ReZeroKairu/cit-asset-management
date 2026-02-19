@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, user } = useAuth(); // Add user to check if already logged in
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -63,6 +63,14 @@ const LoginPage = () => {
     }
   }, [error, isLoading, email, password]);
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      console.log("User already logged in, redirecting to dashboard...");
+      window.location.href = '/';
+    }
+  }, [user]);
+
   // Debug: Component mounting
   useEffect(() => {
     console.log("🚀 LoginPage mounted at:", new Date().toISOString());
@@ -108,6 +116,10 @@ const LoginPage = () => {
     try {
       const res = await api.post("/login", { email: currentEmail, password: currentPassword });
       login(res.data.token, res.data.user);
+      
+      // Redirect to dashboard after successful login
+      console.log("Login successful, redirecting to dashboard...");
+      window.location.href = '/';
     } catch (err: any) {
       console.log("Login failed, keeping email:", currentEmail);
       setError("Invalid email or password");
