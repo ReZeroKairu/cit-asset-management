@@ -309,9 +309,7 @@ enum lab_request_status {
   Pending
   Admin_Approved
   Custodian_Approved
-  Dean_Approved
   Denied
-  Rejected
   Completed
 }
 
@@ -320,7 +318,6 @@ enum equipment_borrow_status {
   Admin_Approved
   Custodian_Approved
   Denied
-  Rejected
   Returned
 }
 
@@ -329,6 +326,5 @@ enum software_install_status {
   Admin_Approved
   Custodian_Approved
   Denied
-  Rejected
   Completed
 }

@@ -7,9 +7,7 @@ import {
   getOneTimeFormSubmissionsNoAuth,
   updateLabRequestStatus as apiUpdateLabRequestStatus,
   updateEquipmentBorrowStatus as apiUpdateEquipmentBorrowStatus,
-  updateSoftwareInstallationStatus as apiUpdateSoftwareInstallationStatus,
-  updateLabRequestDetails,
-  updateEquipmentBorrowDetails
+  updateSoftwareInstallationStatus as apiUpdateSoftwareInstallationStatus
 } from "../api/forms";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import QRCodeModal from "../components/QRCodeModal";
@@ -133,7 +131,7 @@ const FormsPage = () => {
 
       const userForms = (() => {
         if (user?.role === 'Admin') {
-          // Admin sees all forms except software-install (handled by custodians only)
+          // Admin sees all forms except software-install (handled by custodians only) and archived forms
           return allForms.filter(form => 
             form.status === 'Custodian_Approved' && 
             form.type !== 'software-install' // Exclude software installation forms
@@ -146,8 +144,10 @@ const FormsPage = () => {
             form.userId === user?.id || 
             (form.details?.submittedVia === 'one-time-token' && form.details?.userId === user?.id)
           ).filter(form => 
-            // Exclude completed/returned forms
-            form.status !== 'Completed' && form.status !== 'Returned'
+            // Exclude archived forms (completed, returned, denied)
+            form.status !== 'Completed' && 
+            form.status !== 'Returned' && 
+            form.status !== 'Denied'
           );
         }
         
@@ -233,7 +233,6 @@ const FormsPage = () => {
       case 'Admin_Approved':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'Denied':
-      case 'Rejected':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'Returned':
         return 'bg-blue-100 text-blue-800 border-blue-200';

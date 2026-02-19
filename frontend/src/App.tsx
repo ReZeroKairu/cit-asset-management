@@ -14,7 +14,7 @@ import PublicLandingPage from "./pages/PublicLandingPage";
 import OneTimeFormPage from "./pages/OneTimeFormPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
-import { Package, Building, FileText, Users } from "lucide-react";
+import { Package, Building, FileText, Users, ClipboardList } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
 
 interface CreateUserData {
@@ -107,7 +107,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? 'lg:grid-cols-2' : ''}`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${!isAdmin ? 'lg:grid-cols-3' : ''}`}>
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
           onClick={() => handleNavigate("inventory")}
@@ -159,6 +159,26 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <FileText className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => handleNavigate("forms")}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  {isAdmin ? 'Forms for Approval' : 'Active Forms'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalForms}</p>
+                <p className="text-xs text-indigo-600 mt-1">Click to view forms →</p>
+              </div>
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                <ClipboardList className="w-6 h-6 text-indigo-600" />
               </div>
             </div>
           </CardContent>

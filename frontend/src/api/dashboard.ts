@@ -6,6 +6,7 @@ export interface DashboardStats {
   totalLaboratories: number;
   totalDailyReports: number;
   totalUsers: number;
+  totalForms: number;
 }
 
 export interface RecentReport {
