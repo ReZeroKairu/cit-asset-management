@@ -373,6 +373,8 @@ function App() {
         return <ProfilePage />;
       case "maintenance":
         return <MaintenancePage />;
+      case "forms":
+        return <FormsPage />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
