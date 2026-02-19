@@ -11,12 +11,16 @@ interface PublicLabRequestFormProps {
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
+  isOneTimeForm?: boolean; // New prop to distinguish form type
 }
 
-export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicLabRequestFormProps) => {
+export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicLabRequestFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [selectedLab, setSelectedLab] = useState<string>('');
+
+  // Debug: Log the props received
+  console.log('🔍 PublicLabRequestForm props:', { custodianName, assignedLab });
 
   // Fetch all labs from database
   useEffect(() => {
@@ -45,6 +49,19 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
     fetchLabs();
   }, []);
+
+  // Auto-populate lab when assignedLab is available
+  useEffect(() => {
+    if (assignedLab && labs.length > 0) {
+      const assignedLabOption = labs.find(option => option.value === assignedLab);
+      if (assignedLabOption) {
+        setFormData(prev => ({
+          ...prev,
+          laboratory: assignedLab
+        }));
+      }
+    }
+  }, [assignedLab, labs]);
 
   // Auto-populate custodian fields when lab is selected
   useEffect(() => {
@@ -105,25 +122,37 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
     }));
   };
   
-  // Filter laboratory options based on assigned lab
+  // Filter laboratory options based on assigned lab and form type
   const getLabOptions = () => {
+    console.log('🔍 getLabOptions called with:', { assignedLab, labs: labs.length, isOneTimeForm });
+    
     // Always include E-Forum
     const eForumOption = { value: "e-forum", label: "E-Forum" };
-    const allOptions = [eForumOption, ...labs];
     
-    // If no assigned lab, return all options
+    // For public forms (not one-time), show all labs + E-Forum
+    if (!isOneTimeForm) {
+      console.log('🔍 Public form: returning all labs + E-Forum');
+      return [eForumOption, ...labs];
+    }
+    
+    // For one-time forms, filter labs
     if (!assignedLab) {
-      return allOptions;
+      console.log('🔍 One-time form with no assignedLab, returning only E-Forum');
+      return [eForumOption];
     }
     
-    // If assigned lab, return all options with assigned lab first
-    const assignedLabOption = allOptions.find(option => option.value === assignedLab);
+    // For one-time forms, only show the assigned lab and E-Forum
+    const assignedLabOption = labs.find(option => option.value === assignedLab);
+    console.log('🔍 One-time form: Looking for assignedLab:', assignedLab, 'found:', assignedLabOption);
+    
     if (assignedLabOption) {
-      const otherOptions = allOptions.filter(option => option.value !== assignedLab);
-      return [assignedLabOption, ...otherOptions];
+      console.log('🔍 One-time form: Returning assigned lab + E-Forum');
+      return [assignedLabOption, eForumOption];
     }
     
-    return allOptions;
+    // Fallback to E-Forum only if assigned lab not found
+    console.log('🔍 One-time form: Assigned lab not found, returning only E-Forum');
+    return [eForumOption];
   };
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],

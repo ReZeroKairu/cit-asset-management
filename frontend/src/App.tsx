@@ -375,17 +375,28 @@ function App() {
         return <MaintenancePage />;
       case "forms":
         return <FormsPage />;
+      case "one-time-form":
+        return <OneTimeFormPage />;
+      case "public-forms":
+        return <PublicFormsPage />;
+      case "public-landing":
+        return <PublicLandingPage />;
       default:
         return <HomePage onNavigate={handleNavigate} />;
     }
   };
 
-  // 1. IF NOT LOGGED IN -> SHOW LOGIN PAGE
+  // 1. PUBLIC PAGES - Never show sidebar, regardless of login status
+  if (currentPage === "one-time-form" || currentPage === "public-forms" || currentPage === "public-landing") {
+    return renderPage();
+  }
+
+  // 2. IF NOT LOGGED IN -> SHOW LOGIN PAGE
   if (!user) {
     return <LoginPage />;
   }
 
-  // 2. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
+  // 3. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
   return (
     <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

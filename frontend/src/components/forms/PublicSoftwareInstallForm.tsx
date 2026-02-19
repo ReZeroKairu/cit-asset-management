@@ -11,9 +11,10 @@ interface PublicSoftwareInstallFormProps {
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
+  isOneTimeForm?: boolean;
 }
 
-export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicSoftwareInstallFormProps) => {
+export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicSoftwareInstallFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   

@@ -290,6 +290,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>
@@ -317,6 +318,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>
@@ -344,6 +346,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>
