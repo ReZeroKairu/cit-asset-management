@@ -62,16 +62,21 @@ export const createWorkstation = async (req: Request, res: Response) => {
   }
 };
 
-// 3. GET WORKSTATION DETAILS
+// 3. GET WORKSTATION DETAILS (By ID or Name)
 export const getWorkstationDetails = async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    const workstationName = Array.isArray(name) ? name[0] : name;
+
+    // ✅ FIX: Explicitly convert to string to satisfy TypeScript
+    // This handles the "string | string[]" error
+    const searchParam = String(name);
+
+    const isId = !isNaN(Number(searchParam));
 
     const workstation = await prisma.workstations.findFirst({
-      where: {
-        workstation_name: workstationName,
-      },
+      where: isId
+        ? { workstation_id: Number(searchParam) }
+        : { workstation_name: searchParam },
       include: {
         laboratory: {
           select: {
@@ -176,14 +181,38 @@ export const deleteWorkstation = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Workstation not found" });
     }
 
-    await prisma.workstations.delete({
-      where: { workstation_id: workstationId },
+    // ✅ FIX: Use a transaction to handle all foreign key constraints before deleting
+    await prisma.$transaction(async (tx) => {
+      // 1. Unassign all assets linked to this workstation (moves them to Unassigned Assets)
+      await tx.inventory_assets.updateMany({
+        where: { workstation_id: workstationId },
+        data: { workstation_id: null },
+      });
+
+      // 2. Delete related Daily Report items for this workstation
+      await tx.report_workstation_items.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 3. Delete related PMC Reports for this workstation
+      // (This will also automatically delete pmc_report_procedures due to the Cascade rule in your schema)
+      await tx.pmc_reports.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 4. Now that dependencies are cleared, delete the workstation itself
+      await tx.workstations.delete({
+        where: { workstation_id: workstationId },
+      });
     });
 
-    res.json({ message: "Workstation deleted successfully" });
-  } catch (error) {
+    res.json({ message: "Workstation and its relations deleted successfully" });
+  } catch (error: any) {
     console.error("Error deleting workstation:", error);
-    res.status(500).json({ error: "Failed to delete workstation" });
+    res.status(500).json({
+      error: "Failed to delete workstation",
+      details: error.message,
+    });
   }
 };
 
@@ -257,8 +286,7 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
 
     if (existingWorkstations.length > 0) {
       const duplicates = existingWorkstations.map(
-        (ws) =>
-          `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
+        (ws) => `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
       );
       return res.status(409).json({
         error: "Duplicate workstation names found",
@@ -296,5 +324,30 @@ export const batchCreateWorkstations = async (req: Request, res: Response) => {
       error: "Failed to create workstations",
       details: error.message,
     });
+  }
+};
+
+// 7. GET WORKSTATIONS BY LAB (For Maintenance Page)
+export const getWorkstationsByLab = async (req: Request, res: Response) => {
+  const { labId } = req.params;
+
+  try {
+    const workstations = await prisma.workstations.findMany({
+      where: {
+        lab_id: Number(labId),
+      },
+      include: {
+        current_status: true, // ✅ Fetches "Functional", "For Repair", etc.
+        assets: true,
+      },
+      orderBy: {
+        workstation_name: "asc",
+      },
+    });
+
+    res.json(workstations);
+  } catch (error) {
+    console.error("Error fetching lab workstations:", error);
+    res.status(500).json({ error: "Failed to fetch workstations" });
   }
 };

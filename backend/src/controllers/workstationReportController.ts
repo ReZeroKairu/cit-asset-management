@@ -23,12 +23,14 @@ export const getLabWorkstationsForReport = async (req: Request, res: Response) =
     });
 
     // Format response for frontend
-    const formattedWorkstations = workstations.map(ws => ({
+    const formattedWorkstations = workstations.map((ws) => ({
       workstation_id: ws.workstation_id,
       workstation_name: ws.workstation_name,
-      status: 'Working',
+      workstation_remarks: ws.workstation_remarks ?? null,
+      current_status: ws.current_status ?? null,
+      status: "Working",
       remarks: null,
-      checked: false
+      checked: false,
     }));
 
     res.json(formattedWorkstations);

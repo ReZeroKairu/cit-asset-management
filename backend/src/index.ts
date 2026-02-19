@@ -1,7 +1,7 @@
 // backend/src/index.ts
 import express from "express";
 import cors from "cors";
-import { config } from "./config"; // Ensure you created src/config.ts as discussed!
+import { config } from "./config";
 
 // Import Routes
 import authRoutes from "./routes/authRoutes";
@@ -11,6 +11,7 @@ import workstationRoutes from "./routes/workstationRoutes";
 import labRoutes from "./routes/labRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
+import maintenanceRoutes from "./routes/maintenanceRoutes";
 import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
 import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
@@ -33,18 +34,21 @@ app.use(
 app.use(express.json());
 
 // Mount Routes
-app.use("/", authRoutes); // handles /login
-app.use("/users", userRoutes); // handles /users/*
-app.use("/inventory", inventoryRoutes); // handles /inventory/*, /units, /device-types
+app.use("/", authRoutes);
+app.use("/users", userRoutes);
+app.use("/inventory", inventoryRoutes);
 app.use("/workstations", workstationRoutes);
 app.use("/laboratories", labRoutes);
-app.use("/daily-reports", reportRoutes); // handles reports and procedures
+app.use("/daily-reports", reportRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/forms", formsRoutes); // handles forms submissions
 app.use("/public-forms", publicFormsRoutes); // handles public form submissions (no auth)
 app.use("/api/one-time-forms", oneTimeFormsRoutes); // handles one-time QR form tokens
 
-// 404 Handler (Optional but good practice)
+// ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
+app.use("/maintenance", maintenanceRoutes);
+
+// 404 Handler
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
