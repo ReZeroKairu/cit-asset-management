@@ -56,7 +56,11 @@ async function main() {
       { workstation_id: 2, workstation_name: "WS-02", lab_id: 1, status_id: 1 },
     ],
     campuses: [{ campus_id: 1, campus_name: "Main Campus" }],
-    officeTypes: [{ type_id: 3, type_name: "ACADEMIC" }],
+    officeTypes: [
+      { type_id: 1, type_name: "ADMINISTRATIVE" },
+      { type_id: 2, type_name: "SUPPORT SERVICE" },
+      { type_id: 3, type_name: "ACADEMIC" },
+    ],
     departments: [
       {
         dept_id: 1,
@@ -68,13 +72,30 @@ async function main() {
     ],
     deviceTypes: [
       { device_type_id: 1, device_type_name: "PC Devices" },
-      { device_type_id: 2, device_type_name: "Peripherals" },
+      { device_type_id: 2, device_type_name: "Networking Devices" },
+      { device_type_id: 3, device_type_name: "Others" },
     ],
     units: [
       { unit_id: 1, unit_name: "Monitor", device_type_id: 1 },
       { unit_id: 2, unit_name: "System Unit", device_type_id: 1 },
-      { unit_id: 3, unit_name: "Keyboard", device_type_id: 2 },
-      { unit_id: 4, unit_name: "Mouse", device_type_id: 2 },
+      { unit_id: 3, unit_name: "Keyboard", device_type_id: 1 },
+      { unit_id: 4, unit_name: "Mouse", device_type_id: 1 },
+      { unit_id: 5, unit_name: "SSD", device_type_id: 1 },
+      { unit_id: 6, unit_name: "PSU", device_type_id: 1 },
+      { unit_id: 7, unit_name: "RAM", device_type_id: 1 },
+      { unit_id: 8, unit_name: "CPU", device_type_id: 1 },
+      { unit_id: 9, unit_name: "HDD", device_type_id: 1 },
+      { unit_id: 10, unit_name: "Case", device_type_id: 1 },
+      { unit_id: 11, unit_name: "CPU Fan", device_type_id: 1 },
+      { unit_id: 12, unit_name: "Motherboard", device_type_id: 1 },
+      { unit_id: 13, unit_name: "System Fan", device_type_id: 1 },
+      { unit_id: 14, unit_name: "GPU", device_type_id: 1 },
+      { unit_id: 15, unit_name: "Video Card", device_type_id: 1 },
+      { unit_id: 16, unit_name: "Router", device_type_id: 2 },
+      { unit_id: 17, unit_name: "Switch", device_type_id: 2 },
+      { unit_id: 18, unit_name: "Printer", device_type_id: 3 },
+      { unit_id: 19, unit_name: "Air Conditioner", device_type_id: 3 },
+      { unit_id: 20, unit_name: "AVR", device_type_id: 1 },
     ],
     procedures: [
       // ✅ DAR (Daily Activity Report) Procedures
@@ -201,8 +222,17 @@ async function main() {
     console.log(`👤 User Created (Pending Lab): ${user.full_name}`);
   }
 
-  // 5. Units
-  for (const unit of backupData.units) {
+  // 5. Device Types
+  for (const item of seedData.deviceTypes) {
+    await prisma.device_types.upsert({
+      where: { device_type_id: item.device_type_id },
+      update: item,
+      create: item,
+    });
+  }
+
+  // 6. Units
+  for (const unit of seedData.units) {
     await prisma.units.upsert({
       where: { unit_id: unit.unit_id },
       update: unit,
@@ -221,29 +251,29 @@ async function main() {
     console.log(`✅ Asset Status: ${status.status_name}`);
   }
 
-  // 7. Laboratories (must be seeded before users that reference them)
-  for (const lab of backupData.laboratories) {
+  // 8. Laboratories (must be seeded before users that reference them)
+  for (const lab of seedData.laboratories) {
     await prisma.laboratories.upsert({
       where: { lab_id: lab.lab_id },
       update: { ...lab, in_charge_id: null }, // Remove in_charge_id temporarily
       create: { ...lab, in_charge_id: null },
     });
-    console.log(`✅ Laboratory: ${lab.lab_name}`);
+    console.log(` Laboratory: ${lab.lab_name}`);
   }
 
-  // 8. Users (now that labs exist)
-  for (const user of backupData.users) {
+  // 9. Users (now that labs exist)
+  for (const user of seedData.users) {
     await prisma.users.upsert({
       where: { email: user.email },
       update: user,
       create: user,
     });
-    console.log(`✅ User: ${user.full_name} (${user.email})`);
+    console.log(` User: ${user.full_name} (${user.email})`);
   }
 
-  // 9. Workstations - Enable seeding
-  console.log("🔄 Seeding workstations...");
-  for (const ws of backupData.workstations) {
+  // 10. Workstations
+  console.log(' Seeding workstations...');
+  for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
       where: { workstation_id: ws.workstation_id },
       update: ws,
@@ -251,15 +281,15 @@ async function main() {
     });
   }
 
-  // 10. Procedures - Enable seeding
-  console.log("🔄 Seeding procedures...");
-  for (const proc of backupData.procedures) {
+  // 11. Procedures
+  console.log(' Seeding procedures...');
+  for (const proc of seedData.procedures) {
     await prisma.procedures.upsert({
       where: { procedure_id: proc.procedure_id },
       update: proc,
       create: proc,
     });
-    console.log(`✅ Procedure: ${proc.procedure_name}`);
+    console.log(` Procedure: ${proc.procedure_name}`);
   }
 
   // 11. Inventory Assets - Skip for now due to workstation dependency
