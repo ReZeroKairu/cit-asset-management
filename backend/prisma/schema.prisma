@@ -89,8 +89,6 @@ model laboratories {
   // ✅ ADDED: Back-relation for PMC Reports
   pmc_reports      pmc_reports[]      
 
-  departments      departments?       @relation(fields: [dept_id], references: [dept_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lab_dept")
-
   @@index([dept_id], map: "dept_id")
   @@index([in_charge_id])
   @@map("laboratories")
@@ -326,7 +324,6 @@ model software_installations {
 
   @@index([user_id])
   @@map("software_installations")
->>>>>>> origin/kyle-branch2
 }
 
 enum users_role {
