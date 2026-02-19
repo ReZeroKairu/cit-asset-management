@@ -226,13 +226,6 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          /* Placeholder or another user card for Custodians if needed */
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-gray-50">
-            <CardContent className="pt-6 flex items-center justify-center h-full">
-              <p className="text-gray-400 text-sm">System Status: Active</p>
-            </CardContent>
-          </Card>
         )}
       </div>
     </div>
