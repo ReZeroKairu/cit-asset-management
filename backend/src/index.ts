@@ -20,8 +20,13 @@ const app = express();
 // Security: Restrict CORS to your frontend and network IP
 app.use(
   cors({
-    origin: true, // Allow all origins for development
+    origin: [
+      'http://localhost:5173',
+      'http://192.168.110.72:5173',
+      'http://192.168.110.72:5174'
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
   }),
 );
 
@@ -56,5 +61,5 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${config.port}`);
-  console.log(`Server also accessible on network: http://192.168.111.21:${config.port}`);
+  console.log(`Server also accessible on network: http://192.168.110.72:${config.port}`);
 });

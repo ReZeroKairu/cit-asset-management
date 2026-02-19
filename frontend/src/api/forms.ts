@@ -64,17 +64,17 @@ export const submitSoftwareInstallation = async (formData: any) => {
 // Fetch one-time form submissions without authentication
 export const getOneTimeFormSubmissionsNoAuth = async () => {
   try {
-    // Fetch from the regular forms endpoints since one-time forms are stored there
+    // Use the authenticated API since this is called from FormsPage where user is logged in
     const [labRequests, equipmentBorrows, softwareInstallations] = await Promise.all([
-      fetch('http://localhost:3001/forms/lab-requests'), // Direct fetch without auth
-      fetch('http://localhost:3001/forms/equipment-borrows'),
-      fetch('http://localhost:3001/forms/software-installations')
+      api.get('/forms/lab-requests'),
+      api.get('/forms/equipment-borrows'),
+      api.get('/forms/software-installations')
     ]);
     
-    // Parse JSON responses manually since we're not using axios
-    const labRequestsData = labRequests.ok ? await labRequests.json() : [];
-    const equipmentBorrowsData = equipmentBorrows.ok ? await equipmentBorrows.json() : [];
-    const softwareInstallationsData = softwareInstallations.ok ? await softwareInstallations.json() : [];
+    // Handle API response structure properly
+    const labRequestsData = labRequests?.data || [];
+    const equipmentBorrowsData = equipmentBorrows?.data || [];
+    const softwareInstallationsData = softwareInstallations?.data || [];
     
     console.log('🔍 One-time forms data:', {
       labRequestsData,
@@ -82,23 +82,28 @@ export const getOneTimeFormSubmissionsNoAuth = async () => {
       softwareInstallationsData
     });
     
+    // Ensure we have arrays before mapping
+    const labRequestsArray = Array.isArray(labRequestsData) ? labRequestsData : [];
+    const equipmentBorrowsArray = Array.isArray(equipmentBorrowsData) ? equipmentBorrowsData : [];
+    const softwareInstallationsArray = Array.isArray(softwareInstallationsData) ? softwareInstallationsData : [];
+    
     // Combine all forms and mark those submitted via one-time tokens
     const allSubmissions = [
-      ...(labRequestsData.map((req: any) => ({
+      ...(labRequestsArray.map((req: any) => ({
         ...req,
         formType: 'lab-request',
         formId: req.request_id,
         request_id: req.request_id,
         submittedVia: req.usage_type === 'One-Time QR Code' ? 'one-time-token' : 'regular'
       }))),
-      ...(equipmentBorrowsData.map((borrow: any) => ({
+      ...(equipmentBorrowsArray.map((borrow: any) => ({
         ...borrow,
         formType: 'equipment-borrow',
         formId: borrow.borrow_id,
         borrow_id: borrow.borrow_id,
         submittedVia: borrow.usage_type === 'One-Time QR Code' ? 'one-time-token' : 'regular'
       }))),
-      ...(softwareInstallationsData.map((install: any) => ({
+      ...(softwareInstallationsArray.map((install: any) => ({
         ...install,
         formType: 'software-install',
         formId: install.id,

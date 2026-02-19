@@ -194,61 +194,131 @@ export const deleteLaboratory = async (req: Request, res: Response) => {
   }
 };
 
-// GET: Get single laboratory by ID
+// GET: Get single laboratory by ID or name
 export const getLaboratoryById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    // Note: this handler is used by multiple routes with different param names
+    // (e.g. "/laboratories/:id" and "/laboratories/public/:labName/custodian").
+    const id = req.params.id ?? (req.params as any).labName;
+    console.log('🔍 getLaboratoryById called with id:', id);
+
+    if (!id) {
+      return res.status(400).json({ error: "Laboratory identifier is required" });
+    }
+    
     const labId = parseInt(Array.isArray(id) ? id[0] : id);
+    console.log('🔍 Parsed labId:', labId, 'isNaN:', isNaN(labId));
 
     if (isNaN(labId)) {
-      return res.status(400).json({ error: "Invalid laboratory ID" });
-    }
-
-    const laboratory = await prisma.laboratories.findUnique({
-      where: { lab_id: labId },
-      include: {
-        users: {
+      console.log('🔍 Searching by lab_name:', id);
+      
+      // Decode URL-encoded lab name
+      const decodedLabName = decodeURIComponent(id as string);
+      console.log('🔍 Decoded lab name:', decodedLabName);
+      
+      // Search by lab name instead
+      const laboratory = await prisma.laboratories.findFirst({
+        where: { lab_name: decodedLabName },
+        include: {
+          users: {
+            select: {
+              user_id: true,
+              full_name: true,
+              email: true,
+              role: true,
+            },
+          },
+          departments: {
+            select: {
+              dept_id: true,
+              dept_name: true,
+            },
+          },
+        },
+      });
+      
+      console.log('🔍 Found lab by name:', laboratory?.lab_name || 'Not found');
+      
+      if (!laboratory) {
+        // List all labs for debugging
+        const allLabs = await prisma.laboratories.findMany({ select: { lab_name: true } });
+        console.log('🔍 All available labs:', allLabs.map(l => l.lab_name));
+        return res.status(404).json({ error: "Laboratory not found" });
+      }
+      
+      // Get custodian user separately (using users.lab_id instead of laboratory.in_charge_id)
+      let custodians = null;
+      if (laboratory.lab_id) {
+        custodians = await prisma.users.findMany({
+          where: { 
+            lab_id: laboratory.lab_id,
+            role: 'Custodian'
+          },
           select: {
             user_id: true,
             full_name: true,
             email: true,
             role: true,
           },
-        },
-        departments: {
-          select: {
-            dept_id: true,
-            dept_name: true,
+        });
+      }
+
+      // Add custodians to the response
+      const response = {
+        ...laboratory,
+        users: custodians,
+        custodians: custodians,
+      };
+
+      res.json(response);
+    } else {
+      console.log('🔍 Searching by lab_id:', labId);
+      const laboratory = await prisma.laboratories.findUnique({
+        where: { lab_id: labId },
+        include: {
+          users: {
+            select: {
+              user_id: true,
+              full_name: true,
+              email: true,
+              role: true,
+            },
+          },
+          departments: {
+            select: {
+              dept_id: true,
+              dept_name: true,
+            },
           },
         },
-      },
-    });
-
-    if (!laboratory) {
-      return res.status(404).json({ error: "Laboratory not found" });
-    }
-
-    // Get the in-charge user separately
-    let inCharge = null;
-    if (laboratory.in_charge_id) {
-      inCharge = await prisma.users.findUnique({
-        where: { user_id: laboratory.in_charge_id },
-        select: {
-          user_id: true,
-          full_name: true,
-          email: true,
-          role: true,
-        },
       });
+
+      if (!laboratory) {
+        return res.status(404).json({ error: "Laboratory not found" });
+      }
+
+      // Get the in-charge user separately
+      let inCharge = null;
+      if (laboratory.in_charge_id) {
+        inCharge = await prisma.users.findUnique({
+          where: { user_id: laboratory.in_charge_id },
+          select: {
+            user_id: true,
+            full_name: true,
+            email: true,
+            role: true,
+          },
+        });
+      }
+
+      // Add in_charge to the response
+      const response = {
+        ...laboratory,
+        in_charge: inCharge,
+      };
+
+      res.json(response);
     }
-
-    // Add in_charge to the response
-    const response = {
-      ...laboratory,
-      in_charge: inCharge,
-    };
-
-    res.json(response);
   } catch (error) {
     console.error("Error fetching laboratory:", error);
     res.status(500).json({ error: "Failed to fetch laboratory" });

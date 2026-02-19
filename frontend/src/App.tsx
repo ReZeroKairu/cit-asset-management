@@ -191,13 +191,16 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
 
 function App() {
   const { user } = useAuth(); // Check if user is logged in
-  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archives" | "user-management" | "profile" | "forms" | "public-forms" | "public-landing" | "one-time-form">(() => {
+  const [currentPage, setCurrentPage] = useState<"home" | "inventory" | "labs" | "reports" | "admin-reports" | "archives" | "user-management" | "profile" | "forms" | "public-forms" | "public-landing" | "one-time-form" | "login">(() => {
     // Check URL path on initial load
     const path = window.location.pathname;
     console.log('Current pathname:', path);
     console.log('Current search:', window.location.search);
     console.log('Current full URL:', window.location.href);
     
+    if (path === '/login') {
+      return "login";
+    }
     if (path === '/public-forms') {
       return "public-forms";
     }
@@ -205,8 +208,20 @@ function App() {
       console.log('Detected one-time form path');
       return "one-time-form";
     }
+    // For root path, show landing page (not redirect to forms)
+    if (path === '/') {
+      return "public-landing"; // Show landing page, let users choose
+    }
     return "home";
   });
+
+  // If the user is already logged in and refreshes at '/', don't keep them on the public landing page.
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (user && path === '/' && currentPage === 'public-landing') {
+      setCurrentPage('home');
+    }
+  }, [user, currentPage]);
 
   // Check if we're on the public forms page (no auth required)
   const isPublicFormsPage = currentPage === "public-forms";
@@ -224,8 +239,11 @@ function App() {
         console.log('Popstate detected one-time form path');
         setCurrentPage('one-time-form');
       } else {
-        // For public users, show a landing page instead of login
-        if (!user) {
+        // Check if specifically requesting public-landing page
+        if (path === '/public-landing') {
+          setCurrentPage('public-landing');
+        } else if (!user) {
+          // For public users, show a landing page instead of login
           setCurrentPage('public-landing');
         } else {
           setCurrentPage('home');
@@ -261,6 +279,8 @@ function App() {
     // Update URL when navigating
     if (page === 'public-forms') {
       window.history.pushState(null, '', '/public-forms');
+    } else if (page === 'login') {
+      window.history.pushState(null, '', '/login');
     } else if (page === 'one-time-form') {
       window.history.pushState(null, '', '/one-time');
     } else {
@@ -292,6 +312,8 @@ function App() {
         />;
       case "forms":
         return <FormsPage />;
+      case "login":
+        return <LoginPage />;
       case "public-forms":
         return <PublicFormsPage />;
       case "public-landing":
@@ -307,11 +329,13 @@ function App() {
 
   // 1. IF PUBLIC FORMS PAGE -> SHOW PUBLIC FORMS (NO AUTH REQUIRED)
   if (isPublicFormsPage) {
+    console.log('🔍 Rendering PublicFormsPage - user:', user);
     return <PublicFormsPage />;
   }
 
   // 2. IF PUBLIC LANDING PAGE -> SHOW LANDING PAGE (NO AUTH REQUIRED)
   if (isPublicLandingPage) {
+    console.log('🔍 Rendering PublicLandingPage - user:', user);
     return <PublicLandingPage />;
   }
 
@@ -325,7 +349,7 @@ function App() {
     return <LoginPage />;
   }
 
-  // 4. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
+  // 5. IF LOGGED IN -> SHOW MAIN APP WITH SIDEBAR
   return (
     <MainLayout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

@@ -173,34 +173,56 @@ export const mapFormDataToTemplate = (formData: any) => {
       };
 
     case 'equipment-borrow':
+      const equipmentData = formData.details?.equipment_list || formData.equipment_list || [];
+      let unitQtys: string[] = [];
+      let equipmentNames: string[] = [];
+      
+      if (equipmentData) {
+        let items: any[] = [];
+        if (typeof equipmentData === 'string') {
+          try {
+            items = JSON.parse(equipmentData);
+          } catch {
+            // If parsing fails, treat as plain text
+            items = [{ unitQty: '', equipmentName: equipmentData }];
+          }
+        } else if (Array.isArray(equipmentData)) {
+          items = equipmentData;
+        }
+        
+        unitQtys = items.map((item: any) => item.unitQty || '');
+        equipmentNames = items.map((item: any) => item.equipmentName || '');
+      }
+      
+      // Create individual placeholders for each equipment item (up to 10 items)
+      const equipmentPlaceholders: any = {};
+      const maxItems = Math.min(unitQtys.length, 10);
+      
+      for (let i = 0; i < maxItems; i++) {
+        equipmentPlaceholders[`unitQty_${i + 1}`] = unitQtys[i] || '';
+        equipmentPlaceholders[`equipmentName_${i + 1}`] = equipmentNames[i] || '';
+      }
+      
+      // Fill remaining placeholders with empty strings
+      for (let i = maxItems + 1; i <= 10; i++) {
+        equipmentPlaceholders[`unitQty_${i}`] = '';
+        equipmentPlaceholders[`equipmentName_${i}`] = '';
+      }
+      
       return {
         ...baseData,
-        equipment_items: (() => {
-          const equipmentData = formData.details?.equipment_list || formData.equipment_list || [];
-          if (!equipmentData || equipmentData.length === 0) return '';
-          
-          let items: any[] = [];
-          if (typeof equipmentData === 'string') {
-            try {
-              items = JSON.parse(equipmentData);
-            } catch {
-              return equipmentData;
-            }
-          } else if (Array.isArray(equipmentData)) {
-            items = equipmentData;
-          }
-          
-          if (items.length === 0) return '';
-          
-          // Create two separate arrays for each column
-          const unitQtys = items.map((item: any) => item.unitQty || '');
-          const equipmentNames = items.map((item: any) => item.equipmentName || '');
-          
-          return {
-            unitQty_column: unitQtys.join('\n'),
-            equipmentName_column: equipmentNames.join('\n')
-          };
-        })(),
+        // Original column-based placeholders (for backward compatibility)
+        unitQty_column: unitQtys.join('\n'),
+        equipmentName_column: equipmentNames.join('\n'),
+        // Individual item placeholders for flexible layout
+        ...equipmentPlaceholders,
+        // Keep nested structure for backward compatibility
+        equipment_items: {
+          unitQty_column: unitQtys.join('\n'),
+          equipmentName_column: equipmentNames.join('\n')
+        },
+        // Add count for template logic
+        equipment_count: maxItems.toString(),
         borrow_date: formatDate(formData.details?.borrow_date || formData.date || ''),
         return_date: formatDate(formData.details?.return_date || ''),
         release_time: (() => {

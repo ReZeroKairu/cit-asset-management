@@ -265,6 +265,7 @@ export const FormsManagementPage = () => {
       case 'Admin_Approved':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'Rejected':
+      case 'Denied':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'Returned':
         return <CheckCircle className="w-4 h-4 text-blue-500" />;
@@ -284,6 +285,7 @@ export const FormsManagementPage = () => {
       case 'Admin_Approved':
         return 'bg-green-100 text-green-800';
       case 'Rejected':
+      case 'Denied':
         return 'bg-red-100 text-red-800';
       case 'Returned':
         return 'bg-blue-100 text-blue-800';

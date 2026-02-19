@@ -28,8 +28,8 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
     console.log('QR Generator hostname:', hostname);
     
     // Always use the network IP for API calls when accessing from network
-    if (hostname === '192.168.111.21') {
-      return 'http://192.168.111.21:3001';
+    if (hostname === '192.168.110.72') {
+      return 'http://192.168.110.72:3001';
     }
     // For localhost access, use localhost API
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -47,7 +47,7 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
     
     // For local development, use network IP for mobile scanning
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://192.168.111.21:5173'; // Use correct frontend network IP and port
+      return 'http://192.168.110.72:5174'; // Use correct frontend network IP and port
     }
     
     return window.location.origin;
@@ -180,10 +180,39 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(generatedUrl);
-      alert('One-time link copied to clipboard!');
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(generatedUrl);
+        alert('One-time link copied to clipboard!');
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = generatedUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          if (successful) {
+            alert('One-time link copied to clipboard!');
+          } else {
+            throw new Error('Copy command failed');
+          }
+        } catch (fallbackError) {
+          document.body.removeChild(textArea);
+          throw fallbackError;
+        }
+      }
     } catch (error) {
       console.error('Error copying to clipboard:', error);
+      // Show the URL in an alert as a last resort
+      alert(`Failed to copy to clipboard. Here is the link:\n\n${generatedUrl}\n\nPlease copy it manually.`);
     }
   };
 
@@ -210,7 +239,7 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
               placeholder="http://localhost:5173"
             />
             <p className="text-sm text-gray-500">
-              Your frontend URL for QR code generation (port 5173)
+              Your frontend URL for QR code generation (port 5174)
             </p>
           </div>
           

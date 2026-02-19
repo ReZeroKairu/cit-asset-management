@@ -15,31 +15,115 @@ interface PublicLabRequestFormProps {
 
 export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicLabRequestFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
+  const [selectedLab, setSelectedLab] = useState<string>('');
+
+  // Fetch all labs from database
+  useEffect(() => {
+    const fetchLabs = async () => {
+      try {
+        console.log('🔍 Fetching labs from:', 'http://192.168.110.72:3001/laboratories/public');
+        const response = await fetch('http://192.168.110.72:3001/laboratories/public');
+        console.log('🔍 Labs response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
+        }
+        
+        const labsData = await response.json();
+        console.log('🔍 Labs data received:', labsData);
+        
+        const labOptions = labsData.map((lab: any) => ({
+          value: lab.lab_name,
+          label: lab.lab_name
+        }));
+        setLabs(labOptions);
+      } catch (error) {
+        console.error('Failed to fetch labs:', error);
+      }
+    };
+
+    fetchLabs();
+  }, []);
+
+  // Auto-populate custodian fields when lab is selected
+  useEffect(() => {
+    if (selectedLab && labs.length > 0) {
+      const selectedLabData = labs.find(lab => lab.value === selectedLab);
+      if (selectedLabData) {
+        // Find custodian for this lab
+        const fetchCustodian = async () => {
+          try {
+            const encodedLabName = encodeURIComponent(selectedLabData.value);
+            console.log('🔍 Fetching custodian for lab:', selectedLabData.value);
+            console.log('🔍 API URL:', `http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+            
+            const response = await fetch(`http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+            console.log('🔍 Custodian response status:', response.status);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
+            }
+            
+            const custodianData = await response.json();
+            console.log('🔍 Custodian data received:', custodianData);
+            
+            // Try different possible custodian field names
+            const custodianName = custodianData.users?.[0]?.full_name || 
+                              custodianData.in_charge?.full_name || 
+                              custodianData.full_name || 
+                              custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
+                              'No custodian assigned';
+            
+            console.log('🔍 Extracted custodian name:', custodianName);
+            
+            setFormData(prev => ({
+              ...prev,
+              monitored_by: custodianName
+            }));
+          } catch (error) {
+            console.error('Failed to fetch custodian:', error);
+            // Set default values if custodian fetch fails
+            setFormData(prev => ({
+              ...prev,
+              monitored_by: 'No custodian assigned'
+            }));
+          }
+        };
+
+        fetchCustodian();
+      }
+    }
+  }, [selectedLab, labs]);
+
+  // Handle lab selection from dropdown
+  const handleLabSelection = (labValue: string) => {
+    setSelectedLab(labValue);
+    setFormData(prev => ({
+      ...prev,
+      laboratory: labValue
+    }));
+  };
   
   // Filter laboratory options based on assigned lab
   const getLabOptions = () => {
-    // E-Forum is always available and stays hardcoded
+    // Always include E-Forum
     const eForumOption = { value: "e-forum", label: "E-Forum" };
+    const allOptions = [eForumOption, ...labs];
     
-    // If no assigned lab, only return E-Forum
+    // If no assigned lab, return all options
     if (!assignedLab) {
-      return [eForumOption];
+      return allOptions;
     }
     
-    // Filter options: always include E-Forum + assigned lab if it exists
-    const filteredOptions: Array<{value: string, label: string}> = [eForumOption];
-    
-    // Add assigned lab using the actual lab name from database
-    if (assignedLab) {
-      // Create option for the assigned lab using its actual name
-      const assignedLabOption = {
-        value: assignedLab.toLowerCase().replace(/\s+/g, '-'), // Create a simple value
-        label: assignedLab
-      };
-      filteredOptions.push(assignedLabOption);
+    // If assigned lab, return all options with assigned lab first
+    const assignedLabOption = allOptions.find(option => option.value === assignedLab);
+    if (assignedLabOption) {
+      const otherOptions = allOptions.filter(option => option.value !== assignedLab);
+      return [assignedLabOption, ...otherOptions];
     }
     
-    return filteredOptions;
+    return allOptions;
   };
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -185,7 +269,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
         <div className="space-y-2">
           <Label htmlFor="laboratory">Laboratory *</Label>
-          <Select value={formData.laboratory} onValueChange={(value) => handleInputChange('laboratory', value)} required disabled={disabled}>
+          <Select value={formData.laboratory} onValueChange={handleLabSelection} required disabled={disabled}>
             <SelectTrigger>
               <SelectValue placeholder="Select laboratory" />
             </SelectTrigger>

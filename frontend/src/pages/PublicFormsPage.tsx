@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, ArrowLeft, CheckCircle } from "lucide-react";
+import { FileText, CheckCircle } from "lucide-react";
 import { PublicLabRequestForm } from "../components/forms/PublicLabRequestForm";
 import { PublicEquipmentBorrowForm } from "../components/forms/PublicEquipmentBorrowForm";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
@@ -67,20 +67,9 @@ const PublicFormsPage = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => window.history.back()}
-              className="w-fit sm:w-auto flex items-center gap-2 mb-4 sm:mb-0"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-            <div className="text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">CIT Asset Management Forms</h1>
-              <p className="text-gray-600 mt-2 text-sm sm:text-base">Submit your requests for laboratory usage, equipment borrowing, and software installation</p>
-            </div>
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">CIT Asset Management Forms</h1>
+            <p className="text-gray-600 mt-2 text-sm sm:text-base">Submit your requests for laboratory usage, equipment borrowing, and software installation</p>
           </div>
         </div>
 
@@ -138,6 +127,23 @@ const PublicFormsPage = () => {
                   <div className="space-y-1 text-sm text-gray-600">
                     <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
                     <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
+                    <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
+                    {submittedForm.type === 'equipment-borrow' && submittedForm.data.equipment_list && (
+                      <p>
+                        <strong>Equipment List:</strong>{' '}
+                        {Array.isArray(submittedForm.data.equipment_list)
+                          ? submittedForm.data.equipment_list
+                              .map((item: any) => `${item.unitQty || ''} ${item.equipmentName || ''}`.trim())
+                              .filter(Boolean)
+                              .join(', ')
+                          : typeof submittedForm.data.equipment_list === 'string'
+                          ? submittedForm.data.equipment_list
+                          : 'N/A'}
+                      </p>
+                    )}
+                    {submittedForm.type === 'software-install' && submittedForm.data.software_list && (
+                      <p><strong>Software List:</strong> {submittedForm.data.software_list}</p>
+                    )}
                     <p><strong>Purpose:</strong> {submittedForm.data.purpose || submittedForm.data.software_list || 'N/A'}</p>
                     <p><strong>Submitted:</strong> {new Date(submittedForm.submittedAt).toLocaleString()}</p>
                   </div>

@@ -15,28 +15,47 @@ interface PublicEquipmentBorrowFormProps {
 
 export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicEquipmentBorrowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   
+  // Fetch all labs from database (fallback when not provided an assigned lab)
+  useEffect(() => {
+    if (assignedLab) return;
+
+    const fetchLabs = async () => {
+      try {
+        console.log('🔍 Fetching labs from:', 'http://192.168.110.72:3001/laboratories/public');
+        const response = await fetch('http://192.168.110.72:3001/laboratories/public');
+        console.log('🔍 Labs response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
+        }
+
+        const labsData = await response.json();
+        console.log('🔍 Labs data received:', labsData);
+
+        const labOptions = labsData.map((lab: any) => ({
+          value: lab.lab_name,
+          label: lab.lab_name
+        }));
+        setLabs(labOptions);
+      } catch (error) {
+        console.error('Failed to fetch labs:', error);
+      }
+    };
+
+    fetchLabs();
+  }, [assignedLab]);
+
   // Filter laboratory options based on assigned lab
   const getLabOptions = () => {
-    // If no assigned lab, return empty array (no options)
-    if (!assignedLab) {
-      return [];
-    }
-    
-    // Only show assigned lab for Equipment Borrow form
-    const filteredOptions: Array<{value: string, label: string}> = [];
-    
-    // Add assigned lab using the actual lab name from database
+    // If assigned lab exists, only show that lab
     if (assignedLab) {
-      // Create option for the assigned lab using its actual name
-      const assignedLabOption = {
-        value: assignedLab.toLowerCase().replace(/\s+/g, '-'), // Create a simple value
-        label: assignedLab
-      };
-      filteredOptions.push(assignedLabOption);
+      return [{ value: assignedLab, label: assignedLab }];
     }
-    
-    return filteredOptions;
+
+    // Otherwise show all labs from the database
+    return labs;
   };
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -52,6 +71,60 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     monitored_by: '', // Will be set by useEffect
     approved_by: 'DR. MARCO MARVIN L. RADO' // Pre-filled approval
   });
+
+  // If assignedLab is provided, pre-fill the laboratory field.
+  useEffect(() => {
+    if (!assignedLab) return;
+    setFormData(prev => ({
+      ...prev,
+      laboratory: prev.laboratory || assignedLab,
+    }));
+  }, [assignedLab]);
+
+  // Auto-populate monitored_by based on selected lab custodian (if custodianName prop is not explicitly provided)
+  useEffect(() => {
+    if (custodianName) return;
+    if (!formData.laboratory) return;
+
+    const fetchCustodian = async () => {
+      try {
+        const encodedLabName = encodeURIComponent(formData.laboratory);
+        console.log('🔍 Fetching custodian for lab:', formData.laboratory);
+        console.log('🔍 API URL:', `http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+
+        const response = await fetch(`http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+        console.log('🔍 Custodian response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
+        }
+
+        const custodianData = await response.json();
+        console.log('🔍 Custodian data received:', custodianData);
+
+        const resolvedCustodianName = custodianData.users?.[0]?.full_name ||
+          custodianData.in_charge?.full_name ||
+          custodianData.full_name ||
+          custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
+          'No custodian assigned';
+
+        console.log('🔍 Extracted custodian name:', resolvedCustodianName);
+
+        setFormData(prev => ({
+          ...prev,
+          monitored_by: resolvedCustodianName,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch custodian:', error);
+        setFormData(prev => ({
+          ...prev,
+          monitored_by: 'No custodian assigned',
+        }));
+      }
+    };
+
+    fetchCustodian();
+  }, [custodianName, formData.laboratory]);
 
   // Update monitored_by when custodianName changes
   useEffect(() => {

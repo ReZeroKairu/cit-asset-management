@@ -15,28 +15,44 @@ interface PublicSoftwareInstallFormProps {
 
 export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicSoftwareInstallFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   
+  // Fetch all labs from database (fallback when not provided an assigned lab)
+  useEffect(() => {
+    if (assignedLab) return;
+
+    const fetchLabs = async () => {
+      try {
+        console.log('🔍 Fetching labs from:', 'http://192.168.110.72:3001/laboratories/public');
+        const response = await fetch('http://192.168.110.72:3001/laboratories/public');
+        console.log('🔍 Labs response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
+        }
+
+        const labsData = await response.json();
+        console.log('🔍 Labs data received:', labsData);
+
+        const labOptions = labsData.map((lab: any) => ({
+          value: lab.lab_name,
+          label: lab.lab_name
+        }));
+        setLabs(labOptions);
+      } catch (error) {
+        console.error('Failed to fetch labs:', error);
+      }
+    };
+
+    fetchLabs();
+  }, [assignedLab]);
+
   // Filter laboratory options based on assigned lab
   const getLabOptions = () => {
-    // If no assigned lab, return empty array (no options)
-    if (!assignedLab) {
-      return [];
-    }
-    
-    // Only show assigned lab for Software Installation form
-    const filteredOptions: Array<{value: string, label: string}> = [];
-    
-    // Add assigned lab using the actual lab name from database
     if (assignedLab) {
-      // Create option for the assigned lab using its actual name
-      const assignedLabOption = {
-        value: assignedLab.toLowerCase().replace(/\s+/g, '-'), // Create a simple value
-        label: assignedLab
-      };
-      filteredOptions.push(assignedLabOption);
+      return [{ value: assignedLab, label: assignedLab }];
     }
-    
-    return filteredOptions;
+    return labs;
   };
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -44,10 +60,19 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
     laboratory: '',
     software_list: '',
     requested_by: '', // Default value for public submissions
-    approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
+    approved_by: '',
     installation_remarks: '',
-    prepared_by: '' // Will be set by useEffect
+    prepared_by: ''
   });
+
+  // If assignedLab is provided, pre-fill the laboratory field.
+  useEffect(() => {
+    if (!assignedLab) return;
+    setFormData(prev => ({
+      ...prev,
+      laboratory: prev.laboratory || assignedLab,
+    }));
+  }, [assignedLab]);
 
   // Update approved_by and prepared_by when custodianName changes
   useEffect(() => {
@@ -59,6 +84,60 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
       }));
     }
   }, [custodianName]);
+
+  // Auto-populate approved_by and prepared_by based on selected lab custodian (if custodianName prop is not explicitly provided)
+  useEffect(() => {
+    if (custodianName) return;
+    if (!formData.laboratory) {
+      setFormData(prev => ({
+        ...prev,
+        approved_by: '',
+        prepared_by: '',
+      }));
+      return;
+    }
+
+    const fetchCustodian = async () => {
+      try {
+        const encodedLabName = encodeURIComponent(formData.laboratory);
+        console.log('🔍 Fetching custodian for lab:', formData.laboratory);
+        console.log('🔍 API URL:', `http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+
+        const response = await fetch(`http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
+        console.log('🔍 Custodian response status:', response.status);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
+        }
+
+        const custodianData = await response.json();
+        console.log('🔍 Custodian data received:', custodianData);
+
+        const resolvedCustodianName = custodianData.users?.[0]?.full_name ||
+          custodianData.in_charge?.full_name ||
+          custodianData.full_name ||
+          custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
+          '';
+
+        console.log('🔍 Extracted custodian name:', resolvedCustodianName);
+
+        setFormData(prev => ({
+          ...prev,
+          approved_by: resolvedCustodianName,
+          prepared_by: resolvedCustodianName,
+        }));
+      } catch (error) {
+        console.error('Failed to fetch custodian:', error);
+        setFormData(prev => ({
+          ...prev,
+          approved_by: '',
+          prepared_by: '',
+        }));
+      }
+    };
+
+    fetchCustodian();
+  }, [custodianName, formData.laboratory]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -105,7 +184,7 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
         laboratory: '',
         software_list: '',
         requested_by: '', // Default value for public submissions
-        approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
+        approved_by: '',
         installation_remarks: '',
         prepared_by: ''
       });
@@ -185,10 +264,8 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
           <Input
             id="approved_by"
             value={custodianName ? custodianName.toUpperCase() : formData.approved_by}
-            onChange={!custodianName ? (e) => handleInputChange('approved_by', e.target.value) : undefined}
-            placeholder="DR. MARCO MARVIN L. RADO"
-            disabled={disabled || !!custodianName} // Disable if custodianName is provided
-            readOnly={!!custodianName} // Make read-only if custodianName is provided
+            disabled
+            readOnly
           />
           {custodianName && (
             <p className="text-sm text-gray-500">This field is automatically set by the custodian who generated this link</p>
@@ -200,10 +277,8 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
           <Input
             id="prepared_by"
             value={custodianName ? custodianName.toUpperCase() : formData.prepared_by}
-            onChange={!custodianName ? (e) => handleInputChange('prepared_by', e.target.value) : undefined}
-            placeholder="IT staff name"
-            disabled={disabled || !!custodianName} // Disable if custodianName is provided
-            readOnly={!!custodianName} // Make read-only if custodianName is provided
+            disabled
+            readOnly
           />
           {custodianName && (
             <p className="text-sm text-gray-500">This field is automatically set by the custodian who generated this link</p>

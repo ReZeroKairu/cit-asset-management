@@ -1,6 +1,6 @@
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, ArrowRight } from "lucide-react";
+import { FileText, ArrowRight, MessageSquare } from "lucide-react";
 
 const PublicLandingPage = () => {
   return (
@@ -11,11 +11,11 @@ const PublicLandingPage = () => {
             CIT Asset Management
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            College of Information Technology Laboratory & Equipment Management System
+            <strong>College of Information Technology Laboratory & Equipment Management System</strong>
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
@@ -38,6 +38,27 @@ const PublicLandingPage = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
+                <MessageSquare className="w-8 h-8 text-orange-600 mr-3" />
+                <h2 className="text-xl font-semibold">Complaint Ticket</h2>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Submit complaints about issues in your workstation.
+              </p>
+              <Button 
+                onClick={() => alert('Complaint system coming soon!')}
+                variant="outline"
+                className="w-full"
+                disabled
+              >
+                Submit Complaint
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center mb-4">
                 <FileText className="w-8 h-8 text-green-600 mr-3" />
                 <h2 className="text-xl font-semibold">Staff Portal</h2>
               </div>
@@ -45,7 +66,7 @@ const PublicLandingPage = () => {
                 Login to access the full management system for staff and administrators.
               </p>
               <Button 
-                onClick={() => window.location.href = '/'}
+                onClick={() => window.location.href = '/login'}
                 variant="outline"
                 className="w-full"
               >

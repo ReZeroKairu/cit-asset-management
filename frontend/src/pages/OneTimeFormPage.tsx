@@ -21,8 +21,8 @@ const OneTimeFormPage = () => {
     console.log('Current hostname:', hostname);
     
     // Always use the network IP for API calls when accessing from network
-    if (hostname === '192.168.111.21') {
-      return 'http://192.168.111.21:3001';
+    if (hostname === '192.168.110.72') {
+      return 'http://192.168.110.72:3001';
     }
     // For localhost access, use localhost API
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -192,6 +192,23 @@ const OneTimeFormPage = () => {
                 <div className="space-y-1 text-sm text-gray-600">
                   <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
                   <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
+                  <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
+                  {submittedForm.type === 'equipment-borrow' && submittedForm.data.equipment_list && (
+                    <p>
+                      <strong>Equipment List:</strong>{' '}
+                      {Array.isArray(submittedForm.data.equipment_list)
+                        ? submittedForm.data.equipment_list
+                            .map((item: any) => `${item.unitQty || ''} ${item.equipmentName || ''}`.trim())
+                            .filter(Boolean)
+                            .join(', ')
+                        : typeof submittedForm.data.equipment_list === 'string'
+                        ? submittedForm.data.equipment_list
+                        : 'N/A'}
+                    </p>
+                  )}
+                  {submittedForm.type === 'software-install' && submittedForm.data.software_list && (
+                    <p><strong>Software List:</strong> {submittedForm.data.software_list}</p>
+                  )}
                   <p><strong>Purpose:</strong> {submittedForm.data.purpose || submittedForm.data.software_list || 'N/A'}</p>
                   <p><strong>Submitted:</strong> {new Date(submittedForm.submittedAt).toLocaleString()}</p>
                 </div>

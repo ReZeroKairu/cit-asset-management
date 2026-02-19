@@ -3,6 +3,46 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+const resolveCustodianUserIdByLaboratory = async (laboratory: string | null | undefined) => {
+  if (!laboratory) return null;
+
+  const raw = String(laboratory).trim();
+  if (!raw) return null;
+
+  const candidates = Array.from(
+    new Set([
+      raw,
+      raw.replace(/-/g, ' '),
+      raw.replace(/\s+/g, ' '),
+      raw.replace(/-/g, ' ').replace(/\s+/g, ' '),
+    ]),
+  );
+
+  const lab = await prisma.laboratories.findFirst({
+    where: {
+      OR: candidates.map((name) => ({ lab_name: name })),
+    },
+    select: {
+      lab_id: true,
+      lab_name: true,
+    },
+  });
+
+  if (!lab?.lab_id) return null;
+
+  const custodian = await prisma.users.findFirst({
+    where: {
+      lab_id: lab.lab_id,
+      role: 'Custodian',
+    },
+    select: {
+      user_id: true,
+    },
+  });
+
+  return custodian?.user_id ?? null;
+};
+
 // Public Lab Request Controller (no authentication required)
 export const createPublicLabRequest = async (req: Request, res: Response) => {
   try {
@@ -22,6 +62,8 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
       monitored_by
     } = req.body;
 
+    const custodianUserId = await resolveCustodianUserIdByLaboratory(laboratory);
+
     const labRequest = await prisma.lab_requests.create({
       data: {
         date: new Date(date),
@@ -37,7 +79,7 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
         requested_by,
         remarks,
         monitored_by,
-        user_id: null, // Public submissions don't have user_id
+        user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
         status: 'Pending' // Default status for public submissions
       }
     });
@@ -74,6 +116,8 @@ export const createPublicEquipmentBorrow = async (req: Request, res: Response) =
       monitored_by
     } = req.body;
 
+    const custodianUserId = await resolveCustodianUserIdByLaboratory(laboratory);
+
     const equipmentBorrow = await prisma.equipment_borrows.create({
       data: {
         date: new Date(date),
@@ -87,7 +131,7 @@ export const createPublicEquipmentBorrow = async (req: Request, res: Response) =
         requested_by,
         remarks,
         monitored_by,
-        user_id: null, // Public submissions don't have user_id
+        user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
         status: 'Pending' // Default status for public submissions
       }
     });
@@ -120,6 +164,8 @@ export const createPublicSoftwareInstallation = async (req: Request, res: Respon
       prepared_by
     } = req.body;
 
+    const custodianUserId = await resolveCustodianUserIdByLaboratory(laboratory);
+
     const softwareInstallation = await prisma.software_installations.create({
       data: {
         date: new Date(date),
@@ -129,7 +175,7 @@ export const createPublicSoftwareInstallation = async (req: Request, res: Respon
         requested_by,
         installation_remarks,
         prepared_by,
-        user_id: null, // Public submissions don't have user_id
+        user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
         status: 'Pending' // Default status for public submissions
       }
     });

@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001',
+  baseURL: 'http://192.168.110.72:3001',
   headers: {
     "Content-Type": "application/json",
   },
@@ -11,7 +11,7 @@ const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    const API_BASE_URL = 'http://localhost:3001';
+    const API_BASE_URL = 'http://192.168.110.72:3001';
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -31,7 +31,12 @@ api.interceptors.response.use(
       // Token expired or invalid, logout user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/";
+      // Only redirect to login if not on public pages
+      const publicPages = ['/public-forms', '/public-landing', '/one-time'];
+      const currentPath = window.location.pathname;
+      if (!publicPages.includes(currentPath)) {
+        window.location.href = "/";
+      }
     }
     return Promise.reject(error);
   }
