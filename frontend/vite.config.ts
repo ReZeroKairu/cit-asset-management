@@ -10,4 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: '0.0.0.0', // Bind to all network interfaces
+    port: 5173,
+    allowedHosts: [
+      'constraints-copper-arabia-casino.trycloudflare.com',
+      'orchestra-passport-superior-sail.trycloudflare.com',
+      '.trycloudflare.com' // Allow all trycloudflare.com subdomains
+    ]
+  }
 });

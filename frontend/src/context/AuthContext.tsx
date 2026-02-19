@@ -6,9 +6,12 @@ interface User {
   id: number;
   name: string;
   email: string;
-  role: "Admin" | "Custodian";
+  role: users_role;
   lab_id?: number; // Assigned lab for custodians
 }
+
+// Backend enum types for type safety
+export type users_role = "Admin" | "Custodian";
 
 interface AuthContextType {
   user: User | null;

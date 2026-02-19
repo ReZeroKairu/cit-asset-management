@@ -36,9 +36,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const loadReports = async () => {
     try {
       setLoading(true);
-      const data = await getAllDailyReports();
-      setReports(data);
+      console.log('Loading admin daily reports...');
+      // For admin view, show only pending reports
+      const data = await getAllDailyReports({ status: "Pending" });
+      console.log('Admin reports data received:', data);
+      setReports(data.data || data);
     } catch (err: any) {
+      console.error('Error loading admin reports:', err);
       setError(err.response?.data?.error || "Failed to load reports");
     } finally {
       setLoading(false);
@@ -125,7 +129,9 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     });
   };
 
-  const filteredReports = reports.filter((report) => {
+  console.log('AdminDailyReports render - reports:', reports, 'loading:', loading, 'error:', error);
+
+  const filteredReports = (reports || []).filter((report) => {
     let matchesFilter = true;
 
     // Start date filter
@@ -271,7 +277,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                 <>
                   <button
                     onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 flex items-center gap-2"
+                    className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 flex items-center gap-2 cursor-pointer"
                   >
                     {selectedReports.length ===
                     filteredReports.filter((r) => r.status === "Pending")
@@ -341,7 +347,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         filteredReports.some((r) => r.status === "Pending")
                       }
                       onChange={handleSelectAll}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                     />
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
@@ -373,7 +379,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                           type="checkbox"
                           checked={selectedReports.includes(report.report_id)}
                           onChange={() => handleSelectReport(report.report_id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       )}
                     </td>
@@ -419,7 +425,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleViewReport(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="View Report Details"
                         >
                           <svg
                             className="w-4 h-4"
@@ -440,27 +447,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                             />
                           </svg>
-                          <span>View</span>
                         </button>
                         {report.status !== "Approved" && (
                           <button
                             onClick={() => handleQuickApprove(report.report_id)}
-                            className="text-green-600 hover:text-green-900 flex items-center gap-1"
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded cursor-pointer"
                           >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            <span>Approve</span>
+                            Approve
                           </button>
                         )}
                       </div>

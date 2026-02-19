@@ -146,7 +146,6 @@ const EmbeddedLaboratoryForm: React.FC<Props> = ({
               setError("");
             }}
           >
-            <RotateCcw className="w-4 h-4 mr-2" />
             Clear Form
           </button>
           <button
@@ -160,10 +159,7 @@ const EmbeddedLaboratoryForm: React.FC<Props> = ({
                 Creating...
               </>
             ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Create Laboratory
-              </>
+              "Create Laboratory"
             )}
           </button>
         </div>

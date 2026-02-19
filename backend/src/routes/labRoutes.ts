@@ -10,8 +10,12 @@ import { authenticateToken, requireRole } from "../middleware/auth";
 
 const router = Router();
 
-router.use(authenticateToken);
+// Public routes (no authentication required)
+router.get("/public", getLaboratories);
+router.get("/public/:labName/custodian", getLaboratoryById);
 
+// Protected routes (authentication required)
+router.use(authenticateToken);
 router.get("/", getLaboratories);
 router.get("/:id", getLaboratoryById);
 

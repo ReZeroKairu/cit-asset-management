@@ -201,15 +201,17 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
                           <div className="flex space-x-2">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleEdit(lab)}
+                              className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleDelete(lab.lab_id)}
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>

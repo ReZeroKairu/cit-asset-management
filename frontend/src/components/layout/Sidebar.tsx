@@ -199,33 +199,23 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </button>
               </li>
             )}
-            {/* Archived Reports - Available to all users */}
+            {/* Forms - Available to all users */}
             <li>
               <button
                 className={`w-full text-left rounded-md flex items-center transition-colors ${
-                  active === "archived-reports"
-                    ? "bg-blue-600 text-white"
+                  active === "forms" 
+                    ? "bg-blue-600 text-white" 
                     : "hover:bg-gray-700 text-gray-300"
                 } ${
                   collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
                 }`}
-                onClick={() => onNavigate("archived-reports")}
-                title={collapsed ? "Archived Reports" : ""}
+                onClick={() => onNavigate("forms")}
+                title={collapsed ? "Forms" : ""}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                  />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2 2v5a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
-                {!collapsed && <span>Archived Reports</span>}
+                {!collapsed && <span>Forms</span>}
               </button>
             </li>
             {user?.role === "Admin" && (
@@ -260,6 +250,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </button>
               </li>
             )}
+<<<<<<< HEAD
             <li>
               <button
                 className={`w-full text-left rounded-md flex items-center transition-colors ${
@@ -293,6 +284,26 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                   />
                 </svg>
                 {!collapsed && <span>Maintenance & Services</span>}
+              </button>
+            </li>
+            )}
+            {/* Archives - Available to all users */}
+            <li>
+              <button
+                className={`w-full text-left rounded-md flex items-center transition-colors ${
+                  active === "archives" 
+                    ? "bg-blue-600 text-white" 
+                    : "hover:bg-gray-700 text-gray-300"
+                } ${
+                  collapsed ? 'justify-center px-2 py-2' : 'px-4 py-2 space-x-3'
+                }`}
+                onClick={() => onNavigate("archives")}
+                title={collapsed ? "Archives" : ""}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                {!collapsed && <span>Archives</span>}
               </button>
             </li>
             {/* Refresh User Data Button */}

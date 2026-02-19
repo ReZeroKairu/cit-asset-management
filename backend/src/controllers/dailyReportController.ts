@@ -55,7 +55,7 @@ export const getArchivedReports = async (req: Request, res: Response) => {
     // Get total count for pagination
     const totalCount = await prisma.daily_reports.count({ where });
 
-    // Get paginated reports
+    // Get paginated reports with full details
     const reports = await prisma.daily_reports.findMany({
       where,
       include: {
@@ -64,6 +64,20 @@ export const getArchivedReports = async (req: Request, res: Response) => {
         },
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
+        },
+        workstation_items: {
+          include: {
+            workstation: {
+              select: { workstation_id: true, workstation_name: true }
+            }
+          }
+        },
+        procedures: {
+          include: {
+            procedure: {
+              select: { procedure_id: true, procedure_name: true, category: true }
+            }
+          }
         }
       },
       orderBy: { created_at: 'desc' },
@@ -155,7 +169,10 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
       orderBy: { report_date: 'desc' }
     });
 
-    res.json(reports);
+    res.json({
+      success: true,
+      data: reports
+    });
   } catch (error) {
     console.error("Error fetching daily reports:", error);
     res.status(500).json({ error: "Failed to fetch daily reports" });
@@ -504,7 +521,10 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
       orderBy: { report_date: 'desc' }
     });
 
-    res.json(reports);
+    res.json({
+      success: true,
+      data: reports
+    });
   } catch (error) {
     console.error("Error fetching user daily reports:", error);
     res.status(500).json({ error: "Failed to fetch daily reports" });

@@ -15,7 +15,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalAssets,
       totalLaboratories,
       totalDailyReports,
-      totalUsers
+      totalUsers,
+      totalForms
     ] = await Promise.all([
       // Total assets count - filtered by user role
       userRole === "Custodian" && userId
@@ -56,7 +57,74 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }),
       
       // Total users count - only for admins
-      userRole === "Admin" ? prisma.users.count() : 0
+      userRole === "Admin" ? prisma.users.count() : 0,
+      
+      // Total forms count (pending only) - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(async user => {
+            if (user?.lab_id) {
+              // For custodians: count their own pending + custodian_approved forms + pending forms from their generated links
+              const [labRequests, equipmentBorrows, softwareInstallations] = await Promise.all([
+                // Lab requests: Pending and Custodian_Approved status
+                prisma.lab_requests.count({
+                  where: {
+                    OR: [
+                      { user_id: userId }, // Their own forms
+                      { laboratory: user.lab_id.toString() } // Forms from their lab
+                    ],
+                    status: {
+                      in: ['Pending', 'Custodian_Approved']
+                    }
+                  }
+                }),
+                // Equipment borrows: Pending and Custodian_Approved status
+                prisma.equipment_borrows.count({
+                  where: {
+                    OR: [
+                      { user_id: userId }, // Their own forms
+                      { laboratory: user.lab_id.toString() } // Forms from their lab
+                    ],
+                    status: {
+                      in: ['Pending', 'Custodian_Approved']
+                    }
+                  }
+                }),
+                // Software installations: Pending and Custodian_Approved status
+                prisma.software_installations.count({
+                  where: {
+                    user_id: userId, // Only their own software installations
+                    status: {
+                      in: ['Pending', 'Custodian_Approved']
+                    }
+                  }
+                })
+              ]);
+              return labRequests + equipmentBorrows + softwareInstallations;
+            }
+            return 0;
+          })
+        : prisma.$transaction(async (tx) => {
+            // For admins: count all Custodian_Approved forms (ready for admin approval), excluding software installations
+            const [labRequests, equipmentBorrows] = await Promise.all([
+              // Lab requests: only Custodian_Approved status
+              tx.lab_requests.count({
+                where: {
+                  status: 'Custodian_Approved'
+                }
+              }),
+              // Equipment borrows: only Custodian_Approved status
+              tx.equipment_borrows.count({
+                where: {
+                  status: 'Custodian_Approved'
+                }
+              })
+              // Software installations excluded - handled by custodians only
+            ]);
+            return labRequests + equipmentBorrows;
+          })
     ]);
 
     // Get recent pending daily reports (last 5) - filtered by user role
@@ -197,7 +265,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         totalAssets,
         totalLaboratories,
         totalDailyReports,
-        totalUsers
+        totalUsers,
+        totalForms
       },
       recentReports,
       assetsByLab: assetsByLabWithNames,

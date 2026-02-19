@@ -162,6 +162,8 @@ async function main() {
   };
 
   // --- EXECUTION ---
+  // Seed data in order to respect foreign key constraints
+  console.log('📝 Seeding reference data...');
 
   // 1. Campuses
   for (const item of seedData.campuses) {
@@ -188,7 +190,7 @@ async function main() {
     });
   }
 
-  // ✅ 4. Users (Phase 1: Create without Lab Assignment)
+// ✅ 4. Users (Phase 1: Create without Lab Assignment)
   // We strip the lab_id here to prevent the "Foreign Key Constraint" error
   for (const user of seedData.users) {
     const { lab_id, ...userData } = user; // Separate lab_id from the rest
@@ -200,7 +202,7 @@ async function main() {
     console.log(`👤 User Created (Pending Lab): ${user.full_name}`);
   }
 
-  // 5. Laboratories (Now safe to create, as users exist for in_charge_id)
+// 5. Laboratories (Now safe to create, as users exist for in_charge_id)
   for (const lab of seedData.laboratories) {
     await prisma.laboratories.upsert({
       where: { lab_id: lab.lab_id },
@@ -210,7 +212,7 @@ async function main() {
   }
 
   // ✅ 6. Users (Phase 2: Assign Labs)
-  // Now that labs exist, we can link the users to them
+  // Now that labs exist, we can link users to them
   for (const user of seedData.users) {
     if (user.lab_id) {
       await prisma.users.update({
@@ -247,6 +249,7 @@ async function main() {
     });
   }
   // 9. Workstations
+  console.log('🔄 Seeding workstations...');
   for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
       where: { workstation_id: ws.workstation_id },
@@ -254,7 +257,7 @@ async function main() {
       create: ws,
     });
   }
-  // 10. Procedures
+// 10. Procedures
   for (const proc of seedData.procedures) {
     await prisma.procedures.upsert({
       where: { procedure_id: proc.procedure_id },
@@ -263,7 +266,12 @@ async function main() {
     });
   }
 
-  console.log("🎉 Database seeding completed!");
+console.log("🎉 Database seeding completed!");
+  console.log("📊 Summary:");
+  console.log(`   - Users: ${seedData.users.length}`);
+  console.log(`   - Laboratories: ${seedData.laboratories.length}`);
+  console.log(`   - Workstations: ${seedData.workstations.length}`);
+  console.log(`   - Procedures: ${seedData.procedures.length}`);
 }
 
 main()

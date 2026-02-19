@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: 'http://192.168.110.72:3001',
   headers: {
     "Content-Type": "application/json",
   },
@@ -30,7 +30,12 @@ api.interceptors.response.use(
       // Token expired or invalid, logout user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/";
+      
+      // Only redirect to login if not already on login page
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login') {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

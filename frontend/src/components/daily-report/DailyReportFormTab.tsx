@@ -35,6 +35,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
   const [assignedLab, setAssignedLab] = useState<any>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProcedureDropdownOpen, setIsProcedureDropdownOpen] = useState(false);
+  const [workstationSearch, setWorkstationSearch] = useState("");
+  const [procedureSearch, setProcedureSearch] = useState("");
   const [procedures, setProcedures] = useState<ReportProcedure[]>([]);
   const [workstations, setWorkstations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -382,9 +384,10 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
             <div className="relative" id="procedure-dropdown">
               <button
                 type="button"
-                onClick={() =>
-                  setIsProcedureDropdownOpen(!isProcedureDropdownOpen)
-                }
+                onClick={() => {
+                  setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
+                  setProcedureSearch(""); // Clear search when opening
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
               >
                 <span className="text-gray-500">
@@ -410,34 +413,55 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               </button>
 
               {isProcedureDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                  {procedures
-                    .filter((proc) => proc.overall_status !== "Completed")
-                    .map((procedure) => (
-                      <button
-                        key={procedure.procedure_id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updatedProcedures = procedures.map((proc) =>
-                            proc.procedure_id === procedure.procedure_id
-                              ? { ...proc, overall_status: "Completed" }
-                              : proc,
-                          );
-                          setProcedures(updatedProcedures);
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
-                      >
-                        {procedure.procedure_name}
-                      </button>
-                    ))}
-                  {procedures.filter(
-                    (proc) => proc.overall_status !== "Completed",
-                  ).length === 0 && (
-                    <div className="px-3 py-2 text-gray-500 text-sm">
-                      All procedures selected
-                    </div>
-                  )}
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                  {/* Search Input */}
+                  <div className="p-2 border-b border-gray-200">
+                    <input
+                      type="text"
+                      value={procedureSearch}
+                      onChange={(e) => setProcedureSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Search procedures..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  {/* Scrollable List */}
+                  <div className="max-h-40 overflow-y-auto">
+                    {procedures
+                      .filter((proc) => proc.overall_status !== "Completed")
+                      .filter((proc) => 
+                        proc.procedure_name.toLowerCase().includes(procedureSearch.toLowerCase())
+                      )
+                      .map((procedure) => (
+                        <button
+                          key={procedure.procedure_id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updatedProcedures = procedures.map((proc) =>
+                              proc.procedure_id === procedure.procedure_id
+                                ? { ...proc, overall_status: "Completed" }
+                                : proc,
+                            );
+                            setProcedures(updatedProcedures);
+                            setProcedureSearch(""); // Clear search after selection
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        >
+                          {procedure.procedure_name}
+                        </button>
+                      ))}
+                    {procedures
+                      .filter((proc) => proc.overall_status !== "Completed")
+                      .filter((proc) => 
+                        proc.procedure_name.toLowerCase().includes(procedureSearch.toLowerCase())
+                      ).length === 0 && (
+                      <div className="px-3 py-2 text-gray-500 text-sm">
+                        {procedureSearch ? "No procedures found" : "All procedures selected"}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -519,7 +543,10 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
             <div className="relative" id="workstation-dropdown">
               <button
                 type="button"
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                onClick={() => {
+                  setIsDropdownOpen(!isDropdownOpen);
+                  setWorkstationSearch(""); // Clear search when opening
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
               >
                 <span className="text-gray-500">
@@ -543,32 +570,55 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                  {workstations
-                    .filter((ws) => !ws.checked)
-                    .map((workstation) => (
-                      <button
-                        key={workstation.workstation_id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const updatedWorkstations = workstations.map((ws) =>
-                            ws.workstation_id === workstation.workstation_id
-                              ? { ...ws, checked: true }
-                              : ws,
-                          );
-                          setWorkstations(updatedWorkstations);
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
-                      >
-                        {workstation.workstation_name}
-                      </button>
-                    ))}
-                  {workstations.filter((ws) => !ws.checked).length === 0 && (
-                    <div className="px-3 py-2 text-gray-500 text-sm">
-                      All workstations selected
-                    </div>
-                  )}
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                  {/* Search Input */}
+                  <div className="p-2 border-b border-gray-200">
+                    <input
+                      type="text"
+                      value={workstationSearch}
+                      onChange={(e) => setWorkstationSearch(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder="Search workstations..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  {/* Scrollable List */}
+                  <div className="max-h-40 overflow-y-auto">
+                    {workstations
+                      .filter((ws) => !ws.checked)
+                      .filter((ws) => 
+                        ws.workstation_name.toLowerCase().includes(workstationSearch.toLowerCase())
+                      )
+                      .map((workstation) => (
+                        <button
+                          key={workstation.workstation_id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updatedWorkstations = workstations.map((ws) =>
+                              ws.workstation_id === workstation.workstation_id
+                                ? { ...ws, checked: true }
+                                : ws,
+                            );
+                            setWorkstations(updatedWorkstations);
+                            setWorkstationSearch(""); // Clear search after selection
+                          }}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                        >
+                          {workstation.workstation_name}
+                        </button>
+                      ))}
+                    {workstations
+                      .filter((ws) => !ws.checked)
+                      .filter((ws) => 
+                        ws.workstation_name.toLowerCase().includes(workstationSearch.toLowerCase())
+                      ).length === 0 && (
+                      <div className="px-3 py-2 text-gray-500 text-sm">
+                        {workstationSearch ? "No workstations found" : "All workstations selected"}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
