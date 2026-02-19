@@ -108,15 +108,19 @@ export const updateLabRequestStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Handle both old "Rejected" and new "Denied" status for backward compatibility
-    let validStatus = status;
-    if (status === 'Denied') {
-      validStatus = 'Rejected'; // Temporarily map Denied to Rejected until DB is updated
+    // Validate status against the enum
+    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+        error: `Status must be one of: ${validStatuses.join(', ')}`
+      });
     }
 
     const labRequest = await prisma.lab_requests.update({
       where: { request_id: parseInt(id as string) },
-      data: { status: validStatus }
+      data: { status }
     });
 
     res.json({
@@ -268,15 +272,19 @@ export const updateEquipmentBorrowStatus = async (req: Request, res: Response) =
     const { id } = req.params;
     const { status } = req.body;
 
-    // Handle both old "Rejected" and new "Denied" status for backward compatibility
-    let validStatus = status;
-    if (status === 'Denied') {
-      validStatus = 'Rejected'; // Temporarily map Denied to Rejected until DB is updated
+    // Validate status against the enum
+    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Returned'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+        error: `Status must be one of: ${validStatuses.join(', ')}`
+      });
     }
 
     const equipmentBorrow = await prisma.equipment_borrows.update({
       where: { borrow_id: parseInt(id as string) },
-      data: { status: validStatus }
+      data: { status }
     });
 
     res.json({
@@ -423,40 +431,26 @@ export const updateSoftwareInstallationStatus = async (req: Request, res: Respon
     const { id } = req.params;
     const { status } = req.body;
 
-    // Handle both old "Rejected" and new "Denied" status for backward compatibility
-    let validStatus = status;
-    if (status === 'Denied') {
-      validStatus = 'Rejected'; // Temporarily map Denied to Rejected until DB is updated
-    }
-
-    // Try raw SQL first to bypass any Prisma issues
-    try {
-      const result = await prisma.$queryRaw`
-        UPDATE software_installations 
-        SET status = ${validStatus} 
-        WHERE id = ${parseInt(id as string)}
-      `;
-      
-      res.status(200).json({
-        success: true,
-        message: 'Software installation status updated successfully',
-        data: result
-      });
-    } catch (rawSqlError) {
-      console.error('❌ Raw SQL failed, trying Prisma:', rawSqlError);
-      
-      // Fallback to Prisma
-      const softwareInstallation = await prisma.software_installations.update({
-        where: { id: parseInt(id as string) },
-        data: { status: validStatus }
-      });
-
-      res.status(200).json({
-        success: true,
-        message: 'Software installation status updated successfully',
-        data: softwareInstallation
+    // Validate status against the enum
+    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+        error: `Status must be one of: ${validStatuses.join(', ')}`
       });
     }
+
+    const softwareInstallation = await prisma.software_installations.update({
+      where: { id: parseInt(id as string) },
+      data: { status }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Software installation status updated successfully',
+      data: softwareInstallation
+    });
 
   } catch (error) {
     console.error('❌ Error updating software installation status:', error);

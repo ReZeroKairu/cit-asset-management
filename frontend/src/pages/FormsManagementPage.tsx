@@ -21,7 +21,7 @@ interface FormSubmission {
   type: 'lab-request' | 'equipment-borrow' | 'software-install';
   date: string;
   name: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Returned' | 'Completed' | 'Admin_Approved';
+  status: 'Pending' | 'Approved' | 'Denied' | 'Returned' | 'Completed' | 'Admin_Approved';
   laboratory: string;
   purpose: string;
   createdAt: string;
@@ -92,8 +92,8 @@ export const FormsManagementPage = () => {
       
       const archivedLabRequests = Array.isArray(labRequests) ? labRequests.filter((req: any) => {
         const statusMatch = isAdmin 
-          ? req.status === 'Admin_Approved' || req.status === 'Completed' || req.status === 'Denied' || req.status === 'Rejected'
-          : req.status === 'Completed' || req.status === 'Denied' || req.status === 'Rejected';
+          ? req.status === 'Admin_Approved' || req.status === 'Completed' || req.status === 'Denied'
+          : req.status === 'Completed' || req.status === 'Denied';
         
         // Temporarily show all forms to debug data structure
         const ownershipMatch = isAdmin || 
@@ -126,8 +126,8 @@ export const FormsManagementPage = () => {
       
       const archivedEquipmentBorrows = Array.isArray(equipmentBorrows) ? equipmentBorrows.filter((borrow: any) => {
         const statusMatch = isAdmin 
-          ? borrow.status === 'Admin_Approved' || borrow.status === 'Returned' || borrow.status === 'Denied' || borrow.status === 'Rejected'
-          : borrow.status === 'Returned' || borrow.status === 'Denied' || borrow.status === 'Rejected';
+          ? borrow.status === 'Admin_Approved' || borrow.status === 'Returned' || borrow.status === 'Denied'
+          : borrow.status === 'Returned' || borrow.status === 'Denied';
         
         // Temporarily show all forms to debug data structure
         const ownershipMatch = isAdmin || 
@@ -158,8 +158,8 @@ export const FormsManagementPage = () => {
       
       const archivedSoftwareInstallations = Array.isArray(softwareInstallations) ? softwareInstallations.filter((install: any) => {
         const statusMatch = isAdmin 
-          ? install.status === 'Completed' || install.status === 'Denied' || install.status === 'Rejected' // Removed Admin_Approved since custodians handle directly
-          : install.status === 'Completed' || install.status === 'Denied' || install.status === 'Rejected';
+          ? install.status === 'Completed' || install.status === 'Denied' // Removed Admin_Approved since custodians handle directly
+          : install.status === 'Completed' || install.status === 'Denied';
         
         // Temporarily show all forms to debug data structure
         const ownershipMatch = isAdmin || 
@@ -264,7 +264,7 @@ export const FormsManagementPage = () => {
       case 'Approved':
       case 'Admin_Approved':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'Rejected':
+      case 'Denied':
         return <XCircle className="w-4 h-4 text-red-500" />;
       case 'Returned':
         return <CheckCircle className="w-4 h-4 text-blue-500" />;
@@ -283,7 +283,7 @@ export const FormsManagementPage = () => {
         return 'bg-green-100 text-green-800';
       case 'Admin_Approved':
         return 'bg-green-100 text-green-800';
-      case 'Rejected':
+      case 'Denied':
         return 'bg-red-100 text-red-800';
       case 'Returned':
         return 'bg-blue-100 text-blue-800';
@@ -394,7 +394,7 @@ export const FormsManagementPage = () => {
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="Admin_Approved">Admin Approved</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Rejected">Rejected</SelectItem>
+              <SelectItem value="Denied">Denied</SelectItem>
               <SelectItem value="Returned">Returned</SelectItem>
             </SelectContent>
           </Select>
@@ -510,9 +510,9 @@ export const FormsManagementPage = () => {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => updateStatus(form.id, form.type, 'Rejected')}
+                          onClick={() => updateStatus(form.id, form.type, 'Denied')}
                         >
-                          Reject
+                          Deny
                         </Button>
                       </>
                     )}
