@@ -6,7 +6,6 @@ import LaboratoriesPage from "./pages/LaboratoriesPage";
 import DailyReportsPage from "./pages/DailyReportsPage";
 import AdminReportsPage from "./pages/AdminReportsPage";
 import { ArchivesPage } from "./pages/ArchivesPage";
-import ArchivedReportsPage from "./components/archived-reports/ArchivedReportsList";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import FormsPage from "./pages/FormsPage";
@@ -47,7 +46,7 @@ interface LabFormData {
 // Home Page Component with Real Data
 const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -241,6 +240,13 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
               </div>
             </CardContent>
           </Card>
+        ) : (
+          /* Placeholder or another user card for Custodians if needed */
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-gray-50">
+            <CardContent className="pt-6 flex items-center justify-center h-full">
+              <p className="text-gray-400 text-sm">System Status: Active</p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
@@ -268,15 +274,16 @@ function App() {
     const path = window.location.pathname;
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
-    if (path === "/one-time" || path.startsWith("/one-time")) return "one-time-form";
-    
+    if (path === "/one-time" || path.startsWith("/one-time"))
+      return "one-time-form";
+
     const storedUser = localStorage.getItem("user");
     const isLoggedIn = storedUser && storedUser !== "null";
-    
+
     if (path === "/") {
       return isLoggedIn ? "home" : "public-landing";
     }
-    
+
     return isLoggedIn ? "home" : "public-landing";
   });
 
@@ -306,6 +313,7 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [user]);
+
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
     full_name: "",
     email: "",
@@ -380,7 +388,11 @@ function App() {
   };
 
   // 1. PUBLIC PAGES - Never show sidebar, regardless of login status
-  if (currentPage === "one-time-form" || currentPage === "public-forms" || currentPage === "public-landing") {
+  if (
+    currentPage === "one-time-form" ||
+    currentPage === "public-forms" ||
+    currentPage === "public-landing"
+  ) {
     return renderPage();
   }
 

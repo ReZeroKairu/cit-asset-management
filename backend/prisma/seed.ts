@@ -212,7 +212,11 @@ async function main() {
 
   // ✅ 4. Users (Phase 1: Create without Lab Assignment)
   // We strip the lab_id here to prevent the "Foreign Key Constraint" error
+  for (const user of seedData.users) {
+    const { lab_id, ...userData } = user; // Separate lab_id from the rest
+    await prisma.users.upsert({
       where: { user_id: user.user_id },
+      update: userData, // Update without lab_id
       create: { ...userData, lab_id: null }, // Create with lab_id as null
     });
     console.log(`👤 User Created (Pending Lab): ${user.full_name}`);
@@ -268,7 +272,7 @@ async function main() {
   }
 
   // 10. Workstations
-  console.log(' Seeding workstations...');
+  console.log(" Seeding workstations...");
   for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
       where: { workstation_id: ws.workstation_id },
@@ -278,7 +282,7 @@ async function main() {
   }
 
   // 11. Procedures
-  console.log(' Seeding procedures...');
+  console.log(" Seeding procedures...");
   for (const proc of seedData.procedures) {
     await prisma.procedures.upsert({
       where: { procedure_id: proc.procedure_id },
