@@ -241,6 +241,12 @@ const InventoryPage = () => {
         <p className="text-gray-600">
           Manage workstations and their assigned inventory assets
         </p>
+        {/* Lab Assigned Indicator for Custodians */}
+        {user?.role === "Custodian" && user?.lab_id && (
+          <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            📍 Assigned Lab: {availableLabs.find(lab => lab.lab_id === user.lab_id)?.lab_name || "Loading..."}
+          </div>
+        )}
       </div>
 
       {/* Filter Toggle & Controls */}

@@ -535,6 +535,8 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
       <DailyAccomplishmentReport
         show={showDARModal}
         onClose={() => setShowDARModal(false)}
+        archiveMode={archiveMode}
+        pageContext={archiveMode ? 'archives' : 'daily-reports'}
       />
     </div>
   );

@@ -128,6 +128,9 @@ const PublicFormsPage = () => {
                     <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
                     <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
                     <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
+                    {submittedForm.data.approved_by && (
+                      <p><strong>Approved By:</strong> {submittedForm.data.approved_by}</p>
+                    )}
                     {submittedForm.type === 'equipment-borrow' && submittedForm.data.equipment_list && (
                       <p>
                         <strong>Equipment List:</strong>{' '}

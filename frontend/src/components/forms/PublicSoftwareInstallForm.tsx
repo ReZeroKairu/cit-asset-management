@@ -6,14 +6,24 @@ import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { submitPublicSoftwareInstallation } from "../../api/publicForms";
 
+// Dynamic API URL detection
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
+  }
+  return `http://${hostname}:3001`;
+};
+
 interface PublicSoftwareInstallFormProps {
   onSubmit?: (data: any) => void;
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
+  isOneTimeForm?: boolean;
 }
 
-export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicSoftwareInstallFormProps) => {
+export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicSoftwareInstallFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   
@@ -23,17 +33,12 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
 
     const fetchLabs = async () => {
       try {
-        console.log('🔍 Fetching labs from:', 'http://192.168.110.72:3001/laboratories/public');
-        const response = await fetch('http://192.168.110.72:3001/laboratories/public');
-        console.log('🔍 Labs response status:', response.status);
-
+        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`);
         if (!response.ok) {
           throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
         }
 
         const labsData = await response.json();
-        console.log('🔍 Labs data received:', labsData);
-
         const labOptions = labsData.map((lab: any) => ({
           value: lab.lab_name,
           label: lab.lab_name
@@ -100,26 +105,19 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
     const fetchCustodian = async () => {
       try {
         const encodedLabName = encodeURIComponent(formData.laboratory);
-        console.log('🔍 Fetching custodian for lab:', formData.laboratory);
-        console.log('🔍 API URL:', `http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
-
-        const response = await fetch(`http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
-        console.log('🔍 Custodian response status:', response.status);
+        const response = await fetch(`${getApiBaseUrl()}/laboratories/public/${encodedLabName}/custodian`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
         }
 
         const custodianData = await response.json();
-        console.log('🔍 Custodian data received:', custodianData);
-
+        
         const resolvedCustodianName = custodianData.users?.[0]?.full_name ||
           custodianData.in_charge?.full_name ||
           custodianData.full_name ||
           custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
           '';
-
-        console.log('🔍 Extracted custodian name:', resolvedCustodianName);
 
         setFormData(prev => ({
           ...prev,
@@ -162,17 +160,14 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting software installation data:', formData);
-      
       // Add timeout for better error handling
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const result = await submitPublicSoftwareInstallation(formData);
+      // Don't submit directly - parent will handle submission
       clearTimeout(timeoutId);
       
-      console.log('Software installation submission result:', result);
-      
+      // Call parent's onSubmit to show success message
       if (onSubmit) {
         onSubmit(formData);
       }

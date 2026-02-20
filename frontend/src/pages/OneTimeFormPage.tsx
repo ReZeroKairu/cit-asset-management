@@ -20,14 +20,15 @@ const OneTimeFormPage = () => {
     const hostname = window.location.hostname;
     console.log('Current hostname:', hostname);
     
-    // Always use the network IP for API calls when accessing from network
-    if (hostname === '192.168.110.72') {
-      return 'http://192.168.110.72:3001';
-    }
-    // For localhost access, use localhost API
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
-    }
+    // Always use network IP for API calls when accessing from network
+    const getApiBaseUrl = () => {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3001';
+      }
+      // Use dynamic hostname for network access
+      return `http://${hostname}:3001`;
+    };
     // Fallback to current origin with port 3001
     return `${window.location.protocol}//${hostname}:3001`;
   };
@@ -193,6 +194,9 @@ const OneTimeFormPage = () => {
                   <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
                   <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
                   <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
+                  {custodianName && (
+                    <p><strong>Custodian:</strong> {custodianName}</p>
+                  )}
                   {submittedForm.type === 'equipment-borrow' && submittedForm.data.equipment_list && (
                     <p>
                       <strong>Equipment List:</strong>{' '}
@@ -290,6 +294,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>
@@ -317,6 +322,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>
@@ -344,6 +350,7 @@ const OneTimeFormPage = () => {
                   disabled={isSubmitting}
                   custodianName={custodianName}
                   assignedLab={assignedLab}
+                  isOneTimeForm={true}
                 />
               </CardContent>
             </Card>

@@ -16,18 +16,16 @@ model campuses {
 }
 
 model daily_reports {
-  report_id       Int                       @id @default(autoincrement())
-  user_id         Int
-  lab_id          Int
-  report_date     DateTime                  @db.Date
-  general_remarks String?                   @db.Text
-  status          daily_reports_status?     @default(Pending)
-  created_at      DateTime?                 @default(now()) @db.Timestamp(0)
-  report_type     String                    @default("DAILY") 
-
-  users             users?                    @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
-  laboratories      laboratories?             @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
+  report_id         Int                        @id @default(autoincrement())
+  user_id           Int
+  lab_id            Int
+  report_date       DateTime                   @db.Date
+  general_remarks   String?                    @db.Text
+  status            daily_reports_status?      @default(Pending)
+  created_at        DateTime?                  @default(now()) @db.Timestamp(0)
   procedures        daily_report_procedures[]
+  laboratories      laboratories               @relation(fields: [lab_id], references: [lab_id])
+  users             users                      @relation(fields: [user_id], references: [user_id])
   workstation_items report_workstation_items[]
 
   @@index([lab_id], map: "lab_id")
@@ -36,14 +34,14 @@ model daily_reports {
 }
 
 model departments {
-  dept_id        Int           @id @default(autoincrement())
-  dept_name      String        @db.VarChar(100)
+  dept_id        Int            @id @default(autoincrement())
+  dept_name      String         @db.VarChar(100)
   campus_id      Int?
   office_type_id Int?
-  designee_name  String?       @db.VarChar(100)
+  designee_name  String?        @db.VarChar(100)
+  campus         campuses?      @relation(fields: [campus_id], references: [campus_id])
+  office_type    office_types?  @relation(fields: [office_type_id], references: [type_id])
   laboratories   laboratories[]
-  campus         campuses?     @relation(fields: [campus_id], references: [campus_id], onDelete: NoAction, onUpdate: NoAction)
-  office_type    office_types? @relation(fields: [office_type_id], references: [type_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([campus_id], map: "campus_id")
   @@index([office_type_id], map: "office_type_id")
@@ -58,13 +56,10 @@ model inventory_assets {
   added_by_user_id Int?
   date_added       DateTime?      @default(now()) @db.Timestamp(0)
   details          asset_details?
-laboratories     laboratories?  @relation(fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
-  units            units?         @relation(fields: [unit_id], references: [unit_id], onDelete: NoAction, onUpdate: NoAction)
-  users            users?         @relation(fields: [added_by_user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users            users?         @relation(fields: [added_by_user_id], references: [user_id])
+  laboratories     laboratories?  @relation(fields: [lab_id], references: [lab_id])
+  units            units?         @relation(fields: [unit_id], references: [unit_id])
   workstation      workstations?  @relation(fields: [workstation_id], references: [workstation_id])
-  
-  // ✅ ADDED: Back-relation for Service Log Assets
-  service_actions  service_log_assets[]
 
   @@index([added_by_user_id], map: "added_by_user_id")
   @@index([lab_id], map: "lab_id")
@@ -74,20 +69,15 @@ laboratories     laboratories?  @relation(fields: [lab_id], references: [lab_id]
 }
 
 model laboratories {
-  lab_id       Int     @id @default(autoincrement())
-  lab_name     String  @db.VarChar(50)
-  location     String? @db.VarChar(50)
-  dept_id      Int?
-  in_charge_id Int?
-
-  users            users[]            @relation("LabAssignment")
+  lab_id           Int                @id @default(autoincrement())
+  lab_name         String             @db.VarChar(50)
+  location         String?            @db.VarChar(50)
+  dept_id          Int?
+  in_charge_id     Int?
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
   departments      departments?       @relation(fields: [dept_id], references: [dept_id], map: "fk_lab_dept")
   workstations     workstations[]
-  
-  // ✅ ADDED: Back-relation for PMC Reports
-  pmc_reports      pmc_reports[]      
 
   @@index([dept_id], map: "dept_id")
   @@index([in_charge_id])
@@ -95,27 +85,20 @@ model laboratories {
 }
 
 model users {
-  user_id       Int         @id @default(autoincrement())
-  full_name     String      @db.VarChar(100)
-  email         String      @unique(map: "email") @db.VarChar(100)
-  password_hash String      @db.VarChar(255)
-  role          users_role? @default(Custodian)
-  created_at    DateTime?   @default(now()) @db.Timestamp(0)
-  lab_id        Int?
-
-  assigned_lab     laboratories?      @relation("LabAssignment", fields: [lab_id], references: [lab_id], onDelete: NoAction, onUpdate: NoAction)
-  daily_reports    daily_reports[]
-  inventory_assets inventory_assets[]
+  user_id                Int                      @id @default(autoincrement())
+  full_name              String                   @db.VarChar(100)
+  email                  String                   @unique(map: "email") @db.VarChar(100)
+  password_hash          String                   @db.VarChar(255)
+  role                   users_role?              @default(Custodian)
+  created_at             DateTime?                @default(now()) @db.Timestamp(0)
+  lab_id                 Int?
+  daily_reports          daily_reports[]
   equipment_borrows      equipment_borrows[]
+  inventory_assets       inventory_assets[]
   lab_requests           lab_requests[]
   software_installations software_installations[]
   one_time_links        one_time_links[]
-  
-  // ✅ ADDED: Back-relation for PMC Reports
-  pmc_reports      pmc_reports[]
-  
-  // ✅ ADDED: Back-relation for Service Logs
-  service_logs     service_logs[]
+  assigned_lab           laboratories?            @relation("LabAssignment", fields: [lab_id], references: [lab_id])
 
   @@index([lab_id], map: "users_lab_id_fkey")
   @@map("users")
@@ -149,21 +132,16 @@ model units {
 }
 
 model workstations {
-  workstation_id      Int      @id @default(autoincrement())
-  workstation_name    String   @db.VarChar(100) 
-  lab_id              Int?      
-  created_at          DateTime @default(now())
-  
-  workstation_remarks String?  @db.Text
-  status_id           Int?     @default(1) 
-  
-  laboratory          laboratories?              @relation(fields: [lab_id], references: [lab_id])
-  current_status      asset_statuses?            @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
-  assets              inventory_assets[] 
+  workstation_id      Int                        @id @default(autoincrement())
+  workstation_name    String                     @db.VarChar(100)
+  lab_id              Int?
+  created_at          DateTime                   @default(now())
+  status_id           Int?                       @default(1)
+  workstation_remarks String?                    @db.Text
+  assets              inventory_assets[]
   report_items        report_workstation_items[]
-  
-  // ✅ ADDED: Back-relation for PMC Reports
-  pmc_reports         pmc_reports[]
+  laboratory          laboratories?              @relation(fields: [lab_id], references: [lab_id])
+  current_status      asset_statuses?            @relation(fields: [status_id], references: [status_id])
 
   @@unique([workstation_name, lab_id])
   @@index([lab_id])
@@ -172,33 +150,31 @@ model workstations {
 }
 
 model asset_details {
-  detail_id        Int             @id @default(autoincrement())
-  asset_id         Int             @unique
-  property_tag_no  String?         @unique(map: "property_tag_no") @db.VarChar(50)
-  quantity         Int?            @default(1)
-  description      String?         @db.Text
-  serial_number    String?         @db.VarChar(100)
-  date_of_purchase DateTime?       @db.Date
-  asset_remarks    String?         @db.Text
-  status_id        Int?            @default(1) 
-  
-  asset            inventory_assets @relation(fields: [asset_id], references: [asset_id], onDelete: Cascade)
-  current_status   asset_statuses?  @relation(fields: [status_id], references: [status_id], onDelete: NoAction, onUpdate: NoAction)
+  detail_id        Int              @id @default(autoincrement())
+  asset_id         Int              @unique
+  property_tag_no  String?          @unique(map: "property_tag_no") @db.VarChar(50)
+  quantity         Int?             @default(1)
+  description      String?          @db.Text
+  serial_number    String?          @db.VarChar(100)
+  date_of_purchase DateTime?        @db.Date
+  asset_remarks    String?          @db.Text
+  status_id        Int?             @default(1)
+  asset            inventory_assets @relation(fields: [asset_id], references: [asset_id])
+  current_status   asset_statuses?  @relation(fields: [status_id], references: [status_id])
 
   @@index([status_id])
   @@map("asset_details")
 }
 
 model daily_report_procedures {
-  id              Int            @id @default(autoincrement())
+  id              Int           @id @default(autoincrement())
   report_id       Int
   procedure_id    Int
-  overall_status  String         @default("Pending") @db.VarChar(50)
-  overall_remarks String?        @db.Text
-  created_at      DateTime?      @default(now()) @db.Timestamp(0)
-  
-  daily_report    daily_reports? @relation(fields: [report_id], references: [report_id], onDelete: NoAction, onUpdate: NoAction)
-  procedure       procedures?    @relation(fields: [procedure_id], references: [procedure_id], onDelete: NoAction, onUpdate: NoAction)
+  overall_status  String        @default("Pending") @db.VarChar(50)
+  overall_remarks String?       @db.Text
+  created_at      DateTime?     @default(now()) @db.Timestamp(0)
+  procedure       procedures    @relation(fields: [procedure_id], references: [procedure_id])
+  daily_report    daily_reports @relation(fields: [report_id], references: [report_id])
 
   @@index([procedure_id], map: "procedure_id")
   @@index([report_id], map: "report_id")
@@ -211,29 +187,21 @@ model procedures {
   category                String?                   @db.VarChar(50)
   is_active               Boolean                   @default(true)
   created_at              DateTime?                 @default(now()) @db.Timestamp(0)
-  
   daily_report_procedures daily_report_procedures[]
-  
-  // ✅ ADDED: Back-relation for PMC Report Procedures
-  pmc_report_procedures   pmc_report_procedures[]
-  
-  // ✅ ADDED: Back-relation for Service Log Procedures
-  service_log_procedures  service_log_procedures[]
 
   @@index([procedure_id])
   @@map("procedures")
 }
 
 model report_workstation_items {
-  item_id        Int            @id @default(autoincrement())
+  item_id        Int           @id @default(autoincrement())
   report_id      Int
   workstation_id Int
-  status         String         @default("Working") @db.VarChar(50)
-  remarks        String?        @db.Text
-  created_at     DateTime?      @default(now()) @db.Timestamp(0)
-
-  daily_report   daily_reports? @relation(fields: [report_id], references: [report_id], onDelete: NoAction, onUpdate: NoAction)
-  workstation    workstations?  @relation(fields: [workstation_id], references: [workstation_id], onDelete: NoAction, onUpdate: NoAction)
+  status         String        @default("Working") @db.VarChar(50)
+  remarks        String?       @db.Text
+  created_at     DateTime?     @default(now()) @db.Timestamp(0)
+  daily_report   daily_reports @relation(fields: [report_id], references: [report_id])
+  workstation    workstations  @relation(fields: [workstation_id], references: [workstation_id])
 
   @@index([report_id], map: "report_id")
   @@index([workstation_id], map: "workstation_id")
@@ -241,10 +209,10 @@ model report_workstation_items {
 }
 
 model asset_statuses {
-  status_id   Int             @id @default(autoincrement())
-  status_name String          @unique @db.VarChar(50) 
-  details     asset_details[]
-  workstations workstations[]
+  status_id     Int             @id @default(autoincrement())
+  status_name   String          @unique @db.VarChar(50)
+  asset_details asset_details[]
+  workstations  workstations[]
 
   @@map("asset_statuses")
 }
@@ -335,6 +303,31 @@ enum daily_reports_status {
   Pending
   Approved
 }
+
+enum lab_request_status {
+  Pending
+  Admin_Approved
+  Custodian_Approved
+  Denied
+  Completed
+}
+
+enum equipment_borrow_status {
+  Pending
+  Admin_Approved
+  Custodian_Approved
+  Denied
+  Returned
+}
+
+enum software_install_status {
+  Pending
+  Admin_Approved
+  Custodian_Approved
+  Denied
+  Completed
+}
+
 
 // ==========================================
 // ✅ NEW TABLES ADDED BELOW
@@ -453,28 +446,4 @@ model service_log_procedures {
 
   @@index([log_id])
   @@index([procedure_id])
-}
-
-enum lab_request_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Completed
-}
-
-enum equipment_borrow_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Returned
-}
-
-enum software_install_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Completed
 }

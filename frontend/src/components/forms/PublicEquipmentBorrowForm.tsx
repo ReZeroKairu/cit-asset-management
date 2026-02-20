@@ -11,9 +11,10 @@ interface PublicEquipmentBorrowFormProps {
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
+  isOneTimeForm?: boolean;
 }
 
-export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicEquipmentBorrowFormProps) => {
+export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicEquipmentBorrowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   
@@ -192,10 +193,14 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     try {
       console.log('Submitting equipment borrow data:', formData);
       
-      // Call the parent's onSubmit callback instead of submitting directly
+      // Don't submit directly - parent will handle submission
+      
+      // Call parent's onSubmit to show success message
       if (onSubmit) {
-        await onSubmit(formData);
+        onSubmit(formData);
       }
+      
+      // Reset form
       
       // Reset form
       setFormData({

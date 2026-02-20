@@ -183,7 +183,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Laboratory</label>
-                      <p className="font-medium text-gray-900 uppercase">{form.details.laboratory}</p>
+                      <p className="font-medium text-gray-900 uppercase">{form.details?.laboratory || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -212,7 +212,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Requested by</label>
-                      <p className="font-medium text-gray-900">{form.details.requested_by}</p>
+                      <p className="font-medium text-gray-900">{form.details?.requested_by || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Approved by</label>
@@ -222,7 +222,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Monitored by</label>
-                      <p className="font-medium text-gray-900">{form.details.monitored_by}</p>
+                      <p className="font-medium text-gray-900">{form.details?.monitored_by || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Laboratory</label>
-                      <p className="font-medium text-gray-900 uppercase">{form.details.laboratory}</p>
+                      <p className="font-medium text-gray-900 uppercase">{form.details?.laboratory || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Release Time</label>
@@ -301,7 +301,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Requested by</label>
-                      <p className="font-medium text-gray-900">{form.details.requested_by}</p>
+                      <p className="font-medium text-gray-900">{form.details?.requested_by || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Approved by</label>
@@ -311,7 +311,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Monitored by</label>
-                      <p className="font-medium text-gray-900">{form.details.monitored_by}</p>
+                      <p className="font-medium text-gray-900">{form.details?.monitored_by || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -405,11 +405,11 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Laboratory</label>
-                      <p className="font-medium text-gray-900 uppercase">{form.details.laboratory}</p>
+                      <p className="font-medium text-gray-900 uppercase">{form.details?.laboratory || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Requested by</label>
-                      <p className="font-medium text-gray-900">{form.details.requested_by}</p>
+                      <p className="font-medium text-gray-900">{form.details?.requested_by || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="space-y-3">

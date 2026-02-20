@@ -17,9 +17,11 @@ interface Props {
   onClose: () => void;
   reportId?: number; // Optional: if editing existing report
   mode?: 'single' | 'all'; // New: single report or all reports mode
+  archiveMode?: boolean; // Add archive mode prop
+  pageContext?: 'daily-reports' | 'archives'; // Add page context
 }
 
-const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, mode = 'single' }) => {
+const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, mode = 'single', archiveMode = false, pageContext = 'archives' }) => {
   const { user } = useAuth();
   const [workstations, setWorkstations] = useState<WorkstationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,6 +29,10 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   const [availableReports, setAvailableReports] = useState<any[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [generateMode, setGenerateMode] = useState<'single' | 'all'>('single');
+  const [dateFilters, setDateFilters] = useState({
+    start_date: '',
+    end_date: ''
+  });
 
   // Format date for display in modal
   const formatDisplayDateTime = (dateString: string | undefined) => {
@@ -61,24 +67,96 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     }
   }, [show, reportId, mode]);
 
+  // Debug: Log when availableReports changes
+  useEffect(() => {
+    console.log('🔍 availableReports updated:', availableReports.length, availableReports);
+  }, [availableReports]);
+
+  // Filter reports by date and creator
+  const getFilteredReports = () => {
+    let filtered = availableReports;
+    
+    // Apply date filters
+    if (dateFilters.start_date || dateFilters.end_date) {
+      filtered = filtered.filter(report => {
+        const reportDate = new Date(report.report_date || report.created_at);
+        const startDate = dateFilters.start_date ? new Date(dateFilters.start_date) : null;
+        const endDate = dateFilters.end_date ? new Date(dateFilters.end_date) : null;
+
+        if (startDate && reportDate < startDate) return false;
+        if (endDate && reportDate > endDate) return false;
+        
+        return true;
+      });
+    }
+    
+    // For custodians, only show reports they created (only in non-archive, non-daily-reports context)
+    if (!archiveMode && pageContext !== 'daily-reports' && user?.role !== 'Admin') {
+      filtered = filtered.filter(report => report.created_by === user?.id);
+    }
+    
+    return filtered;
+  };
+
   const loadAvailableReports = async () => {
     try {
+      console.log('🔍 Loading available reports - archiveMode:', archiveMode, 'pageContext:', pageContext, 'user role:', user?.role);
       let response;
-      // Admin can see all reports, custodians only see their lab's reports
-      if (user?.role === 'Admin') {
-        response = await api.get("/daily-reports");
+      
+      // In archive mode, respect creator permissions and only show approved reports
+      if (archiveMode) {
+        if (user?.role === 'Admin') {
+          console.log('🔍 Admin Archive: Fetching all approved reports');
+          response = await api.get("/daily-reports?status=Approved");
+        } else {
+          // Custodians can only see their own approved reports in archive mode
+          console.log('🔍 Custodian Archive: Fetching own approved reports');
+          response = await api.get(`/daily-reports?created_by=${user?.id}&status=Approved`);
+        }
       } else {
-        // For custodians, only get reports from their assigned lab
-        response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
+        // Normal mode - check page context
+        if (pageContext === 'daily-reports') {
+          // On Daily Reports page, show only pending reports
+          if (user?.role === 'Admin') {
+            console.log('🔍 Admin Daily Reports: Fetching all pending reports');
+            response = await api.get("/daily-reports?status=Pending");
+          } else {
+            // For custodians, only get pending reports from their assigned lab
+            console.log('🔍 Custodian Daily Reports: Fetching pending lab reports for lab_id:', user?.lab_id);
+            response = await api.get(`/daily-reports?status=Pending&lab_id=${user?.lab_id}`);
+          }
+        } else {
+          // Normal filtering by role
+          if (user?.role === 'Admin') {
+            console.log('🔍 Admin Normal: Fetching all reports');
+            response = await api.get("/daily-reports");
+          } else {
+            // For custodians, only get reports from their assigned lab
+            console.log('🔍 Custodian Normal: Fetching lab reports for lab_id:', user?.lab_id);
+            response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
+          }
+        }
+      }
+      
+      console.log('🔍 API response:', response.data);
+      console.log('🔍 Response type:', typeof response.data);
+      console.log('🔍 Is array?', Array.isArray(response.data));
+      
+      // Check if response.data is an array before sorting
+      let reportsData = response.data;
+      if (!Array.isArray(reportsData)) {
+        // If it's an object, try to extract array from common properties
+        reportsData = reportsData.data || reportsData.reports || reportsData.dailyReports || [];
       }
       
       // Sort reports by newest to oldest (using created_at or report_date)
-      const sortedReports = response.data.sort((a: any, b: any) => {
+      const sortedReports = reportsData.sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || a.report_date);
         const dateB = new Date(b.created_at || b.report_date);
         return dateB.getTime() - dateA.getTime(); // Newest first
       });
       
+      console.log('🔍 Sorted reports:', sortedReports);
       setAvailableReports(sortedReports);
     } catch (error) {
       console.error("Failed to load available reports:", error);
@@ -289,6 +367,35 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                 </div>
               </div>
 
+              {/* Date Filters */}
+              <div className="mt-4 space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Filter by Date Range:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dateFilters.start_date}
+                      onChange={(e) => setDateFilters(prev => ({ ...prev, start_date: e.target.value }))}
+                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dateFilters.end_date}
+                      onChange={(e) => setDateFilters(prev => ({ ...prev, end_date: e.target.value }))}
+                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Report Selection for Single Mode */}
               {generateMode === 'single' && (
                 <div className="mt-4 flex items-center gap-4">
@@ -307,7 +414,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     className="border rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]"
                   >
                     <option value="" disabled>Select a report to generate</option>
-                    {availableReports.map((report) => (
+                    {getFilteredReports().map((report) => (
                       <option key={report.report_id} value={report.report_id}>
                         Report #{report.report_id} - {new Date(report.report_date).toLocaleDateString()} - {report.laboratories?.lab_name}
                       </option>
@@ -316,7 +423,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                 </div>
               )}
             </div>
-
+            
+            
             {/* Content */}
             <div className="p-6 overflow-y-auto flex-1">
               {loading ? (
@@ -331,14 +439,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h4 className="font-semibold text-blue-900 mb-2">All Reports Mode</h4>
                     <p className="text-blue-700">
-                      Ready to generate {availableReports.length} Daily Accomplishment Reports.
+                      Ready to generate {getFilteredReports().length} Daily Accomplishment Reports.
                       Each report will be downloaded as a separate Word document.
                     </p>
                   </div>
                   
                   <div className="space-y-2">
                     <h5 className="font-medium text-gray-900">Reports to be generated:</h5>
-                    {availableReports.map((report) => (
+                    {getFilteredReports().map((report) => (
                       <div key={report.report_id} className="flex justify-between items-center border rounded p-3">
                         <div>
                           <span className="font-medium">Report #{report.report_id}</span>
