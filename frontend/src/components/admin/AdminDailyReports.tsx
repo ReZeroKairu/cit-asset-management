@@ -7,7 +7,8 @@ import {
   updateDailyReport,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
-import { CheckSquare, Square } from "lucide-react";
+import { CheckSquare, Square, FileText } from "lucide-react";
+import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 
 interface AdminDailyReportsProps {}
 
@@ -20,6 +21,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   );
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReports, setSelectedReports] = useState<number[]>([]);
+  const [showDARModal, setShowDARModal] = useState(false);
   const [filters, setFilters] = useState({
     start_date: "",
     end_date: "",
@@ -210,10 +212,21 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Daily Reports</h1>
-        <p className="mt-2 text-gray-600">
-          Review and manage all custodian daily reports
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Daily Reports</h1>
+            <p className="mt-2 text-gray-600">
+              Review and manage all custodian daily reports
+            </p>
+          </div>
+          <button
+            onClick={() => setShowDARModal(true)}
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            Generate DAR Report
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -465,6 +478,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           </div>
         )}
       </div>
+
+      {/* Daily Accomplishment Report Modal */}
+      <DailyAccomplishmentReport
+        show={showDARModal}
+        onClose={() => setShowDARModal(false)}
+        archiveMode={false}
+        pageContext={'daily-reports'}
+      />
     </div>
   );
 };
