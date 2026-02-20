@@ -7,8 +7,11 @@ import {
   updateDailyReport,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
-import { CheckSquare, Square, FileText } from "lucide-react";
+import { CheckSquare, Square, FileText, Download } from "lucide-react";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
+import { generateTemplateReport } from "../../utils/generateTemplateReport";
+import { mapReportDataToTemplate } from "../../utils/templateMapping";
+import api from "../../api/axios";
 
 interface AdminDailyReportsProps {}
 
@@ -159,6 +162,93 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
 
   const handleReportUpdated = () => {
     loadReports();
+  };
+
+  const handleGenerateReport = async (report: DailyReport) => {
+    try {
+      console.log("Generating report for:", report.report_id);
+      
+      // Show loading state
+      setError("");
+      
+      // Check if report_id exists
+      if (!report.report_id) {
+        throw new Error("Report ID is missing");
+      }
+      
+      // Use the same API call as DailyAccomplishmentReport that works
+      console.log("Fetching detailed report data for ID:", report.report_id);
+      const response = await api.get(`/daily-reports/${report.report_id}`);
+      const detailedReport = response.data;
+      
+      console.log("Detailed report data:", detailedReport);
+      
+      // Check if detailedReport exists and has the expected structure
+      if (!detailedReport) {
+        console.error("No data returned from API");
+        throw new Error("API returned no data for this report");
+      }
+      
+      // Process workstation data in same way as DailyAccomplishmentReport
+      const processedWorkstations = detailedReport.workstation_items?.map((item: any) => ({
+        workstation_id: item.workstation_id,
+        workstation_name: item.workstation_name || 'Unknown Workstation',
+        status: item.status || 'Working',
+        remarks: item.remarks || ''
+      })) || [];
+      
+      console.log("Processed workstations:", processedWorkstations);
+      
+      // Use procedures data directly from API response
+      const proceduresData = detailedReport.procedures || [];
+      console.log("Procedures data:", proceduresData);
+      
+      // Map the report data to template format in same way as DailyAccomplishmentReport
+      const templateData = mapReportDataToTemplate({
+        lab_name: detailedReport.laboratories?.lab_name || "Unknown Lab",
+        lab_id: detailedReport.lab_id,
+        custodian_name: detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
+        noted_by: "DR. MARCO MARVIN L. RADO",
+        general_remarks: detailedReport.general_remarks || "",
+        workstations: processedWorkstations,
+        procedures: proceduresData,
+        report_id: detailedReport.report_id,
+        created_at: detailedReport.created_at || detailedReport.report_date,
+        report_date: detailedReport.report_date
+      });
+      
+      console.log("Template data:", templateData);
+      
+      // Determine template based on lab_id
+      const getLabTemplate = (labId: number): string => {
+        switch (labId) {
+          case 1:
+            return "/Lab1_DAR.docx"; // CIT-Lab 1 template
+          case 2:
+            return "/Lab2_DAR.docx"; // CIT-Lab 2 template
+          case 3:
+            return "/CiscoLab_DAR.docx"; // CIT-CISCO Lab template
+          default:
+            return "/Lab2_DAR.docx"; // Default template
+        }
+      };
+      
+      const templateFile = getLabTemplate(detailedReport.lab_id);
+      const reportDate = detailedReport.report_date ? new Date(detailedReport.report_date) : new Date();
+      const fileName = `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${reportDate.toISOString().split("T")[0]}.docx`;
+      
+      console.log("Using template:", templateFile);
+      console.log("File name:", fileName);
+      
+      // Generate and download the report
+      await generateTemplateReport(templateFile, templateData, fileName);
+      
+      console.log("Report generated successfully!");
+      
+    } catch (error) {
+      console.error("Failed to generate report:", error);
+      setError(`Failed to generate report. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const formatDateTime = (dateString: string) => {
@@ -460,6 +550,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                             />
                           </svg>
+                        </button>
+                        <button
+                          onClick={() => handleGenerateReport(report)}
+                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          title="Generate Report"
+                        >
+                          <Download className="w-4 h-4" />
                         </button>
                         {report.status !== "Approved" && (
                           <button
