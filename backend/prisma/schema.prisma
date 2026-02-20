@@ -329,29 +329,6 @@ enum software_install_status {
   Completed
 }
 
-enum lab_request_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Completed
-}
-
-enum equipment_borrow_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Returned
-}
-
-enum software_install_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Completed
-}
 
 // ==========================================
 // ✅ NEW TABLES ADDED BELOW
