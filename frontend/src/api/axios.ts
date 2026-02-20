@@ -1,8 +1,16 @@
 //frontend/src/api/axios.ts
 import axios from "axios";
 
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
+  }
+  return `http://${hostname}:3001`;
+};
+
 const api = axios.create({
-  baseURL: 'http://192.168.110.72:3001',
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },

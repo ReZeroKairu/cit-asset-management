@@ -1,15 +1,10 @@
 // Dynamic API URL detection
 const getApiBaseUrl = () => {
-  // Use the same host as the current page, but force backend port 3001
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    // Extract host from current origin, but force port 3001 for backend
-    const url = new URL(origin);
-    const host = url.hostname; // e.g., 192.168.110.72
-    return `${url.protocol}//${host}:3001`;
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001';
   }
-  // Fallback for SSR or non-browser environments
-  return 'http://192.168.110.72:3001';
+  return `http://${hostname}:3001`;
 };
 
 const API_BASE_URL = getApiBaseUrl();

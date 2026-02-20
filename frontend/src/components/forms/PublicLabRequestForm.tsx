@@ -206,10 +206,14 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
     try {
       console.log('Submitting lab request data:', formData);
       
-      // Call the parent's onSubmit callback instead of submitting directly
+      // Don't submit directly - parent will handle submission
+      
+      // Call parent's onSubmit to show success message
       if (onSubmit) {
-        await onSubmit(formData);
+        onSubmit(formData);
       }
+      
+      // Reset form
       
       // Reset form
       setFormData({

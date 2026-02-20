@@ -159,7 +159,7 @@ const LoginPage = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <div key={`form-${formKey}`} className="space-y-6">
+            <form key={`form-${formKey}`} onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -217,7 +217,6 @@ const LoginPage = () => {
                 type="submit" 
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
                 disabled={isLoading}
-                onClick={handleSubmit}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
@@ -231,7 +230,7 @@ const LoginPage = () => {
                   "Sign In"
                 )}
               </Button>
-            </div>
+            </form>
           </CardContent>
         </Card>
       </div>
