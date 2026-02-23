@@ -174,6 +174,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                       <p className="font-medium text-gray-900">{form.details.faculty_student_name}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide">User Type</label>
+                      <p className="font-medium text-gray-900 capitalize">{form.details.user_type || form.details.userType || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Year Level</label>
                       <p className="font-medium text-gray-900">{form.details.year_level}</p>
                     </div>
@@ -269,6 +273,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Faculty/Student Name</label>
                       <p className="font-medium text-gray-900">{form.details.faculty_student_name}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide">User Type</label>
+                      <p className="font-medium text-gray-900 capitalize">{form.details.user_type || form.details.userType || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Year Level</label>

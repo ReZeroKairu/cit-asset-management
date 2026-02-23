@@ -49,14 +49,14 @@ const PublicFormsPage = () => {
     }
   };
 
-  const getFormTypeLabel = (type: string) => {
+  const getFormTypeLabel = (type: string, formData?: any) => {
     switch (type) {
       case 'lab-request':
         return 'Lab Request';
       case 'equipment-borrow':
-        return 'Equipment Borrow';
+        return 'Equipment Borrow Request';
       case 'software-install':
-        return 'Software Installation';
+        return 'Software Installation Request';
       default:
         return type;
     }
@@ -120,13 +120,14 @@ const PublicFormsPage = () => {
                 <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Form Submitted Successfully!</h2>
                 <p className="text-gray-600 mb-4">
-                  Your {getFormTypeLabel(submittedForm.type)} has been submitted and is now pending review.
+                  Your {getFormTypeLabel(submittedForm.type, submittedForm.data)} has been submitted and is now pending review.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 text-left max-w-md mx-auto">
                   <h3 className="font-semibold mb-2">Submission Details:</h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
+                    <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type, submittedForm.data)}</p>
                     <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
+                    <p><strong>User Type:</strong> {submittedForm.data.user_type || 'N/A'}</p>
                     <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
                     {submittedForm.data.approved_by && (
                       <p><strong>Approved By:</strong> {submittedForm.data.approved_by}</p>

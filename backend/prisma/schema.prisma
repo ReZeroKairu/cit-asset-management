@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
@@ -56,6 +56,7 @@ model inventory_assets {
   added_by_user_id Int?
   date_added       DateTime?      @default(now()) @db.Timestamp(0)
   details          asset_details?
+  service_log_assets service_log_assets[]
   users            users?         @relation(fields: [added_by_user_id], references: [user_id])
   laboratories     laboratories?  @relation(fields: [lab_id], references: [lab_id])
   units            units?         @relation(fields: [unit_id], references: [unit_id])
@@ -76,6 +77,7 @@ model laboratories {
   in_charge_id     Int?
   daily_reports    daily_reports[]
   inventory_assets inventory_assets[]
+  pmc_reports      pmc_reports[]
   departments      departments?       @relation(fields: [dept_id], references: [dept_id], map: "fk_lab_dept")
   users            users[]            @relation("LabAssignment")
   workstations     workstations[]
@@ -99,6 +101,8 @@ model users {
   lab_requests           lab_requests[]
   software_installations software_installations[]
   one_time_links        one_time_links[]
+  pmc_reports             pmc_reports[]
+  service_logs            service_logs[]
   assigned_lab           laboratories?            @relation("LabAssignment", fields: [lab_id], references: [lab_id])
 
   @@index([lab_id], map: "users_lab_id_fkey")
@@ -141,6 +145,7 @@ model workstations {
   workstation_remarks String?                    @db.Text
   assets              inventory_assets[]
   report_items        report_workstation_items[]
+  pmc_reports          pmc_reports[]
   laboratory          laboratories?              @relation(fields: [lab_id], references: [lab_id])
   current_status      asset_statuses?            @relation(fields: [status_id], references: [status_id])
 
@@ -189,6 +194,8 @@ model procedures {
   is_active               Boolean                   @default(true)
   created_at              DateTime?                 @default(now()) @db.Timestamp(0)
   daily_report_procedures daily_report_procedures[]
+  pmc_report_procedures   pmc_report_procedures[]
+  service_log_procedures  service_log_procedures[]
 
   @@index([procedure_id])
   @@map("procedures")
@@ -237,6 +244,7 @@ model lab_requests {
   approved_by          String?            @db.VarChar(100)
   status               lab_request_status @default(Pending)
   created_at           DateTime           @default(now()) @db.Timestamp(0)
+  user_type            String?            @db.VarChar(20)
   users                users?             @relation(fields: [user_id], references: [user_id])
   @@index([user_id])
   @@map("lab_requests")
@@ -259,6 +267,7 @@ model equipment_borrows {
   approved_by          String?                 @db.VarChar(100)
   status               equipment_borrow_status @default(Pending)
   created_at           DateTime                @default(now()) @db.Timestamp(0)
+  user_type            String?                 @db.VarChar(20)
   users                users?                  @relation(fields: [user_id], references: [user_id])
   @@index([user_id])
   @@map("equipment_borrows")

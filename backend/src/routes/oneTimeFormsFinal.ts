@@ -204,6 +204,7 @@ router.post('/submit/:token', async (req, res) => {
           requested_by: formData.requested_by || '',
           remarks: formData.remarks || '',
           monitored_by: formData.monitored_by || '',
+          user_type: formData.user_type || '', // ADD: Store user type
           user_id: generatedBy,
           status: 'Pending'
         }
@@ -226,6 +227,7 @@ router.post('/submit/:token', async (req, res) => {
           remarks: formData.remarks || '',
           monitored_by: formData.monitored_by || '',
           approved_by: formData.approved_by || '',
+          user_type: formData.user_type || '', // ADD: Store user type
           user_id: generatedBy,
           status: 'Pending'
         }

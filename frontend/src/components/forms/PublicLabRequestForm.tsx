@@ -5,6 +5,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { submitPublicLabRequest } from "../../api/publicForms";
+import { getApiBaseUrl } from "../../api/publicForms";
 
 interface PublicLabRequestFormProps {
   onSubmit?: (data: any) => void;
@@ -18,24 +19,50 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [selectedLab, setSelectedLab] = useState<string>('');
+  const [userType, setUserType] = useState<'student' | 'faculty'>('student'); // New state for user type
 
-  // Debug: Log the props received
-  console.log('🔍 PublicLabRequestForm props:', { custodianName, assignedLab });
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    usage_type: '',
+    faculty_student_name: '',
+    year_level: '',
+    laboratory: '',
+    printing_pages: '',
+    ws_number: '',
+    time_in: '',
+    time_out: '',
+    purpose: '',
+    requested_by: '', // Default value for public submissions
+    remarks: '',
+    monitored_by: '',
+    approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
+    user_type: 'student' // Add user_type field for database storage
+  });
 
   // Fetch all labs from database
   useEffect(() => {
     const fetchLabs = async () => {
       try {
-        console.log('🔍 Fetching labs from:', 'http://192.168.110.72:3001/laboratories/public');
-        const response = await fetch('http://192.168.110.72:3001/laboratories/public');
-        console.log('🔍 Labs response status:', response.status);
+        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
         }
         
-        const labsData = await response.json();
-        console.log('🔍 Labs data received:', labsData);
+        const contentType = response.headers.get('content-type');
+        const responseText = await response.text();
+        
+        // Check if response is HTML (error page) instead of JSON
+        if (contentType && contentType.includes('text/html')) {
+          throw new Error('Server returned HTML error page instead of JSON data');
+        }
+        
+        let labsData;
+        try {
+          labsData = JSON.parse(responseText);
+        } catch (parseError) {
+          throw new Error(`Invalid JSON response: ${(parseError as Error).message}`);
+        }
         
         const labOptions = labsData.map((lab: any) => ({
           value: lab.lab_name,
@@ -72,18 +99,13 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         const fetchCustodian = async () => {
           try {
             const encodedLabName = encodeURIComponent(selectedLabData.value);
-            console.log('🔍 Fetching custodian for lab:', selectedLabData.value);
-            console.log('🔍 API URL:', `http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
-            
-            const response = await fetch(`http://192.168.110.72:3001/laboratories/public/${encodedLabName}/custodian`);
-            console.log('🔍 Custodian response status:', response.status);
+            const response = await fetch(`${getApiBaseUrl()}/laboratories/public/${encodedLabName}/custodian`);
             
             if (!response.ok) {
               throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
             }
             
             const custodianData = await response.json();
-            console.log('🔍 Custodian data received:', custodianData);
             
             // Try different possible custodian field names
             const custodianName = custodianData.users?.[0]?.full_name || 
@@ -91,8 +113,6 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
                               custodianData.full_name || 
                               custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
                               'No custodian assigned';
-            
-            console.log('🔍 Extracted custodian name:', custodianName);
             
             setFormData(prev => ({
               ...prev,
@@ -124,52 +144,29 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   
   // Filter laboratory options based on assigned lab and form type
   const getLabOptions = () => {
-    console.log('🔍 getLabOptions called with:', { assignedLab, labs: labs.length, isOneTimeForm });
-    
     // Always include E-Forum
     const eForumOption = { value: "e-forum", label: "E-Forum" };
     
     // For public forms (not one-time), show all labs + E-Forum
     if (!isOneTimeForm) {
-      console.log('🔍 Public form: returning all labs + E-Forum');
       return [eForumOption, ...labs];
     }
     
     // For one-time forms, filter labs
     if (!assignedLab) {
-      console.log('🔍 One-time form with no assignedLab, returning only E-Forum');
       return [eForumOption];
     }
     
     // For one-time forms, only show the assigned lab and E-Forum
     const assignedLabOption = labs.find(option => option.value === assignedLab);
-    console.log('🔍 One-time form: Looking for assignedLab:', assignedLab, 'found:', assignedLabOption);
     
     if (assignedLabOption) {
-      console.log('🔍 One-time form: Returning assigned lab + E-Forum');
       return [assignedLabOption, eForumOption];
     }
     
     // Fallback to E-Forum only if assigned lab not found
-    console.log('🔍 One-time form: Assigned lab not found, returning only E-Forum');
     return [eForumOption];
   };
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    usage_type: '',
-    faculty_student_name: '',
-    year_level: '',
-    laboratory: '',
-    printing_pages: '',
-    ws_number: '',
-    time_in: '',
-    time_out: '',
-    purpose: '',
-    requested_by: '', // Default value for public submissions
-    remarks: '',
-    monitored_by: '',
-    approved_by: 'DR. MARCO MARVIN L. RADO' // Pre-filled approval
-  });
 
   // Update monitored_by when custodianName changes
   useEffect(() => {
@@ -204,16 +201,17 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting lab request data:', formData);
-      
-      // Don't submit directly - parent will handle submission
+      // Include userType in the form data for template generation
+      const formDataWithUserType = {
+        ...formData,
+        userType: userType, // Add user type to determine template name
+        user_type: userType // Add user_type field for database storage
+      };
       
       // Call parent's onSubmit to show success message
       if (onSubmit) {
-        onSubmit(formData);
+        onSubmit(formDataWithUserType);
       }
-      
-      // Reset form
       
       // Reset form
       setFormData({
@@ -230,7 +228,8 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         requested_by: '', // Default value for public submissions
         remarks: '',
         monitored_by: '',
-        approved_by: 'DR. MARCO MARVIN L. RADO' // Pre-filled approval
+        approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
+        user_type: userType
       });
     } catch (error) {
       console.error('Error submitting lab request:', error);
@@ -278,7 +277,20 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="faculty_student_name">Faculty/Student Name *</Label>
+          <Label htmlFor="user_type">User Type *</Label>
+          <Select value={userType} onValueChange={(value: 'student' | 'faculty') => setUserType(value)} required disabled={disabled}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select user type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="student">Student</SelectItem>
+              <SelectItem value="faculty">Faculty</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="faculty_student_name">{userType === 'faculty' ? 'Faculty Name' : 'Student Name'} *</Label>
           <Input
             id="faculty_student_name"
             value={formData.faculty_student_name}
@@ -289,16 +301,18 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="year_level">Year Level</Label>
-          <Input
-            id="year_level"
-            value={formData.year_level}
-            onChange={(e) => handleInputChange('year_level', e.target.value)}
-            placeholder="e.g., 1st Year, 2nd Year"
-            disabled={disabled}
-          />
-        </div>
+        {userType === 'student' && (
+          <div className="space-y-2">
+            <Label htmlFor="year_level">Year Level</Label>
+            <Input
+              id="year_level"
+              value={formData.year_level}
+              onChange={(e) => handleInputChange('year_level', e.target.value)}
+              placeholder="e.g., 1st Year, 2nd Year"
+              disabled={disabled}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="laboratory">Laboratory *</Label>

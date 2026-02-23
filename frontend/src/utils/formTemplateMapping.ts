@@ -3,13 +3,25 @@ import { generateTemplateReport } from './generateTemplateReport';
 
 // Smart form type detection based on data content
 const detectFormType = (formData: any): string => {
-  // If form type is explicitly provided and valid, use it
-  if (formData.type && FORM_TEMPLATES[formData.type as keyof typeof FORM_TEMPLATES]) {
-    return formData.type;
-  }
-  
   // Smart detection based on data content
   const data = formData.details || formData;
+
+  // Check for user type at both root level and in details
+  const resolvedUserType = data.userType || data.user_type || formData.userType || formData.user_type;
+  
+  // If form type is explicitly provided and valid, check if we need to use faculty variant
+  if (formData.type && FORM_TEMPLATES[formData.type as keyof typeof FORM_TEMPLATES]) {
+    // Check if we should use faculty variant
+    if (resolvedUserType === 'faculty') {
+      if (formData.type === 'equipment-borrow') {
+        return 'equipment-borrow-faculty';
+      } else if (formData.type === 'lab-request') {
+        return 'lab-request-faculty';
+      }
+    }
+    
+    return formData.type;
+  }
   
   // Check for equipment borrow indicators
   if (data.equipment_list || data.equipment_items || data.releaseTime || data.returnedTime) {
@@ -20,25 +32,29 @@ const detectFormType = (formData: any): string => {
         try {
           const parsed = JSON.parse(equipmentData);
           if (Array.isArray(parsed) && parsed.some((item: any) => item.unitQty && item.equipmentName)) {
-            return 'equipment-borrow';
+            const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+            return result;
           }
         } catch {
           // If JSON parse fails, check for equipment keywords
           if (equipmentData.toLowerCase().includes('equipment') || 
               equipmentData.toLowerCase().includes('borrow')) {
-            return 'equipment-borrow';
+            const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+            return result;
           }
         }
       } else if (Array.isArray(equipmentData)) {
         if (equipmentData.some((item: any) => item.unitQty && item.equipmentName)) {
-          return 'equipment-borrow';
+          const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+          return result;
         }
       }
     }
     
     // Check for borrow-specific fields
-    if (data.releaseTime || data.returnedTime || data.borrow_date) {
-      return 'equipment-borrow';
+    if (data.releaseTime || data.returned_time || data.borrow_date) {
+      const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+      return result;
     }
   }
   
@@ -49,6 +65,10 @@ const detectFormType = (formData: any): string => {
   
   // Check for lab request indicators
   if (data.usage_type || data.time_in || data.time_out || data.ws_number || data.printing_pages) {
+    // Check if it's faculty lab request
+    if (resolvedUserType === 'faculty') {
+      return 'lab-request-faculty';
+    }
     return 'lab-request';
   }
   
@@ -56,6 +76,10 @@ const detectFormType = (formData: any): string => {
   if (data.purpose) {
     const purpose = data.purpose.toLowerCase();
     if (purpose.includes('borrow') || purpose.includes('equipment')) {
+      // Check if it's faculty equipment borrow
+      if (resolvedUserType === 'faculty') {
+        return 'equipment-borrow-faculty';
+      }
       return 'equipment-borrow';
     }
     if (purpose.includes('install') || purpose.includes('software')) {
@@ -73,7 +97,9 @@ const detectFormType = (formData: any): string => {
 // Map form types to their template files
 export const FORM_TEMPLATES = {
   'lab-request': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request.docx',
-  'equipment-borrow': '/LDCU-Forms-CIT-033-Laboratoty Borrowing of Equipment.docx',
+  'lab-request-faculty': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request Faculty.docx',
+  'equipment-borrow': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment.docx',
+  'equipment-borrow-faculty': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment Faculty.docx',
   'software-install': '/LDCU-Forms-CIT-035-Laboratory Software Installation Request.docx',
   'one-time-submission': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request.docx', // Default to lab request
 };
@@ -172,6 +198,17 @@ export const mapFormDataToTemplate = (formData: any) => {
         additional_requirements: formData.details?.additional_requirements || '',
       };
 
+    case 'lab-request-faculty':
+      return {
+        ...baseData,
+        course_code: formData.details?.course_code || '',
+        year_section: formData.details?.year_section || '',
+        number_of_students: formData.details?.number_of_students || '',
+        schedule: formData.details?.schedule || '',
+        software_needed: formData.details?.software_needed || '',
+        additional_requirements: formData.details?.additional_requirements || '',
+      };
+
     case 'equipment-borrow':
       const equipmentData = formData.details?.equipment_list || formData.equipment_list || [];
       let unitQtys: string[] = [];
@@ -223,6 +260,100 @@ export const mapFormDataToTemplate = (formData: any) => {
         },
         // Add count for template logic
         equipment_count: maxItems.toString(),
+        borrow_date: formatDate(formData.details?.borrow_date || formData.date || ''),
+        return_date: formatDate(formData.details?.return_date || ''),
+        release_time: (() => {
+          const time24 = formData.details?.releaseTime || formData.releaseTime || '';
+          if (!time24) return '';
+          
+          let hours: number, minutes: string;
+          if (time24.includes(':')) {
+            const parts = time24.split(':');
+            hours = parseInt(parts[0]);
+            minutes = parts[1];
+          } else {
+            hours = parseInt(time24.substring(0, 2));
+            minutes = time24.substring(2);
+          }
+          
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          
+          return `${displayHours}:${minutes.padStart(2, '0')} ${period}`;
+        })(),
+        returned_time: (() => {
+          const time24 = formData.details?.returnedTime || formData.returnedTime || '';
+          if (!time24) return '';
+          
+          let hours: number, minutes: string;
+          if (time24.includes(':')) {
+            const parts = time24.split(':');
+            hours = parseInt(parts[0]);
+            minutes = parts[1];
+          } else {
+            hours = parseInt(time24.substring(0, 2));
+            minutes = time24.substring(2);
+          }
+          
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          
+          return `${displayHours}:${minutes.padStart(2, '0')} ${period}`;
+        })(),
+        purpose_of_use: formData.details?.purpose_of_use || formData.purpose || '',
+      };
+
+    case 'equipment-borrow-faculty':
+      const facultyEquipmentData = formData.details?.equipment_list || formData.equipment_list || [];
+      let facultyUnitQtys: string[] = [];
+      let facultyEquipmentNames: string[] = [];
+      
+      if (facultyEquipmentData) {
+        let items: any[] = [];
+        if (typeof facultyEquipmentData === 'string') {
+          try {
+            items = JSON.parse(facultyEquipmentData);
+          } catch {
+            // If parsing fails, treat as plain text
+            items = [{ unitQty: '', equipmentName: facultyEquipmentData }];
+          }
+        } else if (Array.isArray(facultyEquipmentData)) {
+          items = facultyEquipmentData;
+        }
+        
+        facultyUnitQtys = items.map((item: any) => item.unitQty || '');
+        facultyEquipmentNames = items.map((item: any) => item.equipmentName || '');
+      }
+      
+      // Create individual placeholders for each equipment item (up to 10 items)
+      const facultyEquipmentPlaceholders: any = {};
+      const facultyMaxItems = Math.min(facultyUnitQtys.length, 10);
+      
+      for (let i = 0; i < facultyMaxItems; i++) {
+        facultyEquipmentPlaceholders[`unitQty_${i + 1}`] = facultyUnitQtys[i] || '';
+        facultyEquipmentPlaceholders[`equipmentName_${i + 1}`] = facultyEquipmentNames[i] || '';
+      }
+      
+      // Fill remaining placeholders with empty strings
+      for (let i = facultyMaxItems + 1; i <= 10; i++) {
+        facultyEquipmentPlaceholders[`unitQty_${i}`] = '';
+        facultyEquipmentPlaceholders[`equipmentName_${i}`] = '';
+      }
+      
+      return {
+        ...baseData,
+        // Original column-based placeholders (for backward compatibility)
+        unitQty_column: facultyUnitQtys.join('\n'),
+        equipmentName_column: facultyEquipmentNames.join('\n'),
+        // Individual item placeholders for flexible layout
+        ...facultyEquipmentPlaceholders,
+        // Keep nested structure for backward compatibility
+        equipment_items: {
+          unitQty_column: facultyUnitQtys.join('\n'),
+          equipmentName_column: facultyEquipmentNames.join('\n')
+        },
+        // Add count for template logic
+        equipment_count: facultyMaxItems.toString(),
         borrow_date: formatDate(formData.details?.borrow_date || formData.date || ''),
         return_date: formatDate(formData.details?.return_date || ''),
         release_time: (() => {
