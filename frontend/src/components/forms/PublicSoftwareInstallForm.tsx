@@ -77,7 +77,7 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
       ...prev,
       laboratory: prev.laboratory || assignedLab,
     }));
-  }, [assignedLab]);
+}, [formData.laboratory, custodianName])
 
   // Update approved_by and prepared_by when custodianName changes
   useEffect(() => {

@@ -88,7 +88,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         }));
       }
     }
-  }, [assignedLab, labs]);
+}, [formData.laboratory, labs]);
 
   // Auto-populate custodian fields when lab is selected
   useEffect(() => {
@@ -131,7 +131,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         fetchCustodian();
       }
     }
-  }, [selectedLab, labs]);
+  }, [formData.laboratory, labs]);
 
   // Handle lab selection from dropdown
   const handleLabSelection = (labValue: string) => {

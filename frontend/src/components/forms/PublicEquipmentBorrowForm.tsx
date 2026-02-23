@@ -78,7 +78,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
       ...prev,
       laboratory: prev.laboratory || assignedLab,
     }));
-  }, [assignedLab]);
+  }, [formData.laboratory, custodianName]);   
 
   // Auto-populate approved_by and prepared_by based on selected lab custodian (if custodianName prop is not explicitly provided)
   useEffect(() => {
