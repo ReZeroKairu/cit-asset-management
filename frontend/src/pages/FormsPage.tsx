@@ -37,20 +37,9 @@ const FormsPage = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    console.log('useEffect triggered - user:', user);
-    if (user) {
-      console.log('User exists, calling fetchForms');
-      fetchForms();
-    } else {
-      console.log('No user, skipping fetchForms');
-    }
-  }, [user]);
-
-  const fetchForms = async () => {
+  const fetchForms = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Fetching forms for user:', user);
       
       const [labRequests, equipmentBorrows, softwareInstallations, oneTimeSubmissions] = await Promise.all([
         getLabRequests({}),
@@ -59,24 +48,10 @@ const FormsPage = () => {
         getOneTimeFormSubmissionsNoAuth()
       ]);
       
-      console.log('API Responses:', {
-        labRequests,
-        equipmentBorrows,
-        softwareInstallations,
-        oneTimeSubmissions
-      });
-      
       const labRequestsData = Array.isArray(labRequests) ? labRequests : (labRequests?.data || []);
       const equipmentBorrowsData = Array.isArray(equipmentBorrows) ? equipmentBorrows : (equipmentBorrows?.data || []);
       const softwareInstallationsData = Array.isArray(softwareInstallations) ? softwareInstallations : (softwareInstallations?.data || []);
       const oneTimeSubmissionsData = Array.isArray(oneTimeSubmissions) ? oneTimeSubmissions : [];
-
-      console.log('🔍 FormsPage - Current user:', { 
-        user: user, 
-        userId: user?.id, 
-        userIdType: typeof user?.id,
-        userRole: user?.role 
-      });
       
       const allForms: FormSubmission[] = [
         ...labRequestsData.map((req: any) => ({
@@ -160,12 +135,16 @@ const FormsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, user?.role]); // Only depend on specific user properties
+
+  useEffect(() => {
+    if (user && user.id) {
+      fetchForms();
+    }
+  }, [user?.id, user?.role]); // Only depend on specific user properties
 
   const updateStatus = useCallback(async (formId: number, formType: string, newStatus: string) => {
     try {
-      console.log(`Updating status for ${formType} ${formId} to ${newStatus}`);
-      
       switch (formType) {
         case 'lab-request':
           await apiUpdateLabRequestStatus(formId, newStatus);
@@ -181,7 +160,6 @@ const FormsPage = () => {
           return;
       }
       
-      console.log('Status update successful, refreshing forms...');
       await fetchForms();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -192,15 +170,12 @@ const FormsPage = () => {
     if (selectedForms.size === 0) return;
     
     try {
-      console.log(`Bulk approving ${selectedForms.size} forms`);
-      
       const approvalPromises = Array.from(selectedForms).map(formIdStr => {
         const [formType, idStr] = formIdStr.split('-');
         const formId = parseInt(idStr);
         
         // Skip software-install forms - they are handled by custodians only
         if (formType === 'software-install') {
-          console.log('Skipping software-install form - handled by custodians only');
           return Promise.resolve();
         }
         
@@ -216,7 +191,6 @@ const FormsPage = () => {
       });
       
       await Promise.all(approvalPromises);
-      console.log('Bulk approval successful, clearing selection and refreshing forms...');
       
       setSelectedForms(new Set());
       await fetchForms();

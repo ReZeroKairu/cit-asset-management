@@ -66,39 +66,9 @@ const LoginPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      console.log("User already logged in, redirecting to dashboard...");
       window.location.href = '/';
     }
   }, [user]);
-
-  // Debug: Component mounting
-  useEffect(() => {
-    console.log("🚀 LoginPage mounted at:", new Date().toISOString());
-    console.log("🚀 Mount time:", Date.now() - mountTime.current, "ms since init");
-    return () => {
-      console.log("🔴 LoginPage unmounted at:", new Date().toISOString());
-    };
-  }, []);
-
-  // Debug: Monitor email state changes
-  useEffect(() => {
-    console.log("📧 Email state changed:", email);
-  }, [email]);
-
-  // Debug: Monitor password state changes
-  useEffect(() => {
-    console.log("🔒 Password state changed:", password ? "***" : "(empty)");
-  }, [password]);
-
-  // Debug: Monitor error state changes
-  useEffect(() => {
-    console.log("❌ Error state changed:", error);
-  }, [error]);
-
-  // Debug: Monitor loading state changes
-  useEffect(() => {
-    console.log("⏳ Loading state changed:", isLoading);
-  }, [isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
