@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import { getAllWorkstations } from "../../api/workstations";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -8,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { FileText, Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitLabRequest } from "../../api/forms";
-import { getAllWorkstations } from "../../api/workstations";
+import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
 interface LabRequestFormData {
   date: string;
   usageType: "printing" | "set-in-reservation";
+  userType: "student" | "faculty";
   facultyStudentName: string;
   yearLevel: string;
   laboratory: string;
@@ -54,6 +56,7 @@ export const LabRequestForm = () => {
   const [formData, setFormData] = useState<LabRequestFormData>({
     date: "",
     usageType: "printing",
+    userType: "student",
     facultyStudentName: "",
     yearLevel: "",
     laboratory: "lab1",
@@ -177,6 +180,7 @@ export const LabRequestForm = () => {
       const response = await submitLabRequest({
         date: formData.date,
         usage_type: formData.usageType,
+        user_type: formData.userType,
         faculty_student_name: formData.facultyStudentName,
         year_level: formData.yearLevel,
         laboratory: formData.laboratory,
@@ -198,6 +202,7 @@ export const LabRequestForm = () => {
         setFormData({
           date: "",
           usageType: "printing",
+          userType: "student",
           facultyStudentName: "",
           yearLevel: "",
           laboratory: "lab1",
@@ -222,41 +227,39 @@ export const LabRequestForm = () => {
     }
   };
 
-  const generateReport = () => {
-    const reportContent = `
-COLLEGE OF INFORMATION TECHNOLOGY
-REQUEST FORM FOR LABORATORY/E-FORUM USAGE
-
-Date: ${formData.date}
-Usage Type: ${formData.usageType}
-Faculty/Student Name: ${formData.facultyStudentName}
-Year Level: ${formData.yearLevel}
-Laboratory: ${formData.laboratory}
-Printing-No. Pages: ${formData.printingPages}
-WS No.: ${formData.wsNumber}
-Time In: ${formData.timeIn}
-Time Out: ${formData.timeOut}
-Purpose: ${formData.purpose}
-
-Requested by: ${formData.requestedBy}
-
-Monitoring Form After Laboratory/E-Forum Usage
-Remarks: ${formData.remarks}
-Monitored by: ${formData.monitoredBy}
-
-Laboratory Custodian
-    `.trim();
-
-    // Create and download lab report
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `lab-request-${formData.date || new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  const generateReport = async () => {
+    try {
+      // Create form data object that matches the expected structure for template generation
+      const formDataForTemplate = {
+        type: 'lab-request',
+        details: {
+          date: formData.date,
+          usage_type: formData.usageType,
+          user_type: formData.userType,
+          faculty_student_name: formData.facultyStudentName,
+          year_level: formData.yearLevel,
+          laboratory: formData.laboratory,
+          printing_pages: formData.printingPages,
+          ws_number: formData.wsNumber,
+          time_in: formData.timeIn,
+          time_out: formData.timeOut,
+          purpose: formData.purpose,
+          requested_by: formData.requestedBy,
+          approved_by: formData.approvedBy,
+          remarks: formData.remarks,
+          monitored_by: formData.monitoredBy,
+        },
+        name: formData.facultyStudentName,
+        purpose: formData.purpose,
+        laboratory: formData.laboratory,
+        date: formData.date,
+      };
+      
+      await generateFormDocument(formDataForTemplate);
+    } catch (error) {
+      console.error('Error generating lab report:', error);
+      alert('Error generating report. Please try again.');
+    }
   };
 
   return (
@@ -293,13 +296,24 @@ Laboratory Custodian
                 </SelectContent>
               </Select>
             </div>
-            <div></div>
+            <div>
+              <Label htmlFor="userType">User Type</Label>
+              <Select value={formData.userType} onValueChange={(value: "student" | "faculty") => handleInputChange("userType", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="facultyStudentName">Faculty/Student Name</Label>
+              <Label htmlFor="facultyStudentName">{formData.userType === 'faculty' ? 'Faculty Name' : 'Student Name'}</Label>
               <Input
                 id="facultyStudentName"
                 value={formData.facultyStudentName}
@@ -308,15 +322,17 @@ Laboratory Custodian
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="yearLevel">Year Level</Label>
-              <Input
-                id="yearLevel"
-                value={formData.yearLevel}
-                onChange={(e) => handleInputChange("yearLevel", e.target.value)}
-                placeholder="Enter year level"
-              />
-            </div>
+            {formData.userType === 'student' && (
+              <div>
+                <Label htmlFor="yearLevel">Year Level</Label>
+                <Input
+                  id="yearLevel"
+                  value={formData.yearLevel}
+                  onChange={(e) => handleInputChange("yearLevel", e.target.value)}
+                  placeholder="Enter year level"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">

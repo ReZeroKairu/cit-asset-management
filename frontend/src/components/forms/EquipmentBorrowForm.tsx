@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Download, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitEquipmentBorrow } from "../../api/forms";
+import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
 interface EquipmentBorrowFormData {
   date: string;
   laboratory: string;
+  userType: "student" | "faculty";
   facultyStudentName: string;
   yearLevel: string;
   releaseTime: string;
@@ -49,6 +51,7 @@ export const EquipmentBorrowForm = () => {
   const [formData, setFormData] = useState<EquipmentBorrowFormData>({
     date: "",
     laboratory: "lab1",
+    userType: "student",
     facultyStudentName: "",
     yearLevel: "",
     releaseTime: "",
@@ -159,6 +162,7 @@ export const EquipmentBorrowForm = () => {
       const response = await submitEquipmentBorrow({
         date: formData.date,
         laboratory: formData.laboratory,
+        user_type: formData.userType,
         faculty_student_name: formData.facultyStudentName,
         year_level: formData.yearLevel,
         release_time: formData.releaseTime,
@@ -184,6 +188,7 @@ export const EquipmentBorrowForm = () => {
           setFormData({
             date: "",
             laboratory: "lab1",
+            userType: "student",
             facultyStudentName: "",
             yearLevel: "",
             releaseTime: "",
@@ -212,44 +217,38 @@ export const EquipmentBorrowForm = () => {
     }
   };
 
-  const generateEquipmentReport = () => {
-    const reportContent = `
-COLLEGE OF INFORMATION TECHNOLOGY
-EQUIPMENT BORROWING FORM
-
-Date: ${formData.date}
-Laboratory: ${formData.laboratory}
-Faculty/Student Name: ${formData.facultyStudentName}
-Year Level: ${formData.yearLevel}
-Release Time: ${formData.releaseTime}
-Returned Time: ${formData.returnedTime}
-
-Equipment List:
-${formData.equipmentList.map((item, index) => 
-  `${index + 1}. ${item.equipmentName} - Quantity: ${item.unitQty}`
-).join('\n')}
-
-Purpose: ${formData.purpose}
-
-Requested by: ${formData.requestedBy}
-
-MONITORING FORM FOR BORROWED EQUIPMENT
-Remarks: ${formData.remarks}
-Monitored by: ${formData.monitoredBy}
-
-Laboratory Custodian
-    `.trim();
-
-    // Create and download equipment report
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `equipment-borrow-${formData.date || new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  const generateEquipmentReport = async () => {
+    try {
+      // Create form data object that matches the expected structure for template generation
+      const formDataForTemplate = {
+        type: 'equipment-borrow',
+        details: {
+          date: formData.date,
+          laboratory: formData.laboratory,
+          user_type: formData.userType,
+          faculty_student_name: formData.facultyStudentName,
+          year_level: formData.yearLevel,
+          releaseTime: formData.releaseTime,
+          returnedTime: formData.returnedTime,
+          equipment_list: formData.equipmentList,
+          purpose: formData.purpose,
+          requested_by: formData.requestedBy,
+          approved_by: formData.approvedBy,
+          remarks: formData.remarks,
+          monitored_by: formData.monitoredBy,
+        },
+        name: formData.facultyStudentName,
+        purpose: formData.purpose,
+        laboratory: formData.laboratory,
+        date: formData.date,
+        equipment_list: formData.equipmentList,
+      };
+      
+      await generateFormDocument(formDataForTemplate);
+    } catch (error) {
+      console.error('Error generating equipment report:', error);
+      alert('Error generating report. Please try again.');
+    }
   };
 
   return (
@@ -289,13 +288,24 @@ Laboratory Custodian
                 </SelectContent>
               </Select>
             </div>
-            <div></div>
+            <div>
+              <Label htmlFor="userType">User Type</Label>
+              <Select value={formData.userType} onValueChange={(value: "student" | "faculty") => handleInputChange("userType", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="equipment-facultyStudentName">Faculty/Student Name</Label>
+              <Label htmlFor="equipment-facultyStudentName">{formData.userType === 'faculty' ? 'Faculty Name' : 'Student Name'}</Label>
               <Input
                 id="equipment-facultyStudentName"
                 value={formData.facultyStudentName}
@@ -304,15 +314,17 @@ Laboratory Custodian
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="equipment-yearLevel">Year Level</Label>
-              <Input
-                id="equipment-yearLevel"
-                value={formData.yearLevel}
-                onChange={(e) => handleInputChange("yearLevel", e.target.value)}
-                placeholder="Enter year level"
-              />
-            </div>
+            {formData.userType === 'student' && (
+              <div>
+                <Label htmlFor="equipment-yearLevel">Year Level</Label>
+                <Input
+                  id="equipment-yearLevel"
+                  value={formData.yearLevel}
+                  onChange={(e) => handleInputChange("yearLevel", e.target.value)}
+                  placeholder="Enter year level"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
