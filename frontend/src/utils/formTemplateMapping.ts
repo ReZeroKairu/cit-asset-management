@@ -267,7 +267,7 @@ export const mapFormDataToTemplate = (formData: any) => {
       };
 
     case 'software-install':
-      return {
+      const mappedData = {
         ...baseData,
         faculty_name: formData.details?.faculty_name || formData.facultyName || '',
         date: formatDate(formData.details?.date || formData.date || ''),
@@ -278,6 +278,8 @@ export const mapFormDataToTemplate = (formData: any) => {
         approved_by: formData.details?.approved_by || formData.approvedBy || formData.preparedBy || 'DR. MARCO MARVIN L. RADO',
         // Add prepared_by field for template (ALL CAPS)
         prepared_by: (formData.details?.prepared_by || formData.preparedBy || formData.approvedBy || 'DR. MARCO MARVIN L. RADO').toUpperCase(),
+        // Add missing remarks field - use installation_remarks to match Word template
+        installation_remarks: formData.details?.installation_remarks || formData.installationRemarks || '',
         // Handle feedback date formatting
         feedback_date: (() => {
           const date = formData.details?.feedback_date || formData.feedbackDate || '';
@@ -305,6 +307,8 @@ export const mapFormDataToTemplate = (formData: any) => {
             return '';
           })(),
       };
+      
+      return mappedData;
 
     case 'one-time-submission':
       return {
