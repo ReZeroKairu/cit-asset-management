@@ -20,7 +20,6 @@ import { Download, Edit, Eye, QrCode, FileText } from "lucide-react";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import QRCodeGenerator from "../components/QRCodeGenerator";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { type FormSubmission } from "../types/forms";
 
 const FormsPage = () => {
