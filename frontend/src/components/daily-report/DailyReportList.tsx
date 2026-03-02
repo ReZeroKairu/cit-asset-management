@@ -102,58 +102,60 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
   const handleGenerateReport = async (report: DailyReport) => {
     try {
       console.log("Generating report for:", report.report_id);
-      
+
       // Show loading state
       setError("");
-      
+
       // Check if report_id exists
       if (!report.report_id) {
         throw new Error("Report ID is missing");
       }
-      
+
       // Use the same API call as DailyAccomplishmentReport that works
       console.log("Fetching detailed report data for ID:", report.report_id);
       const response = await api.get(`/daily-reports/${report.report_id}`);
       const detailedReport = response.data;
-      
+
       console.log("Detailed report data:", detailedReport);
-      
+
       // Check if detailedReport exists and has the expected structure
       if (!detailedReport) {
         console.error("No data returned from API");
         throw new Error("API returned no data for this report");
       }
-      
+
       // Process workstation data the same way as DailyAccomplishmentReport
-      const processedWorkstations = detailedReport.workstation_items?.map((item: any) => ({
-        workstation_id: item.workstation_id,
-        workstation_name: item.workstation_name || 'Unknown Workstation',
-        status: item.status || 'Working',
-        remarks: item.remarks || ''
-      })) || [];
-      
+      const processedWorkstations =
+        detailedReport.workstation_items?.map((item: any) => ({
+          workstation_id: item.workstation_id,
+          workstation_name: item.workstation_name || "Unknown Workstation",
+          status: item.status || "Working",
+          remarks: item.remarks || "",
+        })) || [];
+
       console.log("Processed workstations:", processedWorkstations);
-      
+
       // Use procedures data directly from the API response
       const proceduresData = detailedReport.procedures || [];
       console.log("Procedures data:", proceduresData);
-      
+
       // Map the report data to template format the same way as DailyAccomplishmentReport
       const templateData = mapReportDataToTemplate({
         lab_name: detailedReport.laboratories?.lab_name || "Unknown Lab",
         lab_id: detailedReport.lab_id,
-        custodian_name: detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
+        custodian_name:
+          detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
         noted_by: "DR. MARCO MARVIN L. RADO",
         general_remarks: detailedReport.general_remarks || "",
         workstations: processedWorkstations,
         procedures: proceduresData,
         report_id: detailedReport.report_id,
         created_at: detailedReport.created_at || detailedReport.report_date,
-        report_date: detailedReport.report_date
+        report_date: detailedReport.report_date,
       });
-      
+
       console.log("Template data:", templateData);
-      
+
       // Determine template based on lab_id
       const getLabTemplate = (labId: number): string => {
         switch (labId) {
@@ -167,22 +169,25 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
             return "/Lab2_DAR.docx"; // Default template
         }
       };
-      
+
       const templateFile = getLabTemplate(detailedReport.lab_id);
-      const reportDate = detailedReport.report_date ? new Date(detailedReport.report_date) : new Date();
+      const reportDate = detailedReport.report_date
+        ? new Date(detailedReport.report_date)
+        : new Date();
       const fileName = `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${reportDate.toISOString().split("T")[0]}.docx`;
-      
+
       console.log("Using template:", templateFile);
       console.log("File name:", fileName);
-      
+
       // Generate and download the report
       await generateTemplateReport(templateFile, templateData, fileName);
-      
+
       console.log("Report generated successfully!");
-      
     } catch (error) {
       console.error("Failed to generate report:", error);
-      setError(`Failed to generate report. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(
+        `Failed to generate report. Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   };
 
@@ -298,15 +303,15 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 p-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {viewMode === "my" 
-                ? "My Daily Reports" 
-                : adminMode 
-                  ? "Archived Reports" 
+              {viewMode === "my"
+                ? "My Daily Reports"
+                : adminMode
+                  ? "Archived Reports"
                   : "All Daily Reports"}
             </h1>
             <p className="mt-2 text-gray-600">
@@ -536,7 +541,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
         show={showDARModal}
         onClose={() => setShowDARModal(false)}
         archiveMode={archiveMode}
-        pageContext={archiveMode ? 'archives' : 'daily-reports'}
+        pageContext={archiveMode ? "archives" : "daily-reports"}
       />
     </div>
   );
