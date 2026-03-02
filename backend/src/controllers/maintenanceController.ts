@@ -36,11 +36,6 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
   try {
     const { workstation_id, quarter } = req.query;
 
-    console.log("🔍 GET PMC REPORT DETAIL - Request:", {
-      workstation_id,
-      quarter,
-    });
-
     const report = await prisma.pmc_reports.findFirst({
       where: {
         workstation_id: Number(workstation_id),
@@ -89,19 +84,8 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
     });
 
     if (!report) {
-      console.log("❌ GET PMC REPORT DETAIL - No report found");
       return res.status(404).json({ error: "Report not found" });
     }
-
-    console.log("✅ GET PMC REPORT DETAIL - Report found:", {
-      pmc_id: report.pmc_id,
-      overall_remarks: report.overall_remarks || "NULL",
-      software_name: report.software_name || "NULL",
-      connectivity_type: report.connectivity_type || "NULL",
-      connectivity_speed: report.connectivity_speed || "NULL",
-      service_logs_count: report.service_logs?.length || 0,
-      procedures_count: report.pmc_report_procedures?.length || 0,
-    });
 
     // ✅ FIX: Simple response with procedures mapping
     const responseData = {
