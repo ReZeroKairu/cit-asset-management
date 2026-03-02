@@ -36,6 +36,11 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
   try {
     const { workstation_id, quarter } = req.query;
 
+    console.log("🔍 GET PMC REPORT DETAIL - Request:", {
+      workstation_id,
+      quarter,
+    });
+
     const report = await prisma.pmc_reports.findFirst({
       where: {
         workstation_id: Number(workstation_id),
@@ -44,7 +49,14 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
       orderBy: { pmc_id: "desc" },
       include: {
         pmc_report_procedures: {
-          include: { procedures: true },
+          include: { 
+            procedures: {
+              select: {
+                procedure_id: true,
+                procedure_name: true,
+              },
+            },
+          },
         },
         service_logs: {
           orderBy: { service_date: "desc" },
@@ -63,7 +75,12 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
             },
             service_log_procedures: {
               include: {
-                procedures: true,
+                procedures: {
+                  select: {
+                    procedure_id: true,
+                    procedure_name: true,
+                  },
+                },
               },
             },
           },
@@ -72,11 +89,48 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
     });
 
     if (!report) {
+      console.log("❌ GET PMC REPORT DETAIL - No report found");
       return res.status(404).json({ error: "Report not found" });
     }
 
-    res.json(report);
+    console.log("✅ GET PMC REPORT DETAIL - Report found:", {
+      pmc_id: report.pmc_id,
+      overall_remarks: report.overall_remarks || "NULL",
+      software_name: report.software_name || "NULL",
+      connectivity_type: report.connectivity_type || "NULL",
+      connectivity_speed: report.connectivity_speed || "NULL",
+      service_logs_count: report.service_logs?.length || 0,
+      procedures_count: report.pmc_report_procedures?.length || 0,
+    });
+
+    // ✅ FIX: Simple response with procedures mapping
+    const responseData = {
+      pmc_id: report.pmc_id,
+      report_date: report.report_date,
+      quarter: report.quarter,
+      lab_id: report.lab_id,
+      user_id: report.user_id,
+      workstation_id: report.workstation_id,
+      workstation_status: report.workstation_status,
+      overall_remarks: report.overall_remarks,
+      software_name: report.software_name,
+      software_status: report.software_status,
+      connectivity_type: report.connectivity_type,
+      connectivity_type_status: report.connectivity_type_status,
+      connectivity_speed: report.connectivity_speed,
+      connectivity_speed_status: report.connectivity_speed_status,
+      service_count: report.service_count,
+      updated_at: report.updated_at,
+      procedures: report.pmc_report_procedures?.map((proc: any) => ({
+        procedure_id: proc.procedure_id,
+        procedure_name: proc.procedures?.procedure_name || 'Unknown Procedure',
+        is_checked: proc.is_checked,
+      })) || [],
+    };
+
+    res.json(responseData);
   } catch (error) {
+    console.error("❌ GET PMC REPORT DETAIL - Error:", error);
     res.status(500).json({ error: "Failed to fetch report detail" });
   }
 };
@@ -104,6 +158,25 @@ export const createPMCReport = async (req: Request, res: Response) => {
 
     const user_id = req.user?.userId;
 
+    // ✅ LOGGING: Log incoming data for debugging
+    console.log("🔧 CREATE PMC REPORT - Incoming Data:", {
+      lab_id,
+      workstation_id,
+      quarter,
+      workstation_status,
+      overall_remarks: overall_remarks || "MISSING",
+      software_name,
+      software_status,
+      connectivity_type,
+      connectivity_type_status,
+      connectivity_speed,
+      connectivity_speed_status,
+      procedure_ids,
+      service_type,
+      asset_actions_count: asset_actions.length,
+      user_id,
+    });
+
     const result = await prisma.$transaction(async (tx) => {
       // Check if a report already exists for this workstation + quarter
       const existingReport = await tx.pmc_reports.findFirst({
@@ -119,6 +192,12 @@ export const createPMCReport = async (req: Request, res: Response) => {
       if (existingReport) {
         // Capture the status before update
         workstation_status_before = existingReport.workstation_status;
+
+        console.log("📝 UPDATING EXISTING PMC REPORT:", {
+          pmc_id: existingReport.pmc_id,
+          current_overall_remarks: existingReport.overall_remarks || "NONE",
+          new_overall_remarks: overall_remarks || "MISSING",
+        });
 
         // UPDATE the existing report and increment service_count
         report = await tx.pmc_reports.update({
@@ -138,11 +217,20 @@ export const createPMCReport = async (req: Request, res: Response) => {
           },
         });
 
+        console.log("✅ PMC REPORT UPDATED:", {
+          pmc_id: report.pmc_id,
+          saved_overall_remarks: report.overall_remarks || "NULL",
+        });
+
         // Delete old procedures and re-create
         await tx.pmc_report_procedures.deleteMany({
           where: { pmc_id: existingReport.pmc_id },
         });
       } else {
+        console.log("🆕 CREATING NEW PMC REPORT:", {
+          overall_remarks: overall_remarks || "MISSING",
+        });
+
         // CREATE a new report with service_count: 1
         report = await tx.pmc_reports.create({
           data: {
@@ -163,11 +251,22 @@ export const createPMCReport = async (req: Request, res: Response) => {
             updated_at: new Date(),
           },
         });
+
+        console.log("✅ PMC REPORT CREATED:", {
+          pmc_id: report.pmc_id,
+          saved_overall_remarks: report.overall_remarks || "NULL",
+        });
         workstation_status_before = "Not Previously Serviced";
       }
 
       // Link procedures
       if (procedure_ids && procedure_ids.length > 0) {
+        console.log("🔗 LINKING PROCEDURES:", {
+          pmc_id: report.pmc_id,
+          procedure_ids,
+          count: procedure_ids.length,
+        });
+
         await tx.pmc_report_procedures.createMany({
           data: procedure_ids.map((id: number) => ({
             pmc_id: report.pmc_id,
@@ -175,9 +274,23 @@ export const createPMCReport = async (req: Request, res: Response) => {
             is_checked: true,
           })),
         });
+
+        console.log("✅ PROCEDURES LINKED SUCCESSFULLY");
+      } else {
+        console.log("⚠️ NO PROCEDURES TO LINK - procedure_ids array is empty");
       }
 
       // Create service log entry
+      console.log("📋 CREATING SERVICE LOG:", {
+        pmc_id: report.pmc_id,
+        service_type,
+        service_date: report_date,
+        performed_by: user_id,
+        remarks: overall_remarks || "MISSING",
+        workstation_status_before,
+        workstation_status_after: workstation_status,
+      });
+
       const serviceLog = await tx.service_logs.create({
         data: {
           pmc_id: report.pmc_id,
@@ -218,6 +331,11 @@ export const createPMCReport = async (req: Request, res: Response) => {
         },
       });
 
+      console.log("✅ SERVICE LOG CREATED:", {
+        log_id: serviceLog.log_id,
+        saved_remarks: serviceLog.remarks || "NULL",
+      });
+
       return { report, serviceLog };
     });
 
@@ -238,13 +356,13 @@ export const getServiceHistory = async (req: Request, res: Response) => {
     }
 
     const whereClause: any = {
-      pmc_report: {
+      pmc_reports: {
         workstation_id: Number(workstation_id),
       },
     };
 
     if (quarter) {
-      whereClause.pmc_report.quarter = String(quarter);
+      whereClause.pmc_reports.quarter = String(quarter);
     }
 
     const serviceLogs = await prisma.service_logs.findMany({

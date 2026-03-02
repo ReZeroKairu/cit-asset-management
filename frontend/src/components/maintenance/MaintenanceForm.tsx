@@ -314,10 +314,38 @@ const MaintenanceForm: React.FC<Props> = ({
         asset_actions,
       };
 
+      // ✅ LOGGING: Log form submission data
+      console.log("🔧 FRONTEND - Submitting PMC Report:", {
+        payload: {
+          ...reportPayload,
+          overall_remarks: reportPayload.overall_remarks || "EMPTY",
+          software_name: reportPayload.software_name || "EMPTY",
+          connectivity_type: reportPayload.connectivity_type || "EMPTY",
+          connectivity_speed: reportPayload.connectivity_speed || "EMPTY",
+        },
+        workstationAssetsCount: workstationAssets.length,
+        networkItems,
+        completedProcedures: procedures
+          .filter((p) => p.overall_status === "Completed")
+          .map((p) => p.procedure_name),
+      });
+
       await createPMCReport(reportPayload);
+
+      console.log("✅ FRONTEND - PMC Report submitted successfully");
 
       // ✅ FIX: Added `&& targetWorkstation` to satisfy TypeScript
       if (workstationAssets.length > 0 && targetWorkstation) {
+        console.log("🔧 FRONTEND - Updating asset statuses:", {
+          assetCount: workstationAssets.length,
+          assets: workstationAssets.map(asset => ({
+            asset_id: asset.asset_id,
+            unit_name: asset.unit_name,
+            new_status: asset.status,
+            remarks: asset.asset_remarks || "NONE",
+          })),
+        });
+
         await Promise.all(
           workstationAssets.map((asset) => {
             const selectedStatus = statusOptions.find(
@@ -333,8 +361,11 @@ const MaintenanceForm: React.FC<Props> = ({
             });
           }),
         );
+
+        console.log("✅ FRONTEND - Asset statuses updated successfully");
       }
 
+      console.log("🎉 FRONTEND - Service completion successful, calling onSuccess");
       onSuccess();
     } catch (err: any) {
       console.error(err);

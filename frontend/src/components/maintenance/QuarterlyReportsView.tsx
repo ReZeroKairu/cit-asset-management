@@ -23,7 +23,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const [reports, setReports] = useState<any[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(
-    null,
+    null
   );
 
   const quartersList = [
@@ -64,7 +64,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
       // Fetch detailed report data
       const detailedReport = await getPMCReport(
         report.workstation_id,
-        selectedQuarter,
+        selectedQuarter
       );
 
       // Fetch workstation assets
@@ -86,12 +86,12 @@ const QuarterlyReportsView: React.FC<Props> = ({
       const wsName = getWorkstationName(report.workstation_id);
       const finalName = String(wsName).toLowerCase().includes("workstation")
         ? wsName
-        : `Workstation ${wsName}`;
+        : `${wsName}`;
 
       await generateWorkstationReport(
         detailedReport,
         formattedAssets,
-        finalName,
+        finalName
       );
     } catch (error) {
       console.error("Failed to download report:", error);
@@ -104,7 +104,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const generateWorkstationReport = async (
     pmcReport: any,
     assets: any[],
-    workstationName: string,
+    workstationName: string
   ) => {
     const SYSTEM_UNIT_TYPES = [
       "SSD",
@@ -156,14 +156,14 @@ const QuarterlyReportsView: React.FC<Props> = ({
     // Separate Assets into Peripherals and System Components
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
-        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-      ),
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+      )
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
-          (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-        ),
+          (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+        )
     );
 
     // Build components list with Peripherals first
@@ -178,7 +178,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
     const isAllFunctional =
       systemComponents.length > 0 &&
       systemComponents.every((asset) =>
-        ["Functional", "Working", "Operational"].includes(asset.status),
+        ["Functional", "Working", "Operational"].includes(asset.status)
       );
 
     componentsList.push({
@@ -210,8 +210,8 @@ const QuarterlyReportsView: React.FC<Props> = ({
       pmcReport.connectivity_type === "Wired"
         ? "☑ Wired   ☐ Wireless"
         : pmcReport.connectivity_type === "Wireless"
-          ? "☐ Wired   ☑ Wireless"
-          : "☐ Wired   ☐ Wireless";
+        ? "☐ Wired   ☑ Wireless"
+        : "☐ Wired   ☐ Wireless";
 
     componentsList.push({
       name: "Connectivity Type",
@@ -299,7 +299,9 @@ const QuarterlyReportsView: React.FC<Props> = ({
                     {q.num}
                   </span>
                   <span
-                    className={`text-xs font-medium tracking-wide block text-left ${isActive ? "text-gray-500" : "text-blue-100"}`}
+                    className={`text-xs font-medium tracking-wide block text-left ${
+                      isActive ? "text-gray-500" : "text-blue-100"
+                    }`}
                   >
                     {q.label}
                   </span>

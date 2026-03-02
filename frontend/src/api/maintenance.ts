@@ -97,11 +97,19 @@ export const getLabPMCReports = async (labId: number, quarter: string) => {
 export const getPMCReport = async (
   workstationId: number,
   quarter: string,
-): Promise<PMCReport> => {
-  const response = await api.get("/maintenance/pmc/detail", {
-    params: { workstation_id: workstationId, quarter },
-  });
-  return response.data;
+): Promise<PMCReport | null> => {
+  try {
+    const response = await api.get("/maintenance/pmc/detail", {
+      params: { workstation_id: workstationId, quarter },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      console.log("📋 No PMC report found for workstation", workstationId, "quarter", quarter);
+      return null;
+    }
+    throw error; // Re-throw other errors
+  }
 };
 
 // 3. CREATE REPORT

@@ -52,6 +52,7 @@ const MaintenancePage = () => {
 
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
 
   // List of Quarters for the new UI Tabs
   const quartersList = [
@@ -141,6 +142,11 @@ const MaintenancePage = () => {
 
   const handleServiceClick = () => {
     setView("create");
+  };
+
+  const handleReturnToView = () => {
+    setRefreshTrigger(Date.now()); // Trigger refresh
+    setView("view");
   };
 
   const sortedWorkstations = [...labWorkstations].sort((a, b) =>
@@ -415,6 +421,7 @@ const MaintenancePage = () => {
           quarter={selectedQuarter}
           onService={handleServiceClick}
           onBack={() => setView("list")}
+          refreshTrigger={refreshTrigger}
         />
       )}
 
@@ -423,8 +430,8 @@ const MaintenancePage = () => {
         <MaintenanceForm
           targetWorkstation={targetWorkstation}
           onSuccess={() => {
-            setView("list");
-            fetchData();
+            fetchData(); // Refresh main data
+            handleReturnToView(); // Return to view with refresh trigger
           }}
           onCancel={() => setView("list")}
         />

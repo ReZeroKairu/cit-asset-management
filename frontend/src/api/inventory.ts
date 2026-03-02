@@ -8,14 +8,14 @@ export interface Asset {
   unit_id: number | null;
   added_by_user_id: number | null;
   date_added: string;
-  details?: {
+  asset_details?: {
     detail_id: number;
     property_tag_no: string | null;
     serial_number: string | null;
     description: string | null;
     asset_remarks?: string | null;
     status_id: number;
-    current_status?: {
+    asset_statuses?: {
       status_name: string;
     };
   };
@@ -88,15 +88,15 @@ export const getWorkstationAssets = async (workstationId: number) => {
   return data.map((asset: Asset) => ({
     asset_id: asset.asset_id,
     unit_name: asset.units?.unit_name || "Unknown",
-    property_tag_no: asset.details?.property_tag_no || "N/A",
-    serial_number: asset.details?.serial_number || "N/A",
+    property_tag_no: asset.asset_details?.property_tag_no || "N/A",
+    serial_number: asset.asset_details?.serial_number || "N/A",
 
-    // ✅ FIX: Explicitly map the current remarks from the DB
-    // (Previously this might have been mapped to description)
-    asset_remarks: asset.details?.asset_remarks || "",
+    // ✅ FIX: Map from asset_details (not details)
+    asset_remarks: asset.asset_details?.asset_remarks || "",
 
-    status: asset.details?.current_status?.status_name || "Unknown",
-    status_id: asset.details?.status_id || 1,
+    // ✅ FIX: Map from asset_details.asset_statuses (not details.current_status)
+    status: asset.asset_details?.asset_statuses?.status_name || "Unknown",
+    status_id: asset.asset_details?.status_id || 1,
   }));
 };
 
