@@ -289,6 +289,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </button>
               </li>
             )}
+            {user?.role !== "Admin" && (
             <li>
               <button
                 className={`w-full text-left rounded-md flex items-center transition-colors ${
@@ -324,6 +325,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 {!collapsed && <span>Maintenance & Services</span>}
               </button>
             </li>
+            )}
             {/* Archives - Available to all users */}
             <li>
               <button
