@@ -72,13 +72,13 @@ router.get('/validate/:token', async (req, res) => {
           where: { user_id: oneTimeLink.generatedBy },
           select: { 
             full_name: true,
-            assigned_lab: {
+            laboratories: {
               select: { lab_name: true }
             }
           }
         });
         custodianName = user?.full_name || '';
-        assignedLab = user?.assigned_lab?.lab_name || '';
+        assignedLab = user?.laboratories?.lab_name || '';
       } catch (error) {
         console.error('Error fetching user info:', error);
         // Continue without the info if there's an error
@@ -303,7 +303,7 @@ router.get('/users/:userId/assigned-lab', async (req, res) => {
       where: { user_id: parseInt(userId) },
       select: { 
         full_name: true,
-        assigned_lab: {
+        laboratories: {
           select: { lab_name: true }
         }
       }
@@ -318,7 +318,7 @@ router.get('/users/:userId/assigned-lab', async (req, res) => {
     
     res.json({ 
       success: true, 
-      labName: user.assigned_lab?.lab_name || '',
+      labName: user.laboratories?.lab_name || '',
       userName: user.full_name
     });
   } catch (error) {

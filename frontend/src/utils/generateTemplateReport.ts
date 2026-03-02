@@ -45,7 +45,6 @@ export const generateTemplateReport = async (
     // 6. Save the file
     saveAs(out, fileName);
   } catch (error) {
-    console.error("Error generating document:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
     alert(

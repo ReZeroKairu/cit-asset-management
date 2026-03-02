@@ -46,17 +46,17 @@ const EditAssetModal: React.FC<Props> = ({
         // ✅ Map nested backend data to flat form state
         setFormData({
           property_tag_no:
-            asset.details?.property_tag_no || asset.property_tag_no || "",
-          description: asset.details?.description || asset.description || "",
+            asset.asset_details?.property_tag_no || asset.property_tag_no || "",
+          description: asset.asset_details?.description || asset.description || "",
           serial_number:
-            asset.details?.serial_number || asset.serial_number || "",
-          quantity: asset.details?.quantity || asset.quantity || 1,
-          date_of_purchase: asset.details?.date_of_purchase
-            ? new Date(asset.details.date_of_purchase)
+            asset.asset_details?.serial_number || asset.serial_number || "",
+          quantity: asset.asset_details?.quantity || asset.quantity || 1,
+          date_of_purchase: asset.asset_details?.date_of_purchase
+            ? new Date(asset.asset_details.date_of_purchase)
                 .toISOString()
                 .split("T")[0]
             : "",
-          asset_remarks: asset.details?.asset_remarks || "", // ✅ Map remarks
+          asset_remarks: asset.asset_details?.asset_remarks || "", // ✅ Map remarks
 
           // ID References
           lab_id: asset.lab_id?.toString() || "",

@@ -146,8 +146,6 @@ export const updateLabRequestDetails = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { time_out, remarks } = req.body;
 
-    console.log('🔧 Updating lab request details:', { id, time_out, remarks });
-
     const labRequest = await prisma.lab_requests.update({
       where: { request_id: parseInt(id as string) },
       data: { 
@@ -155,8 +153,6 @@ export const updateLabRequestDetails = async (req: Request, res: Response) => {
         remarks: remarks || null
       }
     });
-
-    console.log('✅ Lab request details updated successfully:', labRequest);
 
     res.status(200).json({
       success: true,

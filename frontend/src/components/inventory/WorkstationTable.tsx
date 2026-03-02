@@ -64,19 +64,19 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                    {workstation.laboratory?.lab_name || "N/A"}
+                    {workstation.laboratories?.lab_name || "N/A"}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {workstation.laboratory?.location || "N/A"}
+                  {workstation.laboratories?.location || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      workstation.current_status?.status_name,
+                      workstation.asset_statuses?.status_name,
                     )}`}
                   >
-                    {workstation.current_status?.status_name || "Unknown"}
+                    {workstation.asset_statuses?.status_name || "Unknown"}
                   </span>
                 </td>
                 <td
@@ -87,7 +87,7 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button
-                    className="text-blue-600 hover:text-blue-800 p-1 hover:bg-gray-200 rounded transition-colors"
+                    className="text-blue-600 hover:text-blue-800 p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation(); // Stops row click from triggering
                       onEdit(workstation);
@@ -97,7 +97,7 @@ const WorkstationTable: React.FC<Props> = ({
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded transition-colors"
+                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation(); // Stops row click from triggering
                       onDelete(workstation.workstation_id);

@@ -98,6 +98,7 @@ const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSuccess }) =>
                   placeholder="Enter full name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  className="capitalize-first"
                   required
                 />
               </div>

@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { getAllWorkstations } from "../../api/workstations";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { FileText, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+
+// Year levels for students
+const yearLevels = [
+  "1",
+  "2", 
+  "3",
+  "4",
+  "5"
+];
 import { submitLabRequest } from "../../api/forms";
 import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
@@ -49,9 +57,7 @@ export const LabRequestForm = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [workstations, setWorkstations] = useState<any[]>([]);
   const [assignedLab, setAssignedLab] = useState<string>('');
-  const [isLoadingWorkstations, setIsLoadingWorkstations] = useState(false);
 
   const [formData, setFormData] = useState<LabRequestFormData>({
     date: "",
@@ -109,16 +115,21 @@ export const LabRequestForm = () => {
 
   // Filter laboratory options based on assigned lab
   const getLabOptions = () => {
-    // E-Forum is always available and stays hardcoded
+    // E-Forum is always available but excluded for printing
     const eForumOption = { value: "e-forum", label: "E-Forum" };
     
-    // If no assigned lab, only return E-Forum
+    // If no assigned lab, only return E-Forum (unless printing)
     if (!assignedLab) {
-      return [eForumOption];
+      return formData.usageType === "printing" ? [] : [eForumOption];
     }
     
-    // Filter options: always include E-Forum + assigned lab if it exists
-    const filteredOptions: Array<{value: string, label: string}> = [eForumOption];
+    // Filter options: include E-Forum + assigned lab if it exists (exclude E-Forum for printing)
+    const filteredOptions: Array<{value: string, label: string}> = [];
+    
+    // Only add E-Forum if usage type is not printing
+    if (formData.usageType !== "printing") {
+      filteredOptions.push(eForumOption);
+    }
     
     // Add assigned lab using the actual lab name from database
     if (assignedLab) {
@@ -133,37 +144,6 @@ export const LabRequestForm = () => {
     return filteredOptions;
   };
 
-  useEffect(() => {
-    const fetchWorkstations = async () => {
-      // Only fetch if user is authenticated
-      if (!user) {
-        console.log('User not authenticated, skipping workstation fetch');
-        return;
-      }
-      
-      setIsLoadingWorkstations(true);
-      try {
-        console.log('Fetching workstations...');
-        const allWorkstations = await getAllWorkstations();
-        console.log('Workstations fetched:', allWorkstations);
-        
-        // Filter workstations by selected lab
-        const labId = formData.laboratory === "lab1" ? 1 : formData.laboratory === "lab2" ? 2 : formData.laboratory === "cisco" ? 3 : null;
-        const filteredWorkstations = labId ? allWorkstations.filter((ws: any) => ws.lab_id === labId) : [];
-        console.log('Filtered workstations:', filteredWorkstations);
-        setWorkstations(filteredWorkstations);
-      } catch (error) {
-        console.error("Error fetching workstations:", error);
-        // Don't crash the app if workstations fail to load
-        setWorkstations([]);
-      } finally {
-        setIsLoadingWorkstations(false);
-      }
-    };
-
-    fetchWorkstations();
-  }, [formData.laboratory, user]); // Fetch when lab selection changes or user loads
-
   const handleInputChange = (field: keyof LabRequestFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -175,6 +155,13 @@ export const LabRequestForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage(null);
+
+    // Validation
+    if (formData.usageType === "printing" && !formData.printingPages.trim()) {
+      setSubmitMessage("Please enter the number of printing pages");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const response = await submitLabRequest({
@@ -231,7 +218,7 @@ export const LabRequestForm = () => {
     try {
       // Create form data object that matches the expected structure for template generation
       const formDataForTemplate = {
-        type: 'lab-request',
+        // Remove hardcoded type to allow smart detection
         details: {
           date: formData.date,
           usage_type: formData.usageType,
@@ -254,6 +241,13 @@ export const LabRequestForm = () => {
         laboratory: formData.laboratory,
         date: formData.date,
       };
+      
+      // Debug logging to see what data is being passed
+      console.log('🔍 LabRequestForm - Generating report with data:', {
+        usageType: formData.usageType,
+        userType: formData.userType,
+        formDataForTemplate
+      });
       
       await generateFormDocument(formDataForTemplate);
     } catch (error) {
@@ -319,18 +313,26 @@ export const LabRequestForm = () => {
                 value={formData.facultyStudentName}
                 onChange={(e) => handleInputChange("facultyStudentName", e.target.value)}
                 placeholder="Enter full name"
+                className="capitalize-first"
                 required
               />
             </div>
             {formData.userType === 'student' && (
               <div>
                 <Label htmlFor="yearLevel">Year Level</Label>
-                <Input
-                  id="yearLevel"
+                <Select
                   value={formData.yearLevel}
-                  onChange={(e) => handleInputChange("yearLevel", e.target.value)}
-                  placeholder="Enter year level"
-                />
+                  onValueChange={(value) => handleInputChange("yearLevel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearLevels.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -351,15 +353,18 @@ export const LabRequestForm = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="printingPages">Printing-No. Pages</Label>
-              <Input
-                id="printingPages"
-                value={formData.printingPages}
-                onChange={(e) => handleInputChange("printingPages", e.target.value)}
-                placeholder="Number of pages"
-              />
-            </div>
+            <div></div>
+            {formData.usageType === "printing" && (
+              <div>
+                <Label htmlFor="printingPages">Printing-No. Pages</Label>
+                <Input
+                  id="printingPages"
+                  value={formData.printingPages}
+                  onChange={(e) => handleInputChange("printingPages", e.target.value)}
+                  placeholder="Number of pages"
+                />
+              </div>
+            )}
             <div></div>
             <div></div>
           </div>
@@ -462,11 +467,14 @@ export const LabRequestForm = () => {
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => generateReport()} className="flex items-center gap-2" disabled={isSubmitting}>
+          <div className="flex justify-between items-center pt-6">
+            <div></div>
+            <div className="flex justify-center">
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => generateReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

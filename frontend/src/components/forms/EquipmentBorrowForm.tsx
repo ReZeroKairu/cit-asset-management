@@ -8,6 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Download, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitEquipmentBorrow } from "../../api/forms";
+
+// Year levels for students
+const yearLevels = [
+  "1",
+  "2", 
+  "3",
+  "4",
+  "5"
+];
 import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
@@ -311,18 +320,26 @@ export const EquipmentBorrowForm = () => {
                 value={formData.facultyStudentName}
                 onChange={(e) => handleInputChange("facultyStudentName", e.target.value)}
                 placeholder="Enter full name"
+                className="capitalize-first"
                 required
               />
             </div>
             {formData.userType === 'student' && (
               <div>
                 <Label htmlFor="equipment-yearLevel">Year Level</Label>
-                <Input
-                  id="equipment-yearLevel"
+                <Select
                   value={formData.yearLevel}
-                  onChange={(e) => handleInputChange("yearLevel", e.target.value)}
-                  placeholder="Enter year level"
-                />
+                  onValueChange={(value) => handleInputChange("yearLevel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearLevels.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
@@ -352,27 +369,27 @@ export const EquipmentBorrowForm = () => {
             <Label>Equipment List</Label>
             <div className="border border-gray-200 rounded-lg p-4 mt-2">
               <div className="grid grid-cols-3 gap-4 mb-3 font-semibold">
-                <div>Unit/Oty.</div>
                 <div>Equipment Name</div>
+                <div>Unit/Oty.</div>
                 <div></div>
               </div>
               {formData.equipmentList.map((item, index) => (
                 <div key={index} className="grid grid-cols-3 gap-4 mb-2 items-center">
                   <div>
                     <Input
-                      id={`equipment-qty-${index}`}
-                      value={item.unitQty}
-                      onChange={(e) => handleEquipmentListChange(index, 'unitQty', e.target.value)}
-                      placeholder="Unit/Quantity"
+                      id={`equipment-name-${index}`}
+                      value={item.equipmentName}
+                      onChange={(e) => handleEquipmentListChange(index, 'equipmentName', e.target.value)}
+                      placeholder="Equipment name"
                       required
                     />
                   </div>
                   <div>
                     <Input
-                      id={`equipment-name-${index}`}
-                      value={item.equipmentName}
-                      onChange={(e) => handleEquipmentListChange(index, 'equipmentName', e.target.value)}
-                      placeholder="Equipment name"
+                      id={`equipment-qty-${index}`}
+                      value={item.unitQty}
+                      onChange={(e) => handleEquipmentListChange(index, 'unitQty', e.target.value)}
+                      placeholder="Unit/Quantity"
                       required
                     />
                   </div>
@@ -469,11 +486,14 @@ export const EquipmentBorrowForm = () => {
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => generateEquipmentReport()} className="flex items-center gap-2" disabled={isSubmitting}>
+          <div className="flex justify-between items-center pt-6">
+            <div></div>
+            <div className="flex justify-center">
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => generateEquipmentReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

@@ -389,7 +389,7 @@ const ArchivedReportsList: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleViewReport(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
                           title="View Report Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -397,7 +397,7 @@ const ArchivedReportsList: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />

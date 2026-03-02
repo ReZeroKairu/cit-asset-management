@@ -222,6 +222,7 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
             value={formData.faculty_name}
             onChange={(e) => handleInputChange('faculty_name', e.target.value)}
             placeholder="Enter faculty name"
+            className="capitalize-first"
             required
             disabled={disabled}
           />
@@ -297,13 +298,14 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
         </p>
       </div>
 
-      <div className="flex gap-4 pt-6">
+      <div className="flex justify-center pt-6">
         <Button 
           type="submit" 
-          className="w-full" 
+          variant="outline"
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
           disabled={disabled || isSubmitting}
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Software Installation Request'}
+          {isSubmitting ? 'Submitting...' : 'Submit'}
         </Button>
       </div>
     </form>

@@ -20,33 +20,25 @@ const LoginPage = () => {
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const mountTime = useRef(Date.now());
 
-  // Restore values from sessionStorage on mount
+  // Restore email from sessionStorage on mount (but not password for security)
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('login_email');
-    const savedPassword = sessionStorage.getItem('login_password');
     
     if (savedEmail) {
       console.log("📧 Restored email from sessionStorage:", savedEmail);
       setEmail(savedEmail);
     }
-    if (savedPassword) {
-      console.log("🔒 Restored password from sessionStorage");
-      setPassword(savedPassword);
-    }
+    // NOTE: Don't restore password from sessionStorage for security
   }, []);
 
-  // Save values to sessionStorage when they change
+  // Save email to sessionStorage when it changes (but not password for security)
   useEffect(() => {
     if (email) {
       sessionStorage.setItem('login_email', email);
     }
   }, [email]);
 
-  useEffect(() => {
-    if (password) {
-      sessionStorage.setItem('login_password', password);
-    }
-  }, [password]);
+  // NOTE: Removed password sessionStorage saving for security reasons
 
   // Clear sessionStorage on successful login
   useEffect(() => {
@@ -56,9 +48,10 @@ const LoginPage = () => {
         // Only clear if we're not in an error state
         if (!error) {
           sessionStorage.removeItem('login_email');
-          sessionStorage.removeItem('login_password');
+          // NOTE: No longer saving password to sessionStorage, so no need to remove it
         }
-      }, 1000);
+      }, 2000); // Clear after 2 seconds to ensure login was successful
+      
       return () => clearTimeout(timer);
     }
   }, [error, isLoading, email, password]);
@@ -116,6 +109,35 @@ const LoginPage = () => {
     setPassword(e.target.value);
   };
 
+  const handlePasswordClick = () => {
+    // Ensure password field maintains correct type when clicked
+    if (passwordInputRef.current) {
+      const input = passwordInputRef.current;
+      const expectedType = showPassword ? "text" : "password";
+      if (input.type !== expectedType) {
+        console.log("🔧 Password click: fixing type from", input.type, "to", expectedType);
+        input.type = expectedType;
+      }
+    }
+  };
+
+  // Debug showPassword state changes
+  useEffect(() => {
+    console.log("🔍 showPassword state:", showPassword);
+  }, [showPassword]);
+
+  // Ensure password input type is correct
+  useEffect(() => {
+    if (passwordInputRef.current) {
+      const input = passwordInputRef.current;
+      const expectedType = showPassword ? "text" : "password";
+      if (input.type !== expectedType) {
+        console.log("🔧 Fixing password input type from", input.type, "to", expectedType);
+        input.type = expectedType;
+      }
+    }
+  }, [showPassword]);
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -149,6 +171,10 @@ const LoginPage = () => {
                     value={email}
                     onChange={handleEmailChange}
                     className="pl-10"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                     required
                   />
                 </div>
@@ -166,7 +192,13 @@ const LoginPage = () => {
                     placeholder="Enter your password"
                     value={password}
                     onChange={handlePasswordChange}
+                    onClick={handlePasswordClick}
+                    onFocus={handlePasswordClick}
                     className="pl-10 pr-10"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                     required
                   />
                   <button

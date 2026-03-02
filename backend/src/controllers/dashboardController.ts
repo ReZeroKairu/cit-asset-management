@@ -16,7 +16,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalLaboratories,
       totalDailyReports,
       totalUsers,
-      totalForms
+      totalForms,
+      pendingComplaints,
+      openComplaints,
+      inProgressComplaints
     ] = await Promise.all([
       // Total assets count - filtered by user role
       userRole === "Custodian" && userId
@@ -124,6 +127,72 @@ export const getDashboardStats = async (req: Request, res: Response) => {
               // Software installations excluded - handled by custodians only
             ]);
             return labRequests + equipmentBorrows;
+          }),
+      
+      // Complaint stats - only count unfinished statuses (pending)
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: {
+                    in: ['Open', 'In_Progress']
+                  }
+                }
+              });
+            }
+            return 0;
+          })
+        : prisma.complaints.count({
+            where: {
+              status: {
+                in: ['Open', 'In_Progress']
+              }
+            }
+          }),
+      
+      // Open complaints count - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: 'Open'
+                }
+              });
+            }
+            return 0;
+          })
+        : prisma.complaints.count({
+            where: { status: 'Open' }
+          }),
+      
+      // In Progress complaints count - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: 'In_Progress'
+                }
+              });
+            }
+            return 0;
+          })
+        : prisma.complaints.count({
+            where: { status: 'In_Progress' }
           })
     ]);
 
@@ -248,7 +317,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       const user = await prisma.users.findUnique({
         where: { user_id: userId },
         include: {
-          assigned_lab: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -257,7 +326,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }
         }
       });
-      userAssignedLab = user?.assigned_lab;
+      userAssignedLab = user?.laboratories;
     }
 
     const dashboardData = {
@@ -266,7 +335,10 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         totalLaboratories,
         totalDailyReports,
         totalUsers,
-        totalForms
+        totalForms,
+        totalComplaints: pendingComplaints,
+        openComplaints,
+        inProgressComplaints
       },
       recentReports,
       assetsByLab: assetsByLabWithNames,

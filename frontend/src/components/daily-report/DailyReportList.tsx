@@ -488,7 +488,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleView(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
                           title="View Report Details"
                         >
                           <Eye className="w-4 h-4" />
@@ -496,7 +496,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                         {viewMode === "my" && report.status === "Pending" && (
                           <button
                             onClick={() => handleEdit(report)}
-                            className="text-gray-600 hover:text-gray-800 flex items-center px-2 py-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                            className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                             title="Edit Report"
                           >
                             <svg
@@ -516,7 +516,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                         )}
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />

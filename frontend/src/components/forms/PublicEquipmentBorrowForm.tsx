@@ -4,18 +4,25 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { submitPublicEquipmentBorrow } from "../../api/publicForms";
 import { getApiBaseUrl } from "../../api/publicForms";
+
+// Year levels for students
+const yearLevels = [
+  "1",
+  "2", 
+  "3",
+  "4",
+  "5"
+];
 
 interface PublicEquipmentBorrowFormProps {
   onSubmit?: (data: any) => void;
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
-  isOneTimeForm?: boolean;
 }
 
-export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicEquipmentBorrowFormProps) => {
+export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicEquipmentBorrowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [userType, setUserType] = useState<'student' | 'faculty'>('student'); // New state for user type
@@ -255,18 +262,6 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="faculty_student_name">{userType === 'faculty' ? 'Faculty Name' : 'Student Name'} *</Label>
-          <Input
-            id="faculty_student_name"
-            value={formData.faculty_student_name}
-            onChange={(e) => handleInputChange('faculty_student_name', e.target.value)}
-            placeholder="Enter your full name"
-            required
-            disabled={disabled}
-          />
-        </div>
-
-        <div className="space-y-2">
           <Label htmlFor="user_type">User Type *</Label>
           <Select value={userType} onValueChange={(value: 'student' | 'faculty') => setUserType(value)} required disabled={disabled}>
             <SelectTrigger>
@@ -279,16 +274,35 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
           </Select>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="faculty_student_name">{userType === 'faculty' ? 'Faculty Name' : 'Student Name'} *</Label>
+          <Input
+            id="faculty_student_name"
+            value={formData.faculty_student_name}
+            onChange={(e) => handleInputChange('faculty_student_name', e.target.value)}
+            placeholder="Enter your full name"
+            required
+            disabled={disabled}
+          />
+        </div>
+
         {userType === 'student' && (
           <div className="space-y-2">
             <Label htmlFor="year_level">Year Level</Label>
-            <Input
-              id="year_level"
+            <Select
               value={formData.year_level}
-              onChange={(e) => handleInputChange('year_level', e.target.value)}
-              placeholder="e.g., 1st Year, 2nd Year"
+              onValueChange={(value) => handleInputChange('year_level', value)}
               disabled={disabled}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select year level" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearLevels.map(level => (
+                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -418,22 +432,34 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
             value={custodianName ? custodianName.toUpperCase() : formData.monitored_by}
             onChange={!custodianName ? (e) => handleInputChange('monitored_by', e.target.value) : undefined}
             placeholder="Lab monitor name"
-            disabled={disabled || !!custodianName} // Disable if custodianName is provided
-            readOnly={!!custodianName} // Make read-only if custodianName is provided
+            disabled={disabled || !!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Disabled by default, only enabled for E-Forum
+            readOnly={!!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Read-only by default, only enabled for E-Forum
           />
           {custodianName && (
-            <p className="text-sm text-gray-500">This field is automatically set by the custodian who generated this link</p>
+            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+          )}
+          {formData.laboratory && formData.laboratory !== 'e-forum' && (
+            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+          )}
+          {formData.laboratory === 'e-forum' && (
+            <p className="text-sm text-gray-500">E-Forum requires manual monitor assignment</p>
+          )}
+          {!formData.laboratory && (
+            <p className="text-sm text-gray-500">This field will auto-populate when a laboratory is selected</p>
           )}
         </div>
       </div>
 
-      <Button 
-        type="submit" 
-        className="w-full" 
-        disabled={disabled || isSubmitting}
-      >
-        {isSubmitting ? 'Submitting...' : 'Submit Equipment Borrow Request'}
-      </Button>
+      <div className="flex justify-center pt-6">
+        <Button 
+          type="submit" 
+          variant="outline"
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+          disabled={disabled || isSubmitting}
+        >
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </Button>
+      </div>
     </form>
   );
 };

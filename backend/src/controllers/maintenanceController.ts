@@ -18,8 +18,8 @@ export const getLabPMCReports = async (req: Request, res: Response) => {
         quarter: String(quarter),
       },
       include: {
-        procedures: {
-          include: { procedure: true },
+        pmc_report_procedures: {
+          include: { procedures: true },
         },
       },
     });
@@ -43,28 +43,27 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
       },
       orderBy: { pmc_id: "desc" },
       include: {
-        procedures: {
-          include: { procedure: true },
+        pmc_report_procedures: {
+          include: { procedures: true },
         },
         service_logs: {
           orderBy: { service_date: "desc" },
           include: {
-            user: {
+            users: {
               select: { user_id: true, full_name: true },
             },
-            asset_actions: {
+            service_log_assets: {
               include: {
-                asset: {
+                inventory_assets: {
                   include: {
                     units: true,
-                    details: true,
                   },
                 },
               },
             },
-            log_procedures: {
+            service_log_procedures: {
               include: {
-                procedure: true,
+                procedures: true,
               },
             },
           },
@@ -161,6 +160,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
             connectivity_speed,
             connectivity_speed_status,
             service_count: 1,
+            updated_at: new Date(),
           },
         });
         workstation_status_before = "Not Previously Serviced";
@@ -187,7 +187,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
           remarks: overall_remarks,
           workstation_status_before,
           workstation_status_after: workstation_status,
-          log_procedures:
+          service_log_procedures:
             procedure_ids && procedure_ids.length > 0
               ? {
                   createMany: {
@@ -198,7 +198,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
                   },
                 }
               : undefined,
-          asset_actions:
+          service_log_assets:
             asset_actions.length > 0
               ? {
                   createMany: {
@@ -251,22 +251,22 @@ export const getServiceHistory = async (req: Request, res: Response) => {
       where: whereClause,
       orderBy: { service_date: "desc" },
       include: {
-        user: {
+        users: {
           select: { user_id: true, full_name: true },
         },
-        asset_actions: {
+        service_log_assets: {
           include: {
-            asset: {
+            inventory_assets: {
               include: {
                 units: true,
-                details: true,
+                asset_details: true,
               },
             },
           },
         },
-        log_procedures: {
+        service_log_procedures: {
           include: {
-            procedure: true,
+            procedures: true,
           },
         },
       },
@@ -330,10 +330,10 @@ export const createRepairLog = async (req: Request, res: Response) => {
           // Update old asset status to decommissioned if status exists
           const oldAsset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },
-            include: { details: true },
+            include: { asset_details: true },
           });
 
-          if (oldAsset?.details) {
+          if (oldAsset?.asset_details) {
             // Find "Decommissioned" or "Disposed" status
             const decommissionedStatus = await tx.asset_statuses.findFirst({
               where: {
@@ -346,10 +346,10 @@ export const createRepairLog = async (req: Request, res: Response) => {
             });
 
             await tx.asset_details.update({
-              where: { detail_id: oldAsset.details.detail_id },
+              where: { detail_id: oldAsset.asset_details.detail_id },
               data: {
                 status_id:
-                  decommissionedStatus?.status_id || oldAsset.details.status_id,
+                  decommissionedStatus?.status_id || oldAsset.asset_details.status_id,
                 asset_remarks: `Replaced on ${new Date(service_date).toLocaleDateString()}. ${action.remarks || ""}`,
               },
             });
@@ -367,7 +367,7 @@ export const createRepairLog = async (req: Request, res: Response) => {
                 workstation_id: Number(workstation_id),
                 unit_id: oldAsset?.unit_id,
                 added_by_user_id: Number(user_id),
-                details: {
+                asset_details: {
                   create: {
                     property_tag_no: action.new_property_tag,
                     serial_number: action.new_serial_number,
@@ -389,23 +389,23 @@ export const createRepairLog = async (req: Request, res: Response) => {
           // Update asset status
           const asset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },
-            include: { details: true },
+            include: { asset_details: true },
           });
 
-          if (asset?.details) {
+          if (asset?.asset_details) {
             // Find "Functional" status
             const functionalStatus = await tx.asset_statuses.findFirst({
               where: { status_name: "Functional" },
             });
 
             await tx.asset_details.update({
-              where: { detail_id: asset.details.detail_id },
+              where: { detail_id: asset.asset_details.detail_id },
               data: {
                 status_id:
-                  functionalStatus?.status_id || asset.details.status_id,
+                  functionalStatus?.status_id || asset.asset_details.status_id,
                 asset_remarks: action.remarks
                   ? `${action.action} on ${new Date(service_date).toLocaleDateString()}: ${action.remarks}`
-                  : asset.details.asset_remarks,
+                  : asset.asset_details.asset_remarks,
               },
             });
           }
@@ -437,7 +437,7 @@ export const createRepairLog = async (req: Request, res: Response) => {
           remarks,
           workstation_status_before,
           workstation_status_after,
-          asset_actions: {
+          service_log_assets: {
             createMany: {
               data: asset_actions.map((action: any) => ({
                 asset_id: action.asset_id,

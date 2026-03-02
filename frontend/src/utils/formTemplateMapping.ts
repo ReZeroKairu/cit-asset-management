@@ -2,60 +2,91 @@
 import { generateTemplateReport } from './generateTemplateReport';
 
 // Smart form type detection based on data content
-const detectFormType = (formData: any): string => {
+export const detectFormType = (formData: any): string => {
   // Smart detection based on data content
   const data = formData.details || formData;
 
   // Check for user type at both root level and in details
   const resolvedUserType = data.userType || data.user_type || formData.userType || formData.user_type;
   
+  // Normalize user type for comparison (handle case differences)
+  const normalizedUserType = resolvedUserType?.toLowerCase();
+  
+  console.log('🔍 Template Detection Debug:', {
+    formData,
+    data,
+    resolvedUserType,
+    normalizedUserType,
+    usage_type: data.usage_type,
+    user_type: data.user_type,
+    userType: data.userType,
+    printing_pages: data.printing_pages,
+    'formData.userType': formData.userType,
+    'formData.user_type': formData.user_type,
+    'formData.type': formData.type,
+    'hasDetails': !!formData.details,
+    'detailsKeys': formData.details ? Object.keys(formData.details) : []
+  });
+  
   // If form type is explicitly provided and valid, check if we need to use faculty variant
   if (formData.type && FORM_TEMPLATES[formData.type as keyof typeof FORM_TEMPLATES]) {
     // Check if we should use faculty variant
-    if (resolvedUserType === 'faculty') {
-      if (formData.type === 'equipment-borrow') {
+    if (normalizedUserType === 'faculty') {
+      if (formData.type.toLowerCase() === 'equipment-borrow') {
         return 'equipment-borrow-faculty';
-      } else if (formData.type === 'lab-request') {
-        return 'lab-request-faculty';
+      } else if (formData.type.toLowerCase() === 'lab-request') {
+        // Don't return immediately - let smart detection handle printing vs set-in-reservation
+        // Continue to smart detection below
+      } else {
+        return formData.type;
+      }
+    } else {
+      // For students, continue with smart detection for lab-request to handle printing vs set-in-reservation
+      if (formData.type.toLowerCase() === 'lab-request') {
+        // Don't return immediately - let smart detection handle student + printing
+        // Continue to smart detection below
+      } else {
+        return formData.type;
       }
     }
-    
-    return formData.type;
   }
   
-  // Check for equipment borrow indicators
-  if (data.equipment_list || data.equipment_items || data.releaseTime || data.returnedTime) {
-    // Check if equipment_list contains equipment data structure
-    const equipmentData = data.equipment_list || data.equipment_items;
-    if (equipmentData) {
-      if (typeof equipmentData === 'string') {
-        try {
-          const parsed = JSON.parse(equipmentData);
-          if (Array.isArray(parsed) && parsed.some((item: any) => item.unitQty && item.equipmentName)) {
-            const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
-            return result;
-          }
-        } catch {
-          // If JSON parse fails, check for equipment keywords
-          if (equipmentData.toLowerCase().includes('equipment') || 
-              equipmentData.toLowerCase().includes('borrow')) {
-            const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
-            return result;
-          }
-        }
-      } else if (Array.isArray(equipmentData)) {
-        if (equipmentData.some((item: any) => item.unitQty && item.equipmentName)) {
-          const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
-          return result;
-        }
-      }
-    }
+  // Check for lab request indicators FIRST (priority over equipment borrow)
+  if (data.usage_type || data.time_in || data.time_out || data.ws_number || data.printing_pages) {
+    console.log('✅ Lab Request Detection - Usage Type:', data.usage_type, 'User Type:', resolvedUserType, 'Normalized:', normalizedUserType);
     
-    // Check for borrow-specific fields
-    if (data.releaseTime || data.returned_time || data.borrow_date) {
-      const result = resolvedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
-      return result;
+    // Check if it's faculty lab request
+    if (normalizedUserType === 'faculty') {
+      // Check specifically for printing usage type
+      if (data.usage_type === 'printing') {
+        console.log('🎯 Detected: Faculty + Printing');
+        return 'lab-request-faculty-printing';
+      }
+      return 'lab-request-faculty';
     }
+    // Check if it's student lab request with printing
+    if (normalizedUserType === 'student') {
+      console.log('🎯 Student detected, checking usage type:', data.usage_type);
+      // Check specifically for printing usage type
+      if (data.usage_type === 'printing') {
+        console.log('🎯 Detected: Student + Printing');
+        return 'lab-request-student-printing';
+      } else {
+        console.log('❌ Student but not printing, usage_type:', data.usage_type);
+      }
+    } else {
+      console.log('❌ Not student, normalizedUserType:', normalizedUserType);
+    }
+    console.log('🔍 Default: Lab Request');
+    return 'lab-request';
+  } else {
+    console.log('❌ No lab request indicators found:', {
+      usage_type: data.usage_type,
+      time_in: data.time_in,
+      time_out: data.time_out,
+      ws_number: data.ws_number,
+      printing_pages: data.printing_pages
+    });
   }
   
   // Check for software install indicators
@@ -63,13 +94,53 @@ const detectFormType = (formData: any): string => {
     return 'software-install';
   }
   
-  // Check for lab request indicators
-  if (data.usage_type || data.time_in || data.time_out || data.ws_number || data.printing_pages) {
-    // Check if it's faculty lab request
-    if (resolvedUserType === 'faculty') {
-      return 'lab-request-faculty';
+  // Check for equipment borrow indicators (only if no lab request indicators found)
+  if (data.equipment_list || data.equipment_items || data.releaseTime || data.returnedTime) {
+    console.log('⚠️ Equipment borrow indicators found:', {
+      equipment_list: data.equipment_list,
+      equipment_items: data.equipment_items,
+      releaseTime: data.releaseTime,
+      returnedTime: data.returnedTime,
+      'This should not happen for lab requests!': 'Check form data structure'
+    });
+    
+    // Check if equipment_list contains equipment data structure
+    const equipmentData = data.equipment_list || data.equipment_items;
+    if (equipmentData) {
+      if (typeof equipmentData === 'string') {
+        try {
+          const parsed = JSON.parse(equipmentData);
+          if (Array.isArray(parsed) && parsed.some((item: any) => item.unitQty && item.equipmentName)) {
+            const result = normalizedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+            console.log('⚠️ Returning equipment borrow result:', result);
+            return result;
+          }
+        } catch {
+          // If JSON parse fails, check for equipment keywords
+          if (equipmentData.toLowerCase().includes('equipment') || 
+              equipmentData.toLowerCase().includes('borrow')) {
+            const result = normalizedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+            console.log('⚠️ Returning equipment borrow result (keywords):', result);
+            return result;
+          }
+        }
+      } else if (Array.isArray(equipmentData)) {
+        if (equipmentData.some((item: any) => item.unitQty && item.equipmentName)) {
+          const result = normalizedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+          console.log('⚠️ Returning equipment borrow result (array):', result);
+          return result;
+        }
+      }
     }
-    return 'lab-request';
+    
+    // Check for borrow-specific fields
+    if (data.releaseTime || data.returned_time || data.borrow_date) {
+      const result = normalizedUserType === 'faculty' ? 'equipment-borrow-faculty' : 'equipment-borrow';
+      console.log('⚠️ Returning equipment borrow result (time fields):', result);
+      return result;
+    }
+    
+    console.log('⚠️ Equipment borrow indicators found but no valid equipment data, continuing to lab request detection...');
   }
   
   // Default fallback - check purpose field for clues
@@ -77,7 +148,7 @@ const detectFormType = (formData: any): string => {
     const purpose = data.purpose.toLowerCase();
     if (purpose.includes('borrow') || purpose.includes('equipment')) {
       // Check if it's faculty equipment borrow
-      if (resolvedUserType === 'faculty') {
+      if (normalizedUserType === 'faculty') {
         return 'equipment-borrow-faculty';
       }
       return 'equipment-borrow';
@@ -98,6 +169,8 @@ const detectFormType = (formData: any): string => {
 export const FORM_TEMPLATES = {
   'lab-request': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request.docx',
   'lab-request-faculty': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request Faculty.docx',
+  'lab-request-faculty-printing': '/LDCU-Forms-CIT-034-Laboratory Printing Usage Request Faculty.docx',
+  'lab-request-student-printing': '/LDCU-Forms-CIT-034-Laboratory Printing Usage Request.docx',
   'equipment-borrow': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment.docx',
   'equipment-borrow-faculty': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment Faculty.docx',
   'software-install': '/LDCU-Forms-CIT-035-Laboratory Software Installation Request.docx',
@@ -459,6 +532,12 @@ export const generateFormDocument = async (formData: any) => {
     // Use smart detection to determine correct form type
     const detectedType = detectFormType(formData);
     const templatePath = FORM_TEMPLATES[detectedType as keyof typeof FORM_TEMPLATES];
+    
+    console.log('🎯 Final Template Selection:', {
+      detectedType,
+      templatePath,
+      formData
+    });
     
     if (!templatePath) {
       throw new Error(`No template found for detected form type: ${detectedType}`);

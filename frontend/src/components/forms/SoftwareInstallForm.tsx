@@ -216,6 +216,7 @@ export const SoftwareInstallForm = () => {
                 value={formData.facultyName}
                 onChange={(e) => handleInputChange("facultyName", e.target.value)}
                 placeholder="Enter faculty name"
+                className="capitalize-first"
                 required
               />
             </div>
@@ -329,11 +330,14 @@ export const SoftwareInstallForm = () => {
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => generateSoftwareReport()} className="flex items-center gap-2" disabled={isSubmitting}>
+          <div className="flex justify-between items-center pt-6">
+            <div></div>
+            <div className="flex justify-center">
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => generateSoftwareReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

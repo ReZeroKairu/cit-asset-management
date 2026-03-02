@@ -108,7 +108,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   {workstation.workstation_name}
                 </h3>
                 <p className="text-blue-100 text-sm">
-                  {workstation.laboratory?.lab_name || "No Laboratory"}
+                  {workstation.laboratories?.lab_name || "No Laboratory"}
                 </p>
               </div>
               <button
@@ -140,15 +140,15 @@ const ViewWorkstationModal: React.FC<Props> = ({
                     Laboratory
                   </h4>
                   <p className="text-gray-900 font-medium">
-                    {workstation.laboratory?.lab_name || "N/A"}
+                    {workstation.laboratories?.lab_name || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <h4 className="text-sm font-medium text-gray-500">
                     Location
                   </h4>
                   <p className="text-gray-900 font-medium">
-                    {workstation.laboratory?.location || "N/A"}
+                    {workstation.laboratories?.location || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -234,82 +234,76 @@ const ViewWorkstationModal: React.FC<Props> = ({
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                            {asset.details?.property_tag_no ||
-                              asset.property_tag_no ||
-                              "-"}
+                            {asset.asset_details?.property_tag_no || asset.units?.unit_name || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.units?.unit_name || asset.unit_name || "-"}
+                            {asset.units?.unit_name || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                            {asset.details?.serial_number ||
-                              asset.serial_number ||
-                              "-"}
+                            {asset.asset_details?.serial_number || "-"}
                           </td>
                           <td
                             className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate"
-                            title={asset.details?.description}
+                            title={asset.asset_details?.description}
                           >
-                            {asset.details?.description ||
-                              asset.description ||
-                              "-"}
+                            {asset.asset_details?.description || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.details?.current_status?.status_name)}`}
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.asset_details?.asset_statuses?.status_name)}`}
                             >
-                              {asset.details?.current_status?.status_name ||
+                              {asset.asset_details?.asset_statuses?.status_name ||
                                 "Unknown"}
                             </span>
                           </td>
                           <td
                             className="px-6 py-4 text-sm text-gray-500 max-w-[150px] truncate"
-                            title={asset.details?.asset_remarks}
+                            title={asset.asset_details?.asset_remarks}
                           >
-                            {asset.details?.asset_remarks || "-"}
+                            {asset.asset_details?.asset_remarks || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <div className="flex justify-center space-x-2">
-                              <button
-                                onClick={() => handleEditAsset(asset)}
-                                className="text-amber-600 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 p-2 rounded-full transition-colors"
-                                title="Edit Asset Details"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteAsset(asset.asset_id)
-                                }
-                                className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-2 rounded-full transition-colors"
-                                title="Remove Asset"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
+                            
+                          <button
+  onClick={() => handleEditAsset(asset)}
+  className="text-blue-600 hover:text-blue-800 p-2 transition-colors cursor-pointer"
+  title="Edit Asset Details"
+>
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
+  </svg>
+</button>
+
+<button
+  onClick={() => handleDeleteAsset(asset.asset_id)}
+  className="text-red-500 hover:text-red-600 p-2 transition-colors cursor-pointer"
+  title="Remove Asset"
+>
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
+  </svg>
+</button>
                             </div>
                           </td>
                         </tr>

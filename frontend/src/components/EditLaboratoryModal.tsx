@@ -118,6 +118,7 @@ const EditLaboratoryModal: React.FC<Props> = ({
                   onChange={(e) =>
                     setFormData({ ...formData, lab_name: e.target.value })
                   }
+                  className="capitalize-first"
                   required
                 />
               </div>

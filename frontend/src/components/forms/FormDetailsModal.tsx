@@ -73,6 +73,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
         returned_time: form.details.returned_time || '',
         remarks: form.details.remarks || '',
         installation_remarks: form.details.installation_remarks || '',
+        printing_pages: form.details.printing_pages || '',
         feedback_date: (() => {
           const feedbackDate = form.details.feedback_date;
           if (!feedbackDate) return '';
@@ -214,6 +215,24 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                         </p>
                       )}
                     </div>
+                    {canEdit && editMode && (
+                      <div className="bg-white p-3 rounded border border-gray-200">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Printing Pages</label>
+                        <Input
+                          type="number"
+                          value={editFormData.printing_pages || ''}
+                          onChange={(e) => setEditFormData({...editFormData, printing_pages: e.target.value})}
+                          placeholder="Number of printing pages"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                    {form.details.printing_pages && (
+                      <div className="bg-white p-3 rounded border border-gray-200">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Printing Pages</label>
+                        <p className="font-medium text-gray-900">{form.details.printing_pages}</p>
+                      </div>
+                    )}
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Requested by</label>
                       <p className="font-medium text-gray-900">{form.details?.requested_by || 'N/A'}</p>

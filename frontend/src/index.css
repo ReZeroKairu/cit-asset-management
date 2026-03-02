@@ -55,4 +55,9 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+  
+  /* Utility class for capitalizing first letter of each word in name fields */
+  .capitalize-first {
+    text-transform: capitalize;
+  }
 }

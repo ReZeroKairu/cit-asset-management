@@ -17,7 +17,7 @@ export const getLabWorkstationsForReport = async (req: Request, res: Response) =
     const workstations = await prisma.workstations.findMany({
       where: { lab_id: Number(lab_id) },
       include: {
-        current_status: true,
+        asset_statuses: true,
       },
       orderBy: { workstation_name: 'asc' }
     });
@@ -27,7 +27,7 @@ export const getLabWorkstationsForReport = async (req: Request, res: Response) =
       workstation_id: ws.workstation_id,
       workstation_name: ws.workstation_name,
       workstation_remarks: ws.workstation_remarks ?? null,
-      current_status: ws.current_status ?? null,
+      current_status: ws.asset_statuses ?? null,
       status: "Working",
       remarks: null,
       checked: false,

@@ -16,6 +16,7 @@ import {
   XCircle,
   Eye,
   Download,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
@@ -521,26 +522,41 @@ export const FormsManagementPage = () => {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div>
-                        <span className="font-medium">Name:</span> {form.name}
-                      </div>
-                      <div>
-                        <span className="font-medium">Date:</span>{" "}
-                        {new Date(form.date).toLocaleDateString()}
-                      </div>
-                      {form.laboratory && (
-                        <div>
-                          <span className="font-medium">Lab:</span>{" "}
-                          {form.laboratory}
+                    {/* Add Usage Type and User Type for lab requests like ArchivePage */}
+                    {form.type === 'lab-request' && (
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-gray-500">User:</span>
+                          <span className="capitalize">
+                            {form.details?.user_type || form.details?.userType || 'N/A'}
+                          </span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-gray-500">Usage:</span>
+                          <span className="capitalize">
+                            {form.details?.usage_type?.replace('-', ' ') || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-sm text-gray-600">
+                      <span className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {form.name}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {new Date(form.date).toLocaleDateString()}
+                        </span>
+                      </span>
                     </div>
 
-                    {form.purpose && (
+                    {/* Purpose field moved below name and date */}
+                    {form.details?.purpose && (
                       <div className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium">Purpose:</span>{" "}
-                        {form.purpose}
+                        {form.details.purpose}
                       </div>
                     )}
 
@@ -558,6 +574,7 @@ export const FormsManagementPage = () => {
                         setSelectedForm(form);
                         setShowDetails(true);
                       }}
+                      className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -609,7 +626,7 @@ export const FormsManagementPage = () => {
                         );
                         generateFormDocument(form);
                       }}
-                      className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
+                      className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                       title="Generate Form Document"
                     >
                       <Download className="w-4 h-4" />

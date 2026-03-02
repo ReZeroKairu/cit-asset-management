@@ -67,18 +67,18 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
       let data: Workstation[] = response.data.map((ws: any) => ({
         workstation_id: ws.workstation_id,
         workstation_name: ws.workstation_name,
-        lab_name: ws.laboratory?.lab_name || null,
-        location: ws.laboratory?.location || null,
+        lab_name: ws.laboratories?.lab_name || null,
+        location: ws.laboratories?.location || null,
         lab_id: ws.lab_id,
-        assets: ws.assets.map((asset: any) => ({
+        assets: (ws.inventory_assets || []).map((asset: any) => ({
           asset_id: asset.asset_id,
           property_tag_no:
-            asset.details?.property_tag_no || asset.property_tag_no,
-          serial_number: asset.details?.serial_number || asset.serial_number,
-          description: asset.details?.description || asset.description,
-          quantity: asset.details?.quantity || asset.quantity,
+            asset.asset_details?.property_tag_no || asset.property_tag_no,
+          serial_number: asset.asset_details?.serial_number || asset.serial_number,
+          description: asset.asset_details?.description || asset.description,
+          quantity: asset.asset_details?.quantity || asset.quantity,
           unit_name: asset.units?.unit_name,
-          remarks: asset.details?.asset_remarks || "",
+          remarks: asset.asset_details?.asset_remarks || "",
         })),
       }));
 

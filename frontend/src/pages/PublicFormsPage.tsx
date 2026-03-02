@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, CheckCircle } from "lucide-react";
+import { FileText, CheckCircle, ArrowLeft } from "lucide-react";
 import { PublicLabRequestForm } from "../components/forms/PublicLabRequestForm";
 import { PublicEquipmentBorrowForm } from "../components/forms/PublicEquipmentBorrowForm";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
@@ -67,6 +67,15 @@ const PublicFormsPage = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
+          <div className="mb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/public-landing'}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">CIT Asset Management Forms</h1>
             <p className="text-gray-600 mt-2 text-sm sm:text-base">Submit your requests for laboratory usage, equipment borrowing, and software installation</p>
@@ -152,15 +161,25 @@ const PublicFormsPage = () => {
                     <p><strong>Submitted:</strong> {new Date(submittedForm.submittedAt).toLocaleString()}</p>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => {
-                    setActiveTab('lab-request');
-                    setSubmittedForm(null);
-                  }}
-                  className="mt-6"
-                >
-                  Submit Another Form
-                </Button>
+                <div className="space-y-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = '/public-landing'}
+                    className="w-full sm:w-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Home
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setActiveTab('lab-request');
+                      setSubmittedForm(null);
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Submit Another Form
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

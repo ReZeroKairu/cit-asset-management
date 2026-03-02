@@ -6,6 +6,16 @@ import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { submitPublicLabRequest } from "../../api/publicForms";
 import { getApiBaseUrl } from "../../api/publicForms";
+import { useAuth } from "../../context/AuthContext";
+
+// Year levels for students
+const yearLevels = [
+  "1",
+  "2", 
+  "3",
+  "4",
+  "5"
+];
 
 interface PublicLabRequestFormProps {
   onSubmit?: (data: any) => void;
@@ -16,10 +26,11 @@ interface PublicLabRequestFormProps {
 }
 
 export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm = false }: PublicLabRequestFormProps) => {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [selectedLab, setSelectedLab] = useState<string>('');
-  const [userType, setUserType] = useState<'student' | 'faculty'>('student'); // New state for user type
+  const [userType, setUserType] = useState<'student' | 'faculty'>(user?.role === 'Admin' ? 'faculty' : 'student'); // New state for user type
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -144,28 +155,29 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   
   // Filter laboratory options based on assigned lab and form type
   const getLabOptions = () => {
-    // Always include E-Forum
+    // Always include E-Forum but exclude for printing
     const eForumOption = { value: "e-forum", label: "E-Forum" };
     
-    // For public forms (not one-time), show all labs + E-Forum
+    // For public forms (not one-time), show all labs + E-Forum (exclude E-Forum for printing)
     if (!isOneTimeForm) {
-      return [eForumOption, ...labs];
+      const labOptions = formData.usage_type === "printing" ? labs : [eForumOption, ...labs];
+      return labOptions;
     }
     
-    // For one-time forms, filter labs
+    // If no assigned lab, only return E-Forum (unless printing)
     if (!assignedLab) {
-      return [eForumOption];
+      return formData.usage_type === "printing" ? [] : [eForumOption];
     }
     
-    // For one-time forms, only show the assigned lab and E-Forum
+    // For one-time forms, only show the assigned lab and E-Forum (exclude E-Forum for printing)
     const assignedLabOption = labs.find(option => option.value === assignedLab);
     
     if (assignedLabOption) {
-      return [assignedLabOption, eForumOption];
+      return formData.usage_type === "printing" ? [assignedLabOption] : [assignedLabOption, eForumOption];
     }
     
-    // Fallback to E-Forum only if assigned lab not found
-    return [eForumOption];
+    // Fallback to E-Forum only if assigned lab not found (unless printing)
+    return formData.usage_type === "printing" ? [] : [eForumOption];
   };
 
   // Update monitored_by when custodianName changes
@@ -188,14 +200,26 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Simple debugging
+    console.log('Form submission - UserType:', userType);
+    console.log('Form submission - UsageType:', formData.usage_type);
+    console.log('Form submission - Template should be:', userType === 'student' && formData.usage_type === 'printing' ? 'lab-request-student-printing' : 'other');
+    
     // Network connectivity check
     if (!navigator.onLine) {
       alert('You appear to be offline. Please check your internet connection and try again.');
       return;
     }
     
+    // Validation
     if (!formData.usage_type || !formData.faculty_student_name || !formData.laboratory || !formData.purpose) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    // Require printing pages only when usage type is printing
+    if (formData.usage_type === "printing" && !formData.printing_pages) {
+      alert('Please enter the number of printing pages');
       return;
     }
 
@@ -208,10 +232,19 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         user_type: userType // Add user_type field for database storage
       };
       
+      console.log('📤 Submitting to API with data:', formDataWithUserType);
+      
       // Call parent's onSubmit to show success message
       if (onSubmit) {
-        onSubmit(formDataWithUserType);
+        await onSubmit(formDataWithUserType);
       }
+      
+      console.log('✅ SUCCESS: Form submitted successfully');
+    } catch (error) {
+      console.error('❌ ERROR: Form submission failed:', error);
+      alert('Failed to submit form. Please try again.');
+    } finally {
+      setIsSubmitting(false);
       
       // Reset form
       setFormData({
@@ -225,26 +258,14 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         time_in: '',
         time_out: '',
         purpose: '',
-        requested_by: '', // Default value for public submissions
+        requested_by: '',
         remarks: '',
         monitored_by: '',
         approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
-        user_type: userType
+        user_type: userType // Add user_type field for database storage
       });
-    } catch (error) {
-      console.error('Error submitting lab request:', error);
       
-      // Better error handling
-      let errorMessage = 'Unknown error occurred';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      
-      alert(`Error submitting lab request: ${errorMessage}`);
-    } finally {
-      setIsSubmitting(false);
+      console.log('🔄 Form reset to initial state');
     }
   };
 
@@ -296,6 +317,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             value={formData.faculty_student_name}
             onChange={(e) => handleInputChange('faculty_student_name', e.target.value)}
             placeholder="Enter your full name"
+            className="capitalize-first"
             required
             disabled={disabled}
           />
@@ -304,13 +326,20 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         {userType === 'student' && (
           <div className="space-y-2">
             <Label htmlFor="year_level">Year Level</Label>
-            <Input
-              id="year_level"
+            <Select
               value={formData.year_level}
-              onChange={(e) => handleInputChange('year_level', e.target.value)}
-              placeholder="e.g., 1st Year, 2nd Year"
+              onValueChange={(value) => handleInputChange('year_level', value)}
               disabled={disabled}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select year level" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearLevels.map(level => (
+                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -330,16 +359,18 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="printing_pages">Printing Pages</Label>
-          <Input
-            id="printing_pages"
-            value={formData.printing_pages}
-            onChange={(e) => handleInputChange('printing_pages', e.target.value)}
-            placeholder="Number of pages to print"
-            disabled={disabled}
-          />
-        </div>
+        {formData.usage_type === "printing" && (
+          <div className="space-y-2">
+            <Label htmlFor="printing_pages">Printing Pages</Label>
+            <Input
+              id="printing_pages"
+              value={formData.printing_pages}
+              onChange={(e) => handleInputChange('printing_pages', e.target.value)}
+              placeholder="Number of pages to print"
+              disabled={disabled}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="ws_number">Workstation Number</Label>
@@ -415,22 +446,32 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             value={custodianName ? custodianName.toUpperCase() : formData.monitored_by}
             onChange={!custodianName ? (e) => handleInputChange('monitored_by', e.target.value) : undefined}
             placeholder="Lab monitor name"
-            disabled={disabled || !!custodianName} // Disable if custodianName is provided
-            readOnly={!!custodianName} // Make read-only if custodianName is provided
+            disabled={disabled || !!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Disabled by default, only enabled for E-Forum
+            readOnly={!!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Read-only by default, only enabled for E-Forum
           />
           {custodianName && (
-            <p className="text-sm text-gray-500">This field is automatically set by the custodian who generated this link</p>
+            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+          )}
+          {formData.laboratory && formData.laboratory !== 'e-forum' && (
+            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+          )}
+          {formData.laboratory === 'e-forum' && (
+            <p className="text-sm text-gray-500">E-Forum requires manual monitor assignment</p>
+          )}
+          {!formData.laboratory && (
+            <p className="text-sm text-gray-500">This field will auto-populate when a laboratory is selected</p>
           )}
         </div>
       </div>
 
-      <div className="flex gap-4 pt-6">
+      <div className="flex justify-center pt-6">
         <Button 
           type="submit" 
-          className="w-full" 
+          variant="outline"
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
           disabled={disabled || isSubmitting}
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Lab Request'}
+          {isSubmitting ? 'Submitting...' : 'Submit'}
         </Button>
       </div>
     </form>

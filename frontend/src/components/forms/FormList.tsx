@@ -1,9 +1,8 @@
 import React from 'react';
 import { type FormSubmission } from '../../types/forms';
 import { format } from "date-fns";
-import { Eye, Download, User, Clock, Edit } from "lucide-react";
+import { Eye, Download, Edit } from "lucide-react";
 import { generateFormDocument } from "../../utils/formTemplateMapping";
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 
 interface FormListProps {
@@ -111,136 +110,187 @@ export const FormList: React.FC<FormListProps> = ({
         </div>
       )}
       
-      {forms.map((form) => {
-        const formId = `${form.type}-${form.id}`;
-        const isApprovable = userRole === 'Admin' && form.status === 'Custodian_Approved';
-        const isSelected = selectedForms.has(formId);
-        
-        return (
-          <div key={formId} className="border rounded-lg overflow-hidden">
-            <div className="p-4 sm:p-6">
-              <div className="flex flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  {isApprovable && (
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => handleCheckboxChange(formId, e.target.checked)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                    />
+      <div className="overflow-hidden">
+        <table className="w-full divide-y divide-gray-200 table-fixed">
+          <thead className="bg-gray-50">
+            <tr>
+              {userRole === 'Admin' && approvableForms.length > 0 && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = someSelected && !allSelected;
+                      }
+                    }}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
+              )}
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">
+                Form Info
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                User Details
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                Status
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                Submitted
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {forms.map((form) => {
+              const formId = `${form.type}-${form.id}`;
+              const isApprovable = userRole === 'Admin' && form.status === 'Custodian_Approved';
+              const isSelected = selectedForms.has(formId);
+              
+              return (
+                <tr key={formId} className="hover:bg-gray-50">
+                  {userRole === 'Admin' && approvableForms.length > 0 && (
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      {isApprovable && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleCheckboxChange(formId, e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        />
+                      )}
+                    </td>
                   )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-medium">{getFormTypeLabel(form.type)}</h3>
-                      <Badge variant="outline" className={getStatusColor(form.status)}>
-                        {form.status.replace('_', ' ')}
-                      </Badge>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {getFormTypeLabel(form.type)}
                     </div>
-                    
                     {form.purpose && (
-                      <p className="text-sm text-gray-600 mb-2">
+                      <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
                         {form.purpose}
-                      </p>
+                      </div>
                     )}
-                    
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                      <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-600">{form.name}</span>
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      <span>{format(new Date(form.date), 'M/d/yyyy')}</span>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                      {form.name}
                     </div>
-                    
-                    <p className="text-xs text-gray-500">
-                      Submitted: {format(new Date(form.createdAt || form.date), 'M/d/yyyy, h:mm:ss a')}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onViewDetails(form)}
-                      className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    
-                    {userRole !== 'Admin' && (
+                    <div className="text-sm text-gray-500 truncate max-w-xs">
+                      {form.type === 'lab-request' && (
+                        <>
+                          {form.details?.user_type && (
+                            <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                          )}
+                          {form.details?.usage_type && (
+                            <span> • {form.details.usage_type.replace('-', ' ')}</span>
+                          )}
+                        </>
+                      )}
+                      {form.type !== 'lab-request' && form.laboratory && (
+                        <span>{form.laboratory}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-center">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(form.status)}`}>
+                      {form.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                    {format(new Date(form.createdAt || form.date), 'M/d/yyyy, h:mm a')}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center justify-center gap-1">
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleGenerateForm(form)}
-                        className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
-                        title="Generate Form Document"
+                        onClick={() => onViewDetails(form)}
+                        className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
+                        title="View Details"
                       >
-                        <Download className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </Button>
-                    )}
-                    
-                    {userRole === 'Admin' && form.status === 'Custodian_Approved' && (
-                      <>
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white h-8 cursor-pointer"
-                          onClick={() => onUpdateStatus(form.id, form.type, 'Admin_Approved')}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-600 hover:bg-red-700 text-white h-8 cursor-pointer"
-                          onClick={() => onUpdateStatus(form.id, form.type, 'Denied')}
-                        >
-                          Deny
-                        </Button>
-                      </>
-                    )}
-                    
-                    {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
-                    {form.type === 'software-install' && form.status === 'Custodian_Approved' && (
-                      <>
+                      
+                      {userRole !== 'Admin' && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => onEditForm(form)} // Use edit handler
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                          title="Edit Installation Details"
+                          onClick={() => handleGenerateForm(form)}
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                          title="Generate Form Document"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Download className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white h-8 cursor-pointer"
-                          onClick={() => {
-                            // Check if required fields are filled before marking as completed
-                            const installationRemarks = form.details.installation_remarks;
-                            const feedbackDate = form.details.feedback_date;
-                            
-                            if (!installationRemarks || !feedbackDate) {
-                              const missingFields = [];
-                              if (!installationRemarks) missingFields.push('Installation Remarks');
-                              if (!feedbackDate) missingFields.push('Feedback Date');
+                      )}
+                      
+                      {userRole === 'Admin' && form.status === 'Custodian_Approved' && (
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white h-8 cursor-pointer"
+                            onClick={() => onUpdateStatus(form.id, form.type, 'Admin_Approved')}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white h-8 cursor-pointer"
+                            onClick={() => onUpdateStatus(form.id, form.type, 'Denied')}
+                          >
+                            Deny
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
+                      {form.type === 'software-install' && form.status === 'Custodian_Approved' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onEditForm(form)} // Use edit handler
+                            className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            title="Edit Installation Details"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white h-8 cursor-pointer"
+                            onClick={() => {
+                              // Check if required fields are filled before marking as completed
+                              const installationRemarks = form.details.installation_remarks;
+                              const feedbackDate = form.details.feedback_date;
                               
-                              alert(`Please fill in the following required fields before marking as completed:\n\n${missingFields.join('\n')}\n\nClick "Edit" to update form details.`);
-                              return;
-                            }
-                            
-                            onUpdateStatus(form.id, form.type, 'Completed');
-                          }}
-                        >
-                          Completed
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+                              if (!installationRemarks || !feedbackDate) {
+                                const missingFields = [];
+                                if (!installationRemarks) missingFields.push('Installation Remarks');
+                                if (!feedbackDate) missingFields.push('Feedback Date');
+                                
+                                alert(`Please fill in the following required fields before marking as completed:\n\n${missingFields.join('\n')}\n\nClick "Edit" to update form details.`);
+                                return;
+                              }
+                              
+                              onUpdateStatus(form.id, form.type, 'Completed');
+                            }}
+                          >
+                            Completed
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

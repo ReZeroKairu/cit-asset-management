@@ -23,7 +23,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
         role: true,
         lab_id: true,
         created_at: true,
-        assigned_lab: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -44,7 +44,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       lab_id: user.lab_id,
-        laboratory: user.assigned_lab,
+        laboratory: user.laboratories,
       created_at: user.created_at
     };
 
@@ -161,7 +161,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
         where: { user_id: parseInt(userId) },
         data: { lab_id: null },
         include: {
-          assigned_lab: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -174,8 +174,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       // Transform the response to match frontend expectations
       const transformedUser = {
         ...updatedUser,
-        assigned_lab: updatedUser.assigned_lab,
-        has_lab: !!updatedUser.assigned_lab,
+        assigned_lab: updatedUser.laboratories,
+        has_lab: !!updatedUser.laboratories,
       };
       
       return res.json(transformedUser);
@@ -209,7 +209,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       where: { user_id: parseInt(userId) },
       data: { lab_id: parseInt(labId) },
       include: {
-        assigned_lab: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -222,8 +222,8 @@ export const assignUserToLab = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.assigned_lab,
-      has_lab: !!updatedUser.assigned_lab,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
     };
 
     res.json(transformedUser);
@@ -272,7 +272,7 @@ export const updateUser = async (req: Request, res: Response) => {
         role: role || existingUser.role,
       },
       include: {
-        assigned_lab: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
@@ -285,8 +285,8 @@ export const updateUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...updatedUser,
-      assigned_lab: updatedUser.assigned_lab,
-      has_lab: !!updatedUser.assigned_lab,
+      assigned_lab: updatedUser.laboratories,
+      has_lab: !!updatedUser.laboratories,
     };
 
     res.json(transformedUser);
@@ -389,7 +389,7 @@ export const createUser = async (req: Request, res: Response) => {
           lab_id: lab_id ? Number(lab_id) : null,
         },
         include: {
-          assigned_lab: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -416,8 +416,8 @@ export const createUser = async (req: Request, res: Response) => {
     // Transform the response to match frontend expectations
     const transformedUser = {
       ...userWithoutPassword,
-      assigned_lab: result.assigned_lab || null,
-      has_lab: !!result.assigned_lab,
+      assigned_lab: result.laboratories || null,
+      has_lab: !!result.laboratories,
     };
 
     res.status(201).json({
