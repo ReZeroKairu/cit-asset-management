@@ -5,13 +5,17 @@ export interface Workstation {
   workstation_id: number;
   workstation_name: string;
   lab_id: number | null;
-  created_at: string;
-  laboratory?: {
+  laboratories?: {
     lab_id: number;
     lab_name: string;
-    location?: string;
-  };
-  assets?: any[];
+    location: string;
+  } | null;
+  asset_statuses?: {
+    status_id: number;
+    status_name: string;
+  } | null;
+  inventory_assets?: any[];
+  created_at: string;
 }
 
 // Get all workstations

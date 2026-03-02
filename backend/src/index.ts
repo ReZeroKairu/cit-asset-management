@@ -1,6 +1,7 @@
 // backend/src/index.ts
 import express from "express";
 import cors from "cors";
+import os from "os";
 import { config } from "./config";
 
 // Import Routes
@@ -15,6 +16,7 @@ import maintenanceRoutes from "./routes/maintenanceRoutes";
 import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
 import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
+import complaintsRoutes from "./routes/complaintsRoutes";
 
 const app = express();
 
@@ -46,6 +48,8 @@ app.use("/dashboard", dashboardRoutes);
 app.use("/forms", formsRoutes); // handles forms submissions
 app.use("/public-forms", publicFormsRoutes); // handles public form submissions (no auth)
 app.use("/api/one-time-forms", oneTimeFormsRoutes); // handles one-time QR form tokens
+app.use("/public-complaints", complaintsRoutes); // handles public complaint submissions (no auth)
+app.use("/complaints", complaintsRoutes); // handles complaint management (auth required)
 
 // ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
 app.use("/maintenance", maintenanceRoutes);
@@ -65,7 +69,25 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
+const getLanIpv4Address = (): string | null => {
+  const nets = os.networkInterfaces();
+
+  for (const name of Object.keys(nets)) {
+    const addrs = nets[name] || [];
+    for (const addr of addrs) {
+      if (addr && addr.family === 'IPv4' && !addr.internal) {
+        return addr.address;
+      }
+    }
+  }
+
+  return null;
+};
+
 app.listen(config.port, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${config.port}`);
-  console.log(`Server also accessible on network: http://192.168.110.72:${config.port}`);
+  const lanIp = getLanIpv4Address();
+  if (lanIp) {
+    console.log(`Server also accessible on network: http://${lanIp}:${config.port}`);
+  }
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, CheckCircle } from "lucide-react";
+import { FileText, CheckCircle, ArrowLeft } from "lucide-react";
 import { PublicLabRequestForm } from "../components/forms/PublicLabRequestForm";
 import { PublicEquipmentBorrowForm } from "../components/forms/PublicEquipmentBorrowForm";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
@@ -49,14 +49,14 @@ const PublicFormsPage = () => {
     }
   };
 
-  const getFormTypeLabel = (type: string) => {
+  const getFormTypeLabel = (type: string, formData?: any) => {
     switch (type) {
       case 'lab-request':
         return 'Lab Request';
       case 'equipment-borrow':
-        return 'Equipment Borrow';
+        return 'Equipment Borrow Request';
       case 'software-install':
-        return 'Software Installation';
+        return 'Software Installation Request';
       default:
         return type;
     }
@@ -67,6 +67,15 @@ const PublicFormsPage = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
+          <div className="mb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/public-landing'}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">CIT Asset Management Forms</h1>
             <p className="text-gray-600 mt-2 text-sm sm:text-base">Submit your requests for laboratory usage, equipment borrowing, and software installation</p>
@@ -120,13 +129,14 @@ const PublicFormsPage = () => {
                 <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Form Submitted Successfully!</h2>
                 <p className="text-gray-600 mb-4">
-                  Your {getFormTypeLabel(submittedForm.type)} has been submitted and is now pending review.
+                  Your {getFormTypeLabel(submittedForm.type, submittedForm.data)} has been submitted and is now pending review.
                 </p>
                 <div className="bg-gray-50 rounded-lg p-4 text-left max-w-md mx-auto">
                   <h3 className="font-semibold mb-2">Submission Details:</h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
+                    <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type, submittedForm.data)}</p>
                     <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
+                    <p><strong>User Type:</strong> {submittedForm.data.user_type || 'N/A'}</p>
                     <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
                     {submittedForm.data.approved_by && (
                       <p><strong>Approved By:</strong> {submittedForm.data.approved_by}</p>
@@ -151,15 +161,25 @@ const PublicFormsPage = () => {
                     <p><strong>Submitted:</strong> {new Date(submittedForm.submittedAt).toLocaleString()}</p>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => {
-                    setActiveTab('lab-request');
-                    setSubmittedForm(null);
-                  }}
-                  className="mt-6"
-                >
-                  Submit Another Form
-                </Button>
+                <div className="space-y-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = '/public-landing'}
+                    className="w-full sm:w-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Home
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setActiveTab('lab-request');
+                      setSubmittedForm(null);
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Submit Another Form
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -72,14 +72,14 @@ const UnassignedAssetTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button
-                    className="text-blue-600 hover:text-blue-800"
+                    className="p-2 h-8 w-8 cursor-pointer hover:bg-blue-50 rounded-md text-blue-600 hover:text-blue-700 transition-colors"
                     onClick={() => onEdit(asset)}
                     title="Edit"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    className="text-red-600 hover:text-red-800"
+                    className="text-red-600 hover:text-red-800 cursor-pointer"
                     onClick={() => onDelete(asset.asset_id)}
                     title="Delete"
                   >

@@ -12,6 +12,8 @@ import FormsPage from "./pages/FormsPage";
 import PublicFormsPage from "./pages/PublicFormsPage";
 import PublicLandingPage from "./pages/PublicLandingPage";
 import OneTimeFormPage from "./pages/OneTimeFormPage";
+import ComplaintsPage from "./pages/ComplaintsPage";
+import ComplaintsManagementPage from "./pages/ComplaintsManagementPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import MaintenancePage from "./pages/MaintenancePage";
@@ -20,9 +22,9 @@ import {
   Package,
   Building,
   FileText,
-  Users,
   Wrench,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
 
@@ -216,7 +218,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {isAdmin ? (
+        {isAdmin && (
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
             onClick={() => handleNavigate("labs")}
@@ -240,14 +242,33 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          /* Placeholder or another user card for Custodians if needed */
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-gray-50">
-            <CardContent className="pt-6 flex items-center justify-center h-full">
-              <p className="text-gray-400 text-sm">System Status: Active</p>
-            </CardContent>
-          </Card>
         )}
+
+        {/* ✅ NEW: Complaints Dashboard Card */}
+        <Card
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => handleNavigate("complaints-management")}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Complaints
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalComplaints || 0}
+                </p>
+                <p className="text-xs text-orange-600 mt-1">
+                  {stats.openComplaints || 0} Open •{" "}
+                  {stats.inProgressComplaints || 0} In Progress
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -268,21 +289,25 @@ function App() {
     | "public-forms"
     | "public-landing"
     | "one-time-form"
+    | "complaints"
+    | "complaints-management"
     | "login"
     | "maintenance"
   >(() => {
     const path = window.location.pathname;
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
-    if (path === "/one-time" || path.startsWith("/one-time")) return "one-time-form";
-    
+    if (path === "/complaints") return "complaints";
+    if (path === "/one-time" || path.startsWith("/one-time"))
+      return "one-time-form";
+
     const storedUser = localStorage.getItem("user");
     const isLoggedIn = storedUser && storedUser !== "null";
-    
+
     if (path === "/") {
       return isLoggedIn ? "home" : "public-landing";
     }
-    
+
     return isLoggedIn ? "home" : "public-landing";
   });
 
@@ -298,6 +323,8 @@ function App() {
       const path = window.location.pathname;
       if (path === "/public-forms") {
         setCurrentPage("public-forms");
+      } else if (path === "/complaints") {
+        setCurrentPage("complaints");
       } else if (path === "/one-time" || path.startsWith("/one-time")) {
         setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
@@ -334,6 +361,8 @@ function App() {
     setCurrentPage(page as any);
     if (page === "public-forms") {
       window.history.pushState(null, "", "/public-forms");
+    } else if (page === "complaints") {
+      window.history.pushState(null, "", "/complaints");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else if (page === "one-time-form") {
@@ -379,6 +408,10 @@ function App() {
         return <OneTimeFormPage />;
       case "public-forms":
         return <PublicFormsPage />;
+      case "complaints":
+        return <ComplaintsPage />;
+      case "complaints-management":
+        return <ComplaintsManagementPage />;
       case "public-landing":
         return <PublicLandingPage />;
       default:
@@ -387,7 +420,12 @@ function App() {
   };
 
   // 1. PUBLIC PAGES - Never show sidebar, regardless of login status
-  if (currentPage === "one-time-form" || currentPage === "public-forms" || currentPage === "public-landing") {
+  if (
+    currentPage === "one-time-form" ||
+    currentPage === "public-forms" ||
+    currentPage === "complaints" ||
+    currentPage === "public-landing"
+  ) {
     return renderPage();
   }
 

@@ -50,6 +50,7 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
       date,
       usage_type,
       faculty_student_name,
+      user_type,
       year_level,
       laboratory,
       printing_pages,
@@ -69,6 +70,7 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
         date: new Date(date),
         usage_type,
         faculty_student_name,
+        user_type,
         year_level,
         laboratory,
         printing_pages,
@@ -105,6 +107,7 @@ export const createPublicEquipmentBorrow = async (req: Request, res: Response) =
     const {
       date,
       faculty_student_name,
+      user_type,
       year_level,
       laboratory,
       equipment_list,
@@ -122,6 +125,7 @@ export const createPublicEquipmentBorrow = async (req: Request, res: Response) =
       data: {
         date: new Date(date),
         faculty_student_name,
+        user_type,
         year_level,
         laboratory,
         equipment_list: equipment_list || [],

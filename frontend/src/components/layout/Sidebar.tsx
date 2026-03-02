@@ -26,7 +26,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
 
   return (
     <aside
-      className={`bg-gray-800 text-white flex flex-col transition-all duration-300 ${
+      className={`bg-gray-800 text-white flex flex-col h-full transition-all duration-300 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
@@ -44,8 +44,8 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
           {collapsed ? "CIT" : "CIT Asset Management"}
         </a>
       </div>
-      <div className="flex-1 overflow-y-auto">
-        <nav className={`${collapsed ? "px-2" : "p-4"}`}>
+      <div className="flex-1">
+        <nav className={`${collapsed ? "px-2" : "px-4 pt-4 pb-0"}`}>
           <ul className="space-y-2">
             <li>
               <button
@@ -203,8 +203,8 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
             <li>
               <button
                 className={`w-full text-left rounded-md flex items-center transition-colors ${
-                  active === "forms" 
-                    ? "bg-blue-600 text-white" 
+                  active === "forms"
+                    ? "bg-blue-600 text-white"
                     : "hover:bg-gray-700 text-gray-300"
                 } ${
                   collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
@@ -226,6 +226,35 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                   />
                 </svg>
                 {!collapsed && <span>Forms</span>}
+              </button>
+            </li>
+            {/* Complaints Management - Available to all users */}
+            <li>
+              <button
+                className={`w-full text-left rounded-md flex items-center transition-colors ${
+                  active === "complaints-management" 
+                    ? "bg-blue-600 text-white" 
+                    : "hover:bg-gray-700 text-gray-300"
+                } ${
+                  collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
+                }`}
+                onClick={() => onNavigate("complaints-management")}
+                title={collapsed ? "Complaints Management" : ""}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949M3 20.635a9.863 9.863 0 01-4.255-.949M3 3.512a9.863 9.863 0 014.255-.949M21 3.512a9.863 9.863 0 014.255.949M9 7h.01M15 7h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                {!collapsed && <span>Complaints Management</span>}
               </button>
             </li>
             {user?.role === "Admin" && (
@@ -299,17 +328,27 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
             <li>
               <button
                 className={`w-full text-left rounded-md flex items-center transition-colors ${
-                  active === "archives" 
-                    ? "bg-blue-600 text-white" 
+                  active === "archives"
+                    ? "bg-blue-600 text-white"
                     : "hover:bg-gray-700 text-gray-300"
                 } ${
-                  collapsed ? 'justify-center px-2 py-2' : 'px-4 py-2 space-x-3'
+                  collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
                 }`}
                 onClick={() => onNavigate("archives")}
                 title={collapsed ? "Archives" : ""}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
                 </svg>
                 {!collapsed && <span>Archives</span>}
               </button>

@@ -272,7 +272,7 @@ async function main() {
   }
 
   // 10. Workstations
-  console.log(' Seeding workstations...');
+  console.log(" Seeding workstations...");
   for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
       where: { workstation_id: ws.workstation_id },
@@ -282,7 +282,7 @@ async function main() {
   }
 
   // 11. Procedures
-  console.log(' Seeding procedures...');
+  console.log(" Seeding procedures...");
   for (const proc of seedData.procedures) {
     await prisma.procedures.upsert({
       where: { procedure_id: proc.procedure_id },

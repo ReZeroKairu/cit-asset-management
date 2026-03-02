@@ -10,6 +10,7 @@ export const createLabRequest = async (req: Request, res: Response) => {
       date,
       usage_type,
       faculty_student_name,
+      user_type,
       year_level,
       laboratory,
       printing_pages,
@@ -29,6 +30,7 @@ export const createLabRequest = async (req: Request, res: Response) => {
         date: new Date(date),
         usage_type,
         faculty_student_name,
+        user_type,
         year_level,
         laboratory,
         printing_pages,
@@ -144,8 +146,6 @@ export const updateLabRequestDetails = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { time_out, remarks } = req.body;
 
-    console.log('🔧 Updating lab request details:', { id, time_out, remarks });
-
     const labRequest = await prisma.lab_requests.update({
       where: { request_id: parseInt(id as string) },
       data: { 
@@ -153,8 +153,6 @@ export const updateLabRequestDetails = async (req: Request, res: Response) => {
         remarks: remarks || null
       }
     });
-
-    console.log('✅ Lab request details updated successfully:', labRequest);
 
     res.status(200).json({
       success: true,
@@ -178,6 +176,7 @@ export const createEquipmentBorrow = async (req: Request, res: Response) => {
       date,
       laboratory,
       faculty_student_name,
+      user_type,
       year_level,
       release_time,
       returned_time,
@@ -195,6 +194,7 @@ export const createEquipmentBorrow = async (req: Request, res: Response) => {
         date: new Date(date),
         laboratory,
         faculty_student_name,
+        user_type,
         year_level,
         release_time,
         returned_time,

@@ -7,7 +7,7 @@ import {
   updateDailyReport,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
-import { CheckSquare, Square, FileText, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
@@ -376,36 +376,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {filteredReports.some((r) => r.status === "Pending") && (
-                <>
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 flex items-center gap-2 cursor-pointer"
-                  >
-                    {selectedReports.length ===
-                    filteredReports.filter((r) => r.status === "Pending")
-                      .length ? (
-                      <>
-                        <Square className="w-4 h-4" />
-                        Deselect All
-                      </>
-                    ) : (
-                      <>
-                        <CheckSquare className="w-4 h-4" />
-                        Select All Pending
-                      </>
-                    )}
-                  </button>
-                  {selectedReports.length > 0 && (
-                    <button
-                      onClick={handleApproveAll}
-                      disabled={loading}
-                      className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
-                    >
-                      Approve Selected ({selectedReports.length})
-                    </button>
-                  )}
-                </>
+              {selectedReports.length > 0 && (
+                <button
+                  onClick={handleApproveAll}
+                  disabled={loading}
+                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                  Approve Selected ({selectedReports.length})
+                </button>
               )}
             </div>
           </div>
@@ -528,7 +506,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleViewReport(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="text-gray-600 hover:text-black flex items-center px-2 py-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
                           title="View Report Details"
                         >
                           <svg
@@ -553,7 +531,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         </button>
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />

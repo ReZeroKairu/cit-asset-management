@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Download } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitSoftwareInstallation } from "../../api/forms";
+import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
 interface SoftwareInstallFormData {
@@ -166,39 +167,34 @@ export const SoftwareInstallForm = () => {
     }
   };
 
-  const generateSoftwareReport = () => {
-    const reportContent = `
-COLLEGE OF INFORMATION TECHNOLOGY
-SOFTWARE INSTALLATION REQUEST FORM
-
-Faculty Name: ${formData.facultyName}
-Date: ${formData.date}
-Laboratory: ${formData.laboratory}
-List of Software/Program to be installed:
-${formData.softwareList}
-
-Requested by: ${formData.requestedBy}
-
-Approved by: ${formData.approvedBy}
-
-INSTALLATION FEEDBACK FORM
-Remarks: ${formData.installationRemarks}
-Prepared by: ${formData.preparedBy}
-Date: ${formData.feedbackDate}
-
-Laboratory Custodian
-    `.trim();
-
-    // Create and download software report
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `software-installation-${formData.date || new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  const generateSoftwareReport = async () => {
+    try {
+      // Create form data object that matches the expected structure for template generation
+      const formDataForTemplate = {
+        type: 'software-install',
+        details: {
+          faculty_name: formData.facultyName,
+          date: formData.date,
+          laboratory: formData.laboratory,
+          software_list: formData.softwareList,
+          requested_by: formData.requestedBy,
+          approved_by: formData.approvedBy,
+          installation_remarks: formData.installationRemarks,
+          prepared_by: formData.preparedBy,
+          feedback_date: formData.feedbackDate,
+        },
+        name: formData.facultyName,
+        purpose: formData.softwareList,
+        laboratory: formData.laboratory,
+        date: formData.date,
+        softwareList: formData.softwareList,
+      };
+      
+      await generateFormDocument(formDataForTemplate);
+    } catch (error) {
+      console.error('Error generating software report:', error);
+      alert('Error generating report. Please try again.');
+    }
   };
 
   return (
@@ -220,6 +216,7 @@ Laboratory Custodian
                 value={formData.facultyName}
                 onChange={(e) => handleInputChange("facultyName", e.target.value)}
                 placeholder="Enter faculty name"
+                className="capitalize-first"
                 required
               />
             </div>
@@ -333,11 +330,14 @@ Laboratory Custodian
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => generateSoftwareReport()} className="flex items-center gap-2" disabled={isSubmitting}>
+          <div className="flex justify-between items-center pt-6">
+            <div></div>
+            <div className="flex justify-center">
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => generateSoftwareReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

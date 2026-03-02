@@ -65,16 +65,16 @@ export const getArchivedReports = async (req: Request, res: Response) => {
         laboratories: {
           select: { lab_id: true, lab_name: true, location: true }
         },
-        workstation_items: {
+        report_workstation_items: {
           include: {
-            workstation: {
+            workstations: {
               select: { workstation_id: true, workstation_name: true }
             }
           }
         },
-        procedures: {
+        daily_report_procedures: {
           include: {
-            procedure: {
+            procedures: {
               select: { procedure_id: true, procedure_name: true, category: true }
             }
           }
@@ -166,7 +166,7 @@ export const getAllDailyReports = async (req: Request, res: Response) => {
           select: { lab_id: true, lab_name: true, location: true }
         }
       },
-      orderBy: { report_date: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({
@@ -232,10 +232,7 @@ export const getDailyReportById = async (req: Request, res: Response) => {
       }),
       // Get procedures for this report
       prisma.daily_report_procedures.findMany({
-        where: { report_id: reportId },
-        include: {
-          procedure: true
-        }
+        where: { report_id: reportId }
       })
     ]);
 
@@ -250,6 +247,17 @@ export const getDailyReportById = async (req: Request, res: Response) => {
 
     const workstationMap = new Map(workstationDetails.map(ws => [ws.workstation_id, ws]));
 
+    // Fetch procedure details for the report procedures
+    const procedureIds = reportProcedures.map(rp => rp.procedure_id);
+    const procedureDetails = procedureIds.length > 0 
+      ? await prisma.procedures.findMany({
+          where: { procedure_id: { in: procedureIds } },
+          select: { procedure_id: true, procedure_name: true, category: true }
+        })
+      : [];
+
+    const procedureMap = new Map(procedureDetails.map(p => [p.procedure_id, p]));
+
     const formattedReport = {
       ...report,
       workstation_items: workstationItems.map((item: any) => {
@@ -262,7 +270,7 @@ export const getDailyReportById = async (req: Request, res: Response) => {
         };
       }),
       procedures: reportProcedures.map((rp: any) => {
-        const procedure = rp.procedure;
+        const procedure = procedureMap.get(rp.procedure_id);
         return {
           procedure_id: rp.procedure_id,
           procedure_name: procedure?.procedure_name || 'Unknown Procedure',
@@ -518,7 +526,7 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
           select: { lab_id: true, lab_name: true, location: true }
         }
       },
-      orderBy: { report_date: 'desc' }
+      orderBy: { created_at: 'desc' }
     });
 
     res.json({
