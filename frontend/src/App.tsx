@@ -259,7 +259,8 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
                   {stats.totalComplaints || 0}
                 </p>
                 <p className="text-xs text-orange-600 mt-1">
-                  {stats.openComplaints || 0} Open • {stats.inProgressComplaints || 0} In Progress
+                  {stats.openComplaints || 0} Open •{" "}
+                  {stats.inProgressComplaints || 0} In Progress
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
@@ -297,15 +298,16 @@ function App() {
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
     if (path === "/complaints") return "complaints";
-    if (path === "/one-time" || path.startsWith("/one-time")) return "one-time-form";
-    
+    if (path === "/one-time" || path.startsWith("/one-time"))
+      return "one-time-form";
+
     const storedUser = localStorage.getItem("user");
     const isLoggedIn = storedUser && storedUser !== "null";
-    
+
     if (path === "/") {
       return isLoggedIn ? "home" : "public-landing";
     }
-    
+
     return isLoggedIn ? "home" : "public-landing";
   });
 
@@ -418,7 +420,12 @@ function App() {
   };
 
   // 1. PUBLIC PAGES - Never show sidebar, regardless of login status
-  if (currentPage === "one-time-form" || currentPage === "public-forms" || currentPage === "complaints" || currentPage === "public-landing") {
+  if (
+    currentPage === "one-time-form" ||
+    currentPage === "public-forms" ||
+    currentPage === "complaints" ||
+    currentPage === "public-landing"
+  ) {
     return renderPage();
   }
 

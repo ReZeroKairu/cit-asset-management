@@ -232,7 +232,7 @@ const InventoryPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
@@ -244,7 +244,9 @@ const InventoryPage = () => {
         {/* Lab Assigned Indicator for Custodians */}
         {user?.role === "Custodian" && user?.lab_id && (
           <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            📍 Assigned Lab: {availableLabs.find(lab => lab.lab_id === user.lab_id)?.lab_name || "Loading..."}
+            📍 Assigned Lab:{" "}
+            {availableLabs.find((lab) => lab.lab_id === user.lab_id)
+              ?.lab_name || "Loading..."}
           </div>
         )}
       </div>
