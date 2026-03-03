@@ -12,10 +12,6 @@ import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
 
-// Public routes (no authentication required)
-router.get("/public", getAllWorkstations);
-
-// Protected routes (authentication required)
 router.use(authenticateToken);
 
 router.get("/", getAllWorkstations);

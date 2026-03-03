@@ -268,38 +268,10 @@ const MaintenanceForm: React.FC<Props> = ({
       ),
   );
 
-  // Calculate overall system status based on priority
-  const getOverallSystemStatus = (assets: WorkstationAssetItem[]) => {
-    const statuses = assets.map(asset => asset.status);
-    
-    // ✅ LOGGING: Track status calculation
-    console.log("🔍 CALCULATING OVERALL STATUS:", {
-      assetCount: assets.length,
-      individualStatuses: statuses,
-      assets: assets.map(a => ({ name: a.unit_name, status: a.status }))
-    });
-    
-    // Priority order: most critical to least critical
-    if (statuses.some(status => ["For Repair", "For Replacement", "Lost"].includes(status))) {
-      console.log("🔴 RESULT: For Repair (critical status found)");
-      return "For Repair";
-    }
-    if (statuses.some(status => ["For Upgrade"].includes(status))) {
-      console.log("🟡 RESULT: For Upgrade (upgrade status found)");
-      return "For Upgrade";
-    }
-    if (statuses.some(status => ["Not Functional", "Down", "Offline", "Critical", "Urgent"].includes(status))) {
-      console.log("🔴 RESULT: For Repair (non-functional status found)");
-      return "For Repair";
-    }
-    console.log("🟢 RESULT: Functional (all good)");
-    return "Functional";
-  };
-
-  const parentSystemStatus = getOverallSystemStatus(systemAssets);
-  
-  // ✅ LOGGING: Track final status
-  console.log("🎯 FINAL WORKSTATION STATUS:", parentSystemStatus);
+  const allSystemFunctional = systemAssets.every((asset) =>
+    ["Functional", "Working", "Operational"].includes(asset.status),
+  );
+  const parentSystemStatus = allSystemFunctional ? "Functional" : "For Repair";
 
   const parentSystemUnit: WorkstationAssetItem = {
     asset_id: -1,

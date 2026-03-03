@@ -3,7 +3,7 @@ import api from "./axios";
 
 // Get all laboratories
 export const getLaboratories = async () => {
-  const response = await api.get("/laboratories/public");
+  const response = await api.get("/laboratories");
   return response.data;
 };
 

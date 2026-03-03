@@ -244,12 +244,6 @@ export const createPMCReport = async (req: Request, res: Response) => {
       }
 
       // 🔄 SYNC: Update inventory status based on maintenance status
-      console.log("🔄 STARTING SYNC:", {
-        workstation_id: Number(workstation_id),
-        workstation_status,
-        status_type: typeof workstation_status
-      });
-      
       await syncInventoryStatusWithMaintenance(Number(workstation_id), workstation_status, tx);
 
       // Link procedures
@@ -784,37 +778,18 @@ const syncInventoryStatusWithMaintenance = async (
   try {
     console.log("🔄 SYNCING STATUS:", { workstationId, maintenanceStatus });
 
-    // Check what statuses are available in the database
-    const allStatuses = await tx.asset_statuses.findMany({
-      select: { status_id: true, status_name: true }
-    });
-    console.log("📋 AVAILABLE STATUSES:", allStatuses);
-
     // Use exact same statuses - no mapping needed
     const targetStatusName = maintenanceStatus; // Use status directly
     console.log("🎯 USING EXACT STATUS:", { from: maintenanceStatus, to: targetStatusName });
 
     // Find the status ID
-    let statusRecord = await tx.asset_statuses.findFirst({
+    const statusRecord = await tx.asset_statuses.findFirst({
       where: { status_name: targetStatusName }
     });
 
     if (!statusRecord) {
-      console.log("⚠️ STATUS NOT FOUND - CREATING:", targetStatusName);
-      statusRecord = await tx.asset_statuses.create({
-        data: {
-          status_name: targetStatusName
-        }
-      });
-      console.log("✅ STATUS CREATED:", {
-        statusName: targetStatusName,
-        statusId: statusRecord.status_id
-      });
-    } else {
-      console.log("✅ STATUS FOUND:", {
-        targetStatusName,
-        statusId: statusRecord.status_id
-      });
+      console.error("❌ Status not found:", targetStatusName);
+      return;
     }
 
     // Find all assets for this workstation
