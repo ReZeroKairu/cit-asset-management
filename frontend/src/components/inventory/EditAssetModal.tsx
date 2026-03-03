@@ -43,6 +43,9 @@ const EditAssetModal: React.FC<Props> = ({
     if (show) {
       loadDropdowns();
       if (asset) {
+        console.log('EditAssetModal - Asset data:', asset);
+        console.log('Asset lab_id:', asset.lab_id);
+        console.log('Asset laboratories:', asset.laboratories);
         // ✅ Map nested backend data to flat form state
         setFormData({
           property_tag_no:
@@ -58,11 +61,12 @@ const EditAssetModal: React.FC<Props> = ({
             : "",
           asset_remarks: asset.asset_details?.asset_remarks || "", // ✅ Map remarks
 
-          // ID References
-          lab_id: asset.lab_id?.toString() || "",
+          // ID References - try multiple ways to get lab_id
+          lab_id: asset.lab_id?.toString() || asset.laboratories?.lab_id?.toString() || "",
           unit_id: asset.unit_id?.toString() || "",
           workstation_id: asset.workstation_id?.toString() || "",
         });
+        console.log('Set lab_id to:', asset.lab_id?.toString() || asset.laboratories?.lab_id?.toString() || "");
       }
     }
   }, [show, asset]);
@@ -71,7 +75,7 @@ const EditAssetModal: React.FC<Props> = ({
     try {
       const [labsRes, unitsRes, wsRes] = await Promise.all([
         api.get("/laboratories"),
-        api.get("/units"),
+        api.get("/inventory/units"),
         api.get("/workstations"),
       ]);
       setLabs(labsRes.data);
@@ -109,8 +113,14 @@ const EditAssetModal: React.FC<Props> = ({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div 
+      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-lg font-bold mb-4">Edit Asset</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Property Tag */}
@@ -149,6 +159,19 @@ const EditAssetModal: React.FC<Props> = ({
             />
           </div>
 
+          {/* Date of Purchase */}
+          <div>
+            <label className="block text-sm font-medium">Date of Purchase</label>
+            <input
+              type="date"
+              className="w-full border p-2 rounded"
+              value={formData.date_of_purchase}
+              onChange={(e) =>
+                setFormData({ ...formData, date_of_purchase: e.target.value })
+              }
+            />
+          </div>
+
           {/* Location (Lab) - LOCKED for Custodians */}
           <div>
             <label className="block text-sm font-medium">Laboratory</label>
@@ -173,8 +196,7 @@ const EditAssetModal: React.FC<Props> = ({
             </select>
             {user?.role === "Custodian" && (
               <p className="text-xs text-gray-500 mt-1">
-                LOCKED: You can only edit assets within your assigned
-                laboratory.
+                LOCKED: You can only edit assets within your assigned laboratory.
               </p>
             )}
           </div>

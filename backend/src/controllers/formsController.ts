@@ -273,7 +273,7 @@ export const updateEquipmentBorrowStatus = async (req: Request, res: Response) =
     const { status } = req.body;
 
     // Validate status against the enum
-    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Returned'];
+    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Returned', 'Lost'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,

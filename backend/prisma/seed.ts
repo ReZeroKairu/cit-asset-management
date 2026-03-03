@@ -33,6 +33,7 @@ async function main() {
       { status_id: 2, status_name: "For Repair" },
       { status_id: 3, status_name: "For Upgrade" },
       { status_id: 4, status_name: "For Replacement" },
+      { status_id: 5, status_name: "Lost" },
     ],
 
     laboratories: [

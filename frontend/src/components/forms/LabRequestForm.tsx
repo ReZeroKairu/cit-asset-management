@@ -57,6 +57,7 @@ export const LabRequestForm = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [cooldownActive, setCooldownActive] = useState(false);
   const [assignedLab, setAssignedLab] = useState<string>('');
 
   const [formData, setFormData] = useState<LabRequestFormData>({
@@ -185,6 +186,9 @@ export const LabRequestForm = () => {
 
       if (response.success) {
         setSubmitMessage("Lab request submitted successfully!");
+        setCooldownActive(true);
+        // Reset cooldown after 5 seconds
+        setTimeout(() => setCooldownActive(false), 5000);
         // Reset form but keep default values
         setFormData({
           date: "",
@@ -199,7 +203,7 @@ export const LabRequestForm = () => {
           timeOut: "",
           purpose: "",
           requestedBy: "",
-          approvedBy: "DR. MARCO MARVIN L. RADO", // Keep default value
+          approvedBy: "",
           remarks: "",
           monitoredBy: "",
         });
@@ -470,8 +474,8 @@ export const LabRequestForm = () => {
           <div className="flex justify-between items-center pt-6">
             <div></div>
             <div className="flex justify-center">
-              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting || cooldownActive}>
+                {isSubmitting ? 'Submitting...' : cooldownActive ? 'Please wait...' : 'Submit Form'}
               </Button>
             </div>
             <Button type="button" variant="outline" onClick={() => generateReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>

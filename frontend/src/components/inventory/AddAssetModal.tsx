@@ -273,10 +273,19 @@ const AddAssetModal: React.FC<Props> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] transition-opacity"></div>
-      <div className="fixed inset-0 z-[90] overflow-y-auto">
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] transition-opacity"
+        onClick={handleClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-[90] overflow-y-auto"
+        onClick={handleClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4 py-6">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100">
+          <div 
+            className="bg-white rounded-xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between shadow-md z-10">
               <h3 className="text-lg font-semibold tracking-wide">

@@ -58,7 +58,10 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   // For non-Admin users, show both status and date filters
   return (
     <div className="flex gap-2 w-full sm:w-auto">
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={(newValue) => {
+        console.log('🔄 Status filter changed:', newValue);
+        onChange(newValue);
+      }}>
         <SelectTrigger className="w-full sm:w-48">
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>

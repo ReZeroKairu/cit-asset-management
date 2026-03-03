@@ -32,6 +32,11 @@ export const FormList: React.FC<FormListProps> = ({
   onBulkApprove = () => {},
   onEditForm = () => {}, // Add edit form handler
 }) => {
+  console.log('📋 FormList received:', {
+    formsCount: forms.length,
+    forms: forms.map(f => ({ id: f.id, status: f.status, type: f.type })),
+    loading
+  });
   const handleCheckboxChange = (formId: string, checked: boolean) => {
     const newSelected = new Set(selectedForms);
     if (checked) {

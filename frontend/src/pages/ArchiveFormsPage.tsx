@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { FileText, Clock, CheckCircle, XCircle, Eye, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
+import { useAuth } from "../context/AuthContext";
 import {
   getLabRequests,
   getEquipmentBorrows,
@@ -11,6 +12,7 @@ import { generateFormDocument } from "../utils/formTemplateMapping";
 import { type FormSubmission } from "../types/forms";
 
 const ArchiveFormsPage = () => {
+  const { user } = useAuth();
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,13 +106,26 @@ const ArchiveFormsPage = () => {
         form.status === "Approved" || 
         form.status === "Rejected" || 
         form.status === "Completed" ||
-        form.status === "Denied"
+        form.status === "Denied" ||
+        form.status === "Returned" ||
+        form.status === "Lost"
       );
 
+      // Apply role-based filtering for custodians
+      let filteredArchivedForms = archivedForms;
+      if (user?.role === "Custodian") {
+        filteredArchivedForms = archivedForms.filter(form => {
+          // Show forms created by this custodian or forms from their assigned lab
+          return form.userId === user.id || 
+                 (form.laboratory && user.lab_id && 
+                  form.laboratory.toLowerCase().includes(`lab${user.lab_id}`));
+        });
+      }
+
       // Filter by tab
-      let filteredForms = archivedForms;
+      let filteredForms = filteredArchivedForms;
       if (activeTab !== "all") {
-        filteredForms = archivedForms.filter(form => form.type === activeTab);
+        filteredForms = filteredArchivedForms.filter(form => form.type === activeTab);
       }
 
       // Apply date filtering
@@ -153,6 +168,10 @@ const ArchiveFormsPage = () => {
         return "bg-red-100 text-red-800";
       case "Completed":
         return "bg-green-100 text-green-800";
+      case "Returned":
+        return "bg-blue-100 text-blue-800";
+      case "Lost":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -168,8 +187,12 @@ const ArchiveFormsPage = () => {
       case "Rejected":
       case "Denied":
         return <XCircle className="w-4 h-4" />;
+      case "Returned":
+        return null;
+      case "Lost":
+        return null;
       default:
-        return <FileText className="w-4 h-4" />;
+        return null;
     }
   };
 

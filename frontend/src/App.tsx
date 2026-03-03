@@ -17,6 +17,7 @@ import ComplaintsManagementPage from "./pages/ComplaintsManagementPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import MaintenancePage from "./pages/MaintenancePage";
+import InventoryAnalyticsSection from "./components/admin/InventoryAnalyticsSection";
 // ✅ UPDATED: Added Wrench icon
 import {
   Package,
@@ -270,6 +271,11 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Inventory Analytics Section - Admin Only */}
+      {isAdmin && (
+        <InventoryAnalyticsSection />
+      )}
     </div>
   );
 };

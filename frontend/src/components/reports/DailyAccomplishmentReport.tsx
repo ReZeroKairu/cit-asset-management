@@ -175,8 +175,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
       }
       
       // Get lab info to find who assigned the custodian
-      const labResponse = await api.get(`/laboratories/${report.lab_id}`);
-      const labData = labResponse.data;
+      await api.get(`/laboratories/${report.lab_id}`);
       
       // Process workstation data from the report
       const processedWorkstations = report.workstation_items?.map((item: any) => ({
@@ -274,8 +273,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         const detailedReport = detailedReportResponse.data;
         
         // Get lab info for the noted_by field
-        const labResponse = await api.get(`/laboratories/${report.lab_id}`);
-        const labData = labResponse.data;
+        await api.get(`/laboratories/${report.lab_id}`);
         
         // Process workstation data
         const processedWorkstations = detailedReport.workstation_items?.map((item: any) => ({
@@ -318,8 +316,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   return (
     <>
       {show && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-0 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]">
+        <div 
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          onClick={onClose}
+        >
+          <div 
+            className="relative top-10 mx-auto p-0 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="flex justify-between items-center p-5 border-b bg-gray-50 rounded-t-md">
               <h3 className="text-xl font-semibold text-gray-900">

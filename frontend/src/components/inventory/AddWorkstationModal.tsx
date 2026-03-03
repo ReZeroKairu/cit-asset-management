@@ -139,10 +139,19 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        onClick={handleClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-50 overflow-y-auto"
+        onClick={handleClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-gray-800 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
               <h3 className="text-lg font-semibold">Create Workstations</h3>

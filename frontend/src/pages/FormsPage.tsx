@@ -139,10 +139,11 @@ const FormsPage = () => {
             )
             .filter(
               (form) =>
-                // Exclude archived forms (completed, returned, denied)
+                // Exclude archived forms (completed, returned, denied, lost)
                 form.status !== "Completed" &&
                 form.status !== "Returned" &&
-                form.status !== "Denied"
+                form.status !== "Denied" &&
+                form.status !== "Lost"
             );
         }
 
@@ -171,6 +172,8 @@ const FormsPage = () => {
   const updateStatus = useCallback(
     async (formId: number, formType: string, newStatus: string) => {
       try {
+        console.log(`🔄 Updating status for ${formType} ID ${formId} to ${newStatus}`);
+
         switch (formType) {
           case "lab-request":
             await apiUpdateLabRequestStatus(formId, newStatus);
@@ -186,9 +189,25 @@ const FormsPage = () => {
             return;
         }
 
+        console.log(`✅ Successfully updated status to ${newStatus}`);
         await fetchForms();
       } catch (error) {
-        console.error("Error updating status:", error);
+        console.error("❌ Error updating status:", error);
+        console.error("Error details:", {
+          formId,
+          formType,
+          newStatus,
+          error: error instanceof Error ? error.message : error,
+          response: (error as any)?.response?.data,
+          status: (error as any)?.response?.status
+        });
+
+        // Show user-friendly error message
+        const errorMessage = (error as any)?.response?.data?.message ||
+                           (error as any)?.response?.data?.error ||
+                           "Failed to update status. Please try again.";
+
+        alert(`Error updating status: ${errorMessage}`);
       }
     },
     [fetchForms]
@@ -238,6 +257,8 @@ const FormsPage = () => {
         return "bg-red-100 text-red-800 border-red-200";
       case "Returned":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Lost":
+        return "bg-red-100 text-red-800 border-red-200";
       case "Completed":
         return "bg-purple-100 text-purple-800 border-purple-200";
       default:
@@ -306,10 +327,31 @@ const FormsPage = () => {
   }, []);
 
   const { filteredForms, pendingCount } = useMemo(() => {
+    console.log('🔍 Filtering forms:', {
+      totalForms: forms.length,
+      currentFilter: filter,
+      forms: forms.map(f => ({ 
+        id: f.id, 
+        status: f.status, 
+        type: f.type,
+        fullForm: f
+      }))
+    });
+    
     const filtered = forms.filter((form) => {
       const matchesStatus = filter === "all" || form.status === filter;
       const matchesDate = filterByDate(form);
       return matchesStatus && matchesDate;
+    });
+
+    console.log('✅ Filtered result:', {
+      filteredCount: filtered.length,
+      filteredForms: filtered.map(f => ({ 
+        id: f.id, 
+        status: f.status, 
+        type: f.type,
+        fullForm: f
+      }))
     });
 
     return {
@@ -319,6 +361,17 @@ const FormsPage = () => {
       ).length,
     };
   }, [forms, filter, filterByDate]);
+
+  const handleFilterChange = useCallback((newFilter: string) => {
+    console.log('🎯 FormsPage filter change called:', newFilter);
+    setFilter(newFilter);
+  }, []);
+
+  console.log('👤 User role:', user?.role);
+    
+  // Show available status options for debugging
+  const availableStatuses = [...new Set(forms.map(f => f.status))];
+  console.log('📊 Available statuses:', availableStatuses);
 
   if (user?.role !== "Admin") {
     return (
@@ -338,7 +391,7 @@ const FormsPage = () => {
         {/* Add StatusFilter for Custodian users */}
         <StatusFilter
           value={filter}
-          onChange={setFilter}
+          onChange={handleFilterChange}
           pendingCount={pendingCount}
           userRole={user?.role}
           onDateFilterChange={setDateFilter}
@@ -411,35 +464,34 @@ const FormsPage = () => {
             <h2 className="text-lg font-semibold">Submitted Forms</h2>
             {loading ? (
               <div>Loading...</div>
-            ) : forms.length === 0 ? (
+            ) : filteredForms.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No submitted forms found. Forms submitted via your QR codes will
-                appear here.
+                No forms found matching the current filters
               </div>
             ) : (
               <div className="overflow-hidden">
                 <table className="w-full divide-y divide-gray-200 table-fixed">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                         Form Info
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                         User Details
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                         Submitted
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {forms.map((form) => (
+                    {filteredForms.map((form) => (
                       <tr
                         key={`${form.type}-${form.id}`}
                         className="hover:bg-gray-50"
@@ -581,39 +633,50 @@ const FormsPage = () => {
                             )}
                             {form.type === "equipment-borrow" &&
                               form.status === "Admin_Approved" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    // Check if required fields are filled before marking returned
-                                    const returnedTime =
-                                      form.details.returned_time;
-                                    const remarks = form.details.remarks;
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      // Check if required fields are filled before marking returned
+                                      const returnedTime =
+                                        form.details.returned_time;
+                                      const remarks = form.details.remarks;
 
-                                    if (!returnedTime || !remarks) {
-                                      const missingFields = [];
-                                      if (!returnedTime)
-                                        missingFields.push("Returned Time");
-                                      if (!remarks)
-                                        missingFields.push("Remarks");
+                                      if (!returnedTime || !remarks) {
+                                        const missingFields = [];
+                                        if (!returnedTime)
+                                          missingFields.push("Returned Time");
+                                        if (!remarks)
+                                          missingFields.push("Remarks");
 
-                                      alert(
-                                        `Please fill in the following required fields before marking as returned:\n\n${missingFields.join(
-                                          "\n"
-                                        )}\n\nClick "Edit" to update form details.`
+                                        alert(
+                                          `Please fill in the following required fields before marking as returned:\n\n${missingFields.join(
+                                            "\n"
+                                          )}\n\nClick "Edit" to update form details.`
+                                        );
+                                        return;
+                                      }
+
+                                      updateStatus(
+                                        form.id,
+                                        form.type,
+                                        "Returned"
                                       );
-                                      return;
-                                    }
-
-                                    updateStatus(
-                                      form.id,
-                                      form.type,
-                                      "Returned"
-                                    );
-                                  }}
-                                  className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                                >
-                                  Returned
-                                </Button>
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                  >
+                                    Returned
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      updateStatus(form.id, form.type, "Lost");
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                                  >
+                                    Lost
+                                  </Button>
+                                </div>
                               )}
 
                             {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
@@ -762,7 +825,7 @@ const FormsPage = () => {
 
       <StatusFilter
         value={filter}
-        onChange={setFilter}
+        onChange={handleFilterChange}
         pendingCount={pendingCount}
         userRole={user?.role}
         onDateFilterChange={setDateFilter}

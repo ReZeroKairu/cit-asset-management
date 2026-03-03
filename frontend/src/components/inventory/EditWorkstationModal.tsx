@@ -85,10 +85,19 @@ const EditWorkstationModal: React.FC<Props> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        onClick={onClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-50 overflow-y-auto"
+        onClick={onClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
               <h3 className="text-lg font-semibold">Edit Workstation</h3>
               <button

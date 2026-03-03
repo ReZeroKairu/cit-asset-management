@@ -17,6 +17,7 @@ import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
 import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
 import complaintsRoutes from "./routes/complaintsRoutes";
+import analyticsRoutes from "./routes/analyticsRoutes";
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/public-forms", publicFormsRoutes); // handles public form submissions 
 app.use("/api/one-time-forms", oneTimeFormsRoutes); // handles one-time QR form tokens
 app.use("/public-complaints", complaintsRoutes); // handles public complaint submissions (no auth)
 app.use("/complaints", complaintsRoutes); // handles complaint management (auth required)
+app.use("/analytics", analyticsRoutes); // handles analytics endpoints (admin only)
 
 // ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
 app.use("/maintenance", maintenanceRoutes);

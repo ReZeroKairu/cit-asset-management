@@ -451,6 +451,7 @@ enum equipment_borrows_status {
   Custodian_Approved
   Denied
   Returned
+  Lost
 }
 
 enum lab_requests_status {

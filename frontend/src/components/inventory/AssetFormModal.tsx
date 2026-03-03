@@ -41,9 +41,13 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
     <div
       className="modal fade show d-block"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+      onClick={onClose}
     >
       <div className="modal-dialog modal-lg">
-        <div className="modal-content">
+        <div 
+          className="modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="modal-header bg-primary text-white">
             <h5 className="modal-title">Add New Inventory Asset</h5>
             <button

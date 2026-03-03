@@ -95,12 +95,21 @@ const ViewWorkstationModal: React.FC<Props> = ({
   return (
     <>
       {/* Modal Backdrop */}
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div 
+        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        onClick={onClose}
+      ></div>
 
       {/* Modal Content */}
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 z-50 overflow-y-auto"
+        onClick={onClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between flex-shrink-0">
               <div>

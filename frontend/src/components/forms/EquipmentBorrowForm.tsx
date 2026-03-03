@@ -55,6 +55,7 @@ export const EquipmentBorrowForm = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [cooldownActive, setCooldownActive] = useState(false);
   const [assignedLab, setAssignedLab] = useState<string>('');
 
   const [formData, setFormData] = useState<EquipmentBorrowFormData>({
@@ -188,6 +189,9 @@ export const EquipmentBorrowForm = () => {
       if (response.success) {
         console.log('✅ Equipment borrow submission successful:', response);
         setSubmitMessage("Equipment borrow request submitted successfully!");
+        setCooldownActive(true);
+        // Reset cooldown after 5 seconds
+        setTimeout(() => setCooldownActive(false), 5000);
         // Clear success message after 5 seconds
         setTimeout(() => {
           setSubmitMessage(null);
@@ -489,8 +493,8 @@ export const EquipmentBorrowForm = () => {
           <div className="flex justify-between items-center pt-6">
             <div></div>
             <div className="flex justify-center">
-              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting || cooldownActive}>
+                {isSubmitting ? 'Submitting...' : cooldownActive ? 'Please wait...' : 'Submit Form'}
               </Button>
             </div>
             <Button type="button" variant="outline" onClick={() => generateEquipmentReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
