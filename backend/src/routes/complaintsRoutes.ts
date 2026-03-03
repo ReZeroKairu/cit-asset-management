@@ -166,6 +166,104 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Get complaints analytics for dashboard
+router.get("/analytics", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    let whereClause = {};
+    
+    // For custodians, only get analytics from their assigned lab
+    if (userRole === "Custodian" && userId) {
+      const user = await prisma.users.findUnique({
+        where: { user_id: userId },
+        select: { lab_id: true }
+      });
+      
+      if (user?.lab_id) {
+        whereClause = { lab_id: user.lab_id };
+      }
+    }
+    
+    // Get total complaints count
+    const totalComplaints = await prisma.complaints.count({
+      where: whereClause
+    });
+    
+    // Get total resolved complaints count
+    const totalResolvedComplaints = await prisma.complaints.count({
+      where: {
+        ...whereClause,
+        status: 'Resolved'
+      }
+    });
+    
+    // Get complaints grouped by laboratory (total)
+    const labComplaints = await prisma.complaints.groupBy({
+      by: ['lab_id'],
+      where: whereClause,
+      _count: {
+        complaint_id: true
+      }
+    });
+    
+    // Get resolved complaints grouped by laboratory
+    const labResolvedComplaints = await prisma.complaints.groupBy({
+      by: ['lab_id'],
+      where: {
+        ...whereClause,
+        status: 'Resolved'
+      },
+      _count: {
+        complaint_id: true
+      }
+    });
+    
+    // Get lab names for the groups
+    const labIds = [...new Set([...labComplaints.map(lc => lc.lab_id), ...labResolvedComplaints.map(lc => lc.lab_id)])];
+    const labs = await prisma.laboratories.findMany({
+      where: {
+        lab_id: {
+          in: labIds
+        }
+      },
+      select: {
+        lab_id: true,
+        lab_name: true
+      }
+    });
+    
+    // Create lab name lookup
+    const labNameMap = labs.reduce((acc, lab) => {
+      acc[lab.lab_id] = lab.lab_name;
+      return acc;
+    }, {} as Record<number, string>);
+    
+    // Create resolved complaints lookup
+    const resolvedLookup = labResolvedComplaints.reduce((acc, lc) => {
+      acc[lc.lab_id] = lc._count.complaint_id;
+      return acc;
+    }, {} as Record<number, number>);
+    
+    // Transform the data to include both total and resolved counts
+    const labComplaintsData = labIds.map(labId => ({
+      lab_name: labNameMap[labId] || 'Unknown Lab',
+      total_count: labComplaints.find(lc => lc.lab_id === labId)?._count.complaint_id || 0,
+      resolved_count: resolvedLookup[labId] || 0
+    }));
+    
+    res.json({
+      totalComplaints,
+      totalResolvedComplaints,
+      labComplaints: labComplaintsData
+    });
+  } catch (error) {
+    console.error("Error fetching complaints analytics:", error);
+    res.status(500).json({ message: "Failed to fetch complaints analytics" });
+  }
+});
+
 // Get complaint by ID (for tracking)
 router.get("/:complaintId", async (req, res) => {
   try {

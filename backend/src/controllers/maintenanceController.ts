@@ -243,6 +243,15 @@ export const createPMCReport = async (req: Request, res: Response) => {
         workstation_status_before = "Not Previously Serviced";
       }
 
+      // 🔄 SYNC: Update inventory status based on maintenance status
+      console.log("🔄 STARTING SYNC:", {
+        workstation_id: Number(workstation_id),
+        workstation_status,
+        status_type: typeof workstation_status
+      });
+      
+      await syncInventoryStatusWithMaintenance(Number(workstation_id), workstation_status, tx);
+
       // Link procedures
       if (procedure_ids && procedure_ids.length > 0) {
         console.log("🔗 LINKING PROCEDURES:", {
@@ -575,5 +584,285 @@ export const createRepairLog = async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: error.message || "Failed to create repair log" });
+  }
+};
+
+// 6. GET Preventive Maintenance Analytics for Dashboard
+export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    let whereClause = {};
+    
+    // For custodians, only get analytics from their assigned lab
+    if (userRole === "Custodian" && userId) {
+      const user = await prisma.users.findUnique({
+        where: { user_id: userId },
+        select: { lab_id: true }
+      });
+      
+      if (user?.lab_id) {
+        whereClause = { lab_id: user.lab_id };
+      }
+    }
+    
+    // Get total workstations count
+    const totalWorkstations = await prisma.workstations.count({
+      where: whereClause
+    });
+    
+    // Get completed PMC reports (current quarter)
+    const currentQuarter = getCurrentQuarter();
+    const completedReports = await prisma.pmc_reports.count({
+      where: {
+        ...whereClause,
+        quarter: currentQuarter
+      }
+    });
+    
+    // Get workstation status distribution (current quarter only)
+    const statusDistribution = await prisma.pmc_reports.groupBy({
+      by: ['workstation_status'],
+      where: {
+        ...whereClause,
+        quarter: currentQuarter
+      },
+      _count: {
+        pmc_id: true
+      }
+    });
+    
+    // Get lab-wise completion rates (current quarter only)
+    const labWiseData = await prisma.pmc_reports.groupBy({
+      by: ['lab_id'],
+      where: {
+        ...whereClause,
+        quarter: currentQuarter
+      },
+      _count: {
+        pmc_id: true
+      }
+    });
+    
+    // For admin users, get detailed per-lab analytics
+    let perLabAnalytics: Array<{
+      lab_id: number;
+      lab_name: string;
+      totalWorkstations: number;
+      completedReports: number;
+      uniqueWorkstationsWithMaintenance: number;
+      completionRate: number;
+    }> = [];
+    if (userRole === "Admin") {
+      // Get all labs for admin view
+      const allLabs = await prisma.laboratories.findMany({
+        select: {
+          lab_id: true,
+          lab_name: true
+        }
+      });
+      
+      // Get analytics for each lab
+      perLabAnalytics = await Promise.all(
+        allLabs.map(async (lab) => {
+          const labWorkstations = await prisma.workstations.count({
+            where: { lab_id: lab.lab_id }
+          });
+          
+          const labReports = await prisma.pmc_reports.count({
+            where: {
+              lab_id: lab.lab_id,
+              quarter: currentQuarter
+            }
+          });
+          
+          const labWorkstationReports = await prisma.pmc_reports.findMany({
+            where: {
+              lab_id: lab.lab_id,
+              quarter: currentQuarter
+            },
+            select: { workstation_id: true }
+          });
+          
+          const uniqueLabWorkstations = [...new Set(labWorkstationReports.map(w => w.workstation_id))].length;
+          const labCompletionRate = labWorkstations > 0 
+            ? (labReports / labWorkstations) * 100  // FIXED: Use total lab workstations
+            : 0;
+          
+          return {
+            lab_id: lab.lab_id,
+            lab_name: lab.lab_name,
+            totalWorkstations: labWorkstations,
+            completedReports: labReports,
+            uniqueWorkstationsWithMaintenance: uniqueLabWorkstations,
+            completionRate: Math.round(labCompletionRate)
+          };
+        })
+      );
+    }
+    
+    // Get workstations that actually need maintenance this quarter
+    // This is more accurate - not all workstations need quarterly maintenance
+    const workstationsWithMaintenance = await prisma.pmc_reports.findMany({
+      where: {
+        ...whereClause,
+        quarter: currentQuarter
+      },
+      select: {
+        workstation_id: true
+      }
+    });
+    
+    const uniqueWorkstationIds = [...new Set(workstationsWithMaintenance.map(w => w.workstation_id))];
+    const uniqueWorkstationsWithMaintenance = uniqueWorkstationIds.length;
+    
+    // Get lab names
+    const labIds = labWiseData.map(lcd => lcd.lab_id);
+    const labs = await prisma.laboratories.findMany({
+      where: {
+        lab_id: { in: labIds }
+      },
+      select: {
+        lab_id: true,
+        lab_name: true
+      }
+    });
+    
+    const labNameMap = labs.reduce((acc, lab) => {
+      acc[lab.lab_id] = lab.lab_name;
+      return acc;
+    }, {} as Record<number, string>);
+    
+    // Transform data with ACCURATE completion rate
+    // FIXED: Use total workstations as denominator, not just those with reports
+    const completionRate = totalWorkstations > 0 
+      ? (completedReports / totalWorkstations) * 100 
+      : 0;
+    
+    const labCompletionData = labWiseData.map(lcd => ({
+      lab_name: labNameMap[lcd.lab_id] || 'Unknown Lab',
+      completed_reports: lcd._count.pmc_id,
+      completion_rate: 0 // Will be calculated based on total workstations per lab
+    }));
+    
+    res.json({
+      totalWorkstations,
+      completedReports,
+      uniqueWorkstationsWithMaintenance,
+      completionRate: Math.round(completionRate),
+      currentQuarter,
+      statusDistribution: statusDistribution.map(sd => ({
+        status: sd.workstation_status,
+        count: sd._count.pmc_id
+      })),
+      labCompletionData,
+      perLabAnalytics // NEW: Detailed per-lab data for admin
+    });
+    
+  } catch (error) {
+    console.error("Error fetching maintenance analytics:", error);
+    res.status(500).json({ message: "Failed to fetch maintenance analytics" });
+  }
+};
+
+// Helper function to get current quarter
+const getCurrentQuarter = () => {
+  const month = new Date().getMonth() + 1;
+  if (month >= 1 && month <= 3) return "1st";
+  if (month >= 4 && month <= 6) return "2nd";
+  if (month >= 7 && month <= 9) return "3rd";
+  return "4th";
+};
+
+// 🔄 SYNC: Use exact same statuses for maintenance and inventory
+const syncInventoryStatusWithMaintenance = async (
+  workstationId: number,
+  maintenanceStatus: string,
+  tx: any
+) => {
+  try {
+    console.log("🔄 SYNCING STATUS:", { workstationId, maintenanceStatus });
+
+    // Check what statuses are available in the database
+    const allStatuses = await tx.asset_statuses.findMany({
+      select: { status_id: true, status_name: true }
+    });
+    console.log("📋 AVAILABLE STATUSES:", allStatuses);
+
+    // Use exact same statuses - no mapping needed
+    const targetStatusName = maintenanceStatus; // Use status directly
+    console.log("🎯 USING EXACT STATUS:", { from: maintenanceStatus, to: targetStatusName });
+
+    // Find the status ID
+    let statusRecord = await tx.asset_statuses.findFirst({
+      where: { status_name: targetStatusName }
+    });
+
+    if (!statusRecord) {
+      console.log("⚠️ STATUS NOT FOUND - CREATING:", targetStatusName);
+      statusRecord = await tx.asset_statuses.create({
+        data: {
+          status_name: targetStatusName
+        }
+      });
+      console.log("✅ STATUS CREATED:", {
+        statusName: targetStatusName,
+        statusId: statusRecord.status_id
+      });
+    } else {
+      console.log("✅ STATUS FOUND:", {
+        targetStatusName,
+        statusId: statusRecord.status_id
+      });
+    }
+
+    // Find all assets for this workstation
+    const workstationAssets = await tx.inventory_assets.findMany({
+      where: { workstation_id: workstationId },
+      include: {
+        asset_details: {
+          select: { detail_id: true, status_id: true }
+        }
+      }
+    });
+
+    console.log("📦 FOUND ASSETS:", {
+      workstationId,
+      assetCount: workstationAssets.length,
+      assets: workstationAssets.map((a: any) => ({
+        asset_id: a.asset_id,
+        current_status: a.asset_details?.status_id
+      }))
+    });
+
+    // Update all assets for this workstation
+    if (workstationAssets.length > 0) {
+      await tx.asset_details.updateMany({
+        where: {
+          detail_id: {
+            in: workstationAssets
+              .filter((a: any) => a.asset_details)
+              .map((a: any) => a.asset_details!.detail_id)
+          }
+        },
+        data: {
+          status_id: statusRecord.status_id
+        }
+      });
+
+      console.log("✅ STATUS SYNCED:", {
+        workstationId,
+        assetsUpdated: workstationAssets.length,
+        newStatusId: statusRecord.status_id,
+        newStatusName: targetStatusName
+      });
+    } else {
+      console.log("⚠️ No assets found for workstation:", workstationId);
+    }
+
+  } catch (error) {
+    console.error("❌ STATUS SYNC ERROR:", error);
+    // Don't throw - don't break the maintenance report creation
   }
 };

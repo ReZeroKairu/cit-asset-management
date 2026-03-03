@@ -7,6 +7,7 @@ export interface InventoryAnalyticsData {
     percentage: number;
   }>;
   labStatusData: Array<{
+    lab_id: number;
     lab_name: string;
     Functional: number;
     "For Replacement": number;
@@ -23,6 +24,7 @@ export interface InventoryAnalyticsData {
   };
   timelineData: Array<{
     asset_id: number;
+    lab_id: number;
     asset_name: string;
     unit_name: string;
     workstation_name: string;

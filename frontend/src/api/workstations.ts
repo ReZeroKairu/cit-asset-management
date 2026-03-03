@@ -20,7 +20,7 @@ export interface Workstation {
 
 // Get all workstations
 export const getAllWorkstations = async () => {
-  const response = await api.get("/workstations");
+  const response = await api.get("/workstations/public");
   return response.data;
 };
 

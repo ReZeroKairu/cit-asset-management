@@ -179,3 +179,19 @@ export const updateComplaintStatus = async (complaintId: number, status: string)
 export const updateComplaintRemarks = async (complaintId: number, remarks: string): Promise<void> => {
   await api.put(`/complaints/${complaintId}/remarks`, { remarks });
 };
+
+// Get complaints analytics for dashboard
+export const getComplaintsAnalytics = async () => {
+  const response = await api.get('/complaints/analytics');
+  return response.data;
+};
+
+export interface ComplaintsAnalyticsData {
+  totalComplaints: number;
+  totalResolvedComplaints: number;
+  labComplaints: Array<{
+    lab_name: string;
+    total_count: number;
+    resolved_count: number;
+  }>;
+}

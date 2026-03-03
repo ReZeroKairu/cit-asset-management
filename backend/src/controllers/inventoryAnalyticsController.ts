@@ -8,10 +8,21 @@ const prisma = new PrismaClient();
 export const getInventoryAnalytics = async (req: Request, res: Response) => {
   try {
     const userRole = req.user?.role;
+    const userId = req.user?.userId;
+    const userLabId = req.user?.lab_id;
 
-    // Only allow admins to access inventory analytics
-    if (userRole !== "Admin") {
-      return res.status(403).json({ error: "Access denied. Admin only." });
+    // Allow both admins and custodians to access inventory analytics
+    if (userRole !== "Admin" && userRole !== "Custodian") {
+      return res.status(403).json({ error: "Access denied. Admin or Custodian only." });
+    }
+
+    // Get user's lab information if they're a custodian
+    let userLab = null;
+    if (userRole === "Custodian" && userLabId) {
+      userLab = await prisma.laboratories.findUnique({
+        where: { lab_id: userLabId },
+        select: { lab_id: true, lab_name: true }
+      });
     }
 
     // Get all asset statuses
@@ -19,18 +30,68 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       orderBy: { status_name: 'asc' }
     });
 
-    // Get status distribution across all assets
-    const statusDistribution = await prisma.asset_details.groupBy({
-      by: ['status_id'],
-      _count: {
-        asset_id: true
-      },
-      where: {
-        status_id: {
-          not: null
-        }
+    // Build where clause for status distribution
+    const statusWhereClause: any = {
+      status_id: {
+        not: null
       }
-    });
+    };
+
+    // If custodian, filter by their assigned lab
+    if (userRole === "Custodian" && userLabId) {
+      statusWhereClause.inventory_assets = {
+        some: {
+          lab_id: userLabId
+        }
+      };
+    }
+
+    // Get status distribution (filtered for custodians)
+    let statusDistribution;
+    if (userRole === "Custodian" && userLabId) {
+      // For custodians, get assets from their lab and group by status
+      const labAssets = await prisma.inventory_assets.findMany({
+        where: {
+          lab_id: userLabId,
+          asset_details: {
+            status_id: {
+              not: null
+            }
+          }
+        },
+        select: {
+          asset_details: {
+            select: {
+              status_id: true
+            }
+          }
+        }
+      });
+
+      // Group by status_id and count
+      const statusCounts = labAssets.reduce((acc: any, asset) => {
+        const statusId = asset.asset_details?.status_id;
+        if (statusId) {
+          acc[statusId] = (acc[statusId] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      // Convert to groupBy format
+      statusDistribution = Object.entries(statusCounts).map(([status_id, count]) => ({
+        status_id: parseInt(status_id),
+        _count: { asset_id: count as number }
+      }));
+    } else {
+      // For admins, use the original groupBy query
+      statusDistribution = await prisma.asset_details.groupBy({
+        by: ['status_id'],
+        _count: {
+          asset_id: true
+        },
+        where: statusWhereClause
+      });
+    }
 
     // Calculate total assets for percentage calculation
     const totalAssets = statusDistribution.reduce((sum, status) => sum + status._count.asset_id, 0);
@@ -46,32 +107,63 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     });
 
     // Get assets by laboratory with status breakdown
-    const labStatusData = await prisma.laboratories.findMany({
-      select: {
-        lab_id: true,
-        lab_name: true,
-        inventory_assets: {
-          select: {
-            asset_details: {
-              select: {
-                status_id: true
+    let labStatusData;
+    if (userRole === "Custodian" && userLabId) {
+      // For custodians, only get their assigned lab
+      labStatusData = await prisma.laboratories.findMany({
+        where: {
+          lab_id: userLabId
+        },
+        select: {
+          lab_id: true,
+          lab_name: true,
+          inventory_assets: {
+            select: {
+              asset_details: {
+                select: {
+                  status_id: true
+                }
+              }
+            },
+            where: {
+              asset_details: {
+                status_id: {
+                  not: null
+                }
               }
             }
           }
         }
-      },
-      where: {
-        inventory_assets: {
-          some: {
-            asset_details: {
-              status_id: {
-                not: null
+      });
+    } else {
+      // For admins, get all labs
+      labStatusData = await prisma.laboratories.findMany({
+        select: {
+          lab_id: true,
+          lab_name: true,
+          inventory_assets: {
+            select: {
+              asset_details: {
+                select: {
+                  status_id: true
+                }
+              }
+            }
+          }
+        },
+        where: {
+          inventory_assets: {
+            some: {
+              asset_details: {
+                status_id: {
+                  not: null
+                }
               }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     // Process lab status data
     const processedLabData = labStatusData.map(lab => {
@@ -90,6 +182,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
 
       // Create the standardized data structure
       const labData: any = {
+        lab_id: lab.lab_id,
         lab_name: lab.lab_name,
         total: totalAssets,
         Functional: statusCounts['Functional'] || 0,
@@ -103,53 +196,106 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     }).filter(lab => lab.total > 0); // Only include labs with assets
 
     // Get assets with purchase dates for timeline
-    const assetsWithPurchaseDates = await prisma.inventory_assets.findMany({
-      select: {
-        asset_id: true,
-        asset_details: {
-          select: {
-            date_of_purchase: true,
-            description: true,
-            property_tag_no: true
+    let assetsWithPurchaseDates;
+    if (userRole === "Custodian") {
+      // For custodians, only get assets from their assigned lab
+      assetsWithPurchaseDates = await prisma.inventory_assets.findMany({
+        where: {
+          lab_id: userLabId,
+          asset_details: {
+            date_of_purchase: {
+              not: null
+            },
+            status_id: {
+              not: null
+            }
           }
         },
-        units: {
-          select: {
-            unit_name: true
-          }
-        },
-        workstations: {
-          select: {
-            workstation_name: true
-          }
-        },
-        laboratories: {
-          select: {
-            lab_name: true
-          }
-        }
-      },
-      where: {
-        asset_details: {
-          date_of_purchase: {
-            not: null
+        select: {
+          asset_id: true,
+          lab_id: true,
+          asset_details: {
+            select: {
+              date_of_purchase: true,
+              description: true,
+              property_tag_no: true
+            }
           },
-          status_id: {
-            not: null
+          units: {
+            select: {
+              unit_name: true
+            }
+          },
+          workstations: {
+            select: {
+              workstation_name: true
+            }
+          },
+          laboratories: {
+            select: {
+              lab_name: true
+            }
           }
-        }
-      },
-      orderBy: {
-        asset_details: {
-          date_of_purchase: 'desc'
-        }
-      },
-      take: 50 // Limit to recent 50 assets for timeline
-    });
+        },
+        orderBy: {
+          asset_details: {
+            date_of_purchase: 'desc'
+          }
+        },
+        take: 50 // Limit to recent 50 assets for timeline
+      });
+    } else {
+      // For admins, get all assets with simplified query
+      assetsWithPurchaseDates = await prisma.inventory_assets.findMany({
+        where: {
+          asset_details: {
+            date_of_purchase: {
+              not: null
+            },
+            status_id: {
+              not: null
+            }
+          }
+        },
+        select: {
+          asset_id: true,
+          lab_id: true,
+          asset_details: {
+            select: {
+              date_of_purchase: true,
+              description: true,
+              property_tag_no: true
+            }
+          },
+          units: {
+            select: {
+              unit_name: true
+            }
+          },
+          workstations: {
+            select: {
+              workstation_name: true
+            }
+          },
+          laboratories: {
+            select: {
+              lab_name: true
+            }
+          }
+        },
+        orderBy: {
+          asset_details: {
+            date_of_purchase: 'desc'
+          }
+        },
+        take: 50 // Limit to recent 50 assets for timeline
+      });
+    }
 
     // Process timeline data
     const timelineData = assetsWithPurchaseDates.map(asset => ({
       asset_id: asset.asset_id,
+      lab_id: asset.lab_id,
       asset_name: asset.asset_details?.description || asset.units?.unit_name || `Asset #${asset.asset_id}`,
       unit_name: asset.units?.unit_name || '',
       workstation_name: asset.workstations?.workstation_name || 'Not Assigned',
@@ -159,8 +305,22 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         ? Math.floor((new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
         : 0,
       timeline_position: asset.asset_details?.date_of_purchase
-        ? Math.min(Math.max(Math.floor((new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) + 1, 1), 5)
-        : 1
+        ? (() => {
+            const age = (new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+            let position;
+            
+            // Exact year counting based on completed years
+            if (age < 1) position = 0;      // Y1: 0-1 years old
+            else if (age < 1.5) position = 1;  // Y1: exactly 1 year old
+            else if (age < 2.5) position = 2;  // Y2: exactly 2 years old
+            else if (age < 3.5) position = 3;  // Y3: exactly 3 years old
+            else if (age < 4.5) position = 4;  // Y4: exactly 4 years old
+            else position = 5;               // Y5: 5+ years old
+            
+            console.log(`Asset ${asset.asset_id}: age=${age.toFixed(2)} years, timeline_position=${position}, purchase=${asset.asset_details?.date_of_purchase}`);
+            return position;
+          })()
+        : 0
     }));
 
     // Calculate summary statistics

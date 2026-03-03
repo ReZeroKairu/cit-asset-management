@@ -288,7 +288,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
                 className={`relative flex flex-col items-start justify-center w-36 transition-all ${
                   isActive
                     ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
-                    : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
+                    : "bg-blue-500 text-black hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
                 }`}
               >
                 {isActive && (

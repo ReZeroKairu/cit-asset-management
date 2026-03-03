@@ -462,7 +462,7 @@ const MaintenanceView: React.FC<Props> = ({
           </button>
           <button
             onClick={onService}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center shadow-sm"
+            className="px-4 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 flex items-center shadow-sm"
           >
             <Wrench className="w-4 h-4 mr-2" />
             Service Workstation
@@ -472,7 +472,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={() => setShowRepairModal(true)}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-amber-600 text-black rounded-md hover:bg-amber-700 flex items-center shadow-sm"
             >
               <Wrench className="w-4 h-4 mr-2" />
               Repair Component
@@ -483,7 +483,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-green-600 text-black rounded-md hover:bg-green-700 flex items-center shadow-sm"
             >
               <Download className="w-4 h-4 mr-2" />
               QPMC Report

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { getInventoryAnalytics, type InventoryAnalyticsData } from "../../api/inventoryAnalytics";
-import AssetTimeline from "./AssetTimeline";
+import { getComplaintsAnalytics, type ComplaintsAnalyticsData } from "../../api/complaints";
+import { getMaintenanceAnalytics, type MaintenanceAnalyticsData } from "../../api/maintenance";
 
 const COLORS = {
   "Functional": "#10b981",
@@ -12,16 +13,38 @@ const COLORS = {
   "Lost": "#ef4444"
 };
 
+const MAINTENANCE_COLORS = {
+  "Functional": "#10b981",
+  "Working": "#10b981",
+  "Operational": "#10b981",
+  "Needs Repair": "#f59e0b", 
+  "For Repair": "#3b82f6",
+  "Under Repair": "#3b82f6",
+  "Critical": "#ef4444",
+  "Urgent": "#ef4444",
+  "Under Maintenance": "#8b5cf6",
+  "Maintenance": "#8b5cf6",
+  "Not Functional": "#ef4444",
+  "Down": "#ef4444",
+  "Offline": "#ef4444",
+  "Issue": "#f59e0b",
+  "Problem": "#f59e0b",
+  "For Replacement": "#f59e0b",
+  "For Upgrade": "#8b5cf6",
+  "Lost": "#ef4444"
+};
+
 const InventoryAnalyticsSection = () => {
   const [data, setData] = useState<InventoryAnalyticsData | null>(null);
+  const [complaintsData, setComplaintsData] = useState<ComplaintsAnalyticsData | null>(null);
+  const [maintenanceData, setMaintenanceData] = useState<MaintenanceAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedLab, setSelectedLab] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch inventory analytics
         const analyticsData = await getInventoryAnalytics();
         console.log('API Response:', analyticsData);
 
@@ -44,9 +67,21 @@ const InventoryAnalyticsSection = () => {
 
         console.log('Transformed data:', transformedData);
         setData(transformedData);
+
+        // Fetch complaints analytics
+        const complaintsAnalyticsData = await getComplaintsAnalytics();
+        console.log('Complaints Analytics Response:', complaintsAnalyticsData);
+        setComplaintsData(complaintsAnalyticsData);
+
+        // Fetch maintenance analytics
+        const maintenanceAnalyticsData = await getMaintenanceAnalytics();
+        console.log('Maintenance Analytics Response:', maintenanceAnalyticsData);
+        console.log('Status Distribution:', maintenanceAnalyticsData.statusDistribution);
+        setMaintenanceData(maintenanceAnalyticsData);
+
       } catch (err) {
-        console.error("Failed to fetch inventory analytics:", err);
-        setError("Failed to load inventory analytics");
+        console.error("Failed to fetch analytics:", err);
+        setError("Failed to load analytics");
       } finally {
         setLoading(false);
       }
@@ -54,32 +89,6 @@ const InventoryAnalyticsSection = () => {
 
     fetchData();
   }, []);
-
-  // Aggregate timeline data by lab and year
-  const timelineSummary = data ? (() => {
-    const summary: Record<string, { year1: number; year2: number; year3: number; year4: number; year5: number; total: number }> = {};
-
-    data.timelineData.forEach(asset => {
-      const lab = asset.lab_name || 'Not Assigned';
-      const year = asset.timeline_position;
-
-      if (!summary[lab]) {
-        summary[lab] = { year1: 0, year2: 0, year3: 0, year4: 0, year5: 0, total: 0 };
-      }
-
-      if (year === 1) summary[lab].year1++;
-      else if (year === 2) summary[lab].year2++;
-      else if (year === 3) summary[lab].year3++;
-      else if (year === 4) summary[lab].year4++;
-      else summary[lab].year5++;
-
-      summary[lab].total++;
-    });
-
-    return Object.entries(summary)
-      .map(([lab, counts]) => ({ lab, ...counts }))
-      .sort((a, b) => b.total - a.total); // Sort by total descending
-  })() : [];
 
   if (loading) {
     return (
@@ -124,8 +133,8 @@ const InventoryAnalyticsSection = () => {
         </p>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Status Distribution Pie Chart */}
         <Card>
           <CardHeader className="pb-2">
@@ -167,193 +176,196 @@ const InventoryAnalyticsSection = () => {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+            
+            {/* System Status Summary */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">System Status Summary</h4>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Assets:</span>
+                  <span className="font-medium">{data.summary.totalAssets}</span>
+                </div>
+                {['Functional', 'For Replacement', 'For Repair', 'For Upgrade', 'Lost'].map((statusName) => {
+                  const status = data.statusDistribution.find(s => s.status_name === statusName);
+                  const count = status ? status.count : 0;
+                  return (
+                    <div key={statusName} className="flex justify-between">
+                      <span 
+                        className={
+                          statusName === 'Functional' ? 'text-green-600' :
+                          statusName === 'For Replacement' ? 'text-yellow-600' :
+                          statusName === 'For Repair' ? 'text-blue-600' :
+                          statusName === 'For Upgrade' ? 'text-purple-600' :
+                          statusName === 'Lost' ? 'text-red-600' :
+                          'text-gray-600'
+                        }
+                      >
+                        {statusName === 'For Replacement' ? 'Replace' : 
+                         statusName === 'For Repair' ? 'Repair' :
+                         statusName === 'For Upgrade' ? 'Upgrade' :
+                         statusName}:
+                      </span>
+                      <span 
+                        className={`font-medium ${
+                          statusName === 'Functional' ? 'text-green-600' :
+                          statusName === 'For Replacement' ? 'text-yellow-600' :
+                          statusName === 'For Repair' ? 'text-blue-600' :
+                          statusName === 'For Upgrade' ? 'text-purple-600' :
+                          statusName === 'Lost' ? 'text-red-600' :
+                          'text-gray-600'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* Laboratory Status Table */}
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-xs">Laboratory Status</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="overflow-x-auto">
-              <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-1 py-0.5 text-left text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">
-                      Lab
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Total
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
-                      Functional
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
-                      Replace
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[50px]">
-                      Repair
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[50px]">
-                      Upgrade
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Lost
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.labStatusData.map((lab) => (
-                    <tr key={lab.lab_name}>
-                      <td className="px-1 py-0.5 text-[9px] font-medium text-gray-900 text-left">
-                        {lab.lab_name.length > 10 ? lab.lab_name.substring(0, 8) + '..' : lab.lab_name}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-gray-500 text-center">
-                        {lab.total}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-green-600 text-center">
-                        {lab.Functional}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-yellow-600 text-center">
-                        {lab["For Replacement"]}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-blue-600 text-center">
-                        {lab["For Repair"]}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-purple-600 text-center">
-                        {lab["For Upgrade"] ?? 0}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-red-600 text-center">
-                        {lab.Lost ?? 0}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Laboratory Status Breakdown */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Laboratory Status Breakdown</h4>
+              <div className="space-y-3">
+                {data.labStatusData.map((lab) => (
+                  <div key={lab.lab_id} className="border border-gray-100 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="text-sm font-medium text-gray-900">{lab.lab_name}</h5>
+                      <span className="text-xs text-gray-500">{lab.total} assets</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2 text-xs">
+                      <div className="text-center">
+                        <div className="font-medium text-green-600">{lab.Functional || 0}</div>
+                        <div className="text-gray-500">Functional</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-yellow-600">{lab['For Replacement'] || 0}</div>
+                        <div className="text-gray-500">Replace</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-blue-600">{lab['For Repair'] || 0}</div>
+                        <div className="text-gray-500">Repair</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-purple-600">{lab['For Upgrade'] || 0}</div>
+                        <div className="text-gray-500">Upgrade</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-red-600">{lab.Lost || 0}</div>
+                        <div className="text-gray-500">Lost</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Asset Timelines */}
-        {data.timelineData && data.timelineData.length > 0 && (
+        {/* Preventive Maintenance Analytics */}
+        {maintenanceData && (
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <CardTitle>Asset Lifecycle Timelines</CardTitle>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Lab:</span>
-                    <select
-                      value={selectedLab}
-                      onChange={(e) => setSelectedLab(e.target.value)}
-                      className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                    >
-                      <option value="all">All Labs</option>
-                      {[...new Set(data.timelineData.map(asset => asset.lab_name))].slice(0, 3).map(lab => (
-                        <option key={lab} value={lab}>{lab}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Year:</span>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                    >
-                      <option value="all">All Years</option>
-                      <option value="1">Year 1</option>
-                      <option value="2">Year 2</option>
-                      <option value="3">Year 3</option>
-                      <option value="4">Year 4</option>
-                      <option value="5">Year 5+</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600">
-                Track asset age from purchase date (showing most recent assets)
-              </p>
+              <CardTitle className="text-lg">Preventive Maintenance</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.timelineData
-                  .filter(asset => {
-                    const labMatch = selectedLab === 'all' || asset.lab_name === selectedLab;
-                    const yearMatch = selectedYear === 'all' || asset.timeline_position.toString() === selectedYear;
-                    return labMatch && yearMatch;
-                  })
-                  .slice(0, 6)
-                  .map((asset) => (
-                    <AssetTimeline
-                      key={asset.asset_id}
-                      {...asset}
-                    />
-                  ))}
+            <CardContent className="pt-0">
+              <div className="mb-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">{maintenanceData.completionRate}%</div>
+                <div className="text-sm text-gray-600">Completion Rate ({maintenanceData.currentQuarter} Quarter)</div>
+                <div className="text-lg font-semibold text-green-600 mt-2">{maintenanceData.completedReports}</div>
+                <div className="text-xs text-gray-500">Reports Completed</div>
+                <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.uniqueWorkstationsWithMaintenance}</div>
+                <div className="text-xs text-gray-500">Workstations with Maintenance</div>
+                <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.totalWorkstations}</div>
+                <div className="text-xs text-gray-500">Total Workstations</div>
               </div>
+              
+              {/* Per-Lab Breakdown for Admin */}
+              {maintenanceData.perLabAnalytics && maintenanceData.perLabAnalytics.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Lab Performance</h4>
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={maintenanceData.perLabAnalytics}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="lab_name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                        fontSize={10}
+                      />
+                      <YAxis fontSize={10} />
+                      <Tooltip />
+                      <Bar dataKey="completionRate" fill="#10b981" name="Completion %" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={maintenanceData.statusDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="status" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="count">
+                    {maintenanceData.statusDistribution.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={MAINTENANCE_COLORS[entry.status as keyof typeof MAINTENANCE_COLORS] || "#8884d8"} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         )}
 
-        {/* Asset Lifecycle Timelines Summary Table */}
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-xs">Asset Lifecycle Timelines</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="overflow-x-auto">
-              <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-1 py-0.5 text-left text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[90px]">
-                      Lab
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Year 1
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Year 2
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Year 3
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Year 4
-                    </th>
-                    <th className="px-1 py-0.5 text-center text-[9px] font-medium text-gray-500 uppercase tracking-wider min-w-[40px]">
-                      Year 5+
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {timelineSummary.map((row) => (
-                    <tr key={row.lab}>
-                      <td className="px-1 py-0.5 text-[9px] font-medium text-gray-900 text-left">
-                        {row.lab.length > 10 ? row.lab.substring(0, 8) + '..' : row.lab}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-blue-600 text-center">
-                        {row.year1}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-green-600 text-center">
-                        {row.year2}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-yellow-600 text-center">
-                        {row.year3}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-orange-600 text-center">
-                        {row.year4}
-                      </td>
-                      <td className="px-1 py-0.5 text-[9px] text-red-600 text-center">
-                        {row.year5}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Complaints Analytics Bar Chart */}
+        {complaintsData && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Complaints by Laboratory</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="mb-4 text-center">
+                <div className="text-2xl font-bold text-blue-600">{complaintsData.totalComplaints}</div>
+                <div className="text-sm text-gray-600">Total Complaints</div>
+                <div className="text-lg font-semibold text-green-600 mt-2">{complaintsData.totalResolvedComplaints}</div>
+                <div className="text-xs text-gray-500">Resolved Complaints</div>
+                <div className="text-lg font-semibold text-gray-700 mt-2">{complaintsData.totalComplaints - complaintsData.totalResolvedComplaints}</div>
+                <div className="text-xs text-gray-500">Active Complaints</div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={complaintsData.labComplaints.map(lab => ({
+                  ...lab,
+                  active_count: lab.total_count - lab.resolved_count
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="lab_name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="total_count" fill="#3b82f6" name="Total" />
+                  <Bar dataKey="resolved_count" fill="#10b981" name="Resolved" />
+                  <Bar dataKey="active_count" fill="#f59e0b" name="Active" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

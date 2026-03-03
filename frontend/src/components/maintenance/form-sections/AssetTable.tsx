@@ -117,10 +117,10 @@ export const AssetTable: React.FC<Props> = ({
                             e.target.value,
                           )
                         }
-                        className={`block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none ${
+                        className={`block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none text-black bg-white ${
                           ["Functional", "Working"].includes(asset.status)
-                            ? "text-green-700 bg-green-50"
-                            : "text-red-700 bg-red-50"
+                            ? "bg-green-50"
+                            : "bg-white"
                         }`}
                       >
                         {statusOptions.length > 0 ? (

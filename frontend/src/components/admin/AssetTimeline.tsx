@@ -19,15 +19,16 @@ const AssetTimeline: React.FC<AssetTimelineProps> = ({
   workstation_name,
   lab_name,
   purchase_date,
-  current_age_years
+  current_age_years,
+  timeline_position
 }) => {
   // Calculate years from purchase date
   const purchaseDateObj = new Date(purchase_date);
   const yearsSincePurchase = current_age_years;
-  const currentYear = Math.min(Math.max(yearsSincePurchase + 1, 1), 5); // 1-5 year range
+  const currentYear = timeline_position; // Use the backend-calculated position directly
 
   // Generate timeline data
-  const timelineYears = Array.from({ length: 5 }, (_, i) => i + 1);
+  const timelineYears = Array.from({ length: 6 }, (_, i) => i); // 0, 1, 2, 3, 4, 5
 
   return (
     <Card className="w-full h-28">
@@ -80,7 +81,7 @@ const AssetTimeline: React.FC<AssetTimelineProps> = ({
           <div className="flex justify-between px-2 mt-1">
             {timelineYears.map((year) => (
               <span key={year} className="text-[8px] text-gray-500 font-mono">
-                {year}
+                {year === 0 ? 'Y1' : `Y${year}`}
               </span>
             ))}
           </div>
@@ -89,7 +90,7 @@ const AssetTimeline: React.FC<AssetTimelineProps> = ({
         {/* Purchase date */}
         <div className="text-center mt-1">
           <span className="text-[9px] text-gray-400">
-            {purchaseDateObj.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+            {purchaseDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
         </div>
       </CardContent>

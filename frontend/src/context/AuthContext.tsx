@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: users_role;
   lab_id?: number; // Assigned lab for custodians
+  lab_name?: string; // Lab name for display
 }
 
 // Backend enum types for type safety
