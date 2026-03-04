@@ -132,6 +132,17 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
                 }
               }
             }
+          },
+          workstations: {
+            select: {
+              workstation_name: true,
+              status_id: true,
+              asset_statuses: {
+                select: {
+                  status_name: true
+                }
+              }
+            }
           }
         }
       });
@@ -149,14 +160,14 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
                 }
               }
             }
-          }
-        },
-        where: {
-          inventory_assets: {
-            some: {
-              asset_details: {
-                status_id: {
-                  not: null
+          },
+          workstations: {
+            select: {
+              workstation_name: true,
+              status_id: true,
+              asset_statuses: {
+                select: {
+                  status_name: true
                 }
               }
             }
@@ -169,6 +180,9 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     const processedLabData = labStatusData.map(lab => {
       const statusCounts: Record<string, number> = {};
       let totalAssets = 0;
+      let totalWorkstations = 0;
+      let functionalWorkstations = 0;
+      let servicedWorkstations = 0;
 
       // Count assets by status for this lab
       lab.inventory_assets.forEach(asset => {
@@ -180,7 +194,23 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         }
       });
 
-      // Create the standardized data structure
+      // Count workstations by status for this lab
+      lab.workstations?.forEach((workstation: any) => {
+        if (workstation.status_id) {
+          const statusId = workstation.status_id;
+          const statusName = assetStatuses.find(s => s.status_id === statusId)?.status_name || 'Unknown';
+          
+          if (statusName === 'Functional') {
+            functionalWorkstations++;
+          } else if (statusName !== 'Unknown') {
+            servicedWorkstations++;
+          }
+          
+          totalWorkstations++;
+        }
+      });
+
+      // Create standardized data structure
       const labData: any = {
         lab_id: lab.lab_id,
         lab_name: lab.lab_name,
@@ -188,8 +218,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         Functional: statusCounts['Functional'] || 0,
         "For Replacement": statusCounts['For Replacement'] || 0,
         "For Repair": statusCounts['For Repair'] || 0,
-        "For Upgrade": statusCounts['For Upgrade'] || 0,
-        Lost: statusCounts['Lost'] || 0
+        Lost: statusCounts['Lost'] || 0,
+        totalWorkstations: totalWorkstations,
+        functionalWorkstations: functionalWorkstations,
+        servicedWorkstations: servicedWorkstations
       };
 
       return labData;
@@ -228,7 +260,12 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           },
           workstations: {
             select: {
-              workstation_name: true
+              workstation_name: true,
+              asset_statuses: {
+                select: {
+                  status_name: true
+                }
+              }
             }
           },
           laboratories: {
@@ -274,7 +311,12 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           },
           workstations: {
             select: {
-              workstation_name: true
+              workstation_name: true,
+              asset_statuses: {
+                select: {
+                  status_name: true
+                }
+              }
             }
           },
           laboratories: {
@@ -302,7 +344,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       lab_name: asset.laboratories?.lab_name || 'Not Assigned',
       purchase_date: asset.asset_details?.date_of_purchase?.toISOString() || '',
       current_age_years: asset.asset_details?.date_of_purchase
-        ? Math.floor((new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+        ? Math.max(0, Math.floor((new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25)))
         : 0,
       timeline_position: asset.asset_details?.date_of_purchase
         ? (() => {
@@ -317,10 +359,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             else if (age < 4.5) position = 4;  // Y4: exactly 4 years old
             else position = 5;               // Y5: 5+ years old
             
-            console.log(`Asset ${asset.asset_id}: age=${age.toFixed(2)} years, timeline_position=${position}, purchase=${asset.asset_details?.date_of_purchase}`);
             return position;
           })()
-        : 0
+        : 0,
+      workstation_status: asset.workstations?.asset_statuses?.status_name || 'Unknown'
     }));
 
     // Calculate summary statistics

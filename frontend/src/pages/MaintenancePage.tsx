@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { getLabPMCReports, type PMCReport } from "../api/maintenance";
 import QuarterlyReportsView from "../components/maintenance/QuarterlyReportsView";
 import SetScheduleModal from "../components/maintenance/SetScheduleModal";
+import { calculateWorstStatus } from "../utils/statusUtils";
 
 // Import workstation helper
 import { getLabWorkstationsForReport } from "../api/workstationReports";
 // Import auth to get assigned lab
 import { getUserAssignedLab } from "../api/dailyReports";
+// Import assets API
+import { getWorkstationAssets } from "../api/inventory";
 // ✅ IMPORT useAuth to get user role and lab_id
 import { useAuth } from "../context/AuthContext";
 
@@ -34,6 +37,7 @@ const MaintenancePage = () => {
   // Data State
   const [reports, setReports] = useState<PMCReport[]>([]);
   const [labWorkstations, setLabWorkstations] = useState<any[]>([]);
+  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
 
   const [targetWorkstation, setTargetWorkstation] = useState<{
     id: number;
@@ -104,6 +108,24 @@ const MaintenancePage = () => {
 
       const wsData = await getLabWorkstationsForReport(labId);
       setLabWorkstations(wsData);
+
+      // Load assets for each workstation to calculate actual status
+      const assetsData: Record<number, any[]> = {};
+      for (const ws of wsData) {
+        try {
+          const assets = await getWorkstationAssets(ws.workstation_id);
+          // Transform assets to have status property
+          const transformedAssets = assets.map((asset: any) => ({
+            ...asset,
+            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+          }));
+          assetsData[ws.workstation_id] = transformedAssets;
+        } catch (error) {
+          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
+          assetsData[ws.workstation_id] = [];
+        }
+      }
+      setWorkstationAssets(assetsData);
 
       const reportsData = await getLabPMCReports(labId, selectedQuarter);
       setReports(reportsData);
@@ -359,6 +381,10 @@ const MaintenancePage = () => {
                         ws.workstation_id,
                       );
 
+                      // Calculate actual workstation status from components
+                      const assets = workstationAssets[ws.workstation_id] || [];
+                      const calculatedStatus = assets.length > 0 ? calculateWorstStatus(assets) : 'Functional';
+
                       return (
                         <tr
                           key={ws.workstation_id}
@@ -372,10 +398,10 @@ const MaintenancePage = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span
                               className={`px-2.5 py-1 text-xs font-medium rounded-md ${getStatusColor(
-                                ws.current_status?.status_name,
+                                calculatedStatus,
                               )}`}
                             >
-                              {ws.current_status?.status_name || "Unknown"}
+                              {calculatedStatus}
                             </span>
                           </td>
 

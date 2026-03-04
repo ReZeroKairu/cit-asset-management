@@ -246,6 +246,85 @@ export const createPMCReport = async (req: Request, res: Response) => {
       // 🔄 SYNC: Update inventory status based on maintenance status
       await syncInventoryStatusWithMaintenance(Number(workstation_id), workstation_status, tx);
 
+      // 🔄 SYNC: Update individual asset statuses if provided
+      if (asset_actions && asset_actions.length > 0) {
+        await syncIndividualAssetStatuses(asset_actions, tx);
+      }
+
+      // 🔄 SYNC: Update workstation table status based on individual asset statuses
+      if (asset_actions && asset_actions.length > 0) {
+        // Determine workstation status based on individual asset statuses
+        const assetStatuses = asset_actions.map((action: any) => action.status_after);
+        
+        // Priority order: Lost > For Replacement > For Repair > For Upgrade > Functional
+        const statusPriority: Record<string, number> = {
+          'Lost': 4,
+          'For Replacement': 3,
+          'For Repair': 2,
+          'For Upgrade': 1,
+          'Functional': 0
+        };
+        
+        // Find the highest priority status among individual assets
+        let workstationStatus = 'Functional';
+        let highestPriority = 0;
+        
+        for (const status of assetStatuses) {
+          const priority = statusPriority[status] || 0;
+          if (priority > highestPriority) {
+            highestPriority = priority;
+            workstationStatus = status;
+          }
+        }
+        
+        console.log("🔧 DETERMINING WORKSTATION STATUS FROM ASSETS:", {
+          individualStatuses: assetStatuses,
+          highestPriority,
+          determinedWorkstationStatus: workstationStatus
+        });
+        
+        // Update workstation with the determined status
+        const workstationStatusRecord = await tx.asset_statuses.findFirst({
+          where: { status_name: workstationStatus }
+        });
+
+        if (workstationStatusRecord) {
+          await tx.workstations.update({
+            where: { workstation_id: Number(workstation_id) },
+            data: { 
+              status_id: workstationStatusRecord.status_id 
+            }
+          });
+
+          console.log("✅ WORKSTATION STATUS UPDATED FROM ASSETS:", {
+            workstation_id: Number(workstation_id),
+            new_status: workstationStatus,
+            new_status_id: workstationStatusRecord.status_id,
+            based_on: assetStatuses
+          });
+        }
+      } else {
+        // Fallback to overall workstation status if no individual asset actions
+        const workstationStatusRecord = await tx.asset_statuses.findFirst({
+          where: { status_name: workstation_status }
+        });
+
+        if (workstationStatusRecord) {
+          await tx.workstations.update({
+            where: { workstation_id: Number(workstation_id) },
+            data: { 
+              status_id: workstationStatusRecord.status_id 
+            }
+          });
+
+          console.log("✅ WORKSTATION STATUS UPDATED FROM OVERALL:", {
+            workstation_id: Number(workstation_id),
+            new_status: workstation_status,
+            new_status_id: workstationStatusRecord.status_id
+          });
+        }
+      }
+
       // Link procedures
       if (procedure_ids && procedure_ids.length > 0) {
         console.log("🔗 LINKING PROCEDURES:", {
@@ -839,5 +918,60 @@ const syncInventoryStatusWithMaintenance = async (
   } catch (error) {
     console.error("❌ STATUS SYNC ERROR:", error);
     // Don't throw - don't break the maintenance report creation
+  }
+};
+
+// 🔄 SYNC: Update individual asset statuses based on maintenance form
+const syncIndividualAssetStatuses = async (
+  assetActions: Array<{
+    asset_id: number;
+    action: string;
+    status_before: string;
+    status_after: string;
+  }>,
+  tx: any
+) => {
+  try {
+    console.log("🔄 SYNCING INDIVIDUAL ASSETS:", {
+      assetCount: assetActions.length,
+      assets: assetActions.map(a => ({
+        asset_id: a.asset_id,
+        from: a.status_before,
+        to: a.status_after
+      }))
+    });
+
+    for (const assetAction of assetActions) {
+      // Find status ID for the new status
+      const statusRecord = await tx.asset_statuses.findFirst({
+        where: { status_name: assetAction.status_after }
+      });
+
+      if (!statusRecord) {
+        console.error("❌ Status not found for asset:", assetAction.asset_id, assetAction.status_after);
+        continue;
+      }
+
+      // Update individual asset status
+      await tx.asset_details.updateMany({
+        where: {
+          asset_id: assetAction.asset_id
+        },
+        data: {
+          status_id: statusRecord.status_id
+        }
+      });
+
+      console.log("✅ ASSET STATUS SYNCED:", {
+        asset_id: assetAction.asset_id,
+        from: assetAction.status_before,
+        to: assetAction.status_after,
+        newStatusId: statusRecord.status_id
+      });
+    }
+
+  } catch (error) {
+    console.error("❌ INDIVIDUAL ASSET SYNC ERROR:", error);
+    // Don't throw - don't break maintenance report creation
   }
 };

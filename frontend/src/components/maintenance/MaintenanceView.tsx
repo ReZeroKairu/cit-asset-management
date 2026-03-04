@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { getPMCReport, getServiceHistory } from "../../api/maintenance";
 import { getWorkstationAssets, getAssetStatuses } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
+import { calculateWorstStatus } from "../../utils/statusUtils";
 import {
   Monitor,
   Calendar,
@@ -187,18 +188,14 @@ const MaintenanceView: React.FC<Props> = ({
       remarks: asset.asset_remarks || "",
     }));
 
-    // 5. Add the "System Unit" Parent row
-    const isAllFunctional =
-      systemComponents.length > 0 &&
-      systemComponents.every((asset) =>
-        ["Functional", "Working", "Operational"].includes(asset.status)
-      );
+    // 5. Add the "System Unit" Parent row with shared utility
+    const systemUnitStatus = calculateWorstStatus(systemComponents);
 
     componentsList.push({
       name: "System Unit",
-      ...mapStatus(pmcReport.workstation_status),
+      ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: isAllFunctional ? "Functional" : "",
+      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
     });
 
     // 6. Add the System Unit Components right under it
@@ -281,15 +278,15 @@ const MaintenanceView: React.FC<Props> = ({
       )
   );
 
-  const allSystemFunctional = systemAssets.every((asset) =>
-    ["Functional", "Working", "Operational"].includes(asset.status)
-  );
+  // Use shared utility to calculate System Unit (Overall) status
+  const systemUnitStatus = calculateWorstStatus(systemAssets);
+
   const parentSystemUnit = {
     asset_id: -1,
     unit_name: "System Unit (Overall)",
     property_tag_no: "-",
     description: "Auto-calculated based on components",
-    status: allSystemFunctional ? "Functional" : "For Repair",
+    status: systemUnitStatus,
   };
   const displaySystemAssets =
     systemAssets.length > 0 ? [parentSystemUnit, ...systemAssets] : [];
@@ -441,6 +438,10 @@ const MaintenanceView: React.FC<Props> = ({
   if (loading)
     return <div className="p-12 text-center text-gray-500">Loading...</div>;
 
+  // Calculate workstation status from ALL assets (system + peripherals)
+  const allAssets = [...systemAssets, ...peripheralAssets];
+  const calculatedWorkstationStatus = calculateWorstStatus(allAssets);
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex justify-between items-start mb-8 border-b pb-4">
@@ -515,12 +516,12 @@ const MaintenanceView: React.FC<Props> = ({
             <>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                  pmcReport.workstation_status === "For Repair"
+                  calculatedWorkstationStatus === "For Repair" || calculatedWorkstationStatus === "For Replacement"
                     ? "bg-red-100 text-red-800"
                     : "bg-green-100 text-green-800"
                 }`}
               >
-                {pmcReport.workstation_status}
+                {calculatedWorkstationStatus}
               </span>
               {pmcReport.service_count > 1 && (
                 <p className="text-xs text-gray-600 mt-2">

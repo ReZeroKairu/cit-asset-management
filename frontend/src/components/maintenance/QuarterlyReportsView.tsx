@@ -4,6 +4,7 @@ import { getLabPMCReports, getPMCReport } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
 import { generateQPMCReport } from "../../utils/reportGenerator";
+import { calculateWorstStatus } from "../../utils/statusUtils";
 
 interface Props {
   labId: number | null;
@@ -174,18 +175,14 @@ const QuarterlyReportsView: React.FC<Props> = ({
       remarks: asset.asset_remarks || "",
     }));
 
-    // Add System Unit Parent row
-    const isAllFunctional =
-      systemComponents.length > 0 &&
-      systemComponents.every((asset) =>
-        ["Functional", "Working", "Operational"].includes(asset.status)
-      );
+    // Add System Unit Parent row with shared utility
+    const systemUnitStatus = calculateWorstStatus(systemComponents);
 
     componentsList.push({
       name: "System Unit",
-      ...mapStatus(pmcReport.workstation_status),
+      ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: isAllFunctional ? "Functional" : "",
+      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
     });
 
     // Add System Unit Components

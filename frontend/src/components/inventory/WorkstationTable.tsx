@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Edit, Trash2 } from "lucide-react"; // Removed the Eye icon
+import { calculateWorstStatus } from "../../utils/statusUtils";
+import { getWorkstationAssets } from "../../api/inventory";
 
 interface Props {
   workstations: any[];
@@ -16,6 +18,40 @@ const WorkstationTable: React.FC<Props> = ({
   onDelete,
   getStatusColor,
 }) => {
+  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
+
+  // Load assets for each workstation
+  useEffect(() => {
+    const loadAssetsForWorkstations = async () => {
+      for (const ws of workstations) {
+        try {
+          const assets = await getWorkstationAssets(ws.workstation_id);
+          // Transform assets to have status property
+          const transformedAssets = assets.map((asset: any) => ({
+            ...asset,
+            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+          }));
+          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: transformedAssets }));
+        } catch (error) {
+          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
+          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: [] }));
+        }
+      }
+    };
+
+    if (workstations.length > 0) {
+      loadAssetsForWorkstations();
+    }
+  }, [workstations]);
+
+  // Calculate actual status for each workstation
+  const getCalculatedStatus = (workstation: any) => {
+    const assets = workstationAssets[workstation.workstation_id] || [];
+    if (assets.length === 0) {
+      return workstation.asset_statuses?.status_name || 'Functional';
+    }
+    return calculateWorstStatus(assets);
+  };
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -73,10 +109,10 @@ const WorkstationTable: React.FC<Props> = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      workstation.asset_statuses?.status_name,
+                      getCalculatedStatus(workstation),
                     )}`}
                   >
-                    {workstation.asset_statuses?.status_name || "Unknown"}
+                    {getCalculatedStatus(workstation)}
                   </span>
                 </td>
                 <td

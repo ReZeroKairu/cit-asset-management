@@ -65,20 +65,26 @@ const MaintenanceForm: React.FC<Props> = ({
     return "4th";
   };
 
-  const [formData, setFormData] = useState({
-    lab_id: 0,
+  const [formData, setFormData] = useState<{
+    lab_id: number | null;
+    workstation_id: number | null;
+    report_date: string;
+    quarter: string;
+    general_remarks: string;
+    workstation_status: string;
+  }>({
+    lab_id: null,
+    workstation_id: null,
     report_date: new Date().toISOString().split("T")[0],
     quarter: getCurrentQuarter(),
     general_remarks: "",
+    workstation_status: "Functional",
   });
 
   const [procedures, setProcedures] = useState<ReportProcedure[]>([]);
   const [workstationAssets, setWorkstationAssets] = useState<
     WorkstationAssetItem[]
   >([]);
-  const [originalAssetStatuses, setOriginalAssetStatuses] = useState<{
-    [key: number]: string;
-  }>({});
   const [statusOptions, setStatusOptions] = useState<
     { status_id: number; status_name: string }[]
   >([]);
@@ -226,13 +232,6 @@ const MaintenanceForm: React.FC<Props> = ({
           "Functional",
       }));
       setWorkstationAssets(mappedAssets);
-
-      // Store original statuses
-      const originalStatuses: { [key: number]: string } = {};
-      mappedAssets.forEach((asset: any) => {
-        originalStatuses[asset.asset_id] = asset.status;
-      });
-      setOriginalAssetStatuses(originalStatuses);
     } catch (err) {
       console.error(err);
     }
@@ -268,20 +267,6 @@ const MaintenanceForm: React.FC<Props> = ({
       ),
   );
 
-  const allSystemFunctional = systemAssets.every((asset) =>
-    ["Functional", "Working", "Operational"].includes(asset.status),
-  );
-  const parentSystemStatus = allSystemFunctional ? "Functional" : "For Repair";
-
-  const parentSystemUnit: WorkstationAssetItem = {
-    asset_id: -1,
-    unit_name: "System Unit (Overall)",
-    property_tag_no: "-",
-    asset_remarks: "Auto-calculated based on components",
-    status: parentSystemStatus,
-  };
-  const displaySystemAssets = [parentSystemUnit, ...systemAssets];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -290,16 +275,33 @@ const MaintenanceForm: React.FC<Props> = ({
       const asset_actions = workstationAssets.map((asset) => ({
         asset_id: asset.asset_id,
         action: "CHECKED",
-        status_before: originalAssetStatuses[asset.asset_id] || "Unknown",
+        status_before: asset.status,
         status_after: asset.status,
+        remarks: asset.asset_remarks || "NONE",
       }));
+
+      console.log("🔧 FRONTEND - Submitting PMC Report:", {
+        workstationId: targetWorkstation?.id,
+        report_date: formData.report_date,
+        quarter: formData.quarter,
+        workstation_status: formData.workstation_status, // Let backend determine the actual status
+        overall_remarks: formData.general_remarks,
+        software_name: networkItems[0].remarks,
+        software_status: networkItems[0].status,
+        assetCount: workstationAssets.length,
+        asset_actions,
+        networkItems,
+        completedProcedures: procedures
+          .filter((p) => p.overall_status === "Completed")
+          .map((p) => p.procedure_id),
+      });
 
       const reportPayload = {
         lab_id: formData.lab_id,
         workstation_id: targetWorkstation?.id,
         report_date: formData.report_date,
         quarter: formData.quarter,
-        workstation_status: parentSystemStatus,
+        workstation_status: formData.workstation_status, // Let backend determine the actual status
         overall_remarks: formData.general_remarks,
         software_name: networkItems[0].remarks,
         software_status: networkItems[0].status,
@@ -407,7 +409,7 @@ const MaintenanceForm: React.FC<Props> = ({
             <AssetTable
               title="System Unit Components"
               icon={<Cpu className="w-5 h-5 text-blue-600" />}
-              assets={displaySystemAssets}
+              assets={systemAssets}
               onAssetChange={handleAssetChange}
               emptyMessage="No system unit components found."
               statusOptions={statusOptions}
@@ -421,6 +423,7 @@ const MaintenanceForm: React.FC<Props> = ({
               onAssetChange={handleAssetChange}
               emptyMessage="No peripheral assets found."
               statusOptions={statusOptions}
+              isSystemParentIncluded={false}
             />
 
             <NetworkTable
