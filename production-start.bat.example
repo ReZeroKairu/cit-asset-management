@@ -1,0 +1,17 @@
+@echo off
+title CIT Asset Management - Production
+echo Starting CIT Asset Management servers...
+
+cd /d "%~dp0backend"
+start "Backend Server" /MIN cmd /k "npm run dev"
+
+timeout /t 5 /nobreak >nul
+
+cd /d "%~dp0frontend"
+start "Frontend Server" /MIN cmd /k "npm run dev"
+
+echo Servers started:
+echo Backend:  http://localhost:3001
+echo Frontend: http://172.72.100.78:5173
+
+start "Server Monitor" /MIN cmd /k "%~dp0production-server-monitor.bat"
