@@ -70,13 +70,11 @@ const CustodianInventoryAnalyticsSection = () => {
   const timelineSummary = useMemo(() => {
     if (!filteredData?.timelineData) return [];
     
-    console.log('All timeline data:', filteredData.timelineData);
     
     const summary = filteredData.timelineData.reduce((acc, asset) => {
       const labName = asset.lab_name;
       const year = asset.timeline_position;
       
-      console.log('Processing asset:', asset.asset_name, 'timeline_position:', year, 'lab:', labName);
       
       let existingLab = acc.find(item => item.lab === labName);
       if (!existingLab) {
@@ -101,34 +99,26 @@ const CustodianInventoryAnalyticsSection = () => {
       // timeline_position 5 = Y5 (5+ years old)
       switch (year) {
         case 0: 
-          console.log('Incrementing Year 1 for asset:', asset.asset_name);
           existingLab.year1++; 
           break;
         case 1: 
-          console.log('Incrementing Year 1 for asset:', asset.asset_name);
           existingLab.year1++; 
           break;
         case 2: 
-          console.log('Incrementing Year 2 for asset:', asset.asset_name);
           existingLab.year2++; 
           break;
         case 3: 
-          console.log('Incrementing Year 3 for asset:', asset.asset_name);
           existingLab.year3++; 
           break;
         case 4: 
-          console.log('Incrementing Year 4 for asset:', asset.asset_name);
           existingLab.year4++; 
           break;
         case 5: 
-          console.log('Incrementing Year 5 for asset:', asset.asset_name);
           existingLab.year5++; 
           break;
         default: 
-          console.log('Unknown timeline position for asset:', asset.asset_name, 'position:', year);
           break;
       }
-      console.log('After increment - Year counts:', {year1: existingLab.year1, year2: existingLab.year2, year3: existingLab.year3, year4: existingLab.year4, year5: existingLab.year5});
       existingLab.total++;
       
       return acc;
@@ -142,7 +132,6 @@ const CustodianInventoryAnalyticsSection = () => {
       total: number;
     }>);
     
-    console.log('Final timeline summary:', summary);
     return summary;
   }, [filteredData?.timelineData]);
 
