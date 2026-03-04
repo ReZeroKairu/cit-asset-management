@@ -19,7 +19,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalForms,
       pendingComplaints,
       openComplaints,
-      inProgressComplaints
+      inProgressComplaints,
+      servicedWorkstations,
+      unservicedWorkstations
     ] = await Promise.all([
       // Total assets count - filtered by user role
       userRole === "Custodian" && userId
@@ -193,7 +195,102 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           })
         : prisma.complaints.count({
             where: { status: 'In_Progress' }
+          }),
+
+      // Serviced workstations count - workstations with recent maintenance reports (last 30 days)
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              // Count workstations that have had maintenance reports in the last 30 days
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              return prisma.pmc_reports.count({
+                where: {
+                  workstations: {
+                    lab_id: user.lab_id
+                  },
+                  created_at: {
+                    gte: thirtyDaysAgo
+                  }
+                }
+              });
+            }
+            return 0;
           })
+        : (() => {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            return prisma.pmc_reports.count({
+              where: {
+                created_at: {
+                  gte: thirtyDaysAgo
+                }
+              }
+            });
+          })(),
+
+      // Unserviced workstations count - workstations without recent maintenance reports
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(async (user) => {
+            if (user?.lab_id) {
+              // Get total workstations in lab
+              const totalWorkstations = await prisma.workstations.count({
+                where: { lab_id: user.lab_id }
+              });
+              
+              // Get workstations with recent maintenance (last 30 days)
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              const servicedWorkstations = await prisma.pmc_reports.findMany({
+                where: {
+                  workstations: {
+                    lab_id: user.lab_id
+                  },
+                  created_at: {
+                    gte: thirtyDaysAgo
+                  }
+                },
+                select: {
+                  workstation_id: true
+                },
+                distinct: ['workstation_id']
+              });
+              
+              return Math.max(0, totalWorkstations - servicedWorkstations.length);
+            }
+            return 0;
+          })
+        : (async () => {
+            // Get total workstations
+            const totalWorkstations = await prisma.workstations.count();
+            
+            // Get workstations with recent maintenance (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const servicedWorkstations = await prisma.pmc_reports.findMany({
+              where: {
+                created_at: {
+                  gte: thirtyDaysAgo
+                }
+              },
+              select: {
+                workstation_id: true
+              },
+              distinct: ['workstation_id']
+            });
+            
+            return Math.max(0, totalWorkstations - servicedWorkstations.length);
+          })()
     ]);
 
     // Get recent pending daily reports (last 5) - filtered by user role
@@ -338,7 +435,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         totalForms,
         totalComplaints: pendingComplaints,
         openComplaints,
-        inProgressComplaints
+        inProgressComplaints,
+        servicedWorkstations,
+        unservicedWorkstations
       },
       recentReports,
       assetsByLab: assetsByLabWithNames,

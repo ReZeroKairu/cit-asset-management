@@ -151,26 +151,30 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {/* ✅ NEW: Maintenance Card */}
-        <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("maintenance")}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Maintenance</p>
-                <p className="text-2xl font-bold text-gray-900">QPMC</p>
-                <p className="text-xs text-indigo-600 mt-1">
-                  Preventive Checks →
-                </p>
+        {/* ✅ NEW: Maintenance Card - Only for Custodians */}
+        {userRole === "Custodian" && (
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("maintenance")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Maintenance</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.unservicedWorkstations || 0}
+                  </p>
+                  <p className="text-xs text-indigo-600 mt-1">
+                    {stats.servicedWorkstations || 0} serviced • {stats.unservicedWorkstations || 0} need attention →
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Wrench className="w-6 h-6 text-indigo-600" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                <Wrench className="w-6 h-6 text-indigo-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -246,31 +250,33 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </Card>
         )}
 
-        {/* ✅ NEW: Complaints Dashboard Card */}
-        <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("complaints-management")}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Active Complaints
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.totalComplaints || 0}
-                </p>
-                <p className="text-xs text-orange-600 mt-1">
-                  {stats.openComplaints || 0} Open •{" "}
-                  {stats.inProgressComplaints || 0} In Progress
-                </p>
+        {/* ✅ NEW: Complaints Dashboard Card - Only for Custodians */}
+        {userRole === "Custodian" && (
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("complaints-management")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Active Complaints
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.totalComplaints || 0}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    {stats.openComplaints || 0} Open •{" "}
+                    {stats.inProgressComplaints || 0} In Progress
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <MessageSquare className="w-6 h-6 text-orange-600" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Inventory Analytics Section - Role Based */}
@@ -420,6 +426,10 @@ function App() {
       case "complaints":
         return <ComplaintsPage />;
       case "complaints-management":
+        // Only custodians can access complaints management
+        if (user?.role !== "Custodian") {
+          return <HomePage onNavigate={handleNavigate} />;
+        }
         return <ComplaintsManagementPage />;
       case "public-landing":
         return <PublicLandingPage />;

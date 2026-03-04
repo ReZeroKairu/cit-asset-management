@@ -16,8 +16,6 @@ import { useAuth } from "../context/AuthContext";
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceView from "../components/maintenance/MaintenanceView";
 import {
-  CheckCircle,
-  XCircle,
   Monitor,
   Plus,
   FileText,
@@ -405,13 +403,11 @@ const MaintenancePage = () => {
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {isServiced ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
                                 Serviced
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-100">
-                                <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
                                 Pending
                               </span>
                             )}

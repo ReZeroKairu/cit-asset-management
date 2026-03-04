@@ -10,6 +10,8 @@ export interface DashboardStats {
   totalComplaints: number; // Now represents pending complaints only
   openComplaints: number;
   inProgressComplaints: number;
+  servicedWorkstations: number;
+  unservicedWorkstations: number;
 }
 
 export interface RecentReport {

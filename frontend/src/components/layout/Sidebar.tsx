@@ -228,35 +228,37 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 {!collapsed && <span>Forms</span>}
               </button>
             </li>
-            {/* Complaints Management - Available to all users */}
-            <li>
-              <button
-                className={`w-full text-left rounded-md flex items-center transition-colors ${
-                  active === "complaints-management" 
-                    ? "bg-blue-600 text-white" 
-                    : "hover:bg-gray-700 text-gray-300"
-                } ${
-                  collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
-                }`}
-                onClick={() => onNavigate("complaints-management")}
-                title={collapsed ? "Complaints Management" : ""}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            {/* Complaints Management - Only for Custodians */}
+            {user?.role === "Custodian" && (
+              <li>
+                <button
+                  className={`w-full text-left rounded-md flex items-center transition-colors ${
+                    active === "complaints-management"
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-gray-700 text-gray-300"
+                  } ${
+                    collapsed ? "justify-center px-2 py-2" : "px-4 py-2 space-x-3"
+                  }`}
+                  onClick={() => onNavigate("complaints-management")}
+                  title={collapsed ? "Complaints Management" : ""}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949M3 20.635a9.863 9.863 0 01-4.255-.949M3 3.512a9.863 9.863 0 014.255-.949M21 3.512a9.863 9.863 0 014.255.949M9 7h.01M15 7h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {!collapsed && <span>Complaints Management</span>}
-              </button>
-            </li>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949M3 20.635a9.863 9.863 0 01-4.255-.949M3 3.512a9.863 9.863 0 014.255-.949M21 3.512a9.863 9.863 0 014.255.949M9 7h.01M15 7h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {!collapsed && <span>Complaints Management</span>}
+                </button>
+              </li>
+            )}
             {user?.role === "Admin" && (
               <li>
                 <button
