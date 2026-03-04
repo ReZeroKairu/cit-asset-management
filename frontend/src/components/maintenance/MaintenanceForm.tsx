@@ -39,10 +39,10 @@ interface Props {
 }
 
 const SYSTEM_UNIT_TYPES = [
+  "CPU",
   "SSD",
   "PSU",
   "RAM",
-  "CPU",
   "HDD",
   "Case",
   "CPU Fan",
@@ -413,7 +413,7 @@ const MaintenanceForm: React.FC<Props> = ({
               onAssetChange={handleAssetChange}
               emptyMessage="No system unit components found."
               statusOptions={statusOptions}
-              isSystemParentIncluded={true}
+              isSystemParentIncluded={false}
             />
 
             <AssetTable

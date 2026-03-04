@@ -145,10 +145,8 @@ const MaintenancePage = () => {
       case "Operational":
         return "bg-green-100 text-green-800";
       case "For Repair":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-100 text-amber-800";
       case "For Replacement":
-      case "Defective":
-      case "Condemned":
         return "bg-red-100 text-red-800";
       case "For Upgrade":
         return "bg-blue-100 text-blue-800";

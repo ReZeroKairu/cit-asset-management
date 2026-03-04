@@ -47,12 +47,12 @@ export const GeneralInfoSection: React.FC<Props> = ({
         <select
           value={quarter}
           onChange={(e) => onQuarterChange(e.target.value)}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
         >
-          <option value="1st">1st Quarter (Jan-Mar)</option>
-          <option value="2nd">2nd Quarter (Apr-Jun)</option>
-          <option value="3rd">3rd Quarter (Jul-Sep)</option>
-          <option value="4th">4th Quarter (Oct-Dec)</option>
+          <option value="1st" className="text-gray-900">1st Quarter (Jan-Mar)</option>
+          <option value="2nd" className="text-gray-900">2nd Quarter (Apr-Jun)</option>
+          <option value="3rd" className="text-gray-900">3rd Quarter (Jul-Sep)</option>
+          <option value="4th" className="text-gray-900">4th Quarter (Oct-Dec)</option>
         </select>
       </div>
     </div>

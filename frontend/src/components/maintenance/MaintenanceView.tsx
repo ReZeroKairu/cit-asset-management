@@ -157,11 +157,17 @@ const MaintenanceView: React.FC<Props> = ({
         ? "☑"
         : "☐";
 
-    // 2. Map Statuses to Table Checkmarks
+    // 2. Map Statuses to Table Checkmarks with Color Coding
     const mapStatus = (status: string) => ({
       func: ["Functional", "Working", "Operational"].includes(status)
-        ? "✓"
-        : "",
+        ? "bg-green-100 text-green-800 border-green-200"
+        : status === "For Replacement"
+          ? "bg-red-100 text-red-800 border-red-200"
+          : status === "For Repair"
+            ? "bg-amber-100 text-amber-800 border-amber-200"
+            : status === "For Upgrade"
+              ? "bg-blue-100 text-blue-800 border-blue-200"
+              : "bg-gray-100 text-gray-800 border-gray-200",
       rep: status === "For Repair" ? "✓" : "",
       upg: status === "For Upgrade" ? "✓" : "",
       repl: status === "For Replacement" ? "✓" : "",
@@ -416,11 +422,15 @@ const MaintenanceView: React.FC<Props> = ({
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        ["Functional", "Working", "Operational"].includes(
-                          item.status
-                        )
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        ["Functional", "Working", "Operational"].includes(item.status)
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : item.status === "For Replacement" || item.status === "Not Functional"
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : item.status === "For Repair"
+                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              : item.status === "For Upgrade"
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : "bg-gray-100 text-gray-800 border-gray-200"
                       }`}
                     >
                       {item.status}
@@ -457,13 +467,13 @@ const MaintenanceView: React.FC<Props> = ({
         <div className="flex space-x-3">
           <button
             onClick={onBack}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Back to List
           </button>
           <button
             onClick={onService}
-            className="px-4 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 flex items-center shadow-sm"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center shadow-sm"
           >
             <Wrench className="w-4 h-4 mr-2" />
             Service Workstation
@@ -473,7 +483,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={() => setShowRepairModal(true)}
-              className="px-4 py-2 bg-amber-600 text-black rounded-md hover:bg-amber-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors flex items-center shadow-sm"
             >
               <Wrench className="w-4 h-4 mr-2" />
               Repair Component
@@ -484,7 +494,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-black rounded-md hover:bg-green-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm"
             >
               <Download className="w-4 h-4 mr-2" />
               QPMC Report
@@ -516,9 +526,15 @@ const MaintenanceView: React.FC<Props> = ({
             <>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                  calculatedWorkstationStatus === "For Repair" || calculatedWorkstationStatus === "For Replacement"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-green-100 text-green-800"
+                  calculatedWorkstationStatus === "Functional" || calculatedWorkstationStatus === "Working" || calculatedWorkstationStatus === "Operational"
+                    ? "bg-green-100 text-green-800 border-green-200"
+                    : calculatedWorkstationStatus === "For Replacement"
+                      ? "bg-red-100 text-red-800 border-red-200"
+                      : calculatedWorkstationStatus === "For Repair"
+                        ? "bg-amber-100 text-amber-800 border-amber-200"
+                        : calculatedWorkstationStatus === "For Upgrade"
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : "bg-gray-100 text-gray-800 border-gray-200"
                 }`}
               >
                 {calculatedWorkstationStatus}
