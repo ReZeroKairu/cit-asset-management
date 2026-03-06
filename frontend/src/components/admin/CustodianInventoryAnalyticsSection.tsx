@@ -205,7 +205,7 @@ const CustodianInventoryAnalyticsSection = () => {
         ...workstation,
         assets: filteredAssets
       };
-    }); // Remove the filter that excludes workstations with no assets
+    }).filter(workstation => yearFilter === 'all' ? true : workstation.assets.length > 0); // Only filter out empty workstations when a specific year is selected
 
     // Filter unassigned assets by year if needed
     let filteredUnassigned = unassigned;

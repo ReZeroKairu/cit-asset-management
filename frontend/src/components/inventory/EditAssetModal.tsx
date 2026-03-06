@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { createPortal } from "react-dom";
 
 interface Props {
   show: boolean;
@@ -112,129 +113,140 @@ const EditAssetModal: React.FC<Props> = ({
 
   if (!show) return null;
 
-  return (
-    <div 
-      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
-      onClick={onClose}
-    >
+  return createPortal(
+    <>
       <div 
-        className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999]"
+        onClick={onClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-[10000] overflow-y-auto"
+        onClick={onClose}
       >
-        <h3 className="text-lg font-bold mb-4">Edit Asset</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Property Tag */}
-          <div>
-            <label className="block text-sm font-medium">Property Tag</label>
-            <input
-              className="w-full border p-2 rounded"
-              value={formData.property_tag_no}
-              onChange={(e) =>
-                setFormData({ ...formData, property_tag_no: e.target.value })
-              }
-            />
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+        <div className="p-6 overflow-y-auto">
+            <h3 className="text-lg font-bold mb-4">Edit Asset</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Property Tag */}
+              <div>
+                <label className="block text-sm font-medium">Property Tag</label>
+                <input
+                  className="w-full border p-2 rounded"
+                  value={formData.property_tag_no}
+                  onChange={(e) =>
+                    setFormData({ ...formData, property_tag_no: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea
+                  className="w-full border p-2 rounded"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Serial Number */}
+              <div>
+                <label className="block text-sm font-medium">Serial Number</label>
+                <input
+                  className="w-full border p-2 rounded"
+                  value={formData.serial_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, serial_number: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Date of Purchase */}
+              <div>
+                <label className="block text-sm font-medium">Date of Purchase</label>
+                <input
+                  type="date"
+                  className="w-full border p-2 rounded"
+                  value={formData.date_of_purchase}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date_of_purchase: e.target.value })
+                  }
+                />
+              </div>
+
+              {/* Location (Lab) - LOCKED for Custodians */}
+              <div>
+                <label className="block text-sm font-medium">Laboratory</label>
+                <select
+                  className={`w-full border p-2 rounded ${
+                    user?.role === "Custodian"
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : ""
+                  }`}
+                  value={formData.lab_id}
+                  disabled={user?.role === "Custodian"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lab_id: e.target.value })
+                  }
+                >
+                  <option value="">None</option>
+                  {labs.map((lab) => (
+                    <option key={lab.lab_id} value={lab.lab_id}>
+                      {lab.lab_name}
+                    </option>
+                  ))}
+                </select>
+                {user?.role === "Custodian" && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    LOCKED: You can only edit assets within your assigned laboratory.
+                  </p>
+                )}
+              </div>
+
+              {/* Remarks - NEW FIELD */}
+              <div>
+                <label className="block text-sm font-medium">Remarks</label>
+                <textarea
+                  className="w-full border p-2 rounded"
+                  rows={2}
+                  placeholder="Add remarks (e.g., condition notes)"
+                  value={formData.asset_remarks}
+                  onChange={(e) =>
+                    setFormData({ ...formData, asset_remarks: e.target.value })
+                  }
+                />
+              </div>
+            </form>
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium">Description</label>
-            <textarea
-              className="w-full border p-2 rounded"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-          </div>
-
-          {/* Serial Number */}
-          <div>
-            <label className="block text-sm font-medium">Serial Number</label>
-            <input
-              className="w-full border p-2 rounded"
-              value={formData.serial_number}
-              onChange={(e) =>
-                setFormData({ ...formData, serial_number: e.target.value })
-              }
-            />
-          </div>
-
-          {/* Date of Purchase */}
-          <div>
-            <label className="block text-sm font-medium">Date of Purchase</label>
-            <input
-              type="date"
-              className="w-full border p-2 rounded"
-              value={formData.date_of_purchase}
-              onChange={(e) =>
-                setFormData({ ...formData, date_of_purchase: e.target.value })
-              }
-            />
-          </div>
-
-          {/* Location (Lab) - LOCKED for Custodians */}
-          <div>
-            <label className="block text-sm font-medium">Laboratory</label>
-            <select
-              className={`w-full border p-2 rounded ${
-                user?.role === "Custodian"
-                  ? "bg-gray-100 cursor-not-allowed"
-                  : ""
-              }`}
-              value={formData.lab_id}
-              disabled={user?.role === "Custodian"} // ✅ Lock for custodians
-              onChange={(e) =>
-                setFormData({ ...formData, lab_id: e.target.value })
-              }
-            >
-              <option value="">None</option>
-              {labs.map((lab) => (
-                <option key={lab.lab_id} value={lab.lab_id}>
-                  {lab.lab_name}
-                </option>
-              ))}
-            </select>
-            {user?.role === "Custodian" && (
-              <p className="text-xs text-gray-500 mt-1">
-                LOCKED: You can only edit assets within your assigned laboratory.
-              </p>
-            )}
-          </div>
-
-          {/* Remarks - NEW FIELD */}
-          <div>
-            <label className="block text-sm font-medium">Remarks</label>
-            <textarea
-              className="w-full border p-2 rounded"
-              rows={2}
-              placeholder="Add remarks (e.g., condition notes)"
-              value={formData.asset_remarks}
-              onChange={(e) =>
-                setFormData({ ...formData, asset_remarks: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border rounded"
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              onClick={handleSubmit}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors cursor-pointer"
             >
               {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
-  );
+    </>
+    , document.body);
 };
 
 export default EditAssetModal;

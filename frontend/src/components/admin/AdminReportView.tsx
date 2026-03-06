@@ -90,7 +90,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
           )}
 
           {/* Basic Information */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-blue-600"
@@ -121,7 +121,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
                   Status
                 </div>
                 <span
-                  className={`inline-flex px-3 py-1 text-sm font-bold rounded-full border ${getStatusColor(report.status || "Pending")}`}
+                  className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${getStatusColor(report.status || "Pending")}`}
                 >
                   {report.status === "Approved" ? (
                     <span className="flex items-center">
@@ -178,7 +178,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
           </div>
 
           {/* Custodian Information */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border border-green-200">
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-green-600"
@@ -216,7 +216,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
           </div>
 
           {/* Laboratory Information */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+          <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg
                 className="w-5 h-5 mr-2 text-purple-600"
@@ -255,7 +255,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
 
           {/* Remarks */}
           {report.general_remarks && (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
+            <div className="bg-amber-50 p-6 rounded-lg border border-amber-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <svg
                   className="w-5 h-5 mr-2 text-amber-600"
@@ -282,7 +282,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
 
           {/* Procedures */}
           {report.procedures && report.procedures.length > 0 && (
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border border-purple-200">
+            <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <svg
                   className="w-5 h-5 mr-2 text-purple-600"
@@ -379,7 +379,7 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
 
           {/* Workstations */}
           {report.workstation_items && report.workstation_items.length > 0 && (
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-lg border border-emerald-200">
+            <div className="bg-emerald-50 p-6 rounded-lg border border-emerald-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <svg
                   className="w-5 h-5 mr-2 text-emerald-600"
@@ -444,14 +444,14 @@ const AdminReportView: React.FC<AdminReportViewProps> = ({
                 <Button
                   onClick={handleApproveReport}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                 >
                   {loading ? "Approving..." : "Approve Report"}
                 </Button>
               )}
               <Button
                 onClick={onClose}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               >
                 Close
               </Button>

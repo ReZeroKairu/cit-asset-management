@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
-import { FileDown, Lock } from "lucide-react";
+import { FileDown, Lock, X } from "lucide-react";
 
 interface WorkstationAsset {
   asset_id: number;
@@ -196,23 +196,37 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
   return (
     <>
       {show && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-10 mx-auto p-0 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-5 border-b bg-gray-50 rounded-t-md">
-              <h3 className="text-xl font-semibold text-gray-900">
+        <div 
+          className="fixed inset-0 backdrop-blur-md bg-black/20 overflow-y-auto h-full w-full z-50"
+          onClick={onClose}
+        >
+          <div 
+            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-5 bg-blue-600 text-white rounded-t-md">
+              <h3 className="text-xl font-semibold">
                 Workstation Inventory Report
               </h3>
-              <button
-                onClick={handleDownload}
-                disabled={loading || workstations.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors"
-              >
-                <FileDown className="w-4 h-4" />
-                Download Word Doc
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownload}
+                  disabled={loading || workstations.length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Download Word Doc
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-4 border-b bg-white">
+            <div className="p-4 bg-white">
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-gray-700">
                   Filter by Lab:
@@ -269,7 +283,7 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
                             {workstation.location || "No Location"})
                           </span>
                         </div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                           {workstation.assets.length} Assets
                         </span>
                       </div>
@@ -377,15 +391,6 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
                   </div>
                 )}
               </div>
-            </div>
-
-            <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

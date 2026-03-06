@@ -1,5 +1,6 @@
 // frontend/src/components/inventory/ViewWorkstationModal.tsx
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../api/axios";
 import EditAssetModal from "./EditAssetModal";
 import AddAssetModal from "./AddAssetModal";
@@ -92,17 +93,17 @@ const ViewWorkstationModal: React.FC<Props> = ({
 
   if (!show || !workstation) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Modal Backdrop */}
       <div 
-        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999]"
         onClick={onClose}
       ></div>
 
       {/* Modal Content */}
       <div 
-        className="fixed inset-0 z-50 overflow-y-auto"
+        className="fixed inset-0 z-[10000] overflow-y-auto"
         onClick={onClose}
       >
         <div className="flex items-center justify-center min-h-screen px-4">
@@ -122,7 +123,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
               </div>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-blue-700 cursor-pointer"
                 onClick={onClose}
               >
                 <svg
@@ -178,7 +179,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   Assigned Assets
                 </h4>
                 <button
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm"
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm cursor-pointer"
                   onClick={() => setShowAddModal(true)}
                 >
                   <svg
@@ -326,7 +327,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end border-t border-gray-200">
               <button
                 type="button"
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium cursor-pointer"
                 onClick={onClose}
               >
                 Close
@@ -354,7 +355,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
         preselectedWorkstation={workstation} // <--- Passed prop
       />
     </>
-  );
+    , document.body);
 };
 
 export default ViewWorkstationModal;

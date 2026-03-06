@@ -86,7 +86,7 @@ const EditWorkstationModal: React.FC<Props> = ({
   return (
     <>
       <div 
-        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-40"
         onClick={onClose}
       ></div>
       <div 
@@ -102,7 +102,7 @@ const EditWorkstationModal: React.FC<Props> = ({
               <h3 className="text-lg font-semibold">Edit Workstation</h3>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-blue-700 cursor-pointer"
                 onClick={onClose}
               >
                 <svg
@@ -196,14 +196,14 @@ const EditWorkstationModal: React.FC<Props> = ({
               <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex items-center justify-end space-x-3">
                 <button
                   type="button"
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={onClose}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   disabled={loading}
                 >
                   {loading ? "Updating..." : "Update Workstation"}

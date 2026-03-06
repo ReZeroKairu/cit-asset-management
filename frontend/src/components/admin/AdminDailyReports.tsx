@@ -311,10 +311,10 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           </div>
           <button
             onClick={() => setShowDARModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
           >
             <FileText className="w-4 h-4" />
-            Generate DAR Report
+            Generate DAR
           </button>
         </div>
       </div>
@@ -354,7 +354,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           <div className="flex items-end">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
             </button>
@@ -380,7 +380,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                 <button
                   onClick={handleApproveAll}
                   disabled={loading}
-                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50 cursor-pointer"
                 >
                   Approve Selected ({selectedReports.length})
                 </button>
@@ -494,7 +494,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status || "Pending")}`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status || "Pending")}`}
                       >
                         {report.status || "Pending"}
                       </span>

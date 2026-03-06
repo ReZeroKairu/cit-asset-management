@@ -195,16 +195,6 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
                   Download QR
                 </Button>
               </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <h4 className="font-semibold text-blue-900 mb-2 text-sm">How to use:</h4>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Users can scan this QR code with their phones</li>
-                  <li>• They'll be directed to the public forms page</li>
-                  <li>• No login required for form submission</li>
-                  <li>• Forms will appear as pending for review</li>
-                </ul>
-              </div>
             </>
           )}
         </div>

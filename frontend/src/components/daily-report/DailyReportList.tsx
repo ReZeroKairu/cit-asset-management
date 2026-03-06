@@ -336,7 +336,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
-              Generate DAR Report
+              Generate DAR
             </Button>
           </div>
         </div>

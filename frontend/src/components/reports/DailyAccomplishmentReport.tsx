@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
-import { FileDown } from "lucide-react";
+import { FileDown, X } from "lucide-react";
 
 interface WorkstationItem {
   workstation_id: number;
@@ -321,22 +321,30 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
           onClick={onClose}
         >
           <div 
-            className="relative top-10 mx-auto p-0 border w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
+            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex justify-between items-center p-5 border-b bg-gray-50 rounded-t-md">
-              <h3 className="text-xl font-semibold text-gray-900">
+            <div className="flex justify-between items-center p-5 bg-blue-600 text-white rounded-t-md">
+              <h3 className="text-xl font-semibold">
                 Daily Accomplishment Report
               </h3>
-              <button
-                onClick={handleDownload}
-                disabled={loading || (generateMode === 'single' && !reportData) || (generateMode === 'all' && availableReports.length === 0)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors"
-              >
-                <FileDown className="w-4 h-4" />
-                {generateMode === 'all' ? `Download All (${availableReports.length})` : 'Download Word Doc'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownload}
+                  disabled={loading || (generateMode === 'single' && !reportData) || (generateMode === 'all' && availableReports.length === 0)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  <FileDown className="w-4 h-4" />
+                  {generateMode === 'all' ? `Download All (${availableReports.length})` : 'Download Word Doc'}
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
             </div>
 
             {/* Mode Selection */}
@@ -578,12 +586,6 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

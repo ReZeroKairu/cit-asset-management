@@ -100,13 +100,13 @@ const WorkstationsPage: React.FC = () => {
             </CardTitle>
             <div className="flex space-x-2">
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
-                <Button onClick={handleAddAsset}>
+                <Button onClick={handleAddAsset} className="cursor-pointer">
                   <Package className="w-4 h-4 mr-2" />
                   Assign Asset
                 </Button>
               )}
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} className="cursor-pointer">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Workstation
                 </Button>
@@ -125,11 +125,11 @@ const WorkstationsPage: React.FC = () => {
               <p className="text-gray-500">No workstations found</p>
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
                 <div className="mt-4 space-x-2">
-                  <Button onClick={handleAddAsset}>
+                  <Button onClick={handleAddAsset} className="cursor-pointer">
                     <Package className="w-4 h-4 mr-2" />
                     Assign Asset
                   </Button>
-                  <Button onClick={handleCreate}>
+                  <Button onClick={handleCreate} className="cursor-pointer">
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Workstation
                   </Button>

@@ -393,7 +393,7 @@ const MaintenancePage = () => {
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span
-                              className={`px-2.5 py-1 text-xs font-medium rounded-md ${getStatusColor(
+                              className={`px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(
                                 calculatedStatus,
                               )}`}
                             >

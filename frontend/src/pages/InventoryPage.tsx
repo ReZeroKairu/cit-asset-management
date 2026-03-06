@@ -257,7 +257,7 @@ const InventoryPage = () => {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setShowUnassignedAssets(false)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
                 !showUnassignedAssets
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -267,7 +267,7 @@ const InventoryPage = () => {
             </button>
             <button
               onClick={() => setShowUnassignedAssets(true)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
                 showUnassignedAssets
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -310,7 +310,7 @@ const InventoryPage = () => {
           <div className="flex items-center space-x-2">
             {!showUnassignedAssets && (
               <button
-                className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
+                className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
               >
                 <Plus className="w-4 h-4 mr-2" /> Add Workstation
@@ -320,13 +320,13 @@ const InventoryPage = () => {
             {(user?.role === "Admin" || user?.role === "Custodian") && (
               <>
                 <button
-                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowModal(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Add Asset
                 </button>
                 <button
-                  className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowWorkstationReport(true)}
                 >
                   <FileText className="w-4 h-4 mr-2" /> Workstation Report

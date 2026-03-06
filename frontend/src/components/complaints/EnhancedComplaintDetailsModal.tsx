@@ -72,7 +72,7 @@ const EnhancedComplaintDetailsModal = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
       <div 
@@ -80,7 +80,7 @@ const EnhancedComplaintDetailsModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
+        <div className="bg-blue-600 px-6 py-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <MessageSquare className="w-6 h-6" />
@@ -90,14 +90,12 @@ const EnhancedComplaintDetailsModal = ({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={onClose}
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-800 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
-              </Button>
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
           </div>
         </div>

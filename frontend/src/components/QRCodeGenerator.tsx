@@ -327,27 +327,9 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
               </div>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">How to use:</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• This QR code contains a one-time link for form submission</li>
-                <li>• Users can scan this QR code with their phones</li>
-                <li>• They'll be directed to a special one-time form page</li>
-                <li>• The link can only be used once and expires in 24 hours</li>
-                <li>• No login required for form submission</li>
-                <li>• Forms will be submitted as pending for review</li>
-              </ul>
-            </div>
-            
             {generatedUrl && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <h4 className="font-semibold text-amber-900 mb-2">Important:</h4>
-                <ul className="text-sm text-amber-800 space-y-1">
-                  <li>• Each QR code can only be used once</li>
-                  <li>• Generating a new QR code creates an additional valid link</li>
-                  <li>• Previous QR codes remain valid until used or expired</li>
-                  <li>• Keep track of which QR code you share with users</li>
-                </ul>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800 font-medium">✓ QR code generated successfully!</p>
               </div>
             )}
           </CardContent>

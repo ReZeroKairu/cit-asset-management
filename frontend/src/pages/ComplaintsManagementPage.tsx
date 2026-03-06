@@ -406,7 +406,7 @@ const ComplaintsManagementPage = () => {
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(complaint.status)}`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
                         {complaint.status.replace('_', ' ')}
                       </span>
                     </td>
@@ -416,7 +416,7 @@ const ComplaintsManagementPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           onClick={() => {
                             setSelectedComplaint(complaint);

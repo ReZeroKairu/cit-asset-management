@@ -7,13 +7,13 @@ import {
 } from "../../api/dailyReports";
 import {
   getAllProcedures,
-  getReportProcedures,
   saveReportProcedures,
 } from "../../api/procedures";
 import { getLabWorkstationsForReport } from "../../api/workstationReports";
 import api from "../../api/axios";
 import type { DailyReport } from "../../api/dailyReports";
 import type { Procedure, ReportProcedure } from "../../api/procedures";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface DailyReportFormTabProps {
   report?: DailyReport;
@@ -233,7 +233,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg">
+    <div className="space-y-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">
           {report ? "Edit Daily Report" : "Create Daily Report"}
@@ -245,6 +245,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
         </p>
       </div>
 
+      <div className="bg-white rounded-lg">
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -253,11 +255,17 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Report Information */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Report Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Report Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Laboratory *
@@ -352,33 +360,42 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               />
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Procedures Section */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Procedures</h3>
-            {procedures.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  const allCompleted = procedures.every(
-                    (proc) => proc.overall_status === "Completed",
-                  );
-                  const updatedProcedures = procedures.map((proc) => ({
-                    ...proc,
-                    overall_status: allCompleted ? "Pending" : "Completed",
-                  }));
-                  setProcedures(updatedProcedures);
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                {procedures.every((proc) => proc.overall_status === "Completed")
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
-            )}
-          </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Procedures
+              </CardTitle>
+              {procedures.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allCompleted = procedures.every(
+                      (proc) => proc.overall_status === "Completed",
+                    );
+                    const updatedProcedures = procedures.map((proc) => ({
+                      ...proc,
+                      overall_status: allCompleted ? "Pending" : "Completed",
+                    }));
+                    setProcedures(updatedProcedures);
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  {procedures.every((proc) => proc.overall_status === "Completed")
+                    ? "Deselect All"
+                    : "Select All"}
+                </button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-4">
             {/* Custom Procedure Dropdown */}
             <div className="relative" id="procedure-dropdown">
@@ -388,9 +405,13 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
                   setProcedureSearch(""); // Clear search when opening
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-left flex items-center justify-between hover:border-green-300 transition-colors"
               >
-                <span className="text-gray-500">
+                <span className={`text-sm ${procedures.filter(
+                  (proc) => proc.overall_status === "Completed",
+                ).length > 0
+                  ? "text-gray-900"
+                  : "text-gray-500"}`}>
                   {procedures.filter(
                     (proc) => proc.overall_status === "Completed",
                   ).length > 0
@@ -398,7 +419,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                     : "Select procedures..."}
                 </span>
                 <svg
-                  className="w-4 h-4 text-gray-400"
+                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isProcedureDropdownOpen ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -413,21 +434,26 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               </button>
 
               {isProcedureDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
                   {/* Search Input */}
-                  <div className="p-2 border-b border-gray-200">
-                    <input
-                      type="text"
-                      value={procedureSearch}
-                      onChange={(e) => setProcedureSearch(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Search procedures..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                  <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+                    <div className="relative">
+                      <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={procedureSearch}
+                        onChange={(e) => setProcedureSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="Search procedures..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                      />
+                    </div>
                   </div>
                   
                   {/* Scrollable List */}
-                  <div className="max-h-40 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto">
                     {procedures
                       .filter((proc) => proc.overall_status !== "Completed")
                       .filter((proc) => 
@@ -447,9 +473,10 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                             setProcedures(updatedProcedures);
                             setProcedureSearch(""); // Clear search after selection
                           }}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                          className="w-full px-4 py-3 text-left hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
                         >
-                          {procedure.procedure_name}
+                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                          <span className="text-sm text-gray-700">{procedure.procedure_name}</span>
                         </button>
                       ))}
                     {procedures
@@ -457,7 +484,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                       .filter((proc) => 
                         proc.procedure_name.toLowerCase().includes(procedureSearch.toLowerCase())
                       ).length === 0 && (
-                      <div className="px-3 py-2 text-gray-500 text-sm">
+                      <div className="px-4 py-3 text-gray-500 text-sm text-center">
                         {procedureSearch ? "No procedures found" : "All procedures selected"}
                       </div>
                     )}
@@ -513,31 +540,40 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               No procedures available for this laboratory
             </p>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Workstations Section */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Workstations</h3>
-            {workstations.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  const allChecked = workstations.every((ws) => ws.checked);
-                  const updatedWorkstations = workstations.map((ws) => ({
-                    ...ws,
-                    checked: !allChecked,
-                  }));
-                  setWorkstations(updatedWorkstations);
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                {workstations.every((ws) => ws.checked)
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
-            )}
-          </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Workstations
+              </CardTitle>
+              {workstations.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allChecked = workstations.every((ws) => ws.checked);
+                    const updatedWorkstations = workstations.map((ws) => ({
+                      ...ws,
+                      checked: !allChecked,
+                    }));
+                    setWorkstations(updatedWorkstations);
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  {workstations.every((ws) => ws.checked)
+                    ? "Deselect All"
+                    : "Select All"}
+                </button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
           <div className="space-y-4">
             {/* Custom Workstation Dropdown */}
             <div className="relative" id="workstation-dropdown">
@@ -547,15 +583,17 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   setIsDropdownOpen(!isDropdownOpen);
                   setWorkstationSearch(""); // Clear search when opening
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-left flex items-center justify-between"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-left flex items-center justify-between hover:border-purple-300 transition-colors"
               >
-                <span className="text-gray-500">
+                <span className={`text-sm ${workstations.filter((ws) => ws.checked).length > 0
+                  ? "text-gray-900"
+                  : "text-gray-500"}`}>
                   {workstations.filter((ws) => ws.checked).length > 0
                     ? `${workstations.filter((ws) => ws.checked).length} workstations selected`
                     : "Select workstations..."}
                 </span>
                 <svg
-                  className="w-4 h-4 text-gray-400"
+                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -570,21 +608,26 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
                   {/* Search Input */}
-                  <div className="p-2 border-b border-gray-200">
-                    <input
-                      type="text"
-                      value={workstationSearch}
-                      onChange={(e) => setWorkstationSearch(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="Search workstations..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
+                  <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+                    <div className="relative">
+                      <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={workstationSearch}
+                        onChange={(e) => setWorkstationSearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="Search workstations..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      />
+                    </div>
                   </div>
                   
                   {/* Scrollable List */}
-                  <div className="max-h-40 overflow-y-auto">
+                  <div className="max-h-48 overflow-y-auto">
                     {workstations
                       .filter((ws) => !ws.checked)
                       .filter((ws) => 
@@ -604,9 +647,10 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                             setWorkstations(updatedWorkstations);
                             setWorkstationSearch(""); // Clear search after selection
                           }}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                          className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
                         >
-                          {workstation.workstation_name}
+                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                          <span className="text-sm text-gray-700">{workstation.workstation_name}</span>
                         </button>
                       ))}
                     {workstations
@@ -614,7 +658,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                       .filter((ws) => 
                         ws.workstation_name.toLowerCase().includes(workstationSearch.toLowerCase())
                       ).length === 0 && (
-                      <div className="px-3 py-2 text-gray-500 text-sm">
+                      <div className="px-4 py-3 text-gray-500 text-sm text-center">
                         {workstationSearch ? "No workstations found" : "All workstations selected"}
                       </div>
                     )}
@@ -668,11 +712,20 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               No workstations available for this laboratory
             </p>
           )}
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Remarks Section */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Remarks</h3>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Remarks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
           <div>
             <textarea
               value={formData.general_remarks}
@@ -685,71 +738,29 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               required
             />
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Note about auto-generated fields */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-blue-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">
-                Report Information
-              </h3>
-              <div className="mt-2 text-sm text-blue-700">
-                <p>This report will include:</p>
-                <ul className="list-disc list-inside mt-1 space-y-1">
-                  <li>
-                    <strong>Your assigned laboratory:</strong>{" "}
-                    {assignedLab?.lab_name || "Not assigned"}
-                  </li>
-                  <li>
-                    <strong>Your name:</strong> Automatically recorded as
-                    custodian
-                  </li>
-                  <li>
-                    <strong>Your email:</strong> Automatically recorded as added
-                    by
-                  </li>
-                  <li>
-                    <strong>Status:</strong> Initially set to "Pending" for
-                    admin review
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-4 pt-6 border-t">
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading || !assignedLab}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Saving..." : report ? "Update Report" : "Create Report"}
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 };

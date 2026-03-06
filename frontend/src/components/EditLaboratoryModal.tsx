@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
 import api from "../api/axios";
+import { X } from "lucide-react";
 
 interface Laboratory {
   lab_id: number;
@@ -77,7 +78,7 @@ const EditLaboratoryModal: React.FC<Props> = ({
   return (
     <>
       <div 
-        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-40"
         onClick={onClose}
       ></div>
       <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -90,22 +91,10 @@ const EditLaboratoryModal: React.FC<Props> = ({
               <h3 className="text-lg font-semibold">Edit Laboratory</h3>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-800 transition-colors cursor-pointer"
                 onClick={onClose}
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -161,11 +150,8 @@ const EditLaboratoryModal: React.FC<Props> = ({
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
                   {loading ? "Updating..." : "Update Laboratory"}
                 </Button>
               </div>
