@@ -20,6 +20,7 @@ const CustodianInventoryAnalyticsSection = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -135,27 +136,51 @@ const CustodianInventoryAnalyticsSection = () => {
     return summary;
   }, [filteredData?.timelineData]);
 
-  const { assetsByWorkstation, filteredWorkstations } = useMemo(() => {
+  const { assetsByWorkstation, filteredWorkstations, unassignedAssets } = useMemo(() => {
     if (!filteredData?.timelineData) {
-      return { assetsByWorkstation: [], filteredWorkstations: [] };
+      return { assetsByWorkstation: [], filteredWorkstations: [], unassignedAssets: [] };
     }
     
-    const grouped = filteredData.timelineData.reduce((acc, asset) => {
-      const workstationName = asset.workstation_name || 'Not Assigned';
-      
-      if (!acc[workstationName]) {
-        acc[workstationName] = {
+    // Separate actual workstations from "Not Assigned" assets
+    const actualWorkstationNames = new Set(
+      filteredData.timelineData
+        .filter(asset => asset.workstation_name && asset.workstation_name !== 'Not Assigned')
+        .map(asset => asset.workstation_name)
+    );
+    
+    // Group actual assets by workstation (excluding placeholders)
+    const grouped = filteredData.timelineData
+      .filter(asset => asset.asset_id !== 0 && asset.workstation_name && asset.workstation_name !== 'Not Assigned')
+      .reduce((acc, asset) => {
+        const workstationName = asset.workstation_name;
+        
+        if (!acc[workstationName]) {
+          acc[workstationName] = {
+            workstation_name: workstationName,
+            assets: []
+          };
+        }
+        
+        acc[workstationName].assets.push(asset);
+        return acc;
+      }, {} as Record<string, {
+        workstation_name: string;
+        assets: typeof filteredData.timelineData;
+      }>);
+
+    // Add all workstations from the timeline data, including those with no assets
+    actualWorkstationNames.forEach(workstationName => {
+      if (!grouped[workstationName]) {
+        grouped[workstationName] = {
           workstation_name: workstationName,
-          assets: []
+          assets: [] // Empty array for workstations with no assets
         };
       }
-      
-      acc[workstationName].assets.push(asset);
-      return acc;
-    }, {} as Record<string, {
-      workstation_name: string;
-      assets: typeof filteredData.timelineData;
-    }>);
+    });
+
+    // Get unassigned assets (exclude placeholders)
+    const unassigned = filteredData.timelineData
+      .filter(asset => asset.asset_id !== 0 && (!asset.workstation_name || asset.workstation_name === 'Not Assigned'));
 
     // Filter assets by year if a specific year is selected
     const filteredAssetsByWorkstation = Object.values(grouped).map(workstation => {
@@ -180,15 +205,49 @@ const CustodianInventoryAnalyticsSection = () => {
         ...workstation,
         assets: filteredAssets
       };
-    }).filter(workstation => workstation.assets.length > 0);
+    }); // Remove the filter that excludes workstations with no assets
 
-    // Filter workstations by search term
-    const filteredWorkstations = filteredAssetsByWorkstation.filter(workstation =>
-      workstation.workstation_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter unassigned assets by year if needed
+    let filteredUnassigned = unassigned;
+    if (yearFilter !== 'all') {
+      const yearPositions: { [key: string]: number[] } = {
+        'Y1': [0, 1],
+        'Y2': [2],
+        'Y3': [3],
+        'Y4': [4],
+        'Y5': [5]
+      };
+      
+      const positions = yearPositions[yearFilter] || [];
+      filteredUnassigned = unassigned.filter(asset => 
+        positions.includes(asset.timeline_position)
+      );
+    }
+
+    // Filter by search term and unassigned filter
+    let displayData;
+    if (showUnassignedOnly) {
+      // Show each unassigned asset as an individual "workstation" with its actual name
+      displayData = filteredUnassigned.map(asset => ({
+        workstation_name: asset.unit_name || asset.asset_name,
+        assets: [asset] // Each asset is shown individually
+      })).filter(item => 
+        item.workstation_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    } else {
+      // Show workstations (filter by search term)
+      displayData = filteredAssetsByWorkstation.filter(workstation =>
+        workstation.workstation_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
     
-    return { groupedWorkstations: grouped, assetsByWorkstation: Object.values(grouped), filteredWorkstations };
-  }, [filteredData?.timelineData, searchTerm, yearFilter]);
+    return { 
+      groupedWorkstations: grouped, 
+      assetsByWorkstation: Object.values(grouped), 
+      filteredWorkstations: displayData,
+      unassignedAssets: filteredUnassigned
+    };
+  }, [filteredData?.timelineData, searchTerm, yearFilter, showUnassignedOnly]);
 
   if (loading) {
     return (
@@ -323,6 +382,14 @@ const CustodianInventoryAnalyticsSection = () => {
                 <CardTitle>Asset Lifecycle Timelines</CardTitle>
                 <div className="flex items-center gap-2">
                   <select
+                    value={showUnassignedOnly ? 'unassigned' : 'workstations'}
+                    onChange={(e) => setShowUnassignedOnly(e.target.value === 'unassigned')}
+                    className="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+                  >
+                    <option value="workstations">🖥️ Workstations</option>
+                    <option value="unassigned">📦 Unassigned</option>
+                  </select>
+                  <select
                     value={yearFilter}
                     onChange={(e) => setYearFilter(e.target.value)}
                     className="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -343,7 +410,7 @@ const CustodianInventoryAnalyticsSection = () => {
                   <div className="relative flex-1 min-w-0">
                     <input
                       type="text"
-                      placeholder="Search workstations..."
+                      placeholder={showUnassignedOnly ? "Search unassigned assets..." : "Search workstations..."}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="text-sm border border-gray-300 rounded-md px-3 py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full max-w-64"
@@ -352,16 +419,24 @@ const CustodianInventoryAnalyticsSection = () => {
                       <Search className="h-4 w-4 text-gray-400" />
                     </div>
                   </div>
-                  {filteredWorkstations.length !== assetsByWorkstation.length && (
+                  {!showUnassignedOnly && filteredWorkstations.length !== assetsByWorkstation.length && (
                     <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                       {filteredWorkstations.length} of {assetsByWorkstation.length} workstations
+                    </div>
+                  )}
+                  {showUnassignedOnly && (
+                    <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                      {filteredWorkstations.length} unassigned assets
                     </div>
                   )}
                 </div>
               </div>
 
               <p className="text-sm text-gray-600 mt-3">
-                Track asset age by workstation (hover to view all assets)
+                {showUnassignedOnly 
+                  ? 'Track unassigned assets that need workstation assignment' 
+                  : 'Track asset age by workstation (hover to view all assets)'
+                }
               </p>
             </CardHeader>
             <CardContent>

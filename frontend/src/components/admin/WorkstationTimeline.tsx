@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
 
 interface WorkstationTimelineProps {
@@ -19,6 +19,47 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
   assets
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [overlayPosition, setOverlayPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('bottom');
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Calculate overlay position when hovering
+  useEffect(() => {
+    if (isHovered && cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Calculate available space in all directions
+      const spaceAbove = rect.top - 20;
+      const spaceBelow = viewportHeight - rect.bottom - 20;
+      const spaceLeft = rect.left - 20;
+      const spaceRight = viewportWidth - rect.right - 20;
+      
+      // Calculate required dimensions with smart limits for long lists
+      const overlayWidth = 300;
+      const maxListHeight = Math.max(200, viewportHeight * 0.4); // Max 40% of viewport or 200px minimum
+      const estimatedContentHeight = 120 + (assets.length * 35);
+      const overlayHeight = Math.min(maxListHeight, estimatedContentHeight);
+      
+      // For very long lists, prioritize horizontal positioning (better for scrolling)
+      const isLongList = assets.length > 8;
+      
+      // Find best position with most space
+      const positions = [
+        { dir: 'bottom', space: spaceBelow, width: overlayWidth, height: overlayHeight, priority: isLongList ? 0.8 : 1 },
+        { dir: 'top', space: spaceAbove, width: overlayWidth, height: overlayHeight, priority: isLongList ? 0.8 : 1 },
+        { dir: 'right', space: spaceRight, width: overlayWidth, height: overlayHeight, priority: isLongList ? 1.2 : 0.9 },
+        { dir: 'left', space: spaceLeft, width: overlayWidth, height: overlayHeight, priority: isLongList ? 1.2 : 0.9 }
+      ];
+      
+      // Sort by available space and priority, pick the best fit
+      const bestPosition = positions
+        .filter(p => (p.dir === 'bottom' || p.dir === 'top') ? p.space >= Math.min(200, p.height) : p.space >= p.width)
+        .sort((a, b) => (b.space * b.priority) - (a.space * a.priority))[0]?.dir || 'bottom';
+      
+      setOverlayPosition(bestPosition as any);
+    }
+  }, [isHovered, assets.length]);
 
   // Sort assets by age (newest first)
   const sortedAssets = [...assets].sort((a, b) => b.current_age_years - a.current_age_years);
@@ -35,6 +76,7 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
 
   return (
     <Card 
+      ref={cardRef}
       className="w-full h-36 relative border border-gray-200 shadow hover:shadow-md transition-shadow duration-200"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -98,7 +140,29 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
 
       {/* Hover Overlay */}
       {isHovered && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 min-w-[320px] max-w-[400px]">
+        <div 
+          className={`
+            bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 
+            overflow-y-auto
+            absolute
+            ${overlayPosition === 'top' ? 'bottom-full mb-2 left-0 right-0' : ''}
+            ${overlayPosition === 'bottom' ? 'top-full mt-2 left-0 right-0' : ''}
+            ${overlayPosition === 'left' ? 'right-full mr-2 top-0' : ''}
+            ${overlayPosition === 'right' ? 'left-full ml-2 top-0' : ''}
+          `}
+          style={{
+            maxHeight: overlayPosition === 'top' 
+              ? `${Math.min(350, cardRef.current?.getBoundingClientRect().top || 350 - 40)}px`
+              : overlayPosition === 'bottom'
+              ? `${Math.min(350, window.innerHeight - (cardRef.current?.getBoundingClientRect().bottom || window.innerHeight) - 40)}px`
+              : overlayPosition === 'left' || overlayPosition === 'right'
+              ? `${Math.min(350, window.innerHeight - 40)}px`
+              : '350px',
+            width: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : 'auto',
+            minWidth: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : '260px',
+            maxWidth: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : '320px'
+          }}
+        >
           {/* Header */}
           <div className="mb-3 pb-2 border-b border-gray-100">
             <div className="flex items-center justify-between">
@@ -135,50 +199,63 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
           </div>
           
           {/* Asset List */}
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            <div className="text-sm font-bold text-gray-800 mb-2">Asset Details</div>
-            {sortedAssets.map((asset, index) => (
-              <div key={asset.asset_id} className="flex items-center justify-between p-2 bg-white border border-gray-100 rounded hover:bg-gray-50 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${
-                      asset.timeline_position === 0 ? 'bg-gray-600' :
-                      asset.timeline_position === 1 ? 'bg-gray-600' :
-                      asset.timeline_position === 2 ? 'bg-green-600' :
-                      asset.timeline_position === 3 ? 'bg-yellow-600' :
-                      asset.timeline_position === 4 ? 'bg-orange-600' :
-                      'bg-red-600'
-                    }`}></div>
-                    <div className="font-bold text-sm text-gray-900 truncate">
-                      {asset.unit_name || asset.asset_name}
+          <div className="space-y-1 overflow-y-auto">
+            <div className="text-xs font-bold text-gray-800 mb-1 sticky top-0 bg-white pb-1 flex justify-between items-center">
+              <span>Asset Details</span>
+              {assets.length > 8 && (
+                <span className="text-xs text-blue-600 font-normal">
+                  Scroll to see all {assets.length} assets
+                </span>
+              )}
+            </div>
+            {sortedAssets.length === 0 ? (
+              <div className="text-center py-2 text-gray-500 text-xs">
+                No assets assigned to this workstation
+              </div>
+            ) : (
+              sortedAssets.map((asset, index) => (
+                <div key={asset.asset_id} className="flex items-center justify-between p-1.5 bg-white border border-gray-100 rounded hover:bg-gray-50 transition-colors text-xs">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        asset.timeline_position === 0 ? 'bg-gray-600' :
+                        asset.timeline_position === 1 ? 'bg-gray-600' :
+                        asset.timeline_position === 2 ? 'bg-green-600' :
+                        asset.timeline_position === 3 ? 'bg-yellow-600' :
+                        asset.timeline_position === 4 ? 'bg-orange-600' :
+                        'bg-red-600'
+                      }`}></div>
+                      <div className="font-bold text-gray-900 truncate">
+                        {asset.unit_name || asset.asset_name}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <span className="font-bold text-gray-800">{asset.current_age_years}y</span>
+                        <span className="text-gray-400">•</span>
+                        <span className="font-bold text-gray-800">
+                          {(() => {
+                            const yearData = timelineData.find(d => d.positions.includes(asset.timeline_position));
+                            return yearData ? yearData.label : `Y${asset.timeline_position}`;
+                          })()}
+                        </span>
+                      </span>
+                      <span className="text-gray-400">•</span>
+                      <span className="font-medium text-gray-700">{new Date(asset.purchase_date).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: '2-digit' 
+                      })}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <span className="font-bold text-gray-800">{asset.current_age_years}y</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="font-bold text-gray-800">
-                        {(() => {
-                          const yearData = timelineData.find(d => d.positions.includes(asset.timeline_position));
-                          return yearData ? yearData.label : `Y${asset.timeline_position}`;
-                        })()}
-                      </span>
-                    </span>
-                    <span className="text-gray-400">•</span>
-                    <span className="font-medium text-gray-700">{new Date(asset.purchase_date).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric', 
-                      year: '2-digit' 
-                    })}</span>
+                  <div className="ml-2 text-right">
+                    <div className="text-xs font-mono font-bold text-gray-600">
+                      #{index + 1}
+                    </div>
                   </div>
                 </div>
-                <div className="ml-2 text-right">
-                  <div className="text-xs font-mono font-bold text-gray-600">
-                    #{index + 1}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       )}

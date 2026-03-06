@@ -227,10 +227,48 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       return labData;
     }).filter(lab => lab.total > 0); // Only include labs with assets
 
-    // Get assets with purchase dates for timeline
+    // Get all workstations to ensure complete coverage
+    let allWorkstations;
+    if (userRole === "Custodian" && userLabId) {
+      // For custodians, get workstations from their assigned lab
+      allWorkstations = await prisma.workstations.findMany({
+        where: {
+          lab_id: userLabId
+        },
+        select: {
+          workstation_name: true,
+          lab_id: true,
+          asset_statuses: {
+            select: {
+              status_name: true
+            }
+          }
+        }
+      });
+    } else {
+      // For admins, get all workstations
+      allWorkstations = await prisma.workstations.findMany({
+        select: {
+          workstation_name: true,
+          lab_id: true,
+          laboratories: {
+            select: {
+              lab_name: true
+            }
+          },
+          asset_statuses: {
+            select: {
+              status_name: true
+            }
+          }
+        }
+      });
+    }
+
+    // Get assets with purchase dates for timeline (remove limit to get all assets)
     let assetsWithPurchaseDates;
     if (userRole === "Custodian") {
-      // For custodians, only get assets from their assigned lab
+      // For custodians, get assets from their assigned lab
       assetsWithPurchaseDates = await prisma.inventory_assets.findMany({
         where: {
           lab_id: userLabId,
@@ -278,8 +316,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           asset_details: {
             date_of_purchase: 'desc'
           }
-        },
-        take: 50 // Limit to recent 50 assets for timeline
+        }
       });
     } else {
       // For admins, get all assets with simplified query
@@ -329,13 +366,15 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           asset_details: {
             date_of_purchase: 'desc'
           }
-        },
-        take: 50 // Limit to recent 50 assets for timeline
+        }
       });
     }
 
-    // Process timeline data
-    const timelineData = assetsWithPurchaseDates.map(asset => ({
+    // Process timeline data to include all workstations
+    const timelineData = [];
+    
+    // First, add all assets to timeline data
+    const assetTimelineData = assetsWithPurchaseDates.map(asset => ({
       asset_id: asset.asset_id,
       lab_id: asset.lab_id,
       asset_name: asset.asset_details?.description || asset.units?.unit_name || `Asset #${asset.asset_id}`,
@@ -364,6 +403,31 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         : 0,
       workstation_status: asset.workstations?.asset_statuses?.status_name || 'Unknown'
     }));
+    
+    timelineData.push(...assetTimelineData);
+    
+    // Then, add workstations without assets as placeholder entries
+    const workstationNamesWithAssets = new Set(
+      assetTimelineData.map(asset => asset.workstation_name).filter(name => name && name !== 'Not Assigned')
+    );
+    
+    // Create placeholder entries for workstations without assets
+    allWorkstations.forEach(workstation => {
+      if (!workstationNamesWithAssets.has(workstation.workstation_name)) {
+        timelineData.push({
+          asset_id: 0, // Use 0 as placeholder ID for workstations without assets
+          lab_id: workstation.lab_id,
+          asset_name: 'No Assets',
+          unit_name: '',
+          workstation_name: workstation.workstation_name,
+          lab_name: (workstation as any).laboratories?.lab_name || 'Not Assigned',
+          purchase_date: new Date().toISOString(), // Current date as placeholder
+          current_age_years: 0,
+          timeline_position: 0,
+          workstation_status: workstation.asset_statuses?.status_name || 'Unknown'
+        });
+      }
+    });
 
     // Calculate summary statistics
     const summary = {
