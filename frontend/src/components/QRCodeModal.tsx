@@ -116,27 +116,12 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="base-url">Base URL</Label>
+            <Label htmlFor="path">Path</Label>
             <Input
-              id="base-url"
-              value={editableBaseUrl}
-              onChange={(e) => setEditableBaseUrl(e.target.value)}
-              placeholder="https://your-tunnel-domain.trycloudflare.com"
-            />
-            <p className="text-xs text-gray-500">
-              {window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                ? "Cloudflared tunnel URL for public access"
-                : "Current domain for public access"}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="custom-path">Custom Path</Label>
-            <Input
-              id="custom-path"
+              id="path"
               value={customPath}
               onChange={(e) => setCustomPath(e.target.value)}
-              placeholder="public-forms"
+              placeholder="/public-forms"
             />
             <p className="text-xs text-gray-500">
               Default path for public forms access

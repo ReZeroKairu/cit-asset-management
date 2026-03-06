@@ -78,7 +78,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -159,13 +159,13 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
             >
               Save Schedules
             </button>

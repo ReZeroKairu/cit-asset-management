@@ -202,7 +202,7 @@ const MaintenancePage = () => {
               <div className="flex items-center space-x-3 bg-gray-50 p-1 rounded-lg border border-gray-200">
                 <button
                   onClick={() => setActiveTab("all")}
-                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "all"
                       ? "bg-white text-blue-600 shadow-sm border border-gray-200"
                       : "text-gray-600 hover:text-gray-900"
@@ -212,7 +212,7 @@ const MaintenancePage = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("pending")}
-                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "pending"
                       ? "bg-white text-blue-600 shadow-sm border border-gray-200"
                       : "text-gray-600 hover:text-gray-900"
@@ -230,7 +230,7 @@ const MaintenancePage = () => {
                     onClick={() =>
                       setShowScheduleDropdown(!showScheduleDropdown)
                     }
-                    className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
+                    className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   >
                     <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
                     <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
@@ -243,7 +243,7 @@ const MaintenancePage = () => {
                           setShowScheduleDropdown(false);
                           setShowScheduleModal(true);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg cursor-pointer"
                       >
                         <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set New
                         Schedule
@@ -254,7 +254,7 @@ const MaintenancePage = () => {
                             setShowScheduleDropdown(false);
                             handleResetAllSchedules();
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center rounded-b-lg border-t border-gray-100"
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center rounded-b-lg border-t border-gray-100 cursor-pointer"
                         >
                           <RotateCcw className="w-4 h-4 mr-2" /> Reset All
                           Schedules
@@ -266,7 +266,7 @@ const MaintenancePage = () => {
 
                 <button
                   onClick={() => setView("reports")}
-                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 >
                   <FileText className="w-4 h-4 mr-2" /> View Reports
                 </button>
