@@ -20,9 +20,10 @@ interface PublicEquipmentBorrowFormProps {
   disabled?: boolean;
   custodianName?: string;
   assignedLab?: string;
+  isOneTimeForm?: boolean;
 }
 
-export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab }: PublicEquipmentBorrowFormProps) => {
+export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm }: PublicEquipmentBorrowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [userType, setUserType] = useState<'student' | 'faculty'>('student'); // New state for user type

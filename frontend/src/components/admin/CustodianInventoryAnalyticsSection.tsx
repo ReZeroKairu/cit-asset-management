@@ -460,23 +460,23 @@ const CustodianInventoryAnalyticsSection = () => {
                   <div className="grid grid-cols-5 gap-3 text-xs">
                     <div className="text-center">
                       <div className="text-blue-600 font-bold">{timelineSummary[0].year1}</div>
-                      <div className="text-gray-600 font-bold">Y1</div>
+                      <div className="text-blue-600 font-bold">Y1</div>
                     </div>
                     <div className="text-center">
                       <div className="text-green-600 font-bold">{timelineSummary[0].year2}</div>
-                      <div className="text-gray-600 font-bold">Y2</div>
+                      <div className="text-green-600 font-bold">Y2</div>
                     </div>
                     <div className="text-center">
                       <div className="text-yellow-600 font-bold">{timelineSummary[0].year3}</div>
-                      <div className="text-gray-600 font-bold">Y3</div>
+                      <div className="text-yellow-600 font-bold">Y3</div>
                     </div>
                     <div className="text-center">
                       <div className="text-orange-600 font-bold">{timelineSummary[0].year4}</div>
-                      <div className="text-gray-600 font-bold">Y4</div>
+                      <div className="text-orange-600 font-bold">Y4</div>
                     </div>
                     <div className="text-center">
                       <div className="text-red-600 font-bold">{timelineSummary[0].year5}</div>
-                      <div className="text-gray-600 font-bold">Y5</div>
+                      <div className="text-red-600 font-bold">Y5</div>
                     </div>
                   </div>
                 </div>

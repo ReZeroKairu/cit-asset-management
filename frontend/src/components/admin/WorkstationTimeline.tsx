@@ -113,7 +113,13 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
                   <div
                     className={`w-2 h-2 rounded-full ${
                       hasAssets
-                        ? 'bg-gray-600'
+                        ? (
+                          data.year === 1 ? 'bg-blue-600' :
+                          data.year === 2 ? 'bg-green-600' :
+                          data.year === 3 ? 'bg-yellow-600' :
+                          data.year === 4 ? 'bg-orange-600' :
+                          'bg-red-600'
+                        )
                         : 'bg-gray-300'
                     }`}
                   ></div>
@@ -129,11 +135,22 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
 
           {/* Year labels */}
           <div className="flex justify-between px-2 mt-2">
-            {timelineData.map((data) => (
-              <span key={data.year} className="text-xs text-gray-600 font-mono">
-                {data.label}
-              </span>
-            ))}
+            {timelineData.map((data) => {
+              const assetsInYear = assets.filter(asset => data.positions.includes(asset.timeline_position));
+              const hasAssets = assetsInYear.length > 0;
+              const labelColor = hasAssets ? (
+                data.year === 1 ? 'text-blue-600' :
+                data.year === 2 ? 'text-green-600' :
+                data.year === 3 ? 'text-yellow-600' :
+                data.year === 4 ? 'text-orange-600' :
+                'text-red-600'
+              ) : 'text-gray-600';
+              return (
+                <span key={data.year} className={`text-xs font-mono ${labelColor}`}>
+                  {data.label}
+                </span>
+              );
+            })}
           </div>
         </div>
       </CardContent>
@@ -183,13 +200,33 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
               {timelineData.map((data) => {
                 const assetsInYear = assets.filter(asset => data.positions.includes(asset.timeline_position));
                 const count = assetsInYear.length;
+                const dotColor = count > 0 ? (
+                  data.year === 1 ? 'bg-blue-600' :
+                  data.year === 2 ? 'bg-green-600' :
+                  data.year === 3 ? 'bg-yellow-600' :
+                  data.year === 4 ? 'bg-orange-600' :
+                  'bg-red-600'
+                ) : 'bg-gray-300';
+                const labelColor = count > 0 ? (
+                  data.year === 1 ? 'text-blue-600' :
+                  data.year === 2 ? 'text-green-600' :
+                  data.year === 3 ? 'text-yellow-600' :
+                  data.year === 4 ? 'text-orange-600' :
+                  'text-red-600'
+                ) : 'text-gray-600';
                 return (
                   <div key={data.year} className="flex flex-col items-center">
-                    <div className={`w-2 h-2 rounded-full ${
-                      count > 0 ? 'bg-gray-600' : 'bg-gray-300'
-                    }`}></div>
-                    <div className="text-sm font-bold text-gray-800 mt-1">{count}</div>
-                    <div className="text-xs font-medium text-gray-600">
+                    <div className={`w-2 h-2 rounded-full ${dotColor}`}></div>
+                    <div className={`text-sm font-bold mt-1 ${
+                      count > 0 ? (
+                        data.year === 1 ? 'text-blue-600' :
+                        data.year === 2 ? 'text-green-600' :
+                        data.year === 3 ? 'text-yellow-600' :
+                        data.year === 4 ? 'text-orange-600' :
+                        'text-red-600'
+                      ) : 'text-gray-800'
+                    }`}>{count}</div>
+                    <div className={`text-xs font-medium ${labelColor}`}>
                       {data.label}
                     </div>
                   </div>
@@ -230,16 +267,7 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <span className="font-bold text-gray-800">{asset.current_age_years}y</span>
-                        <span className="text-gray-400">•</span>
-                        <span className="font-bold text-gray-800">
-                          {(() => {
-                            const yearData = timelineData.find(d => d.positions.includes(asset.timeline_position));
-                            return yearData ? yearData.label : `Y${asset.timeline_position}`;
-                          })()}
-                        </span>
-                      </span>
+                      <span className="font-bold text-gray-800">{asset.current_age_years}y</span>
                       <span className="text-gray-400">•</span>
                       <span className="font-medium text-gray-700">{new Date(asset.purchase_date).toLocaleDateString('en-US', { 
                         month: 'short', 
