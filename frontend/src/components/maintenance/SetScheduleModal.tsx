@@ -136,7 +136,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                         onChange={(e) =>
                           handleDateChange(quarterId, "start", e.target.value)
                         }
-                        className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500"
+                        className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -146,7 +146,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                         onChange={(e) =>
                           handleDateChange(quarterId, "end", e.target.value)
                         }
-                        className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500"
+                        className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer"
                       />
                     </td>
                   </tr>

@@ -391,7 +391,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       type="date"
                       value={dateFilters.start_date}
                       onChange={(e) => setDateFilters(prev => ({ ...prev, start_date: e.target.value }))}
-                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     />
                   </div>
                   <div>
@@ -402,7 +402,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       type="date"
                       value={dateFilters.end_date}
                       onChange={(e) => setDateFilters(prev => ({ ...prev, end_date: e.target.value }))}
-                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     />
                   </div>
                 </div>

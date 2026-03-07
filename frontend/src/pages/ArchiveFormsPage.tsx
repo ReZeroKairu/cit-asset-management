@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, Clock, CheckCircle, XCircle, Eye, Download } from "lucide-react";
+import { FileText, Clock, CheckCircle, XCircle, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -293,7 +293,7 @@ const ArchiveFormsPage = () => {
               type="date"
               value={dateFilter.start_date}
               onChange={(e) => setDateFilter(prev => ({ ...prev, start_date: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           
@@ -305,14 +305,14 @@ const ArchiveFormsPage = () => {
               type="date"
               value={dateFilter.end_date}
               onChange={(e) => setDateFilter(prev => ({ ...prev, end_date: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           
           <div className="flex items-end">
             <button
               onClick={() => setDateFilter({ start_date: "", end_date: "" })}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
             </button>
@@ -356,7 +356,11 @@ const ArchiveFormsPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {forms.map((form) => (
-                  <tr key={`${form.type}-${form.id}`} className="hover:bg-gray-50">
+                  <tr 
+                    key={`${form.type}-${form.id}`} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors" 
+                    onClick={() => handleViewForm(form)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {form.type === "lab-request" && `Lab Request`}
@@ -401,17 +405,10 @@ const ArchiveFormsPage = () => {
                       {new Date(form.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewForm(form)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                          title="View Form Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleDownloadForm(form)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
                           title="Download Form"
                         >
                           <Download className="w-4 h-4" />

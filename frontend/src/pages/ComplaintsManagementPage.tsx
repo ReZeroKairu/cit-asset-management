@@ -5,7 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { 
   MessageSquare, 
-  Eye, 
   Edit, 
   Clock, 
   AlertTriangle
@@ -370,7 +369,15 @@ const ComplaintsManagementPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredComplaints.map((complaint) => (
-                  <tr key={complaint.complaint_id} className="hover:bg-gray-50">
+                  <tr 
+                    key={complaint.complaint_id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors" 
+                    onClick={() => {
+                      setSelectedComplaint(complaint);
+                      setRemarksText(complaint.remarks || "");
+                      setIsEditingRemarks(false); // Open modal in read-only mode
+                    }}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         Complaint #{complaint.complaint_id}
@@ -414,27 +421,16 @@ const ComplaintsManagementPage = () => {
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedComplaint(complaint);
-                            setRemarksText(complaint.remarks || "");
-                            setIsEditingRemarks(false); // Open modal in read-only mode
-                          }}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {/* Show Accept/Deny buttons for Open complaints - but not for admins */}
                         {complaint.status === "Open" && !isAdmin && (
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleAcceptComplaint(complaint.complaint_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAcceptComplaint(complaint.complaint_id);
+                              }}
                               className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                               disabled={isUpdating}
                             >
@@ -443,7 +439,10 @@ const ComplaintsManagementPage = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDenyComplaint(complaint.complaint_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDenyComplaint(complaint.complaint_id);
+                              }}
                               className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                               disabled={isUpdating}
                             >
@@ -452,36 +451,38 @@ const ComplaintsManagementPage = () => {
                           </>
                         )}
                         
-                        {/* Show Edit button for In_Progress complaints - but not for admins */}
+                        {/* Show Edit button and status dropdown for In_Progress complaints - but not for admins */}
                         {complaint.status === "In_Progress" && !isAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedComplaint(complaint);
-                              setRemarksText(complaint.remarks || "");
-                              setIsEditingRemarks(true); // Open modal in edit mode
-                            }}
-                            className="p-2 h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer rounded-md"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        )}
-                        
-                        {/* Show status dropdown for In_Progress complaints - but not for admins */}
-                        {complaint.status === "In_Progress" && !isAdmin && (
-                          <Select
-                            value={complaint.status}
-                            onValueChange={(value) => handleStatusUpdate(complaint.complaint_id, value)}
-                          >
-                            <SelectTrigger className="w-28">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="In_Progress">In Progress</SelectItem>
-                              <SelectItem value="Resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedComplaint(complaint);
+                                setRemarksText(complaint.remarks || "");
+                                setIsEditingRemarks(true); // Open modal in edit mode
+                              }}
+                              className="p-2 h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer rounded-md"
+                              title="Edit Remarks"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={complaint.status}
+                                onValueChange={(value) => handleStatusUpdate(complaint.complaint_id, value)}
+                              >
+                                <SelectTrigger className="w-28">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="In_Progress">In Progress</SelectItem>
+                                  <SelectItem value="Resolved">Resolved</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                         )}
                       </div>
                     </td>

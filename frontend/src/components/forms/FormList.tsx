@@ -1,7 +1,7 @@
 import React from 'react';
 import { type FormSubmission } from '../../types/forms';
 import { format } from "date-fns";
-import { Eye, Download, Edit } from "lucide-react";
+import { Download, Edit } from "lucide-react";
 import { generateFormDocument } from "../../utils/formTemplateMapping";
 import { Button } from '../ui/button';
 
@@ -69,7 +69,6 @@ export const FormList: React.FC<FormListProps> = ({
 
   const approvableForms = forms.filter(form => userRole === 'Admin' && form.status === 'Custodian_Approved');
   const allSelected = approvableForms.length > 0 && approvableForms.every(form => selectedForms.has(`${form.type}-${form.id}`));
-  const someSelected = approvableForms.some(form => selectedForms.has(`${form.type}-${form.id}`));
 
   if (loading) {
     return <div>Loading...</div>;
@@ -91,13 +90,8 @@ export const FormList: React.FC<FormListProps> = ({
             <input
               type="checkbox"
               checked={allSelected}
-              ref={(input) => {
-                if (input) {
-                  input.indeterminate = someSelected && !allSelected;
-                }
-              }}
               onChange={(e) => handleSelectAll(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded cursor-pointer checked:bg-blue-600 checked:border-blue-600"
             />
             <span className="text-sm font-medium text-gray-700">
               {allSelected ? 'Deselect All' : 'Select All'} ({selectedForms.size} selected)
@@ -115,23 +109,13 @@ export const FormList: React.FC<FormListProps> = ({
         </div>
       )}
       
-      <div className="overflow-hidden">
+      <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full divide-y divide-gray-200 table-fixed">
           <thead className="bg-gray-50">
             <tr>
               {userRole === 'Admin' && approvableForms.length > 0 && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    ref={(input) => {
-                      if (input) {
-                        input.indeterminate = someSelected && !allSelected;
-                      }
-                    }}
-                    onChange={(e) => handleSelectAll(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                  />
+                  Select
                 </th>
               )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">
@@ -158,16 +142,23 @@ export const FormList: React.FC<FormListProps> = ({
               const isSelected = selectedForms.has(formId);
               
               return (
-                <tr key={formId} className="hover:bg-gray-50">
+                <tr key={formId} className="hover:bg-gray-50 cursor-pointer" onClick={(e) => {
+                  // Don't open modal if clicking on input elements (checkboxes)
+                  const target = e.target as HTMLElement;
+                  if (target.tagName === 'INPUT') return;
+                  onViewDetails(form);
+                }}>
                   {userRole === 'Admin' && approvableForms.length > 0 && (
                     <td className="px-3 py-4 whitespace-nowrap">
                       {isApprovable && (
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => handleCheckboxChange(formId, e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => handleCheckboxChange(formId, e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded cursor-pointer checked:bg-blue-600 checked:border-blue-600"
+                          />
+                        </div>
                       )}
                     </td>
                   )}
@@ -210,17 +201,7 @@ export const FormList: React.FC<FormListProps> = ({
                     {format(new Date(form.createdAt || form.date), 'M/d/yyyy, h:mm a')}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onViewDetails(form)}
-                        className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      
+                    <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {userRole !== 'Admin' && (
                         <Button
                           size="sm"

@@ -14,7 +14,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye,
   Download,
   Users,
 } from "lucide-react";
@@ -280,6 +279,14 @@ export const FormsManagementPage = () => {
     }
   };
 
+  const handleGenerateForm = async (form: any) => {
+    try {
+      await generateFormDocument(form);
+    } catch (error) {
+      console.error("Error generating form:", error);
+    }
+  };
+
   const updateStatus = async (
     formId: number,
     formType: string,
@@ -465,7 +472,7 @@ export const FormsManagementPage = () => {
                   start_date: e.target.value,
                 }))
               }
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
             <input
               type="date"
@@ -474,7 +481,7 @@ export const FormsManagementPage = () => {
               onChange={(e) =>
                 setDateFilter((prev) => ({ ...prev, end_date: e.target.value }))
               }
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
             <Button
               onClick={() => setDateFilter({ start_date: "", end_date: "" })}
@@ -505,7 +512,14 @@ export const FormsManagementPage = () => {
           </Card>
         ) : (
           filteredForms.map((form) => (
-            <Card key={`${form.type}-${form.id}`}>
+            <Card 
+              key={`${form.type}-${form.id}`} 
+              className="cursor-pointer hover:shadow-md hover:shadow-blue-100 hover:border-blue-200 transition-all duration-200"
+              onClick={() => {
+                setSelectedForm(form);
+                setShowDetails(true);
+              }}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -566,19 +580,7 @@ export const FormsManagementPage = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedForm(form);
-                        setShowDetails(true);
-                      }}
-                      className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-
+                  <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                     {form.status === "Pending" && (
                       <>
                         <Button
@@ -586,7 +588,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Approved")
                           }
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 cursor-pointer"
                         >
                           Approve
                         </Button>
@@ -596,6 +598,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Denied")
                           }
+                          className="cursor-pointer"
                         >
                           Deny
                         </Button>
@@ -609,7 +612,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Returned")
                           }
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
                         >
                           Mark Returned
                         </Button>
@@ -618,18 +621,12 @@ export const FormsManagementPage = () => {
                     {/* Generate Form Document Button */}
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        console.log(
-                          "Generate button clicked for archived form:",
-                          form
-                        );
-                        generateFormDocument(form);
-                      }}
-                      className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
-                      title="Generate Form Document"
+                      variant="outline"
+                      onClick={() => handleGenerateForm(form)}
+                      className="cursor-pointer"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
                     </Button>
                   </div>
                 </div>

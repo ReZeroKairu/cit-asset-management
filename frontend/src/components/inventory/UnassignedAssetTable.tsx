@@ -51,16 +51,16 @@ const UnassignedAssetTable: React.FC<Props> = ({
             assets.map((asset) => (
               <tr key={asset.asset_id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
-                  {asset.details?.property_tag_no || asset.property_tag_no}
+                  {asset.asset_details?.property_tag_no || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {asset.units?.unit_name || "N/A"}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  {asset.details?.description || asset.description}
+                  {asset.asset_details?.description || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {asset.details?.serial_number || asset.serial_number}
+                  {asset.asset_details?.serial_number || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
@@ -68,7 +68,7 @@ const UnassignedAssetTable: React.FC<Props> = ({
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {asset.details?.quantity || asset.quantity}
+                  1
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button

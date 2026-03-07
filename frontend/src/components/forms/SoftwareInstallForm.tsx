@@ -232,6 +232,7 @@ export const SoftwareInstallForm = () => {
                 value={formData.date}
                 onChange={(e) => handleInputChange("date", e.target.value)}
                 required
+                className="cursor-pointer"
               />
             </div>
           </div>
@@ -325,6 +326,7 @@ export const SoftwareInstallForm = () => {
                     value={formData.feedbackDate}
                     onChange={(e) => handleInputChange("feedbackDate", e.target.value)}
                     placeholder="Feedback date"
+                    className="cursor-pointer"
                   />
                 </div>
               </div>

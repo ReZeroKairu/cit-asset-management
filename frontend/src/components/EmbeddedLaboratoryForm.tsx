@@ -1,11 +1,5 @@
 //frontend/src/components/EmbeddedLaboratoryForm.tsx
 import React, { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Alert, AlertDescription } from "./ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Building, Save, RotateCcw } from "lucide-react";
 import api from "../api/axios";
 
 interface LabFormData {
@@ -135,7 +129,6 @@ const EmbeddedLaboratoryForm: React.FC<Props> = ({
         <div className="flex justify-end space-x-2">
           <button
             type="button"
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
             onClick={() => {
               // Reset form
               setFormData({
@@ -145,13 +138,14 @@ const EmbeddedLaboratoryForm: React.FC<Props> = ({
               });
               setError("");
             }}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Clear Form
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>

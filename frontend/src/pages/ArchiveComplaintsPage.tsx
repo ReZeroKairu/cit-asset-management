@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { 
-  MessageSquare, 
-  Eye
+  MessageSquare
 } from "lucide-react";
 import { 
   getComplaints, 
@@ -134,7 +133,7 @@ const ArchiveComplaintsPage = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           
@@ -146,14 +145,14 @@ const ArchiveComplaintsPage = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           
           <div className="flex items-end">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
             </button>
@@ -205,7 +204,11 @@ const ArchiveComplaintsPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredComplaints.map((complaint) => (
-                  <tr key={complaint.complaint_id} className="hover:bg-gray-50">
+                  <tr 
+                    key={complaint.complaint_id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors" 
+                    onClick={() => setSelectedComplaint(complaint)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         Complaint #{complaint.complaint_id}
@@ -241,7 +244,7 @@ const ArchiveComplaintsPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(complaint.status)}`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
                         {complaint.status.replace('_', ' ')}
                       </span>
                     </td>
@@ -249,15 +252,7 @@ const ArchiveComplaintsPage = () => {
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setSelectedComplaint(complaint)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                          title="View Complaint Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {/* No actions needed for archived complaints - rows are clickable */}
                     </td>
                   </tr>
                 ))}

@@ -16,7 +16,7 @@ import { FormList } from "../components/forms/FormList";
 import { LabRequestForm } from "../components/forms/LabRequestForm";
 import { EquipmentBorrowForm } from "../components/forms/EquipmentBorrowForm";
 import { SoftwareInstallForm } from "../components/forms/SoftwareInstallForm";
-import { Download, Edit, Eye, QrCode, FileText } from "lucide-react";
+import { Download, Edit, QrCode, FileText } from "lucide-react";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import QRCodeGenerator from "../components/QRCodeGenerator";
 import { Button } from "../components/ui/button";
@@ -217,9 +217,15 @@ const FormsPage = () => {
     if (selectedForms.size === 0) return;
 
     try {
+      console.log('Bulk approving forms:', Array.from(selectedForms));
       const approvalPromises = Array.from(selectedForms).map((formIdStr) => {
-        const [formType, idStr] = formIdStr.split("-");
+        console.log('Processing formIdStr:', formIdStr);
+        const parts = formIdStr.split("-");
+        const idStr = parts[parts.length - 1]; // Last part is always the ID
+        const formType = parts.slice(0, -1).join("-"); // Everything before last hyphen is form type
+        console.log('Parsed formType:', formType, 'idStr:', idStr);
         const formId = parseInt(idStr);
+        console.log('Parsed formId:', formId, 'isNaN:', isNaN(formId));
 
         // Skip software-install forms - they are handled by custodians only
         if (formType === "software-install") {
@@ -230,6 +236,7 @@ const FormsPage = () => {
           case "lab-request":
             return apiUpdateLabRequestStatus(formId, "Admin_Approved");
           case "equipment-borrow":
+          case "equipment":  // Handle both formats
             return apiUpdateEquipmentBorrowStatus(formId, "Admin_Approved");
           default:
             console.error("Unknown form type:", formType);
@@ -238,11 +245,14 @@ const FormsPage = () => {
       });
 
       await Promise.all(approvalPromises);
-
+      console.log('Bulk approval completed successfully');
+      
       setSelectedForms(new Set());
       await fetchForms();
+      alert(`Successfully approved ${selectedForms.size} forms!`);
     } catch (error) {
       console.error("Error during bulk approval:", error);
+      alert("Error during bulk approval. Please try again.");
     }
   }, [selectedForms, fetchForms]);
 
@@ -494,7 +504,19 @@ const FormsPage = () => {
                     {filteredForms.map((form) => (
                       <tr
                         key={`${form.type}-${form.id}`}
-                        className="hover:bg-gray-50"
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => {
+                          console.log("Row clicked, form:", form);
+                          console.log("Form details:", form.details);
+                          setSelectedForm(form);
+                          setShowDetails(true);
+                          console.log(
+                            "After setting state - selectedForm:",
+                            form,
+                            "showDetails:",
+                            true
+                          );
+                        }}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
@@ -545,66 +567,52 @@ const FormsPage = () => {
                           {new Date(form.createdAt).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                console.log("View button clicked, form:", form);
-                                console.log("Form details:", form.details);
-                                setSelectedForm(form);
-                                setShowDetails(true);
-                                console.log(
-                                  "After setting state - selectedForm:",
-                                  form,
-                                  "showDetails:",
-                                  true
-                                );
-                              }}
-                              className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-gray-600 hover:text-black transition-colors"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-
-                            {user?.role === "Custodian" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  console.log(
-                                    "Generate button clicked, form:",
-                                    form
-                                  );
-                                  generateFormDocument(form);
-                                }}
-                                className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
-                                title="Generate Form Document"
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            )}
-
-                            {user?.role === "Custodian" &&
-                              form.status === "Admin_Approved" && (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {/* Download button for custodians */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {user?.role === "Custodian" && (
                                 <Button
                                   size="sm"
-                                  className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                  variant="ghost"
                                   onClick={() => {
                                     console.log(
-                                      "Edit button clicked, form:",
+                                      "Generate button clicked, form:",
                                       form
                                     );
-                                    setSelectedForm(form);
-                                    setEditMode(true);
-                                    setShowDetails(true);
+                                    generateFormDocument(form);
                                   }}
-                                  title="Edit Form Details"
+                                  className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                                  title="Generate Form Document"
                                 >
-                                  <Edit className="w-4 h-4" />
+                                  <Download className="w-4 h-4" />
                                 </Button>
                               )}
+                            </div>
 
+                            {/* Edit button for custodians with Admin_Approved status */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {user?.role === "Custodian" &&
+                                form.status === "Admin_Approved" && (
+                                  <Button
+                                    size="sm"
+                                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                    onClick={() => {
+                                      console.log(
+                                        "Edit button clicked, form:",
+                                        form
+                                      );
+                                      setSelectedForm(form);
+                                      setEditMode(true);
+                                      setShowDetails(true);
+                                    }}
+                                    title="Edit Form Details"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                )}
+                            </div>
+
+                            {/* Approve/Deny buttons for Pending status */}
                             {form.status === "Pending" && (
                               <div className="flex gap-2">
                                 <Button

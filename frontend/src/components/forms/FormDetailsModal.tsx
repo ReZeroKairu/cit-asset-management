@@ -456,7 +456,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                             type="date"
                             value={editFormData.feedback_date || ''}
                             onChange={(e) => setEditFormData({...editFormData, feedback_date: e.target.value})}
-                            className="mt-1"
+                            className="mt-1 cursor-pointer"
                           />
                         ) : (
                           <p className="font-medium text-gray-900">

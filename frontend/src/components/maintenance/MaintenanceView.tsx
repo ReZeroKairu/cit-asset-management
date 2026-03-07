@@ -467,13 +467,13 @@ const MaintenanceView: React.FC<Props> = ({
         <div className="flex space-x-3">
           <button
             onClick={onBack}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Back to List
           </button>
           <button
             onClick={onService}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center shadow-sm cursor-pointer"
           >
             <Wrench className="w-4 h-4 mr-2" />
             Service Workstation
@@ -483,7 +483,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={() => setShowRepairModal(true)}
-              className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors flex items-center shadow-sm"
+              className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors flex items-center shadow-sm cursor-pointer"
             >
               <Wrench className="w-4 h-4 mr-2" />
               Repair Component
@@ -494,7 +494,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm cursor-pointer"
             >
               <Download className="w-4 h-4 mr-2" />
               QPMC Report
