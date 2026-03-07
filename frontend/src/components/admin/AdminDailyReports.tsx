@@ -529,7 +529,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         {report.status !== "Approved" && (
                           <button
                             onClick={() => handleQuickApprove(report.report_id)}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded cursor-pointer"
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 text-sm font-medium rounded cursor-pointer"
                           >
                             Approve
                           </button>
