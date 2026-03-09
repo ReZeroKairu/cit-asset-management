@@ -183,7 +183,7 @@ const ArchiveFormsPage = () => {
         return <Clock className="w-4 h-4" />;
       case "Approved":
       case "Completed":
-        return <CheckCircle className="w-4 h-4" />;
+        return null; // Remove icon for Completed status
       case "Rejected":
       case "Denied":
         return <XCircle className="w-4 h-4" />;
@@ -394,7 +394,7 @@ const ArchiveFormsPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(form.status)}`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(form.status)}`}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(form.status)}
                           {form.status.replace('_', ' ')}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, CheckCircle, ArrowLeft } from "lucide-react";
+import { FileText, CheckCircle, ArrowLeft, Plus } from "lucide-react";
 import { PublicLabRequestForm } from "../components/forms/PublicLabRequestForm";
 import { PublicEquipmentBorrowForm } from "../components/forms/PublicEquipmentBorrowForm";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
@@ -163,20 +163,13 @@ const PublicFormsPage = () => {
                 </div>
                 <div className="space-y-4">
                   <Button 
-                    variant="outline"
-                    onClick={() => window.location.href = '/public-landing'}
-                    className="w-full sm:w-auto"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Home
-                  </Button>
-                  <Button 
                     onClick={() => {
                       setActiveTab('lab-request');
                       setSubmittedForm(null);
                     }}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
                   >
+                    <Plus className="w-4 h-4 mr-2" />
                     Submit Another Form
                   </Button>
                 </div>

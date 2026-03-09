@@ -326,7 +326,7 @@ export const FormsManagementPage = () => {
       case "Returned":
         return <CheckCircle className="w-4 h-4 text-blue-500" />;
       case "Completed":
-        return <CheckCircle className="w-4 h-4 text-purple-500" />;
+        return null; // Remove icon for Completed status
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
     }
@@ -528,7 +528,7 @@ export const FormsManagementPage = () => {
                       <h3 className="font-semibold text-gray-900">
                         {getFormTypeLabel(form.type)}
                       </h3>
-                      <Badge className={getStatusColor(form.status)}>
+                      <Badge className={`${getStatusColor(form.status)} border-0`}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(form.status)}
                           {form.status}
