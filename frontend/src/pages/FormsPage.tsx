@@ -124,7 +124,7 @@ const FormsPage = () => {
           return allForms.filter(
             (form) =>
               form.status === "Custodian_Approved" &&
-              form.type !== "software-install" // Exclude software installation forms
+              form.type !== "software-install" // Exclude ALL software installation forms from main list
           );
         }
 
@@ -612,8 +612,9 @@ const FormsPage = () => {
                                 )}
                             </div>
 
-                            {/* Approve/Deny buttons for Pending status */}
-                            {form.status === "Pending" && (
+                            {/* Approve/Deny buttons for Pending status - Hide from Admins for software installations */}
+                            {form.status === "Pending" && 
+                              !(user?.role === "Admin" && form.type === "software-install") && (
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
@@ -639,6 +640,41 @@ const FormsPage = () => {
                                 </Button>
                               </div>
                             )}
+
+                            {/* Lab Request: Completed button for Admin_Approved status */}
+                            {form.type === "lab-request" &&
+                              form.status === "Admin_Approved" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                    onClick={() => {
+                                      // Check if required fields are filled before marking as completed
+                                      const timeOut = form.details.time_out;
+                                      const remarks = form.details.remarks;
+
+                                      if (!timeOut || !remarks) {
+                                        const missingFields = [];
+                                        if (!timeOut) missingFields.push("Time Out");
+                                        if (!remarks) missingFields.push("Remarks");
+
+                                        alert(
+                                          `Please fill in the following required fields before marking as completed:\n\n${missingFields.join(
+                                            "\n"
+                                          )}\n\nClick "Edit" to update form details.`
+                                        );
+                                        return;
+                                      }
+
+                                      updateStatus(form.id, form.type, "Completed");
+                                    }}
+                                  >
+                                    Completed
+                                  </Button>
+                                </div>
+                              )}
+
+                            {/* Equipment Borrow: Returned and Lost buttons for Admin_Approved status */}
                             {form.type === "equipment-borrow" &&
                               form.status === "Admin_Approved" && (
                                 <div className="flex gap-2">

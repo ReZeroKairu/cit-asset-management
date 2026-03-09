@@ -1,6 +1,6 @@
 // backend/prisma/seed.ts
-import { PrismaClient, users_role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { PrismaClient, users_role, lab_requests_status, equipment_borrows_status, software_installations_status, daily_reports_status, complaints_status } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +24,14 @@ async function main() {
         email: "custodian@cit.edu",
         role: users_role.Custodian,
         lab_id: 1, // We will handle this carefully
+        password_hash: await bcrypt.hash("password123", 10),
+      },
+      {
+        user_id: 3,
+        full_name: "Jane Custodian",
+        email: "custodian2@cit.edu",
+        role: users_role.Custodian,
+        lab_id: 2, // We will handle this carefully
         password_hash: await bcrypt.hash("password123", 10),
       },
     ],
@@ -181,6 +189,226 @@ async function main() {
         is_active: true,
       },
     ],
+
+    // Example Data for Tables
+    labRequests: [
+      {
+        request_id: 1,
+        user_id: 2,
+        date: new Date("2024-01-15"),
+        usage_type: "set-in",
+        faculty_student_name: "Juan Dela Cruz",
+        user_type: "Student",
+        year_level: "3rd Year",
+        laboratory: "CIT-Lab 1",
+        printing_pages: "10",
+        ws_number: "WS-01",
+        time_in: "08:00",
+        time_out: "10:00",
+        purpose: "Programming exercises",
+        requested_by: "Prof. Smith",
+        remarks: "Completed all activities",
+        monitored_by: "John Custodian",
+        approved_by: "Prof. Smith",
+        status: lab_requests_status.Completed,
+      },
+      {
+        request_id: 2,
+        user_id: 3,
+        date: new Date("2024-01-16"),
+        usage_type: "printing",
+        faculty_student_name: "Maria Santos",
+        user_type: "Faculty",
+        year_level: null,
+        laboratory: "CIT-Lab 2",
+        printing_pages: "5",
+        ws_number: "WS-02",
+        time_in: "13:00",
+        time_out: "15:00",
+        purpose: "Printing thesis documents",
+        requested_by: "Dr. Johnson",
+        remarks: "Used statistical software",
+        monitored_by: "Jane Custodian",
+        approved_by: "Dr. Johnson",
+        status: lab_requests_status.Admin_Approved,
+      },
+    ],
+
+    equipmentBorrows: [
+      {
+        borrow_id: 1,
+        user_id: 2,
+        date: new Date("2024-01-15"),
+        laboratory: "CIT-Lab 1",
+        faculty_student_name: "Carlos Reyes",
+        user_type: "Student",
+        year_level: "2nd Year",
+        release_time: "09:00",
+        returned_time: "11:00",
+        equipment_list: JSON.stringify([
+          { item: "Laptop", quantity: 1 },
+          { item: "Mouse", quantity: 1 }
+        ]),
+        purpose: "Presentation for class project",
+        requested_by: "Prof. Garcia",
+        remarks: "Returned in good condition",
+        monitored_by: "John Custodian",
+        approved_by: "Prof. Garcia",
+        status: equipment_borrows_status.Returned,
+      },
+      {
+        borrow_id: 2,
+        user_id: 3,
+        date: new Date("2024-01-16"),
+        laboratory: "CIT-Lab 2",
+        faculty_student_name: "Ana Martinez",
+        user_type: "Faculty",
+        year_level: null,
+        release_time: "14:00",
+        returned_time: null,
+        equipment_list: JSON.stringify([
+          { item: "Projector", quantity: 1 },
+          { item: "HDMI Cable", quantity: 2 }
+        ]),
+        purpose: "Faculty meeting presentation",
+        requested_by: "Dr. Wilson",
+        remarks: "Still in use",
+        monitored_by: "Jane Custodian",
+        approved_by: "Dr. Wilson",
+        status: equipment_borrows_status.Custodian_Approved,
+      },
+    ],
+
+    softwareInstallations: [
+      {
+        id: 1,
+        user_id: 2,
+        faculty_name: "Prof. Rodriguez",
+        date: new Date("2024-01-15"),
+        laboratory: "CIT-Lab 1",
+        software_list: "Visual Studio Code, Python 3.9, Git",
+        requested_by: "Prof. Rodriguez",
+        installation_remarks: "Installed successfully on WS-01 to WS-05",
+        prepared_by: "John Custodian",
+        feedback_date: new Date("2024-01-16"),
+        status: software_installations_status.Completed,
+      },
+      {
+        id: 2,
+        user_id: 3,
+        faculty_name: "Dr. Chen",
+        date: new Date("2024-01-16"),
+        laboratory: "CIT-Lab 2",
+        software_list: "SPSS Statistics 28, R Studio",
+        requested_by: "Dr. Chen",
+        installation_remarks: "Installation pending license verification",
+        prepared_by: "Jane Custodian",
+        feedback_date: null,
+        status: software_installations_status.Admin_Approved,
+      },
+    ],
+
+    inventoryAssets: [
+      {
+        asset_id: 1,
+        lab_id: 1,
+        workstation_id: 1,
+        unit_id: 2,
+        added_by_user_id: 2,
+        date_added: new Date("2024-01-10"),
+      },
+      {
+        asset_id: 2,
+        lab_id: 1,
+        workstation_id: 2,
+        unit_id: 1,
+        added_by_user_id: 2,
+        date_added: new Date("2024-01-10"),
+      },
+    ],
+
+    assetDetails: [
+      {
+        detail_id: 1,
+        asset_id: 1,
+        property_tag_no: "CIT-PC-001",
+        quantity: 1,
+        description: "Dell OptiPlex 7090 System Unit",
+        serial_number: "DL70902024001",
+        date_of_purchase: new Date("2024-01-05"),
+        asset_remarks: "Core i5, 8GB RAM, 256GB SSD",
+        status_id: 1,
+      },
+      {
+        detail_id: 2,
+        asset_id: 2,
+        property_tag_no: "CIT-MON-001",
+        quantity: 1,
+        description: "Dell 24-inch LED Monitor",
+        serial_number: "DLM2402024001",
+        date_of_purchase: new Date("2024-01-05"),
+        asset_remarks: "1920x1080 resolution, HDMI/VGA",
+        status_id: 1,
+      },
+    ],
+
+    dailyReports: [
+      {
+        report_id: 1,
+        user_id: 2,
+        lab_id: 1,
+        report_date: new Date("2024-01-15"),
+        general_remarks: "All systems functional, 15 students served",
+        status: daily_reports_status.Approved,
+      },
+      {
+        report_id: 2,
+        user_id: 3,
+        lab_id: 2,
+        report_date: new Date("2024-01-16"),
+        general_remarks: "Minor network issue resolved, 8 students served",
+        status: daily_reports_status.Pending,
+      },
+    ],
+
+    complaints: [
+      {
+        complaint_id: 1,
+        lab_id: 1,
+        workstation_id: 1,
+        faculty_student_name: "Juan Dela Cruz",
+        user_type: "Student",
+        year_level: "3rd Year",
+        issue_description: "Mouse not working properly",
+        status: complaints_status.Resolved,
+        monitored_by: "John Custodian",
+        approved_by: "Admin",
+        custodian_user_id: 2,
+        remarks: "Replaced with new mouse",
+        resolved_at: new Date("2024-01-15"),
+        created_at: new Date("2024-01-15"),
+        updated_at: new Date("2024-01-15"),
+        accepted_at: new Date("2024-01-15"),
+      },
+      {
+        complaint_id: 2,
+        lab_id: 2,
+        workstation_id: 2,
+        faculty_student_name: "Maria Santos",
+        user_type: "Faculty",
+        year_level: null,
+        issue_description: "Application crashes frequently",
+        status: complaints_status.Open,
+        monitored_by: "Jane Custodian",
+        approved_by: null,
+        custodian_user_id: 3,
+        remarks: "Investigating software compatibility",
+        resolved_at: null,
+        created_at: new Date("2024-01-16"),
+        updated_at: new Date("2024-01-16"),
+        accepted_at: null,
+      },
+    ],
   };
 
   // Seed data in order to respect foreign key constraints
@@ -293,7 +521,84 @@ async function main() {
     console.log(` Procedure: ${proc.procedure_name}`);
   }
 
-  // 11. Inventory Assets - Skip for now due to workstation dependency
+  // 12. Lab Requests
+  console.log(" Seeding lab requests...");
+  for (const request of seedData.labRequests) {
+    await prisma.lab_requests.upsert({
+      where: { request_id: request.request_id },
+      update: request,
+      create: request,
+    });
+    console.log(` Lab Request: ${request.faculty_student_name}`);
+  }
+
+  // 13. Equipment Borrows
+  console.log(" Seeding equipment borrows...");
+  for (const borrow of seedData.equipmentBorrows) {
+    await prisma.equipment_borrows.upsert({
+      where: { borrow_id: borrow.borrow_id },
+      update: borrow,
+      create: borrow,
+    });
+    console.log(` Equipment Borrow: ${borrow.faculty_student_name}`);
+  }
+
+  // 14. Software Installations
+  console.log(" Seeding software installations...");
+  for (const installation of seedData.softwareInstallations) {
+    await prisma.software_installations.upsert({
+      where: { id: installation.id },
+      update: installation,
+      create: installation,
+    });
+    console.log(` Software Installation: ${installation.faculty_name}`);
+  }
+
+  // 15. Inventory Assets
+  console.log(" Seeding inventory assets...");
+  for (const asset of seedData.inventoryAssets) {
+    await prisma.inventory_assets.upsert({
+      where: { asset_id: asset.asset_id },
+      update: asset,
+      create: asset,
+    });
+    console.log(` Inventory Asset: ${asset.asset_id}`);
+  }
+
+  // 16. Asset Details
+  console.log(" Seeding asset details...");
+  for (const detail of seedData.assetDetails) {
+    await prisma.asset_details.upsert({
+      where: { detail_id: detail.detail_id },
+      update: detail,
+      create: detail,
+    });
+    console.log(` Asset Detail: ${detail.property_tag_no}`);
+  }
+
+  // 17. Daily Reports
+  console.log(" Seeding daily reports...");
+  for (const report of seedData.dailyReports) {
+    await prisma.daily_reports.upsert({
+      where: { report_id: report.report_id },
+      update: report,
+      create: report,
+    });
+    console.log(` Daily Report: ${report.report_date.toISOString().split('T')[0]}`);
+  }
+
+  // 18. Complaints
+  console.log(" Seeding complaints...");
+  for (const complaint of seedData.complaints) {
+    await prisma.complaints.upsert({
+      where: { complaint_id: complaint.complaint_id },
+      update: complaint,
+      create: complaint,
+    });
+    console.log(` Complaint: ${complaint.issue_description}`);
+  }
+
+  // 19. Inventory Assets - Skip for now due to workstation dependency
   console.log("⏭️ Skipping inventory assets seeding for now...");
 
   // 12. Asset Details - Skip for now due to dependency issues
