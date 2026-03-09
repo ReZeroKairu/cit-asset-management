@@ -11,7 +11,7 @@ import DailyReportViewModal from "./DailyReportViewModal";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
-import { Archive, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, FileText, Download, Edit } from "lucide-react";
 import api from "../../api/axios";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
@@ -443,7 +443,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Actions
                   </th>
                 </tr>
@@ -495,34 +495,31 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        {viewMode === "my" && report.status === "Pending" && (
-                          <button
-                            onClick={() => handleEdit(report)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                            title="Edit Report"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        {/* Edit button for custodians with Pending status */}
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          {viewMode === "my" && report.status === "Pending" && (
+                            <Button
+                              size="sm"
+                              className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                              onClick={() => handleEdit(report)}
+                              title="Edit Report"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleGenerateReport(report)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
-                          title="Generate Report"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Download button */}
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <Button
+                            size="sm"
+                            className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                            onClick={() => handleGenerateReport(report)}
+                            title="Generate Report"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </td>
                   </tr>

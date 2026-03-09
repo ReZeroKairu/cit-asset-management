@@ -410,8 +410,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                 <span className={`text-sm ${procedures.filter(
                   (proc) => proc.overall_status === "Completed",
                 ).length > 0
-                  ? "text-gray-900"
-                  : "text-gray-500"}`}>
+                  ? "text-black"
+                  : "text-black"}`}>
                   {procedures.filter(
                     (proc) => proc.overall_status === "Completed",
                   ).length > 0
@@ -476,7 +476,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                           className="w-full px-4 py-3 text-left hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
                         >
                           <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                          <span className="text-sm text-gray-700">{procedure.procedure_name}</span>
+                          <span className="text-sm text-black">{procedure.procedure_name}</span>
                         </button>
                       ))}
                     {procedures
@@ -504,7 +504,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   .map((procedure) => (
                     <div
                       key={procedure.procedure_id}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 border border-green-300 rounded-full"
+                      className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full"
                     >
                       <span className="text-sm font-medium text-green-800">
                         {procedure.procedure_name}
@@ -586,8 +586,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-left flex items-center justify-between hover:border-purple-300 transition-colors"
               >
                 <span className={`text-sm ${workstations.filter((ws) => ws.checked).length > 0
-                  ? "text-gray-900"
-                  : "text-gray-500"}`}>
+                  ? "text-black"
+                  : "text-black"}`}>
                   {workstations.filter((ws) => ws.checked).length > 0
                     ? `${workstations.filter((ws) => ws.checked).length} workstations selected`
                     : "Select workstations..."}
@@ -650,7 +650,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                           className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
                         >
                           <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                          <span className="text-sm text-gray-700">{workstation.workstation_name}</span>
+                          <span className="text-sm text-black">{workstation.workstation_name}</span>
                         </button>
                       ))}
                     {workstations
@@ -678,7 +678,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   .map((workstation) => (
                     <div
                       key={workstation.workstation_id}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border border-blue-300 rounded-full"
+                      className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 rounded-full"
                     >
                       <span className="text-sm font-medium text-blue-800">
                         {workstation.workstation_name}

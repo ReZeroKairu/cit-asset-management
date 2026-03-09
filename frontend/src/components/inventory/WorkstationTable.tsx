@@ -18,6 +18,25 @@ const WorkstationTable: React.FC<Props> = ({
   onDelete,
   getStatusColor,
 }) => {
+  // Local implementation if not provided
+  const defaultGetStatusColor = (status?: string) => {
+    switch (status) {
+      case "Functional":
+      case "Working":
+      case "Operational":
+        return "bg-green-100 text-green-800";
+      case "For Repair":
+        return "bg-yellow-100 text-yellow-800";
+      case "For Replacement":
+        return "bg-red-100 text-red-800";
+      case "For Upgrade":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const statusColor = getStatusColor || defaultGetStatusColor;
   const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
 
   // Load assets for each workstation

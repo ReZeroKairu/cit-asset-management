@@ -91,7 +91,7 @@ const ArchiveFormsPage = () => {
           id: install.software_id || `soft-${Math.random()}`,
           type: "software-install" as const,
           date: install.date,
-          name: install.faculty_student_name,
+          name: install.faculty_name || install.faculty_student_name,
           status: install.status,
           laboratory: install.laboratory,
           purpose: install.purpose,
@@ -169,7 +169,7 @@ const ArchiveFormsPage = () => {
       case "Completed":
         return "bg-green-100 text-green-800";
       case "Returned":
-        return "bg-blue-100 text-blue-800";
+        return "bg-green-100 text-green-800";
       case "Lost":
         return "bg-red-100 text-red-800";
       default:
@@ -372,10 +372,18 @@ const ArchiveFormsPage = () => {
                           {form.details.purpose}
                         </div>
                       )}
+                      {form.type === "software-install" && form.details?.software_list && (
+                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                          {form.details.software_list}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {form.name}
+                        {form.name || 
+                         (form.type === 'equipment-borrow' && form.details?.faculty_student_name) ||
+                         (form.type === 'software-install' && form.details?.faculty_name) ||
+                         form.details?.faculty_student_name || 'Unknown'}
                       </div>
                       <div className="text-sm text-gray-500">
                         {form.type === 'lab-request' && (
@@ -386,10 +394,40 @@ const ArchiveFormsPage = () => {
                             {form.details?.usage_type && (
                               <span> • {form.details.usage_type.replace('-', ' ')}</span>
                             )}
+                            {form.laboratory && (
+                              <span> • {form.laboratory}</span>
+                            )}
                           </>
                         )}
-                        {form.type !== 'lab-request' && form.laboratory && (
-                          <span>{form.laboratory}</span>
+                        {form.type === 'software-install' && (
+                          <>
+                            {form.details?.user_type && (
+                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                            )}
+                          </>
+                        )}
+                        {form.type === 'equipment-borrow' && (
+                          <>
+                            {form.details?.user_type && (
+                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                            )}
+                            {form.laboratory && (
+                              <span> • {form.laboratory}</span>
+                            )}
+                          </>
+                        )}
+                        {form.type === 'software-install' && (
+                          <>
+                            {form.details?.user_type && (
+                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                            )}
+                            {form.details?.user_type && form.laboratory && (
+                              <span> • </span>
+                            )}
+                            {form.laboratory && (
+                              <span>{form.laboratory}</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

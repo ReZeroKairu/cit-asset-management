@@ -399,8 +399,8 @@ const QuarterlyReportsView: React.FC<Props> = ({
                         <span
                           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
                             report.workstation_status === "For Repair"
-                              ? "bg-red-50 text-red-700 border border-red-100"
-                              : "bg-green-50 text-green-700 border border-green-100"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
                           }`}
                         >
                           {report.workstation_status}

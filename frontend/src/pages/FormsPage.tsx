@@ -266,7 +266,7 @@ const FormsPage = () => {
       case "Denied":
         return "bg-red-100 text-red-800";
       case "Returned":
-        return "bg-blue-100 text-blue-800";
+        return "bg-green-100 text-green-800";
       case "Lost":
         return "bg-red-100 text-red-800";
       case "Completed":
@@ -592,7 +592,8 @@ const FormsPage = () => {
                             {/* Edit button for custodians with Admin_Approved status */}
                             <div className="w-8 h-8 flex items-center justify-center">
                               {user?.role === "Custodian" &&
-                                form.status === "Admin_Approved" && (
+                                (form.status === "Admin_Approved" || 
+                                 (form.type === "software-install" && form.status === "Custodian_Approved")) && (
                                   <Button
                                     size="sm"
                                     className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
@@ -723,26 +724,10 @@ const FormsPage = () => {
                                 </div>
                               )}
 
-                            {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
+                            {/* Software Installation: Complete button for Custodian_Approved status */}
                             {form.type === "software-install" &&
                               form.status === "Custodian_Approved" && (
                                 <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
-                                    onClick={() => {
-                                      console.log(
-                                        "Edit software installation clicked, form:",
-                                        form
-                                      );
-                                      setSelectedForm(form);
-                                      setEditMode(true);
-                                      setShowDetails(true);
-                                    }}
-                                    title="Edit Installation Details"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
                                   <Button
                                     size="sm"
                                     className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
