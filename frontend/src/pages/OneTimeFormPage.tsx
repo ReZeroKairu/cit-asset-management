@@ -24,9 +24,9 @@ const OneTimeFormPage = () => {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3001';
     }
-    // For network access, use the same IP as the frontend
-    if (hostname === '192.168.56.1') {
-      return 'http://192.168.56.1:3001';
+    // For network access, use same IP as frontend
+    if (hostname === '172.72.100.78') {
+      return 'http://172.72.100.78:3001';
     }
     // Fallback to current origin with port 3001
     return `${window.location.protocol}//${hostname}:3001`;

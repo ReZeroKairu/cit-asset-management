@@ -22,9 +22,9 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
   const getBaseUrl = () => {
     if (baseUrl) return baseUrl;
     
-    // If we're on localhost, use the local IP for LAN access
+    // If we're on localhost, use local IP for LAN access
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://192.168.111.21:5173'; // Use local IP for LAN access
+      return 'http://172.72.100.78:3000'; // Use local IP for LAN access
     }
     
     return window.location.origin;
