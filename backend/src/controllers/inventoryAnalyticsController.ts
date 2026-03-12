@@ -38,50 +38,64 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     };
 
     // If custodian, filter by their assigned lab
-    if (userRole === "Custodian" && userLabId) {
-      statusWhereClause.inventory_assets = {
-        some: {
-          lab_id: userLabId
-        }
-      };
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        statusWhereClause.inventory_assets = {
+          some: {
+            lab_id: userLabId
+          }
+        };
+      } else {
+        // Unassigned custodians should see nothing
+        statusWhereClause.inventory_assets = {
+          some: {
+            lab_id: -1 // Impossible lab_id that will return no results
+          }
+        };
+      }
     }
 
     // Get status distribution (filtered for custodians)
-    let statusDistribution;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, get assets from their lab and group by status
-      const labAssets = await prisma.inventory_assets.findMany({
-        where: {
-          lab_id: userLabId,
-          asset_details: {
-            status_id: {
-              not: null
+    let statusDistribution: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, get assets from their lab and group by status
+        const labAssets = await prisma.inventory_assets.findMany({
+          where: {
+            lab_id: userLabId,
+            asset_details: {
+              status_id: {
+                not: null
+              }
+            }
+          },
+          select: {
+            asset_details: {
+              select: {
+                status_id: true
+              }
             }
           }
-        },
-        select: {
-          asset_details: {
-            select: {
-              status_id: true
-            }
+        });
+
+        // Group by status_id and count
+        const statusCounts = labAssets.reduce((acc: any, asset) => {
+          const statusId = asset.asset_details?.status_id;
+          if (statusId) {
+            acc[statusId] = (acc[statusId] || 0) + 1;
           }
-        }
-      });
+          return acc;
+        }, {});
 
-      // Group by status_id and count
-      const statusCounts = labAssets.reduce((acc: any, asset) => {
-        const statusId = asset.asset_details?.status_id;
-        if (statusId) {
-          acc[statusId] = (acc[statusId] || 0) + 1;
-        }
-        return acc;
-      }, {});
-
-      // Convert to groupBy format
-      statusDistribution = Object.entries(statusCounts).map(([status_id, count]) => ({
-        status_id: parseInt(status_id),
-        _count: { asset_id: count as number }
-      }));
+        // Convert to groupBy format
+        statusDistribution = Object.entries(statusCounts).map(([status_id, count]) => ({
+          status_id: parseInt(status_id),
+          _count: { asset_id: count as number }
+        }));
+      } else {
+        // Unassigned custodians should see nothing
+        statusDistribution = [];
+      }
     } else {
       // For admins, use the original groupBy query
       statusDistribution = await prisma.asset_details.groupBy({
@@ -94,10 +108,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     }
 
     // Calculate total assets for percentage calculation
-    const totalAssets = statusDistribution.reduce((sum, status) => sum + status._count.asset_id, 0);
+    const totalAssets = statusDistribution.reduce((sum: number, status: any) => sum + status._count.asset_id, 0);
 
     // Format status distribution with names and percentages
-    const formattedStatusDistribution = statusDistribution.map(status => {
+    const formattedStatusDistribution = statusDistribution.map((status: any) => {
       const statusInfo = assetStatuses.find(s => s.status_id === status.status_id);
       return {
         status_name: statusInfo?.status_name || 'Unknown',
@@ -107,13 +121,14 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     });
 
     // Get assets by laboratory with status breakdown
-    let labStatusData;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, only get their assigned lab
-      labStatusData = await prisma.laboratories.findMany({
-        where: {
-          lab_id: userLabId
-        },
+    let labStatusData: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, only get their assigned lab
+        labStatusData = await prisma.laboratories.findMany({
+          where: {
+            lab_id: userLabId
+          },
         select: {
           lab_id: true,
           lab_name: true,
@@ -147,6 +162,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         }
       });
     } else {
+      // Unassigned custodians should see nothing
+      labStatusData = [];
+    }
+    } else {
       // For admins, get all labs
       labStatusData = await prisma.laboratories.findMany({
         select: {
@@ -177,7 +196,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     }
 
     // Process lab status data
-    const processedLabData = labStatusData.map(lab => {
+    const processedLabData = labStatusData.map((lab: any) => {
       const statusCounts: Record<string, number> = {};
       let totalAssets = 0;
       let totalWorkstations = 0;
@@ -185,10 +204,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       let servicedWorkstations = 0;
 
       // Count assets by status for this lab
-      lab.inventory_assets.forEach(asset => {
+      lab.inventory_assets.forEach((asset: any) => {
         if (asset.asset_details?.status_id) {
           const statusId = asset.asset_details.status_id;
-          const statusName = assetStatuses.find(s => s.status_id === statusId)?.status_name || 'Unknown';
+          const statusName = assetStatuses.find((s: any) => s.status_id === statusId)?.status_name || 'Unknown';
           statusCounts[statusName] = (statusCounts[statusName] || 0) + 1;
           totalAssets++;
         }
@@ -198,7 +217,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       lab.workstations?.forEach((workstation: any) => {
         if (workstation.status_id) {
           const statusId = workstation.status_id;
-          const statusName = assetStatuses.find(s => s.status_id === statusId)?.status_name || 'Unknown';
+          const statusName = assetStatuses.find((s: any) => s.status_id === statusId)?.status_name || 'Unknown';
           
           if (statusName === 'Functional') {
             functionalWorkstations++;
@@ -225,16 +244,17 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       };
 
       return labData;
-    }).filter(lab => lab.total > 0); // Only include labs with assets
+    }).filter((lab: any) => lab.total > 0); // Only include labs with assets
 
     // Get all workstations to ensure complete coverage
-    let allWorkstations;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, get workstations from their assigned lab
-      allWorkstations = await prisma.workstations.findMany({
-        where: {
-          lab_id: userLabId
-        },
+    let allWorkstations: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, get workstations from their assigned lab
+        allWorkstations = await prisma.workstations.findMany({
+          where: {
+            lab_id: userLabId
+          },
         select: {
           workstation_name: true,
           lab_id: true,
@@ -245,6 +265,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           }
         }
       });
+    } else {
+      // Unassigned custodians should see nothing
+      allWorkstations = [];
+    }
     } else {
       // For admins, get all workstations
       allWorkstations = await prisma.workstations.findMany({
@@ -412,7 +436,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     );
     
     // Create placeholder entries for workstations without assets
-    allWorkstations.forEach(workstation => {
+    allWorkstations.forEach((workstation: any) => {
       if (!workstationNamesWithAssets.has(workstation.workstation_name)) {
         timelineData.push({
           asset_id: 0, // Use 0 as placeholder ID for workstations without assets
@@ -432,10 +456,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     // Calculate summary statistics
     const summary = {
       totalAssets: totalAssets,
-      functionalAssets: formattedStatusDistribution.find(s => s.status_name === 'Functional')?.count || 0,
-      needsAttention: (formattedStatusDistribution.find(s => s.status_name === 'For Replacement')?.count || 0) +
-                       (formattedStatusDistribution.find(s => s.status_name === 'For Repair')?.count || 0),
-      criticalAssets: formattedStatusDistribution.find(s => s.status_name === 'Lost')?.count || 0
+      functionalAssets: formattedStatusDistribution.find((s: any) => s.status_name === 'Functional')?.count || 0,
+      needsAttention: (formattedStatusDistribution.find((s: any) => s.status_name === 'For Replacement')?.count || 0) +
+                       (formattedStatusDistribution.find((s: any) => s.status_name === 'For Repair')?.count || 0),
+      criticalAssets: formattedStatusDistribution.find((s: any) => s.status_name === 'Lost')?.count || 0
     };
 
     const analyticsData = {

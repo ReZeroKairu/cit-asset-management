@@ -72,7 +72,7 @@ const UnassignedAssetTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button
-                    className="p-2 h-8 w-8 cursor-pointer hover:bg-blue-50 rounded-md text-blue-600 hover:text-blue-700 transition-colors"
+                    className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-200 rounded-md text-blue-600 hover:text-blue-700 transition-colors"
                     onClick={() => onEdit(asset)}
                     title="Edit"
                   >

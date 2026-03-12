@@ -6,7 +6,6 @@ import { calculateWorstStatus } from "../../utils/statusUtils";
 import {
   Monitor,
   Calendar,
-  CheckCircle2,
   Wrench,
   ListChecks,
   Cpu,
@@ -157,17 +156,11 @@ const MaintenanceView: React.FC<Props> = ({
         ? "☑"
         : "☐";
 
-    // 2. Map Statuses to Table Checkmarks with Color Coding
+    // 2. Map Statuses to Checkmarks Only (No Empty Boxes)
     const mapStatus = (status: string) => ({
       func: ["Functional", "Working", "Operational"].includes(status)
-        ? "bg-green-100 text-green-800 border-green-200"
-        : status === "For Replacement"
-          ? "bg-red-100 text-red-800 border-red-200"
-          : status === "For Repair"
-            ? "bg-amber-100 text-amber-800 border-amber-200"
-            : status === "For Upgrade"
-              ? "bg-blue-100 text-blue-800 border-blue-200"
-              : "bg-gray-100 text-gray-800 border-gray-200",
+        ? "✓"
+        : "",
       rep: status === "For Repair" ? "✓" : "",
       upg: status === "For Upgrade" ? "✓" : "",
       repl: status === "For Replacement" ? "✓" : "",
@@ -604,9 +597,8 @@ const MaintenanceView: React.FC<Props> = ({
                 {completedProcedures.map((p: any) => (
                   <div
                     key={p.procedure_id}
-                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm"
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700"
                   >
-                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
                     {p.procedure_name}
                   </div>
                 ))}

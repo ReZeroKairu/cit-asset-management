@@ -473,12 +473,23 @@ export const LabRequestForm = () => {
 
           <div className="flex justify-between items-center pt-6">
             <div></div>
-            <div className="flex justify-center">
-              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting || cooldownActive}>
+            <div className="flex justify-center ml-32">
+              <Button 
+                type="submit" 
+                variant="outline" 
+                className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+                disabled={isSubmitting || cooldownActive}
+              >
                 {isSubmitting ? 'Submitting...' : cooldownActive ? 'Please wait...' : 'Submit Form'}
               </Button>
             </div>
-            <Button type="button" variant="outline" onClick={() => generateReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => generateReport()} 
+              className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+              disabled={isSubmitting}
+            >
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

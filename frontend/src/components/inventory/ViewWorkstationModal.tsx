@@ -9,7 +9,7 @@ interface Props {
   show: boolean;
   workstation: any;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void; // Make optional since we're not using it
 }
 
 // Helper to determine status color
@@ -34,7 +34,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
   show,
   workstation,
   onClose,
-  onSuccess,
+  // onSuccess is optional and not used
 }) => {
   const [assets, setAssets] = useState<any[]>([]);
   const [editingAsset, setEditingAsset] = useState<any>(null);
@@ -75,8 +75,13 @@ const ViewWorkstationModal: React.FC<Props> = ({
 
     try {
       await api.delete(`/inventory/${assetId}`);
-      await fetchWorkstationAssets();
-      onSuccess();
+      
+      // Remove the deleted asset from local state instead of calling onSuccess
+      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
+      
+      // Don't call onSuccess() here as it closes the modal
+      // The parent data will be refreshed when user closes the modal
+      
     } catch (err: any) {
       console.error("Failed to delete asset:", err);
       alert(err.response?.data?.error || "Failed to delete asset");
@@ -88,7 +93,9 @@ const ViewWorkstationModal: React.FC<Props> = ({
     setEditingAsset(null);
     setShowAddModal(false);
     fetchWorkstationAssets(); // Refresh the table immediately
-    onSuccess();
+    
+    // Don't call onSuccess() here as it closes the ViewWorkstationModal
+    // The parent data will be refreshed when user closes the modal
   };
 
   if (!show || !workstation) return null;

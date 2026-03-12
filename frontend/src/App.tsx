@@ -19,6 +19,7 @@ import { Card, CardContent } from "./components/ui/card";
 import MaintenancePage from "./pages/MaintenancePage";
 import InventoryAnalyticsSection from "./components/admin/InventoryAnalyticsSection";
 import CustodianInventoryAnalyticsSection from "./components/admin/CustodianInventoryAnalyticsSection";
+import AuditSection from "./components/audit/AuditSection";
 // ✅ UPDATED: Added Wrench icon
 import {
   Package,
@@ -285,6 +286,11 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
       ) : userRole === "Custodian" ? (
         <CustodianInventoryAnalyticsSection />
       ) : null}
+
+      {/* Audit Section - Admin Only */}
+      {isAdmin && (
+        <AuditSection />
+      )}
     </div>
   );
 };

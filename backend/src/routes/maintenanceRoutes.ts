@@ -8,6 +8,7 @@ import {
   getMaintenanceAnalytics,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
+import { auditMiddleware } from "../middleware/audit";
 
 const router = Router();
 
@@ -26,7 +27,7 @@ router.get("/pmc/detail", getPMCReportDetail);
 
 // 3. Create a new PMC Report
 // POST /api/maintenance/pmc
-router.post("/pmc", createPMCReport);
+router.post("/pmc", auditMiddleware("CREATE", "PMC report"), createPMCReport);
 
 // 4. Get service history for a workstation
 // GET /api/maintenance/pmc/history?workstation_id=5&quarter=1st
@@ -34,7 +35,7 @@ router.get("/pmc/history", getServiceHistory);
 
 // 5. Create a repair/replacement log
 // POST /api/maintenance/pmc/repair
-router.post("/pmc/repair", createRepairLog);
+router.post("/pmc/repair", auditMiddleware("CREATE", "repair log"), createRepairLog);
 
 // 6. Get preventive maintenance analytics for dashboard
 // GET /api/maintenance/analytics

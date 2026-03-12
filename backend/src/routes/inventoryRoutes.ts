@@ -8,19 +8,20 @@ import {
   deleteAsset,
   getAssetStatuses, // ✅ IMPORT THIS
 } from "../controllers/inventoryController";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, requireRole } from "../middleware/auth";
+import { auditMiddleware } from "../middleware/audit";
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Public access for GET requests (for complaints form)
-router.get("/", getInventory);
+// Protected routes require authentication
+router.get("/", authenticateToken, getInventory);
 
 // Protected routes require authentication
-router.post("/", authenticateToken, createAsset);
-router.post("/batch", authenticateToken, batchCreateAssets);
-router.put("/:id", authenticateToken, updateAsset);
-router.delete("/:id", authenticateToken, deleteAsset);
+router.post("/", authenticateToken, auditMiddleware("CREATE", "inventory"), createAsset);
+router.post("/batch", authenticateToken, auditMiddleware("CREATE", "inventory"), batchCreateAssets);
+router.put("/:id", authenticateToken, auditMiddleware("UPDATE", "inventory"), updateAsset);
+router.delete("/:id", authenticateToken, requireRole(["Admin", "Custodian"]), auditMiddleware("DELETE", "inventory"), deleteAsset);
 
 // ✅ ADD THIS ROUTE
 router.get("/statuses", getAssetStatuses);

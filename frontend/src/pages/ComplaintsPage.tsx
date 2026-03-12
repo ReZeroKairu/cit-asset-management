@@ -3,7 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import ComplaintForm from "../components/forms/ComplaintForm";
 import { submitComplaint, type ComplaintData } from "../api/complaints";
-import { CheckCircle, MessageSquare, ArrowLeft, Plus } from "lucide-react";
+import { CheckCircle, MessageSquare, ArrowLeft } from "lucide-react";
 
 const ComplaintsPage = () => {
   const [submittedComplaint, setSubmittedComplaint] = useState<any>(null);
@@ -18,9 +18,17 @@ const ComplaintsPage = () => {
         result: result,
         submittedAt: new Date().toISOString()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting complaint:', error);
-      alert('Error submitting complaint. Please try again.');
+      
+      // Check if it's a rate limit error
+      if (error.message && error.message.includes('Too many form submissions')) {
+        alert('Maximum submission reached. Please try again in an hour.');
+      } else if (error.error && error.error.includes('Too many form submissions')) {
+        alert('Maximum submission reached. Please try again in an hour.');
+      } else {
+        alert('Error submitting complaint. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

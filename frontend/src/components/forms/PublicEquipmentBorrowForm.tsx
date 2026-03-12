@@ -436,10 +436,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
             disabled={disabled || !!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Disabled by default, only enabled for E-Forum
             readOnly={!!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Read-only by default, only enabled for E-Forum
           />
-          {custodianName && (
-            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
-          )}
-          {formData.laboratory && formData.laboratory !== 'e-forum' && (
+          {(custodianName || (formData.laboratory && formData.laboratory !== 'e-forum')) && (
             <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
           )}
           {formData.laboratory === 'e-forum' && (

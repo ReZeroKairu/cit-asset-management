@@ -405,7 +405,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
                   setProcedureSearch(""); // Clear search when opening
                 }}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-left flex items-center justify-between hover:border-green-300 transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
               >
                 <span className={`text-sm ${procedures.filter(
                   (proc) => proc.overall_status === "Completed",
@@ -447,7 +447,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                         onChange={(e) => setProcedureSearch(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="Search procedures..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
                       />
                     </div>
                   </div>
@@ -473,9 +473,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                             setProcedures(updatedProcedures);
                             setProcedureSearch(""); // Clear search after selection
                           }}
-                          className="w-full px-4 py-3 text-left hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
                         >
-                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
                           <span className="text-sm text-black">{procedure.procedure_name}</span>
                         </button>
                       ))}
@@ -583,7 +582,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                   setIsDropdownOpen(!isDropdownOpen);
                   setWorkstationSearch(""); // Clear search when opening
                 }}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-left flex items-center justify-between hover:border-purple-300 transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
               >
                 <span className={`text-sm ${workstations.filter((ws) => ws.checked).length > 0
                   ? "text-black"
@@ -621,7 +620,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                         onChange={(e) => setWorkstationSearch(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="Search workstations..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
                       />
                     </div>
                   </div>
@@ -647,9 +646,8 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                             setWorkstations(updatedWorkstations);
                             setWorkstationSearch(""); // Clear search after selection
                           }}
-                          className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
                         >
-                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
                           <span className="text-sm text-black">{workstation.workstation_name}</span>
                         </button>
                       ))}

@@ -346,7 +346,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleEditUser(userItem)}
-                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
+                                className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8 rounded-md"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -354,7 +354,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleDeleteUser(userItem)}
-                                className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                                className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer p-2 h-8 w-8 rounded-md"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>

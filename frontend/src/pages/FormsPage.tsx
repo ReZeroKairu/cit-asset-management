@@ -581,7 +581,7 @@ const FormsPage = () => {
                                     );
                                     generateFormDocument(form);
                                   }}
-                                  className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                                  className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
                                   title="Generate Form Document"
                                 >
                                   <Download className="w-4 h-4" />
@@ -596,7 +596,7 @@ const FormsPage = () => {
                                  (form.type === "software-install" && form.status === "Custodian_Approved")) && (
                                   <Button
                                     size="sm"
-                                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                    className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
                                     onClick={() => {
                                       console.log(
                                         "Edit button clicked, form:",

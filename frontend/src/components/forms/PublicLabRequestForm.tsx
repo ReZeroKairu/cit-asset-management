@@ -11,7 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 // Year levels for students
 const yearLevels = [
   "1",
-  "2", 
+  "2",
   "3",
   "4",
   "5"
@@ -207,22 +207,53 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
     
     // Network connectivity check
     if (!navigator.onLine) {
+      console.log('❌ Network check failed - User is offline');
       alert('You appear to be offline. Please check your internet connection and try again.');
       return;
     }
     
-    // Validation
-    if (!formData.usage_type || !formData.faculty_student_name || !formData.laboratory || !formData.purpose) {
-      alert('Please fill in all required fields');
+    // Comprehensive debugging before submission
+    console.log('🔍 FINAL FORM DATA CHECK:');
+    console.log('  - usage_type:', formData.usage_type);
+    console.log('  - faculty_student_name:', formData.faculty_student_name);
+    console.log('  - year_level:', formData.year_level);
+    console.log('  - laboratory:', formData.laboratory);
+    console.log('  - printing_pages:', formData.printing_pages);
+    console.log('  - ws_number:', formData.ws_number);
+    console.log('  - time_in:', formData.time_in);
+    console.log('  - time_out:', formData.time_out);
+    console.log('  - purpose:', formData.purpose);
+    console.log('  - requested_by:', formData.requested_by);
+    console.log('  - remarks:', formData.remarks);
+    console.log('  - monitored_by:', formData.monitored_by);
+    console.log('  - approved_by:', formData.approved_by);
+    console.log('  - userType:', userType);
+    
+    // Check if any validation failed
+    const validationErrors = [];
+    if (!formData.usage_type) {
+      validationErrors.push('Usage Type is required');
+    }
+    if (formData.faculty_student_name && formData.faculty_student_name.length > 100) {
+      validationErrors.push('Name must be less than 100 characters');
+    }
+    if (formData.purpose && formData.purpose.length > 500) {
+      validationErrors.push('Purpose must be less than 500 characters');
+    }
+    if (formData.faculty_student_name && !/^[a-zA-Z\s.-]+$/.test(formData.faculty_student_name)) {
+      validationErrors.push('Name contains invalid characters');
+    }
+    if (formData.requested_by && !/^[a-zA-Z\s.-]+$/.test(formData.requested_by)) {
+      validationErrors.push('Requested By contains invalid characters');
+    }
+    
+    if (validationErrors.length > 0) {
+      console.log('❌ CLIENT-SIDE VALIDATION FAILED:', validationErrors);
+      alert('Please fix the following errors:\n' + validationErrors.join('\n'));
       return;
     }
-
-    // Require printing pages only when usage type is printing
-    if (formData.usage_type === "printing" && !formData.printing_pages) {
-      alert('Please enter the number of printing pages');
-      return;
-    }
-
+    
+    console.log('✅ Client-side validation passed - proceeding to submission');
     setIsSubmitting(true);
     try {
       // Include userType in the form data for template generation
@@ -281,6 +312,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             onChange={(e) => handleInputChange('date', e.target.value)}
             required
             disabled={disabled}
+            max={new Date().toISOString().split('T')[0]} // Prevent future dates
           />
         </div>
 
@@ -288,7 +320,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
           <Label htmlFor="usage_type">Usage Type *</Label>
           <Select value={formData.usage_type} onValueChange={(value) => handleInputChange('usage_type', value)} required disabled={disabled}>
             <SelectTrigger>
-              <SelectValue placeholder="Select usage type" />
+              <SelectValue placeholder="Select Usage Type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="printing">Printing</SelectItem>
@@ -320,6 +352,8 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             className="capitalize-first"
             required
             disabled={disabled}
+            pattern="[a-zA-Z\s.-]+"
+            title="Only letters, spaces, dots, and hyphens allowed"
           />
         </div>
 
@@ -413,6 +447,8 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
           rows={3}
           required
           disabled={disabled}
+          minLength={3}
+          title="Purpose must be at least 3 characters"
         />
       </div>
 
@@ -423,7 +459,10 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             id="requested_by"
             value={formData.requested_by}
             onChange={(e) => handleInputChange('requested_by', e.target.value)}
-            placeholder="Your name"
+            placeholder="Enter your name"
+            pattern="[a-zA-Z\s.-]+"
+            title="Only letters, spaces, dots, and hyphens allowed"
+            required
             disabled={disabled}
           />
         </div>
@@ -449,10 +488,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
             disabled={disabled || !!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Disabled by default, only enabled for E-Forum
             readOnly={!!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Read-only by default, only enabled for E-Forum
           />
-          {custodianName && (
-            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
-          )}
-          {formData.laboratory && formData.laboratory !== 'e-forum' && (
+          {(custodianName || (formData.laboratory && formData.laboratory !== 'e-forum')) && (
             <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
           )}
           {formData.laboratory === 'e-forum' && (

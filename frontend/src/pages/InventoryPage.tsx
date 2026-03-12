@@ -11,7 +11,7 @@ import AddWorkstationModal from "../components/inventory/AddWorkstationModal";
 import WorkstationReport from "../components/inventory/WorkstationReport";
 import { useAuth } from "../context/AuthContext";
 // ✅ IMPORT ICONS HERE
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Search } from "lucide-react";
 
 // Import our newly extracted table components
 import WorkstationTable from "../components/inventory/WorkstationTable";
@@ -20,16 +20,16 @@ import UnassignedAssetTable from "../components/inventory/UnassignedAssetTable";
 interface Asset {
   asset_id: number;
   lab_id?: number;
-  property_tag_no: string;
-  item_name: string;
-  description: string;
-  serial_number: string;
-  quantity: number;
-  date_of_purchase: string;
+  property_tag_no?: string;
+  item_name?: string;
+  description?: string;
+  serial_number?: string;
+  quantity?: number;
+  date_of_purchase?: string;
   laboratories?: { lab_id: number; lab_name: string };
   units?: { unit_name: string };
   workstation?: { workstation_name: string };
-  details?: {
+  asset_details?: {
     property_tag_no: string;
     item_name: string;
     description: string;
@@ -87,6 +87,8 @@ const InventoryPage = () => {
   const [showWorkstationReport, setShowWorkstationReport] = useState(false);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
+  const [workstationSearch, setWorkstationSearch] = useState<string>("");
+  const [assetSearch, setAssetSearch] = useState<string>("");
 
   useEffect(() => {
     fetchInventory();
@@ -127,19 +129,30 @@ const InventoryPage = () => {
   };
 
   const handleDelete = async (assetId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this asset? This action cannot be undone.",
-      )
-    )
-      return;
+    // Use a custom confirmation instead of browser confirm to avoid focus issues
+    const shouldDelete = window.confirm(
+      "Are you sure you want to delete this asset? This action cannot be undone."
+    );
+    
+    if (!shouldDelete) return;
+    
     try {
       await deleteAsset(assetId);
-      await fetchInventory();
-      await fetchWorkstations();
+      
+      // Remove the deleted asset from state instead of refreshing all data
+      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
+      setWorkstations(prev => prev.map(ws => ({
+        ...ws,
+        assets: ws.assets?.filter(asset => asset.asset_id !== assetId) || []
+      })));
+      
+      // Show success message without using alert (which can cause focus issues)
+      console.log("Asset deleted successfully");
+      
     } catch (err: any) {
       console.error("Failed to delete asset:", err);
-      alert(err.response?.data?.error || "Failed to delete asset");
+      // Use console.error instead of alert to avoid focus issues
+      console.error("Delete error:", err.response?.data?.error || "Failed to delete asset");
     }
   };
 
@@ -184,24 +197,46 @@ const InventoryPage = () => {
   };
 
   // --- Filtering Logic ---
-  const unassignedAssets = assets.filter(
+  const unassignedAssets = (assets || []).filter(
     (asset: any) => !asset.workstation && !asset.workstation_id,
   );
 
   const filteredWorkstations = (
     selectedLabId
-      ? workstations.filter((ws) => ws.lab_id === selectedLabId)
-      : [...workstations]
-  ).sort((a, b) =>
-    a.workstation_name.localeCompare(b.workstation_name, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }),
-  );
+      ? (workstations || []).filter((ws) => ws.lab_id === selectedLabId)
+      : [...(workstations || [])]
+  )
+    .filter((ws) => 
+      (ws.workstation_name || '').toLowerCase().includes(workstationSearch.toLowerCase())
+    )
+    .sort((a, b) =>
+      (a.workstation_name || '').localeCompare(b.workstation_name || '', undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
 
-  const filteredUnassignedAssets = selectedLabId
-    ? unassignedAssets.filter((asset) => asset.lab_id === selectedLabId)
-    : unassignedAssets;
+  const filteredUnassignedAssets = unassignedAssets
+    .filter((asset) => {
+      const searchTerm = assetSearch.toLowerCase();
+      return (
+        // Basic asset fields
+        (asset.item_name || '').toLowerCase().includes(searchTerm) ||
+        // Asset details fields (the actual data structure)
+        (asset.asset_details?.property_tag_no || '').toLowerCase().includes(searchTerm) ||
+        (asset.asset_details?.description || '').toLowerCase().includes(searchTerm) ||
+        (asset.asset_details?.serial_number || '').toLowerCase().includes(searchTerm) ||
+        // Related fields
+        (asset.units?.unit_name || '').toLowerCase().includes(searchTerm) ||
+        (asset.laboratories?.lab_name || '').toLowerCase().includes(searchTerm) ||
+        // Numeric fields converted to string
+        (asset.quantity?.toString() || '').includes(searchTerm) ||
+        (asset.asset_id?.toString() || '').includes(searchTerm) ||
+        // Date fields (search year, month, day)
+        (asset.date_of_purchase ? new Date(asset.date_of_purchase).toLocaleDateString().toLowerCase().includes(searchTerm) : false)
+      );
+    })
+    .filter((asset) => selectedLabId ? asset.lab_id === selectedLabId : true);
 
   const availableLabs =
     user?.role === "Admin"
@@ -213,8 +248,17 @@ const InventoryPage = () => {
   useEffect(() => {
     if (user?.role === "Custodian" && user.lab_id && !selectedLabId) {
       setSelectedLabId(user.lab_id);
+    } else if (user?.role === "Custodian" && !user.lab_id) {
+      // Custodian with no lab assignment - clear any selection
+      setSelectedLabId(null);
     }
   }, [user, selectedLabId]);
+
+  // Clear search when switching between views
+  useEffect(() => {
+    setWorkstationSearch("");
+    setAssetSearch("");
+  }, [showUnassignedAssets]);
 
   const getStatusColor = (statusName?: string) => {
     switch (statusName) {
@@ -242,19 +286,121 @@ const InventoryPage = () => {
           Manage workstations and their assigned inventory assets
         </p>
         {/* Lab Assigned Indicator for Custodians */}
-        {user?.role === "Custodian" && user?.lab_id && (
-          <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            📍 Assigned Lab:{" "}
-            {availableLabs.find((lab) => lab.lab_id === user.lab_id)
-              ?.lab_name || "Loading..."}
+        {user?.role === "Custodian" && (
+          <div className="mt-2">
+            {user?.lab_id ? (
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                📍 Assigned Lab:{" "}
+                {availableLabs.find((lab) => lab.lab_id === user.lab_id)
+                  ?.lab_name || "Loading..."}
+              </div>
+            ) : (
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                ⚠️ No Laboratory Assigned - Contact Administrator
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Filter Toggle & Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        {/* Lab Filter - Top Row for Admins */}
+        {(user?.role === "Admin" ||
+          (user?.role === "Custodian" && availableLabs.length > 1)) && (
+          <div className="mb-4 flex items-center justify-start">
+            <div className="flex items-center space-x-2">
+              <label
+                htmlFor="lab-filter"
+                className="text-sm font-medium text-gray-700"
+              >
+                Filter by Laboratory:
+              </label>
+              <select
+                id="lab-filter"
+                value={selectedLabId || ""}
+                onChange={(e) =>
+                  setSelectedLabId(
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Laboratories</option>
+                {availableLabs.map((lab) => (
+                  <option key={lab.lab_id} value={lab.lab_id}>
+                    {lab.lab_name} {lab.location && `(${lab.location})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-4">
+            {/* Workstation Search - Moved to first position */}
+            {!showUnassignedAssets && (
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="workstation-search"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Search Workstation:
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="workstation-search"
+                    type="text"
+                    value={workstationSearch}
+                    onChange={(e) => setWorkstationSearch(e.target.value)}
+                    placeholder="Search by name..."
+                    className="pl-10 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  {workstationSearch && (
+                    <button
+                      onClick={() => setWorkstationSearch("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Asset Search - Only show when viewing unassigned assets */}
+            {showUnassignedAssets && (
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="asset-search"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Search Assets:
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="asset-search"
+                    type="text"
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    placeholder="Search assets..."
+                    className="pl-10 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  {assetSearch && (
+                    <button
+                      onClick={() => setAssetSearch("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => setShowUnassignedAssets(false)}
               className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
@@ -276,35 +422,7 @@ const InventoryPage = () => {
               📦 Other Assets ({filteredUnassignedAssets.length})
             </button>
 
-            {/* Lab Filter */}
-            {(user?.role === "Admin" ||
-              (user?.role === "Custodian" && availableLabs.length > 1)) && (
-              <div className="flex items-center space-x-2">
-                <label
-                  htmlFor="lab-filter"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Filter by Lab:
-                </label>
-                <select
-                  id="lab-filter"
-                  value={selectedLabId || ""}
-                  onChange={(e) =>
-                    setSelectedLabId(
-                      e.target.value ? Number(e.target.value) : null,
-                    )
-                  }
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Laboratories</option>
-                  {availableLabs.map((lab) => (
-                    <option key={lab.lab_id} value={lab.lab_id}>
-                      {lab.lab_name} {lab.location && `(${lab.location})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Removed Lab Filter */}
           </div>
 
           <div className="flex items-center space-x-2">

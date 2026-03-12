@@ -446,7 +446,7 @@ const ArchiveFormsPage = () => {
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleDownloadForm(form)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
+                          className="p-2 text-green-600 hover:bg-green-100 rounded-md transition-colors cursor-pointer"
                           title="Download Form"
                         >
                           <Download className="w-4 h-4" />

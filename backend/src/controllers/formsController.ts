@@ -6,6 +6,9 @@ const prisma = new PrismaClient();
 // Lab Request Controllers
 export const createLabRequest = async (req: Request, res: Response) => {
   try {
+    // Capture client IP address
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
+    
     const {
       date,
       usage_type,
@@ -42,7 +45,8 @@ export const createLabRequest = async (req: Request, res: Response) => {
         approved_by,
         remarks,
         monitored_by,
-        user_id: user_id || null
+        user_id: user_id || null,
+        ip_address: clientIP
       }
     });
 
@@ -172,6 +176,9 @@ export const updateLabRequestDetails = async (req: Request, res: Response) => {
 // Equipment Borrow Controllers
 export const createEquipmentBorrow = async (req: Request, res: Response) => {
   try {
+    // Capture client IP address
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
+    
     const {
       date,
       laboratory,
@@ -204,7 +211,8 @@ export const createEquipmentBorrow = async (req: Request, res: Response) => {
         approved_by,
         remarks,
         monitored_by,
-        user_id: user_id || null
+        user_id: user_id || null,
+        ip_address: clientIP
       }
     });
 
@@ -338,6 +346,9 @@ export const updateEquipmentBorrowDetails = async (req: Request, res: Response) 
 // Software Installation Controllers
 export const createSoftwareInstallation = async (req: Request, res: Response) => {
   try {
+    // Capture client IP address
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
+    
     const {
       faculty_name,
       date,
@@ -360,7 +371,8 @@ export const createSoftwareInstallation = async (req: Request, res: Response) =>
         installation_remarks,
         prepared_by,
         feedback_date: feedback_date ? new Date(feedback_date) : null,
-        user_id: user_id || null
+        user_id: user_id || null,
+        ip_address: clientIP
       }
     });
 

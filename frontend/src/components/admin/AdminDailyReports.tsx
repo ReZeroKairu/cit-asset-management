@@ -521,7 +521,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />

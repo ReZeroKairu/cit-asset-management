@@ -41,9 +41,16 @@ const PublicFormsPage = () => {
       
       // Show success message
       setActiveTab('success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
-      alert('Error submitting form. Please try again.');
+      
+      // Check if it's a rate limit error by checking the error message directly
+      const errorMessage = error.message || '';
+      if (errorMessage.includes('Too many form submissions')) {
+        alert('Maximum submission reached. Please try again in an hour.');
+      } else {
+        alert('Error submitting form. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

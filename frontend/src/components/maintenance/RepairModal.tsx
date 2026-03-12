@@ -259,16 +259,16 @@ const RepairModal: React.FC<Props> = ({
                       {asset.unit_name}
                     </div>
                     <div className="text-xs text-gray-500">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         asset.status === "Functional" || asset.status === "Working" || asset.status === "Operational"
-                          ? "bg-green-100 text-green-800 border-green-200"
+                          ? "bg-green-100 text-green-800"
                           : asset.status === "For Replacement"
-                            ? "bg-red-100 text-red-800 border-red-200"
+                            ? "bg-red-100 text-red-800"
                             : asset.status === "For Repair"
-                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              ? "bg-amber-100 text-amber-800"
                               : asset.status === "For Upgrade"
-                                ? "bg-blue-100 text-blue-800 border-blue-200"
-                                : "bg-gray-100 text-gray-800 border-gray-200"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
                       }`}>
                         {asset.status}
                       </span>

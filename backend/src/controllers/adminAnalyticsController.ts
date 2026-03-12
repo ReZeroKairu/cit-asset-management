@@ -93,20 +93,20 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       prisma.$transaction(async (tx) => {
         const [labPending, labApproved, labRejected] = await Promise.all([
           tx.lab_requests.count({ where: { status: 'Pending' } }),
-          tx.lab_requests.count({ where: { status: 'Approved' } }),
-          tx.lab_requests.count({ where: { status: 'Rejected' } })
+          tx.lab_requests.count({ where: { status: 'Admin_Approved' } }),
+          tx.lab_requests.count({ where: { status: 'Denied' } })
         ]);
         
         const [equipPending, equipApproved, equipRejected] = await Promise.all([
           tx.equipment_borrows.count({ where: { status: 'Pending' } }),
-          tx.equipment_borrows.count({ where: { status: 'Approved' } }),
-          tx.equipment_borrows.count({ where: { status: 'Rejected' } })
+          tx.equipment_borrows.count({ where: { status: 'Admin_Approved' } }),
+          tx.equipment_borrows.count({ where: { status: 'Denied' } })
         ]);
         
         const [softPending, softApproved, softRejected] = await Promise.all([
           tx.software_installations.count({ where: { status: 'Pending' } }),
-          tx.software_installations.count({ where: { status: 'Approved' } }),
-          tx.software_installations.count({ where: { status: 'Rejected' } })
+          tx.software_installations.count({ where: { status: 'Admin_Approved' } }),
+          tx.software_installations.count({ where: { status: 'Denied' } })
         ]);
         
         return [
@@ -142,7 +142,7 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
         
         const softwareByDay = await tx.software_installations.groupBy({
           by: ['created_at'],
-          _count: { software_id: true },
+          _count: { software_list: true },
           where: {
             created_at: { gte: thirtyDaysAgo }
           }
@@ -185,16 +185,16 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
         _count: { asset_id: true }
       }),
       
-      // Assets by Type
-      prisma.inventory_assets.groupBy({
-        by: ['asset_type'],
-        _count: { asset_id: true }
+      // Assets by Type (via units table)
+      prisma.units.groupBy({
+        by: ['device_type_id'],
+        _count: { unit_id: true }
       }),
       
-      // Assets by Status
-      prisma.inventory_assets.groupBy({
-        by: ['status'],
-        _count: { asset_id: true }
+      // Assets by Status (via asset_details table)
+      prisma.asset_details.groupBy({
+        by: ['status_id'],
+        _count: { detail_id: true }
       }),
       
       // Users by Role
@@ -279,8 +279,8 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       },
       assets: {
         byLab: assetsByLab.map(a => ({ lab: getLabName(a.lab_id), count: a._count.asset_id })),
-        byType: assetsByType.map(a => ({ type: a.asset_type, count: a._count.asset_id })),
-        byStatus: assetsByStatus.map(a => ({ status: a.status, count: a._count.asset_id }))
+        byType: assetsByType.map(a => ({ type: `Device Type ${a.device_type_id}`, count: a._count.unit_id })),
+        byStatus: assetsByStatus.map(a => ({ status: `Status ${a.status_id}`, count: a._count.detail_id }))
       },
       users: {
         byRole: usersByRole.map(u => ({ role: u.role, count: u._count.user_id })),

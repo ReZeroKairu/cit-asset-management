@@ -463,7 +463,7 @@ const ComplaintsManagementPage = () => {
                                 setRemarksText(complaint.remarks || "");
                                 setIsEditingRemarks(true); // Open modal in edit mode
                               }}
-                              className="p-2 h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer rounded-md"
+                              className="p-2 h-8 w-8 text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer rounded-md"
                               title="Edit Remarks"
                             >
                               <Edit className="w-4 h-4" />

@@ -107,6 +107,44 @@ export const submitComplaint = async (data: ComplaintData) => {
 
   if (!response.ok) {
     const error = await response.json();
+    
+    // Handle rate limiting specifically
+    if (response.status === 429) {
+      const rateLimitMessage = error.error || error.message || 'Too many form submissions. Please try again later.';
+      console.error('⏰ Rate limit reached:', rateLimitMessage);
+      console.error('📊 Error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        message: error.message
+      });
+      
+      // Log individual validation errors if they exist
+      if (error.errors && Array.isArray(error.errors)) {
+        console.error('🔍 Individual validation errors:');
+        error.errors.forEach((err: any, index: number) => {
+          console.error(`  ${index + 1}. Field: ${err.field}, Message: ${err.message}`);
+        });
+      }
+      
+      throw new Error(rateLimitMessage);
+    }
+    
+    console.error('❌ Error response:', error);
+    console.error('📊 Error details:', {
+      status: response.status,
+      statusText: response.statusText,
+      message: error.message,
+      errors: error.errors
+    });
+    
+    // Log individual validation errors if they exist
+    if (error.errors && Array.isArray(error.errors)) {
+      console.error('🔍 Individual validation errors:');
+      error.errors.forEach((err: any, index: number) => {
+        console.error(`  ${index + 1}. Field: ${err.field}, Message: ${err.message}`);
+      });
+    }
+    
     throw new Error(error.message || 'Failed to submit complaint');
   }
 
@@ -124,6 +162,20 @@ export const getLaboratories = async (): Promise<Laboratory[]> => {
 
   if (!response.ok) {
     const error = await response.json();
+    
+    // Handle rate limiting specifically
+    if (response.status === 429) {
+      const rateLimitMessage = error.error || error.message || 'Too many form submissions. Please try again later.';
+      console.error('⏰ Rate limit reached:', rateLimitMessage);
+      throw new Error(rateLimitMessage);
+    }
+    
+    console.error('❌ Failed to fetch laboratories:', error);
+    console.error('📊 Error details:', {
+      status: response.status,
+      statusText: response.statusText,
+      message: error.message
+    });
     throw new Error(error.message || 'Failed to fetch laboratories');
   }
 
@@ -141,6 +193,20 @@ export const getWorkstationsByLab = async (labId: number): Promise<Workstation[]
 
   if (!response.ok) {
     const error = await response.json();
+    
+    // Handle rate limiting specifically
+    if (response.status === 429) {
+      const rateLimitMessage = error.error || error.message || 'Too many form submissions. Please try again later.';
+      console.error('⏰ Rate limit reached:', rateLimitMessage);
+      throw new Error(rateLimitMessage);
+    }
+    
+    console.error('❌ Failed to fetch workstations:', error);
+    console.error('📊 Error details:', {
+      status: response.status,
+      statusText: response.statusText,
+      message: error.message
+    });
     throw new Error(error.message || 'Failed to fetch workstations');
   }
 

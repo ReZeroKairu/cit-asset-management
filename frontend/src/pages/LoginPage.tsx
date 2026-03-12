@@ -6,7 +6,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const LoginPage = () => {
   const { login, user } = useAuth(); // Add user to check if already logged in
@@ -139,9 +139,23 @@ const LoginPage = () => {
   }, [showPassword]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <Card>
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Back to Home Button - Top Left */}
+      <div className="absolute top-4 left-4 z-10">
+        <Button
+          variant="outline"
+          onClick={() => window.location.href = '/'}
+          className="border-gray-300 hover:bg-gray-50"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Button>
+      </div>
+      
+      {/* Centered Login Form */}
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-screen">
+        <div className="max-w-md w-full space-y-8">
+          <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
               <span className="text-blue-600">CIT</span> Asset Manager
@@ -236,6 +250,7 @@ const LoginPage = () => {
           </CardContent>
         </Card>
       </div>
+    </div>
     </div>
   );
 };

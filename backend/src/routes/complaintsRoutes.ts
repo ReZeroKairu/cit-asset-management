@@ -2,14 +2,32 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { generateComplaintNumber } from "../utils/complaintUtils";
 import { authenticateToken } from "../middleware/auth";
+import { validate, complaintSchema } from "../middleware/validation";
+import { auditMiddleware } from "../middleware/audit";
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all laboratories with custodian info
-router.get("/laboratories", async (req, res) => {
+router.get("/laboratories", authenticateToken, async (req, res) => {
   try {
+    const user = req.user;
+    
+    let whereClause = {};
+    
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only see their assigned laboratory
+        whereClause = { lab_id: user.lab_id };
+      } else {
+        // Unassigned custodians should see nothing
+        whereClause = { lab_id: -1 }; // Impossible lab_id that will return no results
+      }
+    }
+    
     const laboratories = await prisma.laboratories.findMany({
+      where: whereClause,
       include: {
         users: {
           where: {
@@ -41,12 +59,27 @@ router.get("/laboratories", async (req, res) => {
 });
 
 // Get workstations by laboratory
-router.get("/laboratories/:labId/workstations", async (req, res) => {
+router.get("/laboratories/:labId/workstations", authenticateToken, async (req, res) => {
   try {
     const { labId } = req.params;
+    const user = req.user;
+    
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only see workstations from their assigned lab
+        if (parseInt(labId as string) !== user.lab_id) {
+          return res.status(403).json({ error: "Access denied: You can only view workstations from your assigned laboratory" });
+        }
+      } else {
+        // Unassigned custodians should see nothing
+        return res.status(403).json({ error: "Access denied: You must be assigned to a laboratory to view workstations" });
+      }
+    }
+    
     const workstations = await prisma.workstations.findMany({
       where: {
-        lab_id: parseInt(labId)
+        lab_id: parseInt(labId as string)
       },
       include: {
         laboratories: true,
@@ -65,8 +98,16 @@ router.get("/laboratories/:labId/workstations", async (req, res) => {
 });
 
 // Submit a new complaint
-router.post("/", async (req, res) => {
+router.post("/", auditMiddleware("CREATE", "complaint"), validate(complaintSchema), async (req, res) => {
   try {
+    // Capture client IP address with comprehensive fallbacks
+    const clientIP = req.ip || 
+                    req.headers['x-forwarded-for'] as string || 
+                    req.headers['x-real-ip'] as string || 
+                    req.connection?.remoteAddress || 
+                    req.socket?.remoteAddress || 
+                    'Unknown';
+    
     const {
       lab_id,
       workstation_id,
@@ -140,6 +181,7 @@ router.post("/", async (req, res) => {
         monitored_by: laboratory.users[0]?.full_name || null,
         approved_by: laboratory.users[0]?.full_name || null,
         custodian_user_id: laboratory.users[0]?.user_id || null,
+        ip_address: clientIP,
         updated_at: new Date(),
       },
       include: {
@@ -175,14 +217,22 @@ router.get("/analytics", authenticateToken, async (req, res) => {
     let whereClause = {};
     
     // For custodians, only get analytics from their assigned lab
-    if (userRole === "Custodian" && userId) {
-      const user = await prisma.users.findUnique({
-        where: { user_id: userId },
-        select: { lab_id: true }
-      });
-      
-      if (user?.lab_id) {
-        whereClause = { lab_id: user.lab_id };
+    if (userRole === "Custodian") {
+      if (userId) {
+        const user = await prisma.users.findUnique({
+          where: { user_id: userId },
+          select: { lab_id: true }
+        });
+        
+        if (user?.lab_id) {
+          whereClause = { lab_id: user.lab_id };
+        } else {
+          // Unassigned custodians should see nothing
+          whereClause = { lab_id: -1 }; // Impossible lab_id that will return no results
+        }
+      } else {
+        // No userId - should not happen with authentication middleware
+        whereClause = { lab_id: -1 };
       }
     }
     
@@ -265,12 +315,13 @@ router.get("/analytics", authenticateToken, async (req, res) => {
 });
 
 // Get complaint by ID (for tracking)
-router.get("/:complaintId", async (req, res) => {
+router.get("/:complaintId", authenticateToken, async (req, res) => {
   try {
     const { complaintId } = req.params;
+    const user = req.user;
     
     const complaint = await prisma.complaints.findUnique({
-      where: { complaint_id: parseInt(complaintId) },
+      where: { complaint_id: parseInt(complaintId as string) },
       include: {
         laboratories: {
           select: {
@@ -298,6 +349,19 @@ router.get("/:complaintId", async (req, res) => {
     if (!complaint) {
       return res.status(404).json({ message: "Complaint not found" });
     }
+    
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only see complaints from their assigned lab
+        if (complaint.lab_id !== user.lab_id) {
+          return res.status(403).json({ error: "Access denied: You can only view complaints from your assigned laboratory" });
+        }
+      } else {
+        // Unassigned custodians should see nothing
+        return res.status(403).json({ error: "Access denied: You must be assigned to a laboratory to view complaints" });
+      }
+    }
 
     res.json(complaint);
   } catch (error) {
@@ -307,14 +371,38 @@ router.get("/:complaintId", async (req, res) => {
 });
 
 // Check for existing complaints on an asset
-router.get("/check-asset/:assetId", async (req, res) => {
+router.get("/check-asset/:assetId", authenticateToken, async (req, res) => {
   try {
     const { assetId } = req.params;
+    const user = req.user;
+    
+    // First get the asset to check its lab
+    const asset = await prisma.inventory_assets.findUnique({
+      where: { asset_id: parseInt(assetId as string) },
+      select: { lab_id: true }
+    });
+    
+    if (!asset) {
+      return res.status(404).json({ hasExistingComplaint: false });
+    }
+    
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only check assets from their assigned lab
+        if (asset.lab_id !== user.lab_id) {
+          return res.status(403).json({ error: "Access denied: You can only check assets from your assigned laboratory" });
+        }
+      } else {
+        // Unassigned custodians should see nothing
+        return res.status(403).json({ error: "Access denied: You must be assigned to a laboratory to check assets" });
+      }
+    }
     
     // Check for existing complaints on this asset with unresolved status using asset_id
     const existingComplaint = await prisma.complaints.findFirst({
       where: {
-        asset_id: parseInt(assetId),
+        asset_id: parseInt(assetId as string),
         status: {
           in: ['Open', 'In_Progress']
         }
@@ -355,14 +443,22 @@ router.get("/", authenticateToken, async (req, res) => {
     let whereClause = {};
     
     // For custodians, only show complaints from their assigned lab
-    if (userRole === "Custodian" && userId) {
-      const user = await prisma.users.findUnique({
-        where: { user_id: userId },
-        select: { lab_id: true }
-      });
-      
-      if (user?.lab_id) {
-        whereClause = { lab_id: user.lab_id };
+    if (userRole === "Custodian") {
+      if (userId) {
+        const user = await prisma.users.findUnique({
+          where: { user_id: userId },
+          select: { lab_id: true }
+        });
+        
+        if (user?.lab_id) {
+          whereClause = { lab_id: user.lab_id };
+        } else {
+          // Unassigned custodians should see nothing
+          whereClause = { lab_id: -1 }; // Impossible lab_id that will return no results
+        }
+      } else {
+        // No userId - should not happen with authentication middleware
+        whereClause = { lab_id: -1 };
       }
     }
     
@@ -403,7 +499,7 @@ router.get("/", authenticateToken, async (req, res) => {
 });
 
 // Update complaint status
-router.put("/:complaintId/status", authenticateToken, async (req, res) => {
+router.put("/:complaintId/status", authenticateToken, auditMiddleware("UPDATE", "complaint status"), async (req, res) => {
   try {
     const { complaintId } = req.params;
     const { status } = req.body;
@@ -443,7 +539,7 @@ router.put("/:complaintId/status", authenticateToken, async (req, res) => {
 });
 
 // Update complaint remarks
-router.put("/:complaintId/remarks", authenticateToken, async (req, res) => {
+router.put("/:complaintId/remarks", authenticateToken, auditMiddleware("UPDATE", "complaint remarks"), async (req, res) => {
   try {
     const { complaintId } = req.params;
     const { remarks } = req.body;

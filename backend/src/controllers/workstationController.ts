@@ -7,7 +7,25 @@ const prisma = new PrismaClient();
 // 1. GET ALL WORKSTATIONS (with assigned assets)
 export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
+    const user = req.user;
+
+    // Build where clause based on user role
+    let whereClause: any = {};
+
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only see workstations from their assigned lab
+        whereClause.lab_id = user.lab_id;
+      } else {
+        // Unassigned custodians should see nothing
+        whereClause.lab_id = -1; // Impossible lab_id that will return no results
+      }
+    }
+    // Admins can see all workstations (no filtering needed)
+
     const workstations = await prisma.workstations.findMany({
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       include: {
         laboratories: {
           select: {

@@ -7,12 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Alert, AlertDescription } from "../ui/alert";
 import { Loader2, AlertCircle, Monitor, X } from "lucide-react";
 import { 
-  getLaboratories, 
-  getWorkstationsByLab, 
   type ComplaintData,
   type Laboratory,
   type Workstation 
 } from "../../api/complaints";
+import { getLaboratories } from "../../api/laboratories";
+import { getWorkstationsByLab } from "../../api/workstations";
 import { getApiBaseUrl } from "../../api/complaints";
 
 interface ComplaintFormProps {
@@ -22,7 +22,7 @@ interface ComplaintFormProps {
 
 const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = false }) => {
   const [formData, setFormData] = useState<ComplaintData>({
-    lab_id: 0,
+    lab_id: 0, // Keep as 0 but handle value differently
     laboratory_name: "",
     workstation_id: undefined,
     workstation_name: "",
@@ -60,8 +60,13 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = fals
       setLoading(true);
       const labs = await getLaboratories();
       setLaboratories(labs);
-    } catch (err) {
-      setError("Failed to load laboratories. Please try again.");
+    } catch (err: any) {
+      // Check if it's a rate limit error
+      if (err.message && err.message.includes('Too many form submissions')) {
+        setError(err.message);
+      } else {
+        setError("Failed to load laboratories. Please try again.");
+      }
       console.error("Error fetching laboratories:", err);
     } finally {
       setLoading(false);
@@ -88,8 +93,13 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = fals
         setLoadingWorkstations(true);
         const workstations = await getWorkstationsByLab(labIdNum);
         setWorkstations(workstations);
-      } catch (err) {
-        setError("Failed to load workstations. Please try again.");
+      } catch (err: any) {
+        // Check if it's a rate limit error
+        if (err.message && err.message.includes('Too many form submissions')) {
+          setError(err.message);
+        } else {
+          setError("Failed to load workstations. Please try again.");
+        }
         console.error("Error fetching workstations:", err);
       } finally {
         setLoadingWorkstations(false);
@@ -169,37 +179,30 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = fals
       try {
         console.log('Checking for existing complaints on asset:', formData.selected_asset.asset_id);
         const response = await fetch(`${getApiBaseUrl()}/public-complaints/check-asset/${formData.selected_asset.asset_id}`);
-        const result = await response.json();
-        console.log('Duplicate check result:', result);
         
-        if (result.hasExistingComplaint) {
-          const errorMessage = `⚠️ **Duplicate Complaint Detected**
+        if (!response.ok) {
+          console.error('❌ Failed to check existing complaints:', response.status, response.statusText);
+          // Continue with submission even if check fails
+        } else {
+          const result = await response.json();
+          console.log('Duplicate check result:', result);
+          
+          if (result.hasExistingComplaint) {
+            const errorMessage = `⚠️ **Duplicate Complaint Detected**
 
 This asset already has an ongoing complaint (Complaint #${result.existingComplaintId}). The custodian is currently processing it.
 
 Please wait for the current complaint to be resolved before submitting a new one.`;
-          setError(errorMessage);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        } else {
-          console.log('No existing complaints found via asset_id check');
+            setError(errorMessage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+          } else {
+            console.log('No existing complaints found via asset_id check');
+          }
         }
       } catch (error) {
         console.error('Error checking existing complaints via asset_id:', error);
-      }
-
-      // TEMPORARY TEST: Simulate duplicate detection for testing
-      // Remove this in production when asset_id is working properly
-      if (formData.selected_asset.asset_id === 123) {
-        const testErrorMessage = `⚠️ **Duplicate Complaint Detected**
-
-This asset (Computer Unit) already has an ongoing complaint (Complaint #24). The custodian is currently processing it.
-
-Please wait for the current complaint to be resolved before submitting a new one.`;
-        setError(testErrorMessage);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        console.log('TEMPORARY TEST: Showing duplicate detection message for asset_id 123');
-        return;
+        // Continue with submission even if check fails
       }
     }
 
@@ -328,12 +331,15 @@ Please wait for the current complaint to be resolved before submitting a new one
           <div>
             <Label htmlFor="lab_id">Laboratory *</Label>
             <Select
-              value={formData.lab_id.toString()}
+              value={formData.lab_id > 0 ? formData.lab_id.toString() : ""}
               onValueChange={handleLabChange}
               disabled={disabled || loading}
             >
               <SelectTrigger>
-                <SelectValue placeholder={loading ? "Loading laboratories..." : "Select laboratory"} />
+                <SelectValue 
+                  placeholder={loading ? "Loading laboratories..." : "Select laboratory"}
+                  className="text-gray-500 placeholder:text-gray-400"
+                />
               </SelectTrigger>
               <SelectContent>
                 {laboratories.map(lab => (
@@ -450,7 +456,15 @@ Please wait for the current complaint to be resolved before submitting a new one
               disabled
               readOnly
             />
-            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+            {selectedLab && selectedLab.lab_name.toLowerCase() !== 'e-forum' && (
+              <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+            )}
+            {selectedLab && selectedLab.lab_name.toLowerCase() === 'e-forum' && (
+              <p className="text-sm text-gray-500">E-Forum requires manual monitor assignment</p>
+            )}
+            {!selectedLab && (
+              <p className="text-sm text-gray-500">This field will auto-populate when a laboratory is selected</p>
+            )}
           </div>
 
           <div>
@@ -475,11 +489,12 @@ Please wait for the current complaint to be resolved before submitting a new one
       </div>
 
       {/* Submit Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-center pt-6">
         <Button
           type="submit"
+          variant="outline"
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm min-w-[120px]"
           disabled={disabled || loading}
-          className="min-w-[120px]"
         >
           {loading ? (
             <>
@@ -487,7 +502,7 @@ Please wait for the current complaint to be resolved before submitting a new one
               Submitting...
             </>
           ) : (
-            "Submit Complaint"
+            "Submit"
           )}
         </Button>
       </div>

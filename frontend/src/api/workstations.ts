@@ -38,3 +38,9 @@ export const getWorkstationDetails = async (name: string) => {
   const response = await api.get(`/workstations/${name}`);
   return response.data;
 };
+
+// Get workstations by laboratory
+export const getWorkstationsByLab = async (labId: number) => {
+  const response = await api.get(`/workstations/lab/${labId}`);
+  return response.data;
+};

@@ -7,8 +7,9 @@ const prisma = new PrismaClient();
 export const getInventory = async (req: Request, res: Response) => {
   try {
     const { workstation_id, lab_id } = req.query;
+    const user = req.user;
 
-    // Build where clause based on query parameters
+    // Build where clause based on query parameters and user role
     let whereClause: any = {};
 
     if (workstation_id) {
@@ -18,6 +19,25 @@ export const getInventory = async (req: Request, res: Response) => {
     if (lab_id) {
       whereClause.lab_id = Number(lab_id);
     }
+
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        // Custodians can only see assets from their assigned lab
+        // If they're already filtering by their lab, allow it
+        // Otherwise, restrict to their lab
+        if (!whereClause.lab_id) {
+          whereClause.lab_id = user.lab_id;
+        } else if (whereClause.lab_id !== user.lab_id) {
+          // Custodian trying to access assets from a lab they're not assigned to
+          return res.status(403).json({ error: "Access denied: You can only view assets from your assigned laboratory" });
+        }
+      } else {
+        // Unassigned custodians should see nothing
+        whereClause.lab_id = -1; // Impossible lab_id that will return no results
+      }
+    }
+    // Admins can see all assets (no additional filtering needed)
 
     const assets = await prisma.inventory_assets.findMany({
       where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
@@ -247,12 +267,101 @@ export const deleteAsset = async (req: Request, res: Response) => {
     const { id } = req.params;
     const assetId = Number(id);
 
+    console.log(`Attempting to delete asset ${assetId} by user ${req.user?.userId} (${req.user?.role})`);
+
+    if (!assetId || isNaN(assetId)) {
+      console.log(`Invalid asset ID: ${id}`);
+      return res.status(400).json({ error: "Invalid asset ID" });
+    }
+
+    // Check if asset exists
+    const existingAsset = await prisma.inventory_assets.findUnique({
+      where: { asset_id: assetId },
+      include: {
+        asset_details: true,
+        complaints: true,
+        service_log_assets: true
+      }
+    });
+
+    if (!existingAsset) {
+      console.log(`Asset not found: ${assetId}`);
+      return res.status(404).json({ error: "Asset not found" });
+    }
+
+    // Check for related records that might prevent deletion
+    const relatedRecords = {
+      asset_details: existingAsset.asset_details ? 1 : 0,
+      complaints: existingAsset.complaints?.length || 0,
+      service_log_assets: existingAsset.service_log_assets?.length || 0
+    };
+
+    console.log(`Asset ${assetId} has related records:`, relatedRecords);
+
+    // Check if there are related records that need cascade deletion
+    const hasRelatedRecords = Object.values(relatedRecords).some(count => count > 0);
+
+    // If there are related records, delete them first (cascade delete)
+    if (hasRelatedRecords) {
+      console.log(`Asset ${assetId} has related records, performing cascade delete`);
+      
+      try {
+        // Delete related records in the correct order (respecting foreign key constraints)
+        
+        // 1. Delete service log assets first
+        if (relatedRecords.service_log_assets > 0) {
+          await prisma.service_log_assets.deleteMany({
+            where: { asset_id: assetId }
+          });
+          console.log(`Deleted ${relatedRecords.service_log_assets} service log records`);
+        }
+        
+        // 2. Delete complaints
+        if (relatedRecords.complaints > 0) {
+          await prisma.complaints.deleteMany({
+            where: { asset_id: assetId }
+          });
+          console.log(`Deleted ${relatedRecords.complaints} complaint records`);
+        }
+        
+        // 3. Delete asset details
+        if (relatedRecords.asset_details > 0) {
+          await prisma.asset_details.delete({
+            where: { asset_id: assetId }
+          });
+          console.log(`Deleted asset details record`);
+        }
+        
+        console.log(`Cascade delete completed for asset ${assetId}`);
+      } catch (cascadeError) {
+        console.error(`Cascade delete failed for asset ${assetId}:`, cascadeError);
+        return res.status(500).json({ 
+          error: "Failed to delete related records",
+          message: "Please contact administrator to delete this asset"
+        });
+      }
+    }
+
+    // Delete the asset
     await prisma.inventory_assets.delete({
       where: { asset_id: assetId },
     });
 
+    console.log(`Asset ${assetId} deleted successfully by user ${req.user?.userId}`);
     res.json({ message: "Asset deleted successfully" });
   } catch (error) {
+    console.error("Error deleting asset:", error);
+    
+    // Check for foreign key constraint errors
+    if (error instanceof Error) {
+      if (error.message.includes('foreign key constraint')) {
+        return res.status(400).json({ 
+          error: "Cannot delete asset - it has related records",
+          message: "Please remove related records first"
+        });
+      }
+    }
+    
     res.status(500).json({ error: "Failed to delete asset" });
   }
 };

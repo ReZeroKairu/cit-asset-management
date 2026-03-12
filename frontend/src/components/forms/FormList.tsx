@@ -207,7 +207,7 @@ export const FormList: React.FC<FormListProps> = ({
                           size="sm"
                           variant="ghost"
                           onClick={() => handleGenerateForm(form)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Form Document"
                         >
                           <Download className="w-4 h-4" />
@@ -240,7 +240,7 @@ export const FormList: React.FC<FormListProps> = ({
                             size="sm"
                             variant="ghost"
                             onClick={() => onEditForm(form)} // Use edit handler
-                            className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                            className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-200 rounded-md text-blue-600 hover:text-blue-700"
                             title="Edit Installation Details"
                           >
                             <Edit className="w-4 h-4" />

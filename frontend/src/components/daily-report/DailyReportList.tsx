@@ -500,7 +500,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                           {viewMode === "my" && report.status === "Pending" && (
                             <Button
                               size="sm"
-                              className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                              className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
                               onClick={() => handleEdit(report)}
                               title="Edit Report"
                             >
@@ -513,7 +513,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                         <div className="w-8 h-8 flex items-center justify-center">
                           <Button
                             size="sm"
-                            className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                            className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
                             onClick={() => handleGenerateReport(report)}
                             title="Generate Report"
                           >
