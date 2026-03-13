@@ -157,13 +157,8 @@ export const getMaintenanceAnalytics = async () => {
 export interface MaintenanceAnalyticsData {
   totalWorkstations: number;
   completedReports: number;
-  uniqueWorkstationsWithMaintenance: number;
   completionRate: number;
   currentQuarter: string;
-  statusDistribution: Array<{
-    status: string;
-    count: number;
-  }>;
   labCompletionData: Array<{
     lab_name: string;
     completed_reports: number;
@@ -174,7 +169,6 @@ export interface MaintenanceAnalyticsData {
     lab_name: string;
     totalWorkstations: number;
     completedReports: number;
-    uniqueWorkstationsWithMaintenance: number;
     completionRate: number;
   }>;
 }

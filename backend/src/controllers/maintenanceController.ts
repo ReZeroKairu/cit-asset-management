@@ -694,18 +694,6 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
       }
     });
     
-    // Get workstation status distribution (current quarter only)
-    const statusDistribution = await prisma.pmc_reports.groupBy({
-      by: ['workstation_status'],
-      where: {
-        ...whereClause,
-        quarter: currentQuarter
-      },
-      _count: {
-        pmc_id: true
-      }
-    });
-    
     // Get lab-wise completion rates (current quarter only)
     const labWiseData = await prisma.pmc_reports.groupBy({
       by: ['lab_id'],
@@ -724,7 +712,6 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
       lab_name: string;
       totalWorkstations: number;
       completedReports: number;
-      uniqueWorkstationsWithMaintenance: number;
       completionRate: number;
     }> = [];
     if (userRole === "Admin") {
@@ -750,15 +737,6 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
             }
           });
           
-          const labWorkstationReports = await prisma.pmc_reports.findMany({
-            where: {
-              lab_id: lab.lab_id,
-              quarter: currentQuarter
-            },
-            select: { workstation_id: true }
-          });
-          
-          const uniqueLabWorkstations = [...new Set(labWorkstationReports.map(w => w.workstation_id))].length;
           const labCompletionRate = labWorkstations > 0 
             ? (labReports / labWorkstations) * 100  // FIXED: Use total lab workstations
             : 0;
@@ -768,27 +746,11 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
             lab_name: lab.lab_name,
             totalWorkstations: labWorkstations,
             completedReports: labReports,
-            uniqueWorkstationsWithMaintenance: uniqueLabWorkstations,
             completionRate: Math.round(labCompletionRate)
           };
         })
       );
     }
-    
-    // Get workstations that actually need maintenance this quarter
-    // This is more accurate - not all workstations need quarterly maintenance
-    const workstationsWithMaintenance = await prisma.pmc_reports.findMany({
-      where: {
-        ...whereClause,
-        quarter: currentQuarter
-      },
-      select: {
-        workstation_id: true
-      }
-    });
-    
-    const uniqueWorkstationIds = [...new Set(workstationsWithMaintenance.map(w => w.workstation_id))];
-    const uniqueWorkstationsWithMaintenance = uniqueWorkstationIds.length;
     
     // Get lab names
     const labIds = labWiseData.map(lcd => lcd.lab_id);
@@ -822,13 +784,8 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
     res.json({
       totalWorkstations,
       completedReports,
-      uniqueWorkstationsWithMaintenance,
       completionRate: Math.round(completionRate),
       currentQuarter,
-      statusDistribution: statusDistribution.map(sd => ({
-        status: sd.workstation_status,
-        count: sd._count.pmc_id
-      })),
       labCompletionData,
       perLabAnalytics // NEW: Detailed per-lab data for admin
     });

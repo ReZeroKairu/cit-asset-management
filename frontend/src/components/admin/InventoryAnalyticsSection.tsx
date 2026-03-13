@@ -274,8 +274,6 @@ const InventoryAnalyticsSection = () => {
                 <div className="text-sm text-gray-600">Completion Rate ({maintenanceData.currentQuarter} Quarter)</div>
                 <div className="text-lg font-semibold text-green-600 mt-2">{maintenanceData.completedReports}</div>
                 <div className="text-xs text-gray-500">Reports Completed</div>
-                <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.uniqueWorkstationsWithMaintenance}</div>
-                <div className="text-xs text-gray-500">Workstations with Maintenance</div>
                 <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.totalWorkstations}</div>
                 <div className="text-xs text-gray-500">Total Workstations</div>
               </div>
@@ -301,29 +299,6 @@ const InventoryAnalyticsSection = () => {
                   </ResponsiveContainer>
                 </div>
               )}
-              
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={maintenanceData.statusDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="status" 
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    fontSize={12}
-                  />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="count">
-                    {maintenanceData.statusDistribution.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={MAINTENANCE_COLORS[entry.status as keyof typeof MAINTENANCE_COLORS] || "#8884d8"} 
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
             </CardContent>
           </Card>
         )}
