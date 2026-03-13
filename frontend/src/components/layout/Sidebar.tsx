@@ -309,6 +309,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </span>
               </button>
             </li>
+
             {/* Complaints Management - Only for Custodians */}
             {user?.role === "Custodian" && (
               <li>
@@ -340,11 +341,11 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                       opacity: collapsed ? 0 : 1,
                       transform: collapsed ? 'translateX(-20px)' : 'translateX(0)',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
                       position: collapsed ? 'absolute' : 'relative'
                     }}
                   >
-                    Complaints
+                    {collapsed ? 'Complaints' : 'Complaints'} Management
                   </span>
                 </button>
               </li>
@@ -425,11 +426,11 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                     opacity: collapsed ? 0 : 1,
                     transform: collapsed ? 'translateX(-20px)' : 'translateX(0)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    whiteSpace: 'nowrap',
+                    whiteSpace: 'normal',
                     position: collapsed ? 'absolute' : 'relative'
                   }}
                 >
-                  Maintenance
+                  {collapsed ? 'Maintenance' : 'Maintenance'} & Services
                 </span>
               </button>
             </li>
