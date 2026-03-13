@@ -9,11 +9,10 @@ import { Loader2, AlertCircle, Monitor, X } from "lucide-react";
 import { 
   type ComplaintData,
   type Laboratory,
-  type Workstation 
+  type Workstation,
+  getLaboratories,
+  getWorkstationsByLab
 } from "../../api/complaints";
-import { getLaboratories } from "../../api/laboratories";
-import { getWorkstationsByLab } from "../../api/workstations";
-import { getApiBaseUrl } from "../../api/complaints";
 
 interface ComplaintFormProps {
   onSubmit: (data: ComplaintData) => void;

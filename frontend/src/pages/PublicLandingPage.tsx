@@ -46,7 +46,7 @@ const PublicLandingPage = () => {
                 Report issues with laboratory equipment, software, or facilities.
               </p>
               <Button 
-                onClick={() => window.location.href = '/complaints'}
+                onClick={() => window.location.href = '/public-complaints'}
                 variant="outline"
                 className="w-full"
               >

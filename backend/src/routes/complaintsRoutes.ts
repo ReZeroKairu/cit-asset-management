@@ -8,7 +8,142 @@ import { auditMiddleware } from "../middleware/audit";
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get all laboratories with custodian info
+// Public complaint submission (no authentication required)
+router.post("/", validate(complaintSchema), auditMiddleware("CREATE", "public complaint"), async (req, res) => {
+  try {
+    const {
+      lab_id,
+      workstation_id,
+      faculty_student_name,
+      user_type,
+      year_level,
+      issue_description,
+      asset_info,
+    } = req.body;
+
+    // Get client IP address for tracking
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Get laboratory and workstation info
+    const laboratory = await prisma.laboratories.findUnique({
+      where: { lab_id },
+      include: {
+        users: {
+          where: { role: "Custodian" },
+          take: 1,
+        },
+      },
+    });
+
+    if (!laboratory) {
+      return res.status(400).json({ message: "Invalid laboratory" });
+    }
+
+    let workstation = null;
+    if (workstation_id) {
+      workstation = await prisma.workstations.findUnique({
+        where: { workstation_id },
+      });
+      if (!workstation) {
+        return res.status(400).json({ message: "Invalid workstation" });
+      }
+    }
+
+    // Create complaint
+    const complaint = await prisma.complaints.create({
+      data: {
+        lab_id,
+        workstation_id: workstation_id || null,
+        faculty_student_name,
+        user_type,
+        year_level: year_level || null,
+        issue_description,
+        asset_info: asset_info || null,
+        status: "Open",
+        monitored_by: laboratory.users[0]?.full_name || null,
+        approved_by: laboratory.users[0]?.full_name || null,
+        custodian_user_id: laboratory.users[0]?.user_id || null,
+        ip_address: clientIP,
+        updated_at: new Date(),
+      },
+      include: {
+        laboratories: true,
+        workstations: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Complaint submitted successfully",
+      data: {
+        complaint_id: complaint.complaint_id,
+        status: complaint.status,
+        created_at: complaint.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating public complaint:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit complaint",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Get all laboratories with custodian info (for public form)
+router.get("/laboratories", async (req, res) => {
+  try {
+    const laboratories = await prisma.laboratories.findMany({
+      include: {
+        users: {
+          where: { role: "Custodian" },
+          take: 1,
+        },
+      },
+      orderBy: {
+        lab_name: 'asc'
+      }
+    });
+
+    // Transform the data to include custodian info
+    const labsWithCustodian = laboratories.map(lab => ({
+      lab_id: lab.lab_id,
+      lab_name: lab.lab_name,
+      location: lab.location,
+      custodian_user_id: lab.users[0]?.user_id || null,
+      custodian: lab.users[0] || null
+    }));
+
+    res.json(labsWithCustodian);
+  } catch (error) {
+    console.error("Error fetching laboratories:", error);
+    res.status(500).json({ message: "Failed to fetch laboratories" });
+  }
+});
+
+// Get workstations by laboratory (for public form)
+router.get("/laboratories/:labId/workstations", async (req, res) => {
+  try {
+    const { labId } = req.params;
+
+    const workstations = await prisma.workstations.findMany({
+      where: {
+        lab_id: parseInt(labId),
+      },
+      orderBy: {
+        workstation_name: 'asc'
+      }
+    });
+
+    res.json(workstations);
+  } catch (error) {
+    console.error("Error fetching workstations:", error);
+    res.status(500).json({ message: "Failed to fetch workstations" });
+  }
+});
+
+// Get all laboratories with custodian info (authenticated - for admin/custodian)
 router.get("/laboratories", authenticateToken, async (req, res) => {
   try {
     const user = req.user;

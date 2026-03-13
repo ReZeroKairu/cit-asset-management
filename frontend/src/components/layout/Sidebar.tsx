@@ -27,7 +27,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
   return (
     <aside
       className={`bg-gray-800 text-white flex flex-col h-full relative ${
-        collapsed ? "w-16" : "w-63"
+        collapsed ? "w-16" : "w-60"
       }`}
       style={{
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -38,6 +38,10 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
         className={`p-4 border-b border-gray-700 overflow-hidden relative ${
           collapsed ? "flex justify-center" : ""
         }`}
+        style={{
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          willChange: 'width'
+        }}
       >
         <a
           href="/"
@@ -425,7 +429,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                     position: collapsed ? 'absolute' : 'relative'
                   }}
                 >
-                  Maintenance & Services
+                  Maintenance
                 </span>
               </button>
             </li>

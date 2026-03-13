@@ -300,7 +300,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-6 p-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -362,7 +362,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div className="bg-white shadow-lg rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -414,8 +414,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden">
-            <table className="w-full divide-y divide-gray-200 table-fixed">
+          <div>
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">

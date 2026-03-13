@@ -39,9 +39,11 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       
-      // Only redirect to login if not already on login page
+      // Only redirect to login if not already on login page AND not on public pages
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login') {
+      const publicPages = ['/login', '/public-forms', '/public-complaints', '/complaints', '/one-time', '/public-landing'];
+      
+      if (!publicPages.includes(currentPath)) {
         window.location.href = "/login";
       }
     }

@@ -303,7 +303,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 p-6">
+    <div className="space-y-6 p-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -385,7 +385,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
         </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div className="bg-white shadow-lg rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -424,8 +424,8 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div>
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

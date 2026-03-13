@@ -197,8 +197,11 @@ const ArchiveComplaintsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    IP Address
                   </th>
                 </tr>
               </thead>
@@ -252,7 +255,14 @@ const ArchiveComplaintsPage = () => {
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {/* No actions needed for archived complaints - rows are clickable */}
+                      <div className="space-y-1">
+                        {/* No actions needed for archived complaints - rows are clickable */}
+                        {complaint.ip_address && (
+                          <div className="text-xs text-gray-500">
+                            IP: {complaint.ip_address}
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

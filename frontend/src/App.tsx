@@ -314,11 +314,13 @@ function App() {
     | "complaints-management"
     | "login"
     | "maintenance"
+    | "public-complaints"
   >(() => {
     const path = window.location.pathname;
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
     if (path === "/complaints") return "complaints";
+    if (path === "/public-complaints") return "public-complaints";
     if (path === "/one-time" || path.startsWith("/one-time"))
       return "one-time-form";
 
@@ -346,6 +348,8 @@ function App() {
         setCurrentPage("public-forms");
       } else if (path === "/complaints") {
         setCurrentPage("complaints");
+      } else if (path === "/public-complaints") {
+        setCurrentPage("public-complaints");
       } else if (path === "/one-time" || path.startsWith("/one-time")) {
         setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
@@ -384,6 +388,8 @@ function App() {
       window.history.pushState(null, "", "/public-forms");
     } else if (page === "complaints") {
       window.history.pushState(null, "", "/complaints");
+    } else if (page === "public-complaints") {
+      window.history.pushState(null, "", "/public-complaints");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else if (page === "one-time-form") {
@@ -429,6 +435,8 @@ function App() {
         return <OneTimeFormPage />;
       case "public-forms":
         return <PublicFormsPage />;
+      case "public-complaints":
+        return <ComplaintsPage />;
       case "complaints":
         return <ComplaintsPage />;
       case "complaints-management":
@@ -448,7 +456,7 @@ function App() {
   if (
     currentPage === "one-time-form" ||
     currentPage === "public-forms" ||
-    currentPage === "complaints" ||
+    currentPage === "public-complaints" ||
     currentPage === "public-landing"
   ) {
     return renderPage();
