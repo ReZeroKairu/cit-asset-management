@@ -44,7 +44,7 @@ export class AuditService {
     try {
       const { page = 1, limit = 50, userId, action, entityType, startDate, endDate, search, actionCategory, userRole } = filters;
       
-      console.log('🔍 AuditService.getAuditLogs called with filters:', filters);
+      // console.log('🔍 AuditService.getAuditLogs called with filters:', filters);
       
       // Build where clause using the view for better performance
       const where: any = {};
@@ -101,7 +101,7 @@ export class AuditService {
       const totalResult = Array.isArray(total) && total.length > 0 ? total[0] : { total: 0 };
       const totalCount = typeof totalResult.total === 'bigint' ? Number(totalResult.total) : totalResult.total;
 
-      console.log('📊 AuditService result:', { logsCount: (logs as any[]).length, total });
+      // console.log('📊 AuditService result:', { logsCount: (logs as any[]).length, total });
 
       return { logs: logs as any[], total: totalCount, page, limit };
     } catch (error) {

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export const auditMiddleware = (action: string, entityType: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    console.log(`🔍 Audit middleware called: ${action} ${entityType}`);
+    // console.log(`🔍 Audit middleware called: ${action} ${entityType}`);
     
     // Store original res.json to intercept responses
     const originalJson = res.json;
@@ -21,11 +21,11 @@ export const auditMiddleware = (action: string, entityType: string) => {
 
     // Handle the audit logging after response is sent
     res.on('finish', async () => {
-      console.log(`✅ Response finished with status: ${statusCode}`);
+      // console.log(`✅ Response finished with status: ${statusCode}`);
       
       // Log successful responses (2xx status codes)
       if (statusCode >= 200 && statusCode < 300) {
-        console.log(`✅ Successful response, creating audit log`);
+        // console.log(`✅ Successful response, creating audit log`);
         try {
           // Try to get user info from multiple sources
           let userId: number | null = null;
@@ -33,12 +33,10 @@ export const auditMiddleware = (action: string, entityType: string) => {
           // 1. Check if user is already attached to request (from previous middleware)
           if (req.user && req.user.userId) {
             userId = req.user.userId;
-            console.log('🔑 User from req.user:', userId);
           }
           // 2. Check if we can extract from response (for login responses)
           else if (responseData && responseData.user && responseData.user.id) {
             userId = responseData.user.id;
-            console.log('🔑 User from response:', userId);
           }
           // 3. Try to get from Authorization header (fallback)
           else {
@@ -47,7 +45,6 @@ export const auditMiddleware = (action: string, entityType: string) => {
               try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
                 userId = decoded.userId;
-                console.log('🔑 User from token:', userId);
               } catch (jwtError) {
                 console.log('❌ JWT decode failed:', jwtError);
               }
@@ -64,11 +61,9 @@ export const auditMiddleware = (action: string, entityType: string) => {
             auditData.user_id = userId;
           }
 
-          console.log('🔍 Creating audit log:', auditData);
           await (prisma as any).audit_logs.create({
             data: auditData
           });
-          console.log('✅ Audit log created successfully');
         } catch (error) {
           console.error('❌ Audit logging failed:', error);
         }

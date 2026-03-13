@@ -7,7 +7,7 @@ const router = Router();
 // Enhanced audit service with filtering and search using view tables
 router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (req, res) => {
   try {
-    console.log('🔍 Enhanced audit route hit!', { user: req.user, query: req.query });
+    // console.log('🔍 Enhanced audit route hit!', { user: req.user, query: req.query });
     
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50); // Max 50 for performance
@@ -21,20 +21,20 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
     
-    console.log('🔍 Extracted parameters:', { 
-      action: action || 'none', 
-      search: search || 'none', 
-      userId: userId || 'none',
-      actionCategory: actionCategory || 'none',
-      userRole: userRole || 'none',
-      startDate: startDate || 'none',
-      endDate: endDate || 'none',
-      page, 
-      limit 
-    });
+    // console.log('🔍 Extracted parameters:', { 
+      // action: action || 'none', 
+      // search: search || 'none', 
+      // userId: userId || 'none',
+      // actionCategory: actionCategory || 'none',
+      // userRole: userRole || 'none',
+      // startDate: startDate ? startDate.toISOString() : 'none',
+      // endDate: endDate ? endDate.toISOString() : 'none',
+      // page, 
+      // limit 
+    // });
     
     try {
-      console.log('🔍 Using optimized audit service with view tables...');
+      // console.log('🔍 Using optimized audit service with view tables...');
       
       // Use the enhanced AuditService with view tables
       const result = await AuditService.getAuditLogs({
@@ -49,11 +49,11 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         endDate
       });
       
-      console.log('📊 AuditService result:', { 
-        logsCount: (result.logs as any[]).length, 
-        total: result.total,
-        search: search || 'none'
-      });
+      // console.log('📊 AuditService result:', { 
+        // logsCount: (result.logs as any[]).length, 
+        // total: result.total,
+        // search: search || 'none'
+      // });
       
       const response = {
         logs: result.logs as any[],
@@ -63,7 +63,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         filters: { action, search, userId, actionCategory, userRole, startDate, endDate }
       };
       
-      console.log('� Final result being sent:', response);
+      // console.log('✅ Final result being sent:', response);
       res.json(response);
     } catch (error) {
       console.error('❌ Error in enhanced audit route:', error);
