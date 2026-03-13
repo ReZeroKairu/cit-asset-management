@@ -91,8 +91,8 @@ router.post("/", validate(complaintSchema), auditMiddleware("CREATE", "public co
   }
 });
 
-// Get all laboratories with custodian info (for public form)
-router.get("/laboratories", async (req, res) => {
+// Get all laboratories with custodian info (for public form) - NO AUTH REQUIRED
+router.get("/public-laboratories", async (req, res) => {
   try {
     const laboratories = await prisma.laboratories.findMany({
       include: {
@@ -122,8 +122,8 @@ router.get("/laboratories", async (req, res) => {
   }
 });
 
-// Get workstations by laboratory (for public form)
-router.get("/laboratories/:labId/workstations", async (req, res) => {
+// Get workstations by laboratory (for public form) - NO AUTH REQUIRED
+router.get("/public-laboratories/:labId/workstations", async (req, res) => {
   try {
     const { labId } = req.params;
 
@@ -140,6 +140,43 @@ router.get("/laboratories/:labId/workstations", async (req, res) => {
   } catch (error) {
     console.error("Error fetching workstations:", error);
     res.status(500).json({ message: "Failed to fetch workstations" });
+  }
+});
+
+// Get assets by workstation (for public form) - NO AUTH REQUIRED
+router.get("/public-workstations/:workstationId/assets", async (req, res) => {
+  try {
+    const { workstationId } = req.params;
+
+    const assets = await prisma.inventory_assets.findMany({
+      where: {
+        workstation_id: parseInt(workstationId),
+      },
+      include: {
+        units: {
+          select: {
+            unit_name: true,
+          }
+        },
+        asset_details: {
+          include: {
+            asset_statuses: {
+              select: {
+                status_name: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        asset_id: 'asc'
+      }
+    });
+
+    res.json(assets);
+  } catch (error) {
+    console.error("Error fetching assets:", error);
+    res.status(500).json({ message: "Failed to fetch assets" });
   }
 });
 
@@ -502,6 +539,56 @@ router.get("/:complaintId", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Error fetching complaint:", error);
     res.status(500).json({ message: "Failed to fetch complaint" });
+  }
+});
+
+// Check for existing complaints on an asset (PUBLIC - no authentication required)
+router.get("/public-check-asset/:assetId", async (req, res) => {
+  try {
+    const { assetId } = req.params;
+    
+    // First get the asset to check if it exists
+    const asset = await prisma.inventory_assets.findUnique({
+      where: { asset_id: parseInt(assetId as string) },
+      select: { lab_id: true }
+    });
+    
+    if (!asset) {
+      return res.status(404).json({ hasExistingComplaint: false });
+    }
+    
+    // Check for existing complaints on this asset with unresolved status using asset_id
+    const existingComplaint = await prisma.complaints.findFirst({
+      where: {
+        asset_id: parseInt(assetId as string),
+        status: {
+          in: ['Open', 'In_Progress']
+        }
+      },
+      select: {
+        complaint_id: true,
+        status: true,
+        created_at: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    if (existingComplaint) {
+      res.json({
+        hasExistingComplaint: true,
+        existingComplaintId: existingComplaint.complaint_id,
+        status: existingComplaint.status
+      });
+    } else {
+      res.json({
+        hasExistingComplaint: false
+      });
+    }
+  } catch (error) {
+    console.error("Error checking existing complaints:", error);
+    res.status(500).json({ message: "Failed to check existing complaints" });
   }
 });
 

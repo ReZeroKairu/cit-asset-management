@@ -11,7 +11,8 @@ import {
   type Laboratory,
   type Workstation,
   getLaboratories,
-  getWorkstationsByLab
+  getWorkstationsByLab,
+  getApiBaseUrl
 } from "../../api/complaints";
 
 interface ComplaintFormProps {
@@ -124,7 +125,7 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = fals
       try {
         setLoadingAssets(true);
         // Fetch assets for the selected workstation using public endpoint
-        const response = await fetch(`${getApiBaseUrl()}/inventory?workstation_id=${workstationIdNum}`);
+        const response = await fetch(`${getApiBaseUrl()}/public-complaints/public-workstations/${workstationIdNum}/assets`);
         if (response.ok) {
           const assets = await response.json();
           setWorkstationAssets(assets);
@@ -177,7 +178,7 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({ onSubmit, disabled = fals
     if (formData.selected_asset?.asset_id) {
       try {
         console.log('Checking for existing complaints on asset:', formData.selected_asset.asset_id);
-        const response = await fetch(`${getApiBaseUrl()}/public-complaints/check-asset/${formData.selected_asset.asset_id}`);
+        const response = await fetch(`${getApiBaseUrl()}/public-complaints/public-check-asset/${formData.selected_asset.asset_id}`);
         
         if (!response.ok) {
           console.error('❌ Failed to check existing complaints:', response.status, response.statusText);
