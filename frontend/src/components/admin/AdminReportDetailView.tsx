@@ -75,7 +75,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
         <div>
           <button
             onClick={onBack}
-            className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+            className="flex items-center text-blue-600 hover:text-blue-800 mb-4 cursor-pointer"
           >
             <svg
               className="w-5 h-5 mr-2"
@@ -132,7 +132,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
       {/* Single Page Report View */}
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Report Header */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
+        <div className="bg-blue-50 p-6 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-sm font-medium text-gray-600">Report ID</div>
@@ -143,10 +143,10 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
             <div>
               <div className="text-sm font-medium text-gray-600">Status</div>
               <span
-                className={`inline-flex px-3 py-1 text-sm font-bold rounded-full border ${
+                className={`inline-flex px-3 py-1 text-sm font-bold rounded-full ${
                   report.status === "Approved"
-                    ? "bg-green-100 text-green-800 border-green-200"
-                    : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-yellow-100 text-yellow-800"
                 }`}
               >
                 {report.status || "Pending"}
@@ -297,7 +297,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
                   <Button
                     onClick={handleApproveReport}
                     disabled={loading || successMessage !== ""}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                   >
                     {loading
                       ? "Approving..."
@@ -308,7 +308,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
                 )}
                 <Button
                   onClick={onBack}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                 >
                   Close
                 </Button>

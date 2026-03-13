@@ -7,7 +7,7 @@ import {
   updateDailyReport,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
-import { CheckSquare, Square, FileText, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
@@ -268,11 +268,11 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Approved":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800";
       case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -311,10 +311,10 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           </div>
           <button
             onClick={() => setShowDARModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
           >
             <FileText className="w-4 h-4" />
-            Generate DAR Report
+            Generate DAR
           </button>
         </div>
       </div>
@@ -337,7 +337,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               type="date"
               value={filters.start_date}
               onChange={(e) => handleFilterChange("start_date", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           <div>
@@ -348,13 +348,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               type="date"
               value={filters.end_date}
               onChange={(e) => handleFilterChange("end_date", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
             </button>
@@ -376,36 +376,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {filteredReports.some((r) => r.status === "Pending") && (
-                <>
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 flex items-center gap-2 cursor-pointer"
-                  >
-                    {selectedReports.length ===
-                    filteredReports.filter((r) => r.status === "Pending")
-                      .length ? (
-                      <>
-                        <Square className="w-4 h-4" />
-                        Deselect All
-                      </>
-                    ) : (
-                      <>
-                        <CheckSquare className="w-4 h-4" />
-                        Select All Pending
-                      </>
-                    )}
-                  </button>
-                  {selectedReports.length > 0 && (
-                    <button
-                      onClick={handleApproveAll}
-                      disabled={loading}
-                      className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
-                    >
-                      Approve Selected ({selectedReports.length})
-                    </button>
-                  )}
-                </>
+              {selectedReports.length > 0 && (
+                <button
+                  onClick={handleApproveAll}
+                  disabled={loading}
+                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50 cursor-pointer"
+                >
+                  Approve Selected ({selectedReports.length})
+                </button>
               )}
             </div>
           </div>
@@ -475,15 +453,30 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
-                  <tr key={report.report_id} className="hover:bg-gray-50">
+                  <tr 
+                    key={report.report_id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={(e) => {
+                      // Check if click is on checkbox or in checkbox column
+                      if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
+                        return; // Don't open modal if clicking checkbox
+                      }
+                      if ((e.target as HTMLElement).closest('td:first-child')) {
+                        return; // Don't open modal if clicking in first column (checkbox column)
+                      }
+                      handleViewReport(report);
+                    }}
+                  >
                     <td className="px-4 py-4 whitespace-nowrap">
                       {report.status === "Pending" && (
-                        <input
-                          type="checkbox"
-                          checked={selectedReports.includes(report.report_id)}
-                          onChange={() => handleSelectReport(report.report_id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedReports.includes(report.report_id)}
+                            onChange={() => handleSelectReport(report.report_id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                          />
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-4">
@@ -516,7 +509,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status || "Pending")}`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status || "Pending")}`}
                       >
                         {report.status || "Pending"}
                       </span>
@@ -525,35 +518,10 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewReport(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                          title="View Report Details"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                        </button>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />
@@ -561,7 +529,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         {report.status !== "Approved" && (
                           <button
                             onClick={() => handleQuickApprove(report.report_id)}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 rounded cursor-pointer"
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 text-sm font-medium rounded cursor-pointer"
                           >
                             Approve
                           </button>

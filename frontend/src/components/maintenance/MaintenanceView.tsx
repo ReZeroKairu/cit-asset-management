@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { getPMCReport, getServiceHistory } from "../../api/maintenance";
 import { getWorkstationAssets, getAssetStatuses } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
+import { calculateWorstStatus } from "../../utils/statusUtils";
 import {
   Monitor,
   Calendar,
@@ -26,6 +27,7 @@ interface Props {
   quarter: string;
   onService: () => void;
   onBack: () => void;
+  refreshTrigger?: number; // Add refresh trigger prop
 }
 
 const SYSTEM_UNIT_TYPES = [
@@ -47,6 +49,7 @@ const MaintenanceView: React.FC<Props> = ({
   quarter,
   onService,
   onBack,
+  refreshTrigger,
 }) => {
   const { user } = useAuth();
   const [pmcReport, setPmcReport] = useState<any>(null);
@@ -60,34 +63,60 @@ const MaintenanceView: React.FC<Props> = ({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const assetData = await getWorkstationAssets(workstation.id);
+      console.log("🔍 MAINTENANCE VIEW - Fetching data for:", {
+        workstationId: workstation.id,
+        quarter,
+      });
 
-      const formattedAssets = assetData.map((item: any) => ({
-        asset_id: item.asset_id,
-        unit_name: item.units?.unit_name || item.unit_name || "Unknown",
-        property_tag_no:
-          item.details?.property_tag_no || item.property_tag_no || "N/A",
-        asset_remarks: item.details?.asset_remarks || item.asset_remarks || "",
-        status:
-          item.details?.current_status?.status_name ||
-          item.status ||
-          "Functional",
-        description: item.details?.description || item.description || "",
-      }));
-      setAssets(formattedAssets);
+      const assetData = await getWorkstationAssets(workstation.id);
+      setAssets(assetData);
+
+      console.log("📦 MAINTENANCE VIEW - Assets loaded:", {
+        count: assetData.length,
+        assets: assetData.map((asset: any) => ({
+          asset_id: asset.asset_id,
+          unit_name: asset.unit_name,
+          status: asset.status,
+          remarks: asset.asset_remarks || "NONE",
+          property_tag_no: asset.property_tag_no || "N/A",
+        })),
+      });
 
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);
+
+      if (reportData) {
+        console.log("📋 MAINTENANCE VIEW - PMC Report loaded:", {
+          pmc_id: reportData?.pmc_id || "NULL",
+          overall_remarks: reportData?.overall_remarks || "NULL",
+          software_name: reportData?.software_name || "NULL",
+          connectivity_type: reportData?.connectivity_type || "NULL",
+          connectivity_speed: reportData?.connectivity_speed || "NULL",
+          workstation_status: reportData?.workstation_status || "NULL",
+        });
+      } else {
+        console.log("📋 MAINTENANCE VIEW - No PMC report found (first service)");
+      }
 
       // Fetch service history
       const historyData = await getServiceHistory(workstation.id, quarter);
       setServiceLogs(historyData);
 
+      console.log("📚 MAINTENANCE VIEW - Service history loaded:", {
+        count: historyData.length,
+        logs: historyData.map((log: any) => ({
+          log_id: log.log_id,
+          service_type: log.service_type,
+          remarks: log.remarks || "NULL",
+          service_date: log.service_date,
+        })),
+      });
+
       // Fetch status options
       const statuses = await getAssetStatuses();
       setStatusOptions(statuses);
     } catch (error) {
-      console.error("Failed to load details", error);
+      console.error("❌ MAINTENANCE VIEW - Failed to load details:", error);
       setPmcReport(null);
       setServiceLogs([]);
     } finally {
@@ -97,7 +126,7 @@ const MaintenanceView: React.FC<Props> = ({
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, refreshTrigger]);
 
   // --- REPORT GENERATION HANDLER ---
   const handleDownloadReport = () => {
@@ -122,15 +151,23 @@ const MaintenanceView: React.FC<Props> = ({
 
     // 1. Map Procedures to Checkmarks
     const checkProc = (name: string) =>
-      completedProcedures.some((p: any) => p.procedure.procedure_name === name)
+      completedProcedures.some((p: any) => 
+        (p.procedure_name || p.procedure?.procedure_name) === name
+      )
         ? "☑"
         : "☐";
 
-    // 2. Map Statuses to Table Checkmarks
+    // 2. Map Statuses to Table Checkmarks with Color Coding
     const mapStatus = (status: string) => ({
       func: ["Functional", "Working", "Operational"].includes(status)
-        ? "✓"
-        : "",
+        ? "bg-green-100 text-green-800 border-green-200"
+        : status === "For Replacement"
+          ? "bg-red-100 text-red-800 border-red-200"
+          : status === "For Repair"
+            ? "bg-amber-100 text-amber-800 border-amber-200"
+            : status === "For Upgrade"
+              ? "bg-blue-100 text-blue-800 border-blue-200"
+              : "bg-gray-100 text-gray-800 border-gray-200",
       rep: status === "For Repair" ? "✓" : "",
       upg: status === "For Upgrade" ? "✓" : "",
       repl: status === "For Replacement" ? "✓" : "",
@@ -139,14 +176,14 @@ const MaintenanceView: React.FC<Props> = ({
     // 3. Separate Assets into Peripherals and System Components
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
-        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-      ),
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+      )
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
-          (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-        ),
+          (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+        )
     );
 
     // 4. Start building the list with Peripherals first
@@ -157,18 +194,14 @@ const MaintenanceView: React.FC<Props> = ({
       remarks: asset.asset_remarks || "",
     }));
 
-    // 5. Add the "System Unit" Parent row
-    const isAllFunctional =
-      systemComponents.length > 0 &&
-      systemComponents.every((asset) =>
-        ["Functional", "Working", "Operational"].includes(asset.status),
-      );
+    // 5. Add the "System Unit" Parent row with shared utility
+    const systemUnitStatus = calculateWorstStatus(systemComponents);
 
     componentsList.push({
       name: "System Unit",
-      ...mapStatus(pmcReport.workstation_status),
+      ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: isAllFunctional ? "Functional" : "",
+      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
     });
 
     // 6. Add the System Unit Components right under it
@@ -193,8 +226,8 @@ const MaintenanceView: React.FC<Props> = ({
       pmcReport.connectivity_type === "Wired"
         ? "☑ Wired   ☐ Wireless"
         : pmcReport.connectivity_type === "Wireless"
-          ? "☐ Wired   ☑ Wireless"
-          : "☐ Wired   ☐ Wireless";
+        ? "☐ Wired   ☑ Wireless"
+        : "☐ Wired   ☐ Wireless";
 
     componentsList.push({
       name: "Connectivity Type",
@@ -241,25 +274,25 @@ const MaintenanceView: React.FC<Props> = ({
   // --- Data Processing ---
   const systemAssets = assets.filter((asset) =>
     SYSTEM_UNIT_TYPES.some(
-      (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-    ),
+      (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+    )
   );
   const peripheralAssets = assets.filter(
     (asset) =>
       !SYSTEM_UNIT_TYPES.some(
-        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-      ),
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+      )
   );
 
-  const allSystemFunctional = systemAssets.every((asset) =>
-    ["Functional", "Working", "Operational"].includes(asset.status),
-  );
+  // Use shared utility to calculate System Unit (Overall) status
+  const systemUnitStatus = calculateWorstStatus(systemAssets);
+
   const parentSystemUnit = {
     asset_id: -1,
     unit_name: "System Unit (Overall)",
     property_tag_no: "-",
     description: "Auto-calculated based on components",
-    status: allSystemFunctional ? "Functional" : "For Repair",
+    status: systemUnitStatus,
   };
   const displaySystemAssets =
     systemAssets.length > 0 ? [parentSystemUnit, ...systemAssets] : [];
@@ -282,7 +315,21 @@ const MaintenanceView: React.FC<Props> = ({
     },
   ];
 
-  const completedProcedures = pmcReport?.procedures || [];
+  const completedProcedures = (pmcReport?.procedures || []).filter((p: any) => {
+    // Safety check: ensure procedure object has required properties
+    if (!p || typeof p === 'undefined') {
+      console.warn('⚠️ Undefined procedure object:', p);
+      return false;
+    }
+    return true;
+  }).map((p: any) => {
+    // Transform to consistent structure
+    return {
+      procedure_id: p.procedure_id || p.procedure?.procedure_id || 0,
+      procedure_name: p.procedure_name || p.procedure?.procedure_name || 'Unknown Procedure',
+      is_checked: p.is_checked || false,
+    };
+  });
 
   const ReadOnlyTable = ({
     title,
@@ -294,11 +341,17 @@ const MaintenanceView: React.FC<Props> = ({
   }: any) => (
     <div className="border rounded-md overflow-hidden shadow-sm bg-white">
       <div
-        className={`px-4 py-3 border-b flex items-center ${isNetwork ? "bg-purple-50 border-purple-100" : "bg-gray-50 border-gray-200"}`}
+        className={`px-4 py-3 border-b flex items-center ${
+          isNetwork
+            ? "bg-purple-50 border-purple-100"
+            : "bg-gray-50 border-gray-200"
+        }`}
       >
         {icon}
         <h3
-          className={`font-medium ml-2 ${isNetwork ? "text-purple-900" : "text-gray-900"}`}
+          className={`font-medium ml-2 ${
+            isNetwork ? "text-purple-900" : "text-gray-900"
+          }`}
         >
           {title}
         </h3>
@@ -336,7 +389,11 @@ const MaintenanceView: React.FC<Props> = ({
               return (
                 <tr
                   key={item.asset_id || idx}
-                  className={`transition-colors ${isParentRow ? "bg-blue-50 font-medium border-b border-blue-100" : "hover:bg-gray-50"}`}
+                  className={`transition-colors ${
+                    isParentRow
+                      ? "bg-blue-50 font-medium border-b border-blue-100"
+                      : "hover:bg-gray-50"
+                  }`}
                 >
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {isSystemParentIncluded && !isParentRow && (
@@ -364,7 +421,17 @@ const MaintenanceView: React.FC<Props> = ({
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${["Functional", "Working", "Operational"].includes(item.status) ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        ["Functional", "Working", "Operational"].includes(item.status)
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : item.status === "For Replacement" || item.status === "Not Functional"
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : item.status === "For Repair"
+                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              : item.status === "For Upgrade"
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : "bg-gray-100 text-gray-800 border-gray-200"
+                      }`}
                     >
                       {item.status}
                     </span>
@@ -381,6 +448,10 @@ const MaintenanceView: React.FC<Props> = ({
   if (loading)
     return <div className="p-12 text-center text-gray-500">Loading...</div>;
 
+  // Calculate workstation status from ALL assets (system + peripherals)
+  const allAssets = [...systemAssets, ...peripheralAssets];
+  const calculatedWorkstationStatus = calculateWorstStatus(allAssets);
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex justify-between items-start mb-8 border-b pb-4">
@@ -396,13 +467,13 @@ const MaintenanceView: React.FC<Props> = ({
         <div className="flex space-x-3">
           <button
             onClick={onBack}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             Back to List
           </button>
           <button
             onClick={onService}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center shadow-sm"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center shadow-sm cursor-pointer"
           >
             <Wrench className="w-4 h-4 mr-2" />
             Service Workstation
@@ -412,7 +483,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={() => setShowRepairModal(true)}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors flex items-center shadow-sm cursor-pointer"
             >
               <Wrench className="w-4 h-4 mr-2" />
               Repair Component
@@ -423,7 +494,7 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport && (
             <button
               onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center shadow-sm"
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm cursor-pointer"
             >
               <Download className="w-4 h-4 mr-2" />
               QPMC Report
@@ -454,9 +525,19 @@ const MaintenanceView: React.FC<Props> = ({
           {pmcReport ? (
             <>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${pmcReport.workstation_status === "For Repair" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                  calculatedWorkstationStatus === "Functional" || calculatedWorkstationStatus === "Working" || calculatedWorkstationStatus === "Operational"
+                    ? "bg-green-100 text-green-800 border-green-200"
+                    : calculatedWorkstationStatus === "For Replacement"
+                      ? "bg-red-100 text-red-800 border-red-200"
+                      : calculatedWorkstationStatus === "For Repair"
+                        ? "bg-amber-100 text-amber-800 border-amber-200"
+                        : calculatedWorkstationStatus === "For Upgrade"
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : "bg-gray-100 text-gray-800 border-gray-200"
+                }`}
               >
-                {pmcReport.workstation_status}
+                {calculatedWorkstationStatus}
               </span>
               {pmcReport.service_count > 1 && (
                 <p className="text-xs text-gray-600 mt-2">
@@ -522,11 +603,11 @@ const MaintenanceView: React.FC<Props> = ({
               <div className="flex flex-wrap gap-3">
                 {completedProcedures.map((p: any) => (
                   <div
-                    key={p.procedure.procedure_id}
+                    key={p.procedure_id}
                     className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-green-50 text-green-700 border border-green-200 shadow-sm"
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
-                    {p.procedure.procedure_name}
+                    {p.procedure_name}
                   </div>
                 ))}
               </div>

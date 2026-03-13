@@ -12,12 +12,16 @@ interface Workstation {
   workstation_id: number;
   workstation_name: string;
   lab_id: number | null;
-  created_at: string;
-  laboratory?: {
+  laboratories?: {
     lab_id: number;
     lab_name: string;
-    location?: string;
-  };
+    location: string;
+  } | null;
+  asset_statuses?: {
+    status_id: number;
+    status_name: string;
+  } | null;
+  created_at: string;
   assets?: {
     asset_id: number;
     item_name: string;
@@ -96,13 +100,13 @@ const WorkstationsPage: React.FC = () => {
             </CardTitle>
             <div className="flex space-x-2">
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
-                <Button onClick={handleAddAsset}>
+                <Button onClick={handleAddAsset} className="cursor-pointer">
                   <Package className="w-4 h-4 mr-2" />
                   Assign Asset
                 </Button>
               )}
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} className="cursor-pointer">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Workstation
                 </Button>
@@ -121,11 +125,11 @@ const WorkstationsPage: React.FC = () => {
               <p className="text-gray-500">No workstations found</p>
               {(user?.role === 'Admin' || user?.role === 'Custodian') && (
                 <div className="mt-4 space-x-2">
-                  <Button onClick={handleAddAsset}>
+                  <Button onClick={handleAddAsset} className="cursor-pointer">
                     <Package className="w-4 h-4 mr-2" />
                     Assign Asset
                   </Button>
-                  <Button onClick={handleCreate}>
+                  <Button onClick={handleCreate} className="cursor-pointer">
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Workstation
                   </Button>
@@ -164,10 +168,10 @@ const WorkstationsPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {workstation.laboratory?.lab_name || 'Unassigned'}
+                        {workstation.laboratories?.lab_name || 'Unassigned'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {workstation.laboratory?.location || 'N/A'}
+                        {workstation.laboratories?.location || 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {workstation.assets && workstation.assets.length > 0 ? (

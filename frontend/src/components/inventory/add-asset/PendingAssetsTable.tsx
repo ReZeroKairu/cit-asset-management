@@ -59,7 +59,7 @@ const PendingAssetsTable: React.FC<Props> = ({ assets, onRemove }) => {
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => onRemove(asset.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-md transition-colors"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded-md transition-colors cursor-pointer"
                     >
                       Remove
                     </button>

@@ -4,6 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { updateLabRequestDetails, updateEquipmentBorrowDetails, updateSoftwareInstallDetails } from "../../api/forms";
+import { X } from "lucide-react";
 
 interface FormDetailsModalProps {
   show: boolean;
@@ -73,6 +74,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
         returned_time: form.details.returned_time || '',
         remarks: form.details.remarks || '',
         installation_remarks: form.details.installation_remarks || '',
+        printing_pages: form.details.printing_pages || '',
         feedback_date: (() => {
           const feedbackDate = form.details.feedback_date;
           if (!feedbackDate) return '';
@@ -114,10 +116,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
   console.log('Modal rendering...', { show, form: form?.id, formType: form?.type });
   return (
   <>
-    <div className="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-[99999] p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-gray-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 backdrop-blur-md bg-white/30 flex items-center justify-center z-[99999] p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 border-b border-gray-200">
+        <div className="bg-blue-600 text-white p-6 rounded-t-xl">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
@@ -132,12 +134,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
-                className="w-10 h-10 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
                 onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-800 transition-colors cursor-pointer"
               >
-                <svg className="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
           </div>
@@ -172,6 +172,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Faculty/Student Name</label>
                       <p className="font-medium text-gray-900">{form.details.faculty_student_name}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide">User Type</label>
+                      <p className="font-medium text-gray-900 capitalize">{form.details.user_type || form.details.userType || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Year Level</label>
@@ -210,6 +214,24 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                         </p>
                       )}
                     </div>
+                    {canEdit && editMode && (
+                      <div className="bg-white p-3 rounded border border-gray-200">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Printing Pages</label>
+                        <Input
+                          type="number"
+                          value={editFormData.printing_pages || ''}
+                          onChange={(e) => setEditFormData({...editFormData, printing_pages: e.target.value})}
+                          placeholder="Number of printing pages"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                    {form.details.printing_pages && (
+                      <div className="bg-white p-3 rounded border border-gray-200">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide">Printing Pages</label>
+                        <p className="font-medium text-gray-900">{form.details.printing_pages}</p>
+                      </div>
+                    )}
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Requested by</label>
                       <p className="font-medium text-gray-900">{form.details?.requested_by || 'N/A'}</p>
@@ -269,6 +291,10 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Faculty/Student Name</label>
                       <p className="font-medium text-gray-900">{form.details.faculty_student_name}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-gray-200">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide">User Type</label>
+                      <p className="font-medium text-gray-900 capitalize">{form.details.user_type || form.details.userType || 'N/A'}</p>
                     </div>
                     <div className="bg-white p-3 rounded border border-gray-200">
                       <label className="text-xs text-gray-500 uppercase tracking-wide">Year Level</label>
@@ -430,7 +456,7 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
                             type="date"
                             value={editFormData.feedback_date || ''}
                             onChange={(e) => setEditFormData({...editFormData, feedback_date: e.target.value})}
-                            className="mt-1"
+                            className="mt-1 cursor-pointer"
                           />
                         ) : (
                           <p className="font-medium text-gray-900">

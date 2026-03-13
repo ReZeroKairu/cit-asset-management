@@ -8,11 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Download, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitEquipmentBorrow } from "../../api/forms";
+
+// Year levels for students
+const yearLevels = [
+  "1",
+  "2", 
+  "3",
+  "4",
+  "5"
+];
+import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
 interface EquipmentBorrowFormData {
   date: string;
   laboratory: string;
+  userType: "student" | "faculty";
   facultyStudentName: string;
   yearLevel: string;
   releaseTime: string;
@@ -44,11 +55,13 @@ export const EquipmentBorrowForm = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [cooldownActive, setCooldownActive] = useState(false);
   const [assignedLab, setAssignedLab] = useState<string>('');
 
   const [formData, setFormData] = useState<EquipmentBorrowFormData>({
     date: "",
     laboratory: "lab1",
+    userType: "student",
     facultyStudentName: "",
     yearLevel: "",
     releaseTime: "",
@@ -159,6 +172,7 @@ export const EquipmentBorrowForm = () => {
       const response = await submitEquipmentBorrow({
         date: formData.date,
         laboratory: formData.laboratory,
+        user_type: formData.userType,
         faculty_student_name: formData.facultyStudentName,
         year_level: formData.yearLevel,
         release_time: formData.releaseTime,
@@ -175,6 +189,9 @@ export const EquipmentBorrowForm = () => {
       if (response.success) {
         console.log('✅ Equipment borrow submission successful:', response);
         setSubmitMessage("Equipment borrow request submitted successfully!");
+        setCooldownActive(true);
+        // Reset cooldown after 5 seconds
+        setTimeout(() => setCooldownActive(false), 5000);
         // Clear success message after 5 seconds
         setTimeout(() => {
           setSubmitMessage(null);
@@ -184,6 +201,7 @@ export const EquipmentBorrowForm = () => {
           setFormData({
             date: "",
             laboratory: "lab1",
+            userType: "student",
             facultyStudentName: "",
             yearLevel: "",
             releaseTime: "",
@@ -212,44 +230,38 @@ export const EquipmentBorrowForm = () => {
     }
   };
 
-  const generateEquipmentReport = () => {
-    const reportContent = `
-COLLEGE OF INFORMATION TECHNOLOGY
-EQUIPMENT BORROWING FORM
-
-Date: ${formData.date}
-Laboratory: ${formData.laboratory}
-Faculty/Student Name: ${formData.facultyStudentName}
-Year Level: ${formData.yearLevel}
-Release Time: ${formData.releaseTime}
-Returned Time: ${formData.returnedTime}
-
-Equipment List:
-${formData.equipmentList.map((item, index) => 
-  `${index + 1}. ${item.equipmentName} - Quantity: ${item.unitQty}`
-).join('\n')}
-
-Purpose: ${formData.purpose}
-
-Requested by: ${formData.requestedBy}
-
-MONITORING FORM FOR BORROWED EQUIPMENT
-Remarks: ${formData.remarks}
-Monitored by: ${formData.monitoredBy}
-
-Laboratory Custodian
-    `.trim();
-
-    // Create and download equipment report
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `equipment-borrow-${formData.date || new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+  const generateEquipmentReport = async () => {
+    try {
+      // Create form data object that matches the expected structure for template generation
+      const formDataForTemplate = {
+        type: 'equipment-borrow',
+        details: {
+          date: formData.date,
+          laboratory: formData.laboratory,
+          user_type: formData.userType,
+          faculty_student_name: formData.facultyStudentName,
+          year_level: formData.yearLevel,
+          releaseTime: formData.releaseTime,
+          returnedTime: formData.returnedTime,
+          equipment_list: formData.equipmentList,
+          purpose: formData.purpose,
+          requested_by: formData.requestedBy,
+          approved_by: formData.approvedBy,
+          remarks: formData.remarks,
+          monitored_by: formData.monitoredBy,
+        },
+        name: formData.facultyStudentName,
+        purpose: formData.purpose,
+        laboratory: formData.laboratory,
+        date: formData.date,
+        equipment_list: formData.equipmentList,
+      };
+      
+      await generateFormDocument(formDataForTemplate);
+    } catch (error) {
+      console.error('Error generating equipment report:', error);
+      alert('Error generating report. Please try again.');
+    }
   };
 
   return (
@@ -289,30 +301,51 @@ Laboratory Custodian
                 </SelectContent>
               </Select>
             </div>
-            <div></div>
+            <div>
+              <Label htmlFor="userType">User Type</Label>
+              <Select value={formData.userType} onValueChange={(value: "student" | "faculty") => handleInputChange("userType", value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="faculty">Faculty</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div></div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="equipment-facultyStudentName">Faculty/Student Name</Label>
+              <Label htmlFor="equipment-facultyStudentName">{formData.userType === 'faculty' ? 'Faculty Name' : 'Student Name'}</Label>
               <Input
                 id="equipment-facultyStudentName"
                 value={formData.facultyStudentName}
                 onChange={(e) => handleInputChange("facultyStudentName", e.target.value)}
                 placeholder="Enter full name"
+                className="capitalize-first"
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="equipment-yearLevel">Year Level</Label>
-              <Input
-                id="equipment-yearLevel"
-                value={formData.yearLevel}
-                onChange={(e) => handleInputChange("yearLevel", e.target.value)}
-                placeholder="Enter year level"
-              />
-            </div>
+            {formData.userType === 'student' && (
+              <div>
+                <Label htmlFor="equipment-yearLevel">Year Level</Label>
+                <Select
+                  value={formData.yearLevel}
+                  onValueChange={(value) => handleInputChange("yearLevel", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearLevels.map(level => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -340,27 +373,27 @@ Laboratory Custodian
             <Label>Equipment List</Label>
             <div className="border border-gray-200 rounded-lg p-4 mt-2">
               <div className="grid grid-cols-3 gap-4 mb-3 font-semibold">
-                <div>Unit/Oty.</div>
                 <div>Equipment Name</div>
+                <div>Unit/Oty.</div>
                 <div></div>
               </div>
               {formData.equipmentList.map((item, index) => (
                 <div key={index} className="grid grid-cols-3 gap-4 mb-2 items-center">
                   <div>
                     <Input
-                      id={`equipment-qty-${index}`}
-                      value={item.unitQty}
-                      onChange={(e) => handleEquipmentListChange(index, 'unitQty', e.target.value)}
-                      placeholder="Unit/Quantity"
+                      id={`equipment-name-${index}`}
+                      value={item.equipmentName}
+                      onChange={(e) => handleEquipmentListChange(index, 'equipmentName', e.target.value)}
+                      placeholder="Equipment name"
                       required
                     />
                   </div>
                   <div>
                     <Input
-                      id={`equipment-name-${index}`}
-                      value={item.equipmentName}
-                      onChange={(e) => handleEquipmentListChange(index, 'equipmentName', e.target.value)}
-                      placeholder="Equipment name"
+                      id={`equipment-qty-${index}`}
+                      value={item.unitQty}
+                      onChange={(e) => handleEquipmentListChange(index, 'unitQty', e.target.value)}
+                      placeholder="Unit/Quantity"
                       required
                     />
                   </div>
@@ -457,11 +490,14 @@ Laboratory Custodian
             </div>
           </div>
 
-          <div className="flex gap-4 pt-6">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => generateEquipmentReport()} className="flex items-center gap-2" disabled={isSubmitting}>
+          <div className="flex justify-between items-center pt-6">
+            <div></div>
+            <div className="flex justify-center">
+              <Button type="submit" variant="outline" className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting || cooldownActive}>
+                {isSubmitting ? 'Submitting...' : cooldownActive ? 'Please wait...' : 'Submit Form'}
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => generateEquipmentReport()} className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" disabled={isSubmitting}>
               <Download className="w-4 h-4" />
               Generate Report
             </Button>

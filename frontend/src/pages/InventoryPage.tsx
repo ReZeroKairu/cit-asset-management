@@ -12,6 +12,7 @@ import WorkstationReport from "../components/inventory/WorkstationReport";
 import { useAuth } from "../context/AuthContext";
 // ✅ IMPORT ICONS HERE
 import { Plus, FileText } from "lucide-react";
+import UploadAssetModal from "../components/inventory/UploadAssetModal";
 
 // Import our newly extracted table components
 import WorkstationTable from "../components/inventory/WorkstationTable";
@@ -87,6 +88,7 @@ const InventoryPage = () => {
   const [showWorkstationReport, setShowWorkstationReport] = useState(false);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   useEffect(() => {
     fetchInventory();
@@ -252,40 +254,38 @@ const InventoryPage = () => {
       </div>
 
       {/* Filter Toggle & Controls */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setShowUnassignedAssets(false)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                !showUnassignedAssets
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              🖥️ Workstations ({filteredWorkstations.length})
-            </button>
-            <button
-              onClick={() => setShowUnassignedAssets(true)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                showUnassignedAssets
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              📦 Other Assets ({filteredUnassignedAssets.length})
-            </button>
+      <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          
+          {/* LEFT SIDE: Tabs & Optional Lab Filter */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowUnassignedAssets(false)}
+                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
+                  !showUnassignedAssets
+                    ? "bg-[#1d4ed8] text-white" // Standard Tailwind blue-700/600 look
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                🖥️ Workstations ({filteredWorkstations.length})
+              </button>
+              <button
+                onClick={() => setShowUnassignedAssets(true)}
+                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
+                  showUnassignedAssets
+                    ? "bg-[#1d4ed8] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                📦 Other Assets ({filteredUnassignedAssets.length})
+              </button>
+            </div>
 
-            {/* Lab Filter */}
+            {/* Lab Filter (kept here so you don't lose the functionality, styled to match) */}
             {(user?.role === "Admin" ||
               (user?.role === "Custodian" && availableLabs.length > 1)) && (
-              <div className="flex items-center space-x-2">
-                <label
-                  htmlFor="lab-filter"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Filter by Lab:
-                </label>
+              <div className="flex items-center space-x-2 border-l border-gray-300 pl-3">
                 <select
                   id="lab-filter"
                   value={selectedLabId || ""}
@@ -294,7 +294,7 @@ const InventoryPage = () => {
                       e.target.value ? Number(e.target.value) : null,
                     )
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 px-3 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">All Laboratories</option>
                   {availableLabs.map((lab) => (
@@ -307,33 +307,45 @@ const InventoryPage = () => {
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* RIGHT SIDE: Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
             {!showUnassignedAssets && (
               <button
-                className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
+                className="h-9 px-3 border borde  r-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
               >
-                <Plus className="w-4 h-4 mr-2" /> Add Workstation
+                <Plus className="w-4 h-4 mr-1.5" /> Add Workstation
               </button>
             )}
-
             {(user?.role === "Admin" || user?.role === "Custodian") && (
               <>
                 <button
-                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-9 px-3 bg-[#1d4ed8] text-white text-sm rounded-md hover:bg-blue-800 flex items-center font-medium transition-colors cursor-pointer"
                   onClick={() => setShowModal(true)}
                 >
-                  <Plus className="w-4 h-4 mr-2" /> Add Asset
+                  <Plus className="w-4 h-4 mr-1.5" /> Add Asset
                 </button>
                 <button
-                  className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-9 px-3 bg-[#16a34a] text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium transition-colors cursor-pointer"
                   onClick={() => setShowWorkstationReport(true)}
                 >
-                  <FileText className="w-4 h-4 mr-2" /> Workstation Report
+                  <FileText className="w-4 h-4 mr-1.5" /> Workstation Report
                 </button>
+                {/* ✅ Show Upload Data button if Custodian */}
+                {user?.role === "Custodian" && (
+                  <button
+                    className="h-9 px-3 bg-[#eab308] text-white text-sm rounded-md hover:bg-yellow-600 flex items-center font-medium transition-colors cursor-pointer"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    {/* Simple upload icon, adjust as needed */}
+                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4M12 16V8M12 8l4 4M12 8l-4 4"/></svg>
+                    Upload Data (XLSX)
+                  </button>
+                )}
               </>
             )}
           </div>
+
         </div>
       </div>
 
@@ -403,6 +415,14 @@ const InventoryPage = () => {
       <WorkstationReport
         show={showWorkstationReport}
         onClose={() => setShowWorkstationReport(false)}
+      />
+      <UploadAssetModal
+        show={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => {
+          fetchInventory();
+          fetchWorkstations();
+        }}
       />
     </div>
   );

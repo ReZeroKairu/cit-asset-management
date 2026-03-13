@@ -9,17 +9,17 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const workstations = await prisma.workstations.findMany({
       include: {
-        laboratory: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
             location: true,
           },
         },
-        current_status: true,
-        assets: {
+        asset_statuses: true,
+        inventory_assets: {
           include: {
-            details: true,
+            asset_details: true,
             units: true,
           },
         },
@@ -51,7 +51,7 @@ export const createWorkstation = async (req: Request, res: Response) => {
         status_id: status_id ? Number(status_id) : 1, // Default to 1
       },
       include: {
-        current_status: true,
+        asset_statuses: true,
       },
     });
 
@@ -78,17 +78,17 @@ export const getWorkstationDetails = async (req: Request, res: Response) => {
         ? { workstation_id: Number(searchParam) }
         : { workstation_name: searchParam },
       include: {
-        laboratory: {
+        laboratories: {
           select: {
             lab_id: true,
             lab_name: true,
             location: true,
           },
         },
-        current_status: true,
-        assets: {
+        asset_statuses: true,
+        inventory_assets: {
           include: {
-            details: true,
+            asset_details: true,
             units: true,
           },
         },
@@ -149,7 +149,7 @@ export const updateWorkstation = async (req: Request, res: Response) => {
       where: { workstation_id: workstationId },
       data: updateData,
       include: {
-        current_status: true,
+        asset_statuses: true,
       },
     });
 
@@ -337,8 +337,8 @@ export const getWorkstationsByLab = async (req: Request, res: Response) => {
         lab_id: Number(labId),
       },
       include: {
-        current_status: true, // ✅ Fetches "Functional", "For Repair", etc.
-        assets: true,
+        asset_statuses: true, // ✅ Fetches "Functional", "For Repair", etc.
+        inventory_assets: true,
       },
       orderBy: {
         workstation_name: "asc",

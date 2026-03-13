@@ -14,8 +14,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye,
   Download,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
@@ -279,6 +279,14 @@ export const FormsManagementPage = () => {
     }
   };
 
+  const handleGenerateForm = async (form: any) => {
+    try {
+      await generateFormDocument(form);
+    } catch (error) {
+      console.error("Error generating form:", error);
+    }
+  };
+
   const updateStatus = async (
     formId: number,
     formType: string,
@@ -318,7 +326,7 @@ export const FormsManagementPage = () => {
       case "Returned":
         return <CheckCircle className="w-4 h-4 text-blue-500" />;
       case "Completed":
-        return <CheckCircle className="w-4 h-4 text-purple-500" />;
+        return null; // Remove icon for Completed status
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
     }
@@ -464,7 +472,7 @@ export const FormsManagementPage = () => {
                   start_date: e.target.value,
                 }))
               }
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
             <input
               type="date"
@@ -473,7 +481,7 @@ export const FormsManagementPage = () => {
               onChange={(e) =>
                 setDateFilter((prev) => ({ ...prev, end_date: e.target.value }))
               }
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
             <Button
               onClick={() => setDateFilter({ start_date: "", end_date: "" })}
@@ -504,7 +512,14 @@ export const FormsManagementPage = () => {
           </Card>
         ) : (
           filteredForms.map((form) => (
-            <Card key={`${form.type}-${form.id}`}>
+            <Card 
+              key={`${form.type}-${form.id}`} 
+              className="cursor-pointer hover:shadow-md hover:shadow-blue-100 hover:border-blue-200 transition-all duration-200"
+              onClick={() => {
+                setSelectedForm(form);
+                setShowDetails(true);
+              }}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -513,7 +528,7 @@ export const FormsManagementPage = () => {
                       <h3 className="font-semibold text-gray-900">
                         {getFormTypeLabel(form.type)}
                       </h3>
-                      <Badge className={getStatusColor(form.status)}>
+                      <Badge className={`${getStatusColor(form.status)} border-0`}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(form.status)}
                           {form.status}
@@ -521,26 +536,41 @@ export const FormsManagementPage = () => {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div>
-                        <span className="font-medium">Name:</span> {form.name}
-                      </div>
-                      <div>
-                        <span className="font-medium">Date:</span>{" "}
-                        {new Date(form.date).toLocaleDateString()}
-                      </div>
-                      {form.laboratory && (
-                        <div>
-                          <span className="font-medium">Lab:</span>{" "}
-                          {form.laboratory}
+                    {/* Add Usage Type and User Type for lab requests like ArchivePage */}
+                    {form.type === 'lab-request' && (
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-gray-500">User:</span>
+                          <span className="capitalize">
+                            {form.details?.user_type || form.details?.userType || 'N/A'}
+                          </span>
                         </div>
-                      )}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium text-gray-500">Usage:</span>
+                          <span className="capitalize">
+                            {form.details?.usage_type?.replace('-', ' ') || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-sm text-gray-600">
+                      <span className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {form.name}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {new Date(form.date).toLocaleDateString()}
+                        </span>
+                      </span>
                     </div>
 
-                    {form.purpose && (
+                    {/* Purpose field moved below name and date */}
+                    {form.details?.purpose && (
                       <div className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium">Purpose:</span>{" "}
-                        {form.purpose}
+                        {form.details.purpose}
                       </div>
                     )}
 
@@ -550,18 +580,7 @@ export const FormsManagementPage = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2 ml-4">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedForm(form);
-                        setShowDetails(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-
+                  <div className="flex gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
                     {form.status === "Pending" && (
                       <>
                         <Button
@@ -569,7 +588,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Approved")
                           }
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 cursor-pointer"
                         >
                           Approve
                         </Button>
@@ -579,6 +598,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Denied")
                           }
+                          className="cursor-pointer"
                         >
                           Deny
                         </Button>
@@ -592,7 +612,7 @@ export const FormsManagementPage = () => {
                           onClick={() =>
                             updateStatus(form.id, form.type, "Returned")
                           }
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
                         >
                           Mark Returned
                         </Button>
@@ -601,18 +621,12 @@ export const FormsManagementPage = () => {
                     {/* Generate Form Document Button */}
                     <Button
                       size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        console.log(
-                          "Generate button clicked for archived form:",
-                          form
-                        );
-                        generateFormDocument(form);
-                      }}
-                      className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
-                      title="Generate Form Document"
+                      variant="outline"
+                      onClick={() => handleGenerateForm(form)}
+                      className="cursor-pointer"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
                     </Button>
                   </div>
                 </div>

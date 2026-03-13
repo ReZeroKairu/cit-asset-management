@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Edit, Trash2 } from "lucide-react"; // Removed the Eye icon
+import { calculateWorstStatus } from "../../utils/statusUtils";
+import { getWorkstationAssets } from "../../api/inventory";
 
 interface Props {
   workstations: any[];
@@ -16,6 +18,40 @@ const WorkstationTable: React.FC<Props> = ({
   onDelete,
   getStatusColor,
 }) => {
+  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
+
+  // Load assets for each workstation
+  useEffect(() => {
+    const loadAssetsForWorkstations = async () => {
+      for (const ws of workstations) {
+        try {
+          const assets = await getWorkstationAssets(ws.workstation_id);
+          // Transform assets to have status property
+          const transformedAssets = assets.map((asset: any) => ({
+            ...asset,
+            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+          }));
+          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: transformedAssets }));
+        } catch (error) {
+          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
+          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: [] }));
+        }
+      }
+    };
+
+    if (workstations.length > 0) {
+      loadAssetsForWorkstations();
+    }
+  }, [workstations]);
+
+  // Calculate actual status for each workstation
+  const getCalculatedStatus = (workstation: any) => {
+    const assets = workstationAssets[workstation.workstation_id] || [];
+    if (assets.length === 0) {
+      return workstation.asset_statuses?.status_name || 'Functional';
+    }
+    return calculateWorstStatus(assets);
+  };
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -64,19 +100,19 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                    {workstation.laboratory?.lab_name || "N/A"}
+                    {workstation.laboratories?.lab_name || "N/A"}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {workstation.laboratory?.location || "N/A"}
+                  {workstation.laboratories?.location || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      workstation.current_status?.status_name,
+                      getCalculatedStatus(workstation),
                     )}`}
                   >
-                    {workstation.current_status?.status_name || "Unknown"}
+                    {getCalculatedStatus(workstation)}
                   </span>
                 </td>
                 <td
@@ -87,7 +123,7 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button
-                    className="text-blue-600 hover:text-blue-800 p-1 hover:bg-gray-200 rounded transition-colors"
+                    className="text-blue-600 hover:text-blue-800 p-1 hover:bg-gray-200 rounded transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation(); // Stops row click from triggering
                       onEdit(workstation);
@@ -97,7 +133,7 @@ const WorkstationTable: React.FC<Props> = ({
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded transition-colors"
+                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded transition-colors cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation(); // Stops row click from triggering
                       onDelete(workstation.workstation_id);

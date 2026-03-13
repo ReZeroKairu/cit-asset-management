@@ -27,6 +27,7 @@ const PublicLandingPage = () => {
               </p>
               <Button 
                 onClick={() => window.location.href = '/public-forms'}
+                variant="outline"
                 className="w-full"
               >
                 Access Public Forms
@@ -39,16 +40,15 @@ const PublicLandingPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
                 <MessageSquare className="w-8 h-8 text-orange-600 mr-3" />
-                <h2 className="text-xl font-semibold">Complaint Ticket</h2>
+                <h2 className="text-xl font-semibold">Submit Complaint</h2>
               </div>
               <p className="text-gray-600 mb-4">
-                Submit complaints about issues in your workstation.
+                Report issues with laboratory equipment, software, or facilities.
               </p>
               <Button 
-                onClick={() => alert('Complaint system coming soon!')}
+                onClick={() => window.location.href = '/complaints'}
                 variant="outline"
                 className="w-full"
-                disabled
               >
                 Submit Complaint
                 <ArrowRight className="w-4 h-4 ml-2" />

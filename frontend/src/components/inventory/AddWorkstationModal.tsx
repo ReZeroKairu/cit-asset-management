@@ -1,7 +1,9 @@
 // frontend/src/components/inventory/AddWorkstationModal.tsx
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
+import { X } from "lucide-react";
 
 interface Props {
   show: boolean;
@@ -137,20 +139,29 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999]"
+        onClick={handleClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-[10000] overflow-y-auto"
+        onClick={handleClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
-            <div className="bg-gray-800 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
+            <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex justify-between items-center">
               <h3 className="text-lg font-semibold">Create Workstations</h3>
               <button
                 onClick={handleClose}
-                className="text-white hover:text-gray-300"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
 
@@ -197,7 +208,7 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                   <button
                     type="button"
                     onClick={handleAddToList}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center shadow-sm"
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center shadow-sm cursor-pointer"
                   >
                     <span className="mr-2 font-bold">+</span> Add to List
                   </button>
@@ -263,14 +274,14 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAll}
                 disabled={submitting || workstations.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium shadow-sm"
+                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium shadow-sm cursor-pointer"
               >
                 {submitting ? "Saving..." : "Save All to Database"}
               </button>
@@ -279,7 +290,7 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         </div>
       </div>
     </>
-  );
+    , document.body);
 };
 
 export default AddWorkstationModal;

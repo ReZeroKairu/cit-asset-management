@@ -39,13 +39,13 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
   const getServiceTypeBadgeColor = (serviceType: string) => {
     switch (serviceType) {
       case "REPAIR":
-        return "bg-orange-100 text-orange-700 border-orange-300";
+        return "bg-amber-100 text-amber-800 border-amber-200";
       case "REPLACEMENT":
-        return "bg-red-100 text-red-700 border-red-300";
+        return "bg-red-100 text-red-800 border-red-200";
       case "UPGRADE":
-        return "bg-purple-100 text-purple-700 border-purple-300";
+        return "bg-blue-100 text-blue-800 border-blue-200";
       default:
-        return "bg-blue-100 text-blue-700 border-blue-300";
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 

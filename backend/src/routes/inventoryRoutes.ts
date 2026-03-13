@@ -13,14 +13,14 @@ import { authenticateToken } from "../middleware/auth";
 const router = Router();
 const prisma = new PrismaClient();
 
-router.use(authenticateToken);
-
-// Main Inventory
+// Public access for GET requests (for complaints form)
 router.get("/", getInventory);
-router.post("/", createAsset);
-router.post("/batch", batchCreateAssets);
-router.put("/:id", updateAsset);
-router.delete("/:id", deleteAsset);
+
+// Protected routes require authentication
+router.post("/", authenticateToken, createAsset);
+router.post("/batch", authenticateToken, batchCreateAssets);
+router.put("/:id", authenticateToken, updateAsset);
+router.delete("/:id", authenticateToken, deleteAsset);
 
 // ✅ ADD THIS ROUTE
 router.get("/statuses", getAssetStatuses);

@@ -40,7 +40,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, currentPage, onNaviga
             <span className="text-sm text-gray-700">{user?.name} ({user?.role})</span>
             <button 
               type="button"
-              className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center"
+              className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center cursor-pointer"
               onClick={logout}
             >
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

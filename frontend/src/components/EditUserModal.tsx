@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription } from "./ui/alert";
 import api from "../api/axios";
+import { X } from "lucide-react";
 
 interface User {
   user_id: number;
@@ -67,20 +68,24 @@ const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSuccess }) =>
 
   return (
     <>
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-40"
+        onClick={onClose}
+      ></div>
+      <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Edit User</h3>
+              <h3 className="text-lg font-semibold">Update User</h3>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-800 transition-colors cursor-pointer"
                 onClick={onClose}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-5 h-5 text-white" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -98,6 +103,7 @@ const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSuccess }) =>
                   placeholder="Enter full name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  className="capitalize-first"
                   required
                 />
               </div>
@@ -127,18 +133,11 @@ const EditUserModal: React.FC<Props> = ({ user, isOpen, onClose, onSuccess }) =>
                 </select>
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                >
-                  Cancel
-                </Button>
+              <div className="flex justify-end">
                 <Button 
                   type="submit" 
-                  variant="outline"
                   disabled={loading}
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {loading ? 'Updating...' : 'Update User'}
                 </Button>

@@ -7,6 +7,7 @@ import {
 import { getAllWorkstations } from "../../api/workstations";
 import { getLaboratories } from "../../api/laboratories";
 import { useAuth } from "../../context/AuthContext";
+import { createPortal } from "react-dom";
 
 // Import our new sub-components
 import AssetFormInputs from "./add-asset/AssetFormInputs";
@@ -271,12 +272,21 @@ const AddAssetModal: React.FC<Props> = ({
 
   if (!show) return null;
 
-  return (
+  return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] transition-opacity"></div>
-      <div className="fixed inset-0 z-[90] overflow-y-auto">
+      <div 
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999] transition-opacity"
+        onClick={handleClose}
+      ></div>
+      <div 
+        className="fixed inset-0 z-[10000] overflow-y-auto"
+        onClick={handleClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4 py-6">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100">
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all scale-100"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between shadow-md z-10">
               <h3 className="text-lg font-semibold tracking-wide">
@@ -286,7 +296,7 @@ const AddAssetModal: React.FC<Props> = ({
               </h3>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-blue-700"
+                className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-blue-700 cursor-pointer"
                 onClick={handleClose}
               >
                 <svg
@@ -322,7 +332,7 @@ const AddAssetModal: React.FC<Props> = ({
               <div className="flex justify-between items-center mb-4">
                 <button
                   onClick={handleAddToList}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-md transition-all active:scale-95"
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium shadow-md transition-all active:scale-95 cursor-pointer"
                 >
                   <svg
                     className="w-5 h-5 mr-2"
@@ -352,14 +362,14 @@ const AddAssetModal: React.FC<Props> = ({
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end space-x-3 border-t border-gray-200">
               <button
                 onClick={handleClose}
-                className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+                className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAll}
                 disabled={submitting || assets.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md transition-colors"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md transition-colors cursor-pointer"
               >
                 {submitting ? "Saving..." : "Save All to Database"}
               </button>
@@ -368,7 +378,7 @@ const AddAssetModal: React.FC<Props> = ({
         </div>
       </div>
     </>
-  );
+    , document.body);
 };
 
 export default AddAssetModal;

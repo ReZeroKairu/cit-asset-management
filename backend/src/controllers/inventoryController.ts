@@ -22,9 +22,9 @@ export const getInventory = async (req: Request, res: Response) => {
     const assets = await prisma.inventory_assets.findMany({
       where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       include: {
-        details: {
+        asset_details: {
           include: {
-            current_status: true, // Include the status name (e.g. "Functional")
+            asset_statuses: true, // Include the status name (e.g. "Functional")
           },
         },
         laboratories: true,
@@ -67,7 +67,7 @@ export const createAsset = async (req: Request, res: Response) => {
         workstation_id: workstation_id ? Number(workstation_id) : null,
         added_by_user_id: user_id ? Number(user_id) : null,
 
-        details: {
+        asset_details: {
           create: {
             description,
             property_tag_no,
@@ -82,11 +82,11 @@ export const createAsset = async (req: Request, res: Response) => {
         },
       },
       include: {
-        details: true,
+        asset_details: true,
         laboratories: true,
         units: true,
         users: true,
-        workstation: true,
+        workstations: true,
       },
     });
     res.json(newAsset);
@@ -185,37 +185,48 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
     const createdAssets = await prisma.$transaction(async (tx: any) => {
       const results = [];
       for (const asset of assets) {
-        const newAsset = await tx.inventory_assets.create({
-          data: {
-            lab_id: Number(asset.lab_id),
-            unit_id: Number(asset.unit_id),
-            workstation_id: asset.workstation_id
-              ? Number(asset.workstation_id)
-              : null,
-            added_by_user_id: user_id ? Number(user_id) : null,
-            details: {
-              create: {
-                property_tag_no: asset.property_tag_no || null,
-                description: asset.description?.trim() || "",
-                serial_number: asset.serial_number?.trim() || "",
-                quantity: Number(asset.quantity) || 1,
-                date_of_purchase: asset.date_of_purchase
-                  ? new Date(asset.date_of_purchase)
-                  : null,
-                asset_remarks: asset.asset_remarks || null,
-                status_id: asset.status_id ? Number(asset.status_id) : 1,
+        try {
+          const newAsset = await tx.inventory_assets.create({
+            data: {
+              lab_id: Number(asset.lab_id),
+              unit_id: Number(asset.unit_id),
+              workstation_id: asset.workstation_id
+                ? Number(asset.workstation_id)
+                : null,
+              added_by_user_id: user_id ? Number(user_id) : null,
+              asset_details: {
+                create: {
+                  property_tag_no: asset.property_tag_no || null,
+                  description: asset.description?.trim() || "",
+                  serial_number: asset.serial_number?.trim() || "",
+                  quantity: Number(asset.quantity) || 1,
+                  date_of_purchase: asset.date_of_purchase
+                    ? new Date(asset.date_of_purchase)
+                    : null,
+                  asset_remarks: asset.asset_remarks || null,
+                  status_id: asset.status_id ? Number(asset.status_id) : 1,
+                },
               },
             },
-          },
-          include: {
-            details: true,
-            laboratories: true,
-            units: true,
-            users: true,
-            workstation: true,
-          },
-        });
-        results.push(newAsset);
+            include: {
+              asset_details: true,
+              laboratories: true,
+              units: true,
+              users: true,
+              workstations: true,
+            },
+          });
+          results.push(newAsset);
+        } catch (error: any) {
+          // Handle duplicate property_tag_no error
+          if (error.code === 'P2002' && error.meta?.target === 'property_tag_no') {
+            console.warn(`⚠️ Property tag "${asset.property_tag_no}" already exists, skipping asset creation`);
+            // Continue with other assets, don't fail the entire transaction
+            continue;
+          }
+          // For other errors, re-throw
+          throw error;
+        }
       }
       return results;
     });
@@ -298,19 +309,19 @@ export const updateAsset = async (req: Request, res: Response) => {
         ...updateData,
         // Only update details if there is details data to update
         ...(Object.keys(detailsData).length > 0 && {
-          details: {
+          asset_details: {
             update: detailsData,
           },
         }),
       },
       include: {
-        details: {
-          include: { current_status: true },
+        asset_details: {
+          include: { asset_statuses: true },
         },
         laboratories: true,
         units: true,
         users: true,
-        workstation: true,
+        workstations: true,
       },
     });
 

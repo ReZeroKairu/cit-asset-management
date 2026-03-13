@@ -88,11 +88,11 @@ export const NetworkTable: React.FC<Props> = ({ items, onItemChange }) => {
                   onChange={(e) =>
                     onItemChange(index, "status", e.target.value)
                   }
-                  className="block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none text-green-700 bg-green-50"
+                  className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors bg-white text-gray-900"
                 >
-                  <option value="Functional">Functional</option>
-                  <option value="Not Functional">Not Functional</option>
-                  <option value="N/A">N/A</option>
+                  <option value="Functional" className="text-gray-900">Functional</option>
+                  <option value="Not Functional" className="text-gray-900">Not Functional</option>
+                  <option value="N/A" className="text-gray-900">N/A</option>
                 </select>
               </td>
             </tr>

@@ -12,17 +12,21 @@ import FormsPage from "./pages/FormsPage";
 import PublicFormsPage from "./pages/PublicFormsPage";
 import PublicLandingPage from "./pages/PublicLandingPage";
 import OneTimeFormPage from "./pages/OneTimeFormPage";
+import ComplaintsPage from "./pages/ComplaintsPage";
+import ComplaintsManagementPage from "./pages/ComplaintsManagementPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import MaintenancePage from "./pages/MaintenancePage";
+import InventoryAnalyticsSection from "./components/admin/InventoryAnalyticsSection";
+import CustodianInventoryAnalyticsSection from "./components/admin/CustodianInventoryAnalyticsSection";
 // ✅ UPDATED: Added Wrench icon
 import {
   Package,
   Building,
   FileText,
-  Users,
   Wrench,
   ClipboardList,
+  MessageSquare,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
 
@@ -46,7 +50,7 @@ interface LabFormData {
 // Home Page Component with Real Data
 const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
-    null,
+    null
   );
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -147,26 +151,30 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {/* ✅ NEW: Maintenance Card */}
-        <Card
-          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          onClick={() => handleNavigate("maintenance")}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Maintenance</p>
-                <p className="text-2xl font-bold text-gray-900">QPMC</p>
-                <p className="text-xs text-indigo-600 mt-1">
-                  Preventive Checks →
-                </p>
+        {/* ✅ NEW: Maintenance Card - Only for Custodians */}
+        {userRole === "Custodian" && (
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("maintenance")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Maintenance</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.unservicedWorkstations || 0}
+                  </p>
+                  <p className="text-xs text-indigo-600 mt-1">
+                    {stats.servicedWorkstations || 0} serviced • {stats.unservicedWorkstations || 0} need attention →
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <Wrench className="w-6 h-6 text-indigo-600" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                <Wrench className="w-6 h-6 text-indigo-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <Card
           className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
@@ -216,7 +224,7 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
           </CardContent>
         </Card>
 
-        {isAdmin ? (
+        {isAdmin && (
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
             onClick={() => handleNavigate("labs")}
@@ -240,15 +248,43 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          /* Placeholder or another user card for Custodians if needed */
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow duration-200 bg-gray-50">
-            <CardContent className="pt-6 flex items-center justify-center h-full">
-              <p className="text-gray-400 text-sm">System Status: Active</p>
+        )}
+
+        {/* ✅ NEW: Complaints Dashboard Card - Only for Custodians */}
+        {userRole === "Custodian" && (
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            onClick={() => handleNavigate("complaints-management")}
+          >
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Active Complaints
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.totalComplaints || 0}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    {stats.openComplaints || 0} Open •{" "}
+                    {stats.inProgressComplaints || 0} In Progress
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <MessageSquare className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
+
+      {/* Inventory Analytics Section - Role Based */}
+      {userRole === "Admin" ? (
+        <InventoryAnalyticsSection />
+      ) : userRole === "Custodian" ? (
+        <CustodianInventoryAnalyticsSection />
+      ) : null}
     </div>
   );
 };
@@ -268,12 +304,15 @@ function App() {
     | "public-forms"
     | "public-landing"
     | "one-time-form"
+    | "complaints"
+    | "complaints-management"
     | "login"
     | "maintenance"
   >(() => {
     const path = window.location.pathname;
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
+    if (path === "/complaints") return "complaints";
     if (path === "/one-time" || path.startsWith("/one-time"))
       return "one-time-form";
 
@@ -299,6 +338,8 @@ function App() {
       const path = window.location.pathname;
       if (path === "/public-forms") {
         setCurrentPage("public-forms");
+      } else if (path === "/complaints") {
+        setCurrentPage("complaints");
       } else if (path === "/one-time" || path.startsWith("/one-time")) {
         setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
@@ -335,6 +376,8 @@ function App() {
     setCurrentPage(page as any);
     if (page === "public-forms") {
       window.history.pushState(null, "", "/public-forms");
+    } else if (page === "complaints") {
+      window.history.pushState(null, "", "/complaints");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else if (page === "one-time-form") {
@@ -380,6 +423,14 @@ function App() {
         return <OneTimeFormPage />;
       case "public-forms":
         return <PublicFormsPage />;
+      case "complaints":
+        return <ComplaintsPage />;
+      case "complaints-management":
+        // Only custodians can access complaints management
+        if (user?.role !== "Custodian") {
+          return <HomePage onNavigate={handleNavigate} />;
+        }
+        return <ComplaintsManagementPage />;
       case "public-landing":
         return <PublicLandingPage />;
       default:
@@ -391,6 +442,7 @@ function App() {
   if (
     currentPage === "one-time-form" ||
     currentPage === "public-forms" ||
+    currentPage === "complaints" ||
     currentPage === "public-landing"
   ) {
     return renderPage();

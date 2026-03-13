@@ -4,6 +4,7 @@ import { getLabPMCReports, getPMCReport } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
 import { generateQPMCReport } from "../../utils/reportGenerator";
+import { calculateWorstStatus } from "../../utils/statusUtils";
 
 interface Props {
   labId: number | null;
@@ -23,7 +24,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const [reports, setReports] = useState<any[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(
-    null,
+    null
   );
 
   const quartersList = [
@@ -64,7 +65,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
       // Fetch detailed report data
       const detailedReport = await getPMCReport(
         report.workstation_id,
-        selectedQuarter,
+        selectedQuarter
       );
 
       // Fetch workstation assets
@@ -86,12 +87,12 @@ const QuarterlyReportsView: React.FC<Props> = ({
       const wsName = getWorkstationName(report.workstation_id);
       const finalName = String(wsName).toLowerCase().includes("workstation")
         ? wsName
-        : `Workstation ${wsName}`;
+        : `${wsName}`;
 
       await generateWorkstationReport(
         detailedReport,
         formattedAssets,
-        finalName,
+        finalName
       );
     } catch (error) {
       console.error("Failed to download report:", error);
@@ -104,7 +105,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const generateWorkstationReport = async (
     pmcReport: any,
     assets: any[],
-    workstationName: string,
+    workstationName: string
   ) => {
     const SYSTEM_UNIT_TYPES = [
       "SSD",
@@ -156,14 +157,14 @@ const QuarterlyReportsView: React.FC<Props> = ({
     // Separate Assets into Peripherals and System Components
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
-        (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-      ),
+        (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+      )
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
-          (type) => type.toLowerCase() === asset.unit_name.toLowerCase(),
-        ),
+          (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
+        )
     );
 
     // Build components list with Peripherals first
@@ -174,18 +175,14 @@ const QuarterlyReportsView: React.FC<Props> = ({
       remarks: asset.asset_remarks || "",
     }));
 
-    // Add System Unit Parent row
-    const isAllFunctional =
-      systemComponents.length > 0 &&
-      systemComponents.every((asset) =>
-        ["Functional", "Working", "Operational"].includes(asset.status),
-      );
+    // Add System Unit Parent row with shared utility
+    const systemUnitStatus = calculateWorstStatus(systemComponents);
 
     componentsList.push({
       name: "System Unit",
-      ...mapStatus(pmcReport.workstation_status),
+      ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: isAllFunctional ? "Functional" : "",
+      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
     });
 
     // Add System Unit Components
@@ -210,8 +207,8 @@ const QuarterlyReportsView: React.FC<Props> = ({
       pmcReport.connectivity_type === "Wired"
         ? "☑ Wired   ☐ Wireless"
         : pmcReport.connectivity_type === "Wireless"
-          ? "☐ Wired   ☑ Wireless"
-          : "☐ Wired   ☐ Wireless";
+        ? "☐ Wired   ☑ Wireless"
+        : "☐ Wired   ☐ Wireless";
 
     componentsList.push({
       name: "Connectivity Type",
@@ -288,7 +285,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
                 className={`relative flex flex-col items-start justify-center w-36 transition-all ${
                   isActive
                     ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
-                    : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
+                    : "bg-blue-500 text-black hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
                 }`}
               >
                 {isActive && (
@@ -299,7 +296,9 @@ const QuarterlyReportsView: React.FC<Props> = ({
                     {q.num}
                   </span>
                   <span
-                    className={`text-xs font-medium tracking-wide block text-left ${isActive ? "text-gray-500" : "text-blue-100"}`}
+                    className={`text-xs font-medium tracking-wide block text-left ${
+                      isActive ? "text-gray-500" : "text-blue-100"
+                    }`}
                   >
                     {q.label}
                   </span>

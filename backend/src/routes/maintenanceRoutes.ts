@@ -5,6 +5,7 @@ import {
   createPMCReport,
   getServiceHistory,
   createRepairLog,
+  getMaintenanceAnalytics,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
 
@@ -34,5 +35,9 @@ router.get("/pmc/history", getServiceHistory);
 // 5. Create a repair/replacement log
 // POST /api/maintenance/pmc/repair
 router.post("/pmc/repair", createRepairLog);
+
+// 6. Get preventive maintenance analytics for dashboard
+// GET /api/maintenance/analytics
+router.get("/analytics", getMaintenanceAnalytics);
 
 export default router;

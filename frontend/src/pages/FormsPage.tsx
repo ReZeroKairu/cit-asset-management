@@ -16,20 +16,10 @@ import { FormList } from "../components/forms/FormList";
 import { LabRequestForm } from "../components/forms/LabRequestForm";
 import { EquipmentBorrowForm } from "../components/forms/EquipmentBorrowForm";
 import { SoftwareInstallForm } from "../components/forms/SoftwareInstallForm";
-import {
-  Download,
-  Edit,
-  Eye,
-  Clock,
-  QrCode,
-  FileText,
-  Users,
-} from "lucide-react";
+import { Download, Edit, QrCode, FileText } from "lucide-react";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import QRCodeGenerator from "../components/QRCodeGenerator";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 import { type FormSubmission } from "../types/forms";
 
 const FormsPage = () => {
@@ -45,20 +35,9 @@ const FormsPage = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    console.log("useEffect triggered - user:", user);
-    if (user) {
-      console.log("User exists, calling fetchForms");
-      fetchForms();
-    } else {
-      console.log("No user, skipping fetchForms");
-    }
-  }, [user]);
-
-  const fetchForms = async () => {
+  const fetchForms = useCallback(async () => {
     try {
       setLoading(true);
-      console.log("Fetching forms for user:", user);
 
       const [
         labRequests,
@@ -72,13 +51,6 @@ const FormsPage = () => {
         getOneTimeFormSubmissionsNoAuth(),
       ]);
 
-      console.log("API Responses:", {
-        labRequests,
-        equipmentBorrows,
-        softwareInstallations,
-        oneTimeSubmissions,
-      });
-
       const labRequestsData = Array.isArray(labRequests)
         ? labRequests
         : labRequests?.data || [];
@@ -91,13 +63,6 @@ const FormsPage = () => {
       const oneTimeSubmissionsData = Array.isArray(oneTimeSubmissions)
         ? oneTimeSubmissions
         : [];
-
-      console.log("🔍 FormsPage - Current user:", {
-        user: user,
-        userId: user?.id,
-        userIdType: typeof user?.id,
-        userRole: user?.role,
-      });
 
       const allForms: FormSubmission[] = [
         ...labRequestsData.map((req: any) => ({
@@ -159,7 +124,7 @@ const FormsPage = () => {
           return allForms.filter(
             (form) =>
               form.status === "Custodian_Approved" &&
-              form.type !== "software-install", // Exclude software installation forms
+              form.type !== "software-install" // Exclude ALL software installation forms from main list
           );
         }
 
@@ -170,14 +135,15 @@ const FormsPage = () => {
                 // Only show forms that this custodian created or is directly responsible for
                 form.userId === user?.id ||
                 (form.details?.submittedVia === "one-time-token" &&
-                  form.details?.userId === user?.id),
+                  form.details?.userId === user?.id)
             )
             .filter(
               (form) =>
-                // Exclude archived forms (completed, returned, denied)
+                // Exclude archived forms (completed, returned, denied, lost)
                 form.status !== "Completed" &&
                 form.status !== "Returned" &&
-                form.status !== "Denied",
+                form.status !== "Denied" &&
+                form.status !== "Lost"
             );
         }
 
@@ -187,22 +153,26 @@ const FormsPage = () => {
       setForms(
         userForms.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        ),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
       );
     } catch (error) {
       console.error("Error fetching forms:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, user?.role]); // Only depend on specific user properties
+
+  useEffect(() => {
+    if (user && user.id) {
+      fetchForms();
+    }
+  }, [user?.id, user?.role]); // Only depend on specific user properties
 
   const updateStatus = useCallback(
     async (formId: number, formType: string, newStatus: string) => {
       try {
-        console.log(
-          `Updating status for ${formType} ${formId} to ${newStatus}`,
-        );
+        console.log(`🔄 Updating status for ${formType} ID ${formId} to ${newStatus}`);
 
         switch (formType) {
           case "lab-request":
@@ -219,30 +189,46 @@ const FormsPage = () => {
             return;
         }
 
-        console.log("Status update successful, refreshing forms...");
+        console.log(`✅ Successfully updated status to ${newStatus}`);
         await fetchForms();
       } catch (error) {
-        console.error("Error updating status:", error);
+        console.error("❌ Error updating status:", error);
+        console.error("Error details:", {
+          formId,
+          formType,
+          newStatus,
+          error: error instanceof Error ? error.message : error,
+          response: (error as any)?.response?.data,
+          status: (error as any)?.response?.status
+        });
+
+        // Show user-friendly error message
+        const errorMessage = (error as any)?.response?.data?.message ||
+                           (error as any)?.response?.data?.error ||
+                           "Failed to update status. Please try again.";
+
+        alert(`Error updating status: ${errorMessage}`);
       }
     },
-    [fetchForms],
+    [fetchForms]
   );
 
   const handleBulkApprove = useCallback(async () => {
     if (selectedForms.size === 0) return;
 
     try {
-      console.log(`Bulk approving ${selectedForms.size} forms`);
-
+      console.log('Bulk approving forms:', Array.from(selectedForms));
       const approvalPromises = Array.from(selectedForms).map((formIdStr) => {
-        const [formType, idStr] = formIdStr.split("-");
+        console.log('Processing formIdStr:', formIdStr);
+        const parts = formIdStr.split("-");
+        const idStr = parts[parts.length - 1]; // Last part is always the ID
+        const formType = parts.slice(0, -1).join("-"); // Everything before last hyphen is form type
+        console.log('Parsed formType:', formType, 'idStr:', idStr);
         const formId = parseInt(idStr);
+        console.log('Parsed formId:', formId, 'isNaN:', isNaN(formId));
 
         // Skip software-install forms - they are handled by custodians only
         if (formType === "software-install") {
-          console.log(
-            "Skipping software-install form - handled by custodians only",
-          );
           return Promise.resolve();
         }
 
@@ -250,6 +236,7 @@ const FormsPage = () => {
           case "lab-request":
             return apiUpdateLabRequestStatus(formId, "Admin_Approved");
           case "equipment-borrow":
+          case "equipment":  // Handle both formats
             return apiUpdateEquipmentBorrowStatus(formId, "Admin_Approved");
           default:
             console.error("Unknown form type:", formType);
@@ -258,32 +245,34 @@ const FormsPage = () => {
       });
 
       await Promise.all(approvalPromises);
-      console.log(
-        "Bulk approval successful, clearing selection and refreshing forms...",
-      );
-
+      console.log('Bulk approval completed successfully');
+      
       setSelectedForms(new Set());
       await fetchForms();
+      alert(`Successfully approved ${selectedForms.size} forms!`);
     } catch (error) {
       console.error("Error during bulk approval:", error);
+      alert("Error during bulk approval. Please try again.");
     }
   }, [selectedForms, fetchForms]);
 
   const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 text-yellow-800";
       case "Custodian_Approved":
       case "Admin_Approved":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800";
       case "Denied":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-800";
       case "Returned":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800";
+      case "Lost":
+        return "bg-red-100 text-red-800";
       case "Completed":
-        return "bg-purple-100 text-purple-800 border-purple-200";
+        return "bg-purple-100 text-purple-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   }, []);
 
@@ -330,7 +319,7 @@ const FormsPage = () => {
           return true;
       }
     },
-    [dateFilter],
+    [dateFilter]
   );
 
   const handleViewDetails = useCallback((form: FormSubmission) => {
@@ -348,19 +337,51 @@ const FormsPage = () => {
   }, []);
 
   const { filteredForms, pendingCount } = useMemo(() => {
+    console.log('🔍 Filtering forms:', {
+      totalForms: forms.length,
+      currentFilter: filter,
+      forms: forms.map(f => ({ 
+        id: f.id, 
+        status: f.status, 
+        type: f.type,
+        fullForm: f
+      }))
+    });
+    
     const filtered = forms.filter((form) => {
       const matchesStatus = filter === "all" || form.status === filter;
       const matchesDate = filterByDate(form);
       return matchesStatus && matchesDate;
     });
 
+    console.log('✅ Filtered result:', {
+      filteredCount: filtered.length,
+      filteredForms: filtered.map(f => ({ 
+        id: f.id, 
+        status: f.status, 
+        type: f.type,
+        fullForm: f
+      }))
+    });
+
     return {
       filteredForms: filtered,
       pendingCount: forms.filter(
-        (f) => f.status === "Pending" && filterByDate(f),
+        (f) => f.status === "Pending" && filterByDate(f)
       ).length,
     };
   }, [forms, filter, filterByDate]);
+
+  const handleFilterChange = useCallback((newFilter: string) => {
+    console.log('🎯 FormsPage filter change called:', newFilter);
+    setFilter(newFilter);
+  }, []);
+
+  console.log('👤 User role:', user?.role);
+    
+  // Show available status options for debugging
+  const availableStatuses = [...new Set(forms.map(f => f.status))];
+  console.log('📊 Available statuses:', availableStatuses);
 
   if (user?.role !== "Admin") {
     return (
@@ -380,7 +401,7 @@ const FormsPage = () => {
         {/* Add StatusFilter for Custodian users */}
         <StatusFilter
           value={filter}
-          onChange={setFilter}
+          onChange={handleFilterChange}
           pendingCount={pendingCount}
           userRole={user?.role}
           onDateFilterChange={setDateFilter}
@@ -453,244 +474,328 @@ const FormsPage = () => {
             <h2 className="text-lg font-semibold">Submitted Forms</h2>
             {loading ? (
               <div>Loading...</div>
-            ) : forms.length === 0 ? (
+            ) : filteredForms.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No submitted forms found. Forms submitted via your QR codes will
-                appear here.
+                No forms found matching the current filters
               </div>
             ) : (
-              forms.map((form) => (
-                <Card
-                  key={`${form.type}-${form.id}`}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">
+              <div className="overflow-hidden">
+                <table className="w-full divide-y divide-gray-200 table-fixed">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                        Form Info
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                        User Details
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                        Submitted
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredForms.map((form) => (
+                      <tr
+                        key={`${form.type}-${form.id}`}
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                        onClick={() => {
+                          console.log("Row clicked, form:", form);
+                          console.log("Form details:", form.details);
+                          setSelectedForm(form);
+                          setShowDetails(true);
+                          console.log(
+                            "After setting state - selectedForm:",
+                            form,
+                            "showDetails:",
+                            true
+                          );
+                        }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
                             {getFormTypeLabel(form.type)}
-                          </h3>
-                          <Badge className={getStatusColor(form.status)}>
-                            {form.status}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-600 mb-1">{form.purpose}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
-                            {form.name}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {new Date(form.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Submitted: {new Date(form.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            console.log("View button clicked, form:", form);
-                            console.log("Form details:", form.details);
-                            setSelectedForm(form);
-                            setShowDetails(true);
-                            console.log(
-                              "After setting state - selectedForm:",
-                              form,
-                              "showDetails:",
-                              true,
-                            );
-                          }}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-
-                        {user?.role === "Custodian" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              console.log(
-                                "Generate button clicked, form:",
-                                form,
-                              );
-                              generateFormDocument(form);
-                            }}
-                            className="p-2 h-8 w-8 cursor-pointer hover:bg-gray-100 rounded-md"
-                            title="Generate Form Document"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                        )}
-
-                        {user?.role === "Custodian" &&
-                          form.status === "Admin_Approved" && (
-                            <Button
-                              size="sm"
-                              className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
-                              onClick={() => {
-                                console.log("Edit button clicked, form:", form);
-                                setSelectedForm(form);
-                                setEditMode(true);
-                                setShowDetails(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-
-                        {form.status === "Pending" && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                updateStatus(
-                                  form.id,
-                                  form.type,
-                                  "Custodian_Approved",
-                                );
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
-                              onClick={() => {
-                                updateStatus(form.id, form.type, "Denied");
-                              }}
-                            >
-                              Deny
-                            </Button>
                           </div>
-                        )}
-                        {form.type === "equipment-borrow" &&
-                          form.status === "Admin_Approved" && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                // Check if required fields are filled before marking returned
-                                const returnedTime = form.details.returned_time;
-                                const remarks = form.details.remarks;
-
-                                if (!returnedTime || !remarks) {
-                                  const missingFields = [];
-                                  if (!returnedTime)
-                                    missingFields.push("Returned Time");
-                                  if (!remarks) missingFields.push("Remarks");
-
-                                  alert(
-                                    `Please fill in the following required fields before marking as returned:\n\n${missingFields.join("\n")}\n\nClick "Edit" to update form details.`,
-                                  );
-                                  return;
-                                }
-
-                                updateStatus(form.id, form.type, "Returned");
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                            >
-                              Returned
-                            </Button>
-                          )}
-
-                        {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
-                        {form.type === "software-install" &&
-                          form.status === "Custodian_Approved" && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
-                                onClick={() => {
-                                  console.log(
-                                    "Edit software installation clicked, form:",
-                                    form,
-                                  );
-                                  setSelectedForm(form);
-                                  setEditMode(true);
-                                  setShowDetails(true);
-                                }}
-                                title="Edit Installation Details"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                                onClick={() => {
-                                  console.log(
-                                    "Complete software installation clicked, form:",
-                                    form,
-                                  );
-
-                                  // Check if required fields are filled before marking as completed
-                                  const installationRemarks =
-                                    form.details.installation_remarks;
-                                  const feedbackDate =
-                                    form.details.feedback_date;
-
-                                  if (!installationRemarks || !feedbackDate) {
-                                    const missingFields = [];
-                                    if (!installationRemarks)
-                                      missingFields.push(
-                                        "Installation Remarks",
-                                      );
-                                    if (!feedbackDate)
-                                      missingFields.push("Feedback Date");
-
-                                    alert(
-                                      `Please fill in the following required fields before marking as completed:\n\n${missingFields.join("\n")}\n\nClick "Edit" to update form details.`,
-                                    );
-                                    return;
-                                  }
-
-                                  updateStatus(form.id, form.type, "Completed");
-                                }}
-                              >
-                                Completed
-                              </Button>
+                          {form.purpose && (
+                            <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                              {form.purpose}
                             </div>
                           )}
-                        {form.type === "lab-request" &&
-                          form.status === "Admin_Approved" && (
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                // Check if required fields are filled before completing
-                                const timeOut = form.details.time_out;
-                                const remarks = form.details.remarks;
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {form.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {form.type === "lab-request" && (
+                              <>
+                                {form.details?.user_type && (
+                                  <span className="capitalize">
+                                    {form.details.user_type.replace("-", " ")}
+                                  </span>
+                                )}
+                                {form.details?.usage_type && (
+                                  <span>
+                                    {" "}
+                                    •{" "}
+                                    {form.details.usage_type.replace("-", " ")}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                            {form.type !== "lab-request" && form.laboratory && (
+                              <span>{form.laboratory}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                              form.status
+                            )}`}
+                          >
+                            {form.status.replace("_", " ")}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                          {new Date(form.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {/* Download button for custodians */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {user?.role === "Custodian" && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    console.log(
+                                      "Generate button clicked, form:",
+                                      form
+                                    );
+                                    generateFormDocument(form);
+                                  }}
+                                  className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                                  title="Generate Form Document"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
 
-                                if (!timeOut || !remarks) {
-                                  const missingFields = [];
-                                  if (!timeOut) missingFields.push("Time Out");
-                                  if (!remarks) missingFields.push("Remarks");
+                            {/* Edit button for custodians with Admin_Approved status */}
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {user?.role === "Custodian" &&
+                                form.status === "Admin_Approved" && (
+                                  <Button
+                                    size="sm"
+                                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                    onClick={() => {
+                                      console.log(
+                                        "Edit button clicked, form:",
+                                        form
+                                      );
+                                      setSelectedForm(form);
+                                      setEditMode(true);
+                                      setShowDetails(true);
+                                    }}
+                                    title="Edit Form Details"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                )}
+                            </div>
 
-                                  alert(
-                                    `Please fill in the following required fields before completing:\n\n${missingFields.join("\n")}\n\nClick "Edit" to update the form details.`,
-                                  );
-                                  return;
-                                }
+                            {/* Approve/Deny buttons for Pending status - Hide from Admins for software installations */}
+                            {form.status === "Pending" && 
+                              !(user?.role === "Admin" && form.type === "software-install") && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updateStatus(
+                                      form.id,
+                                      form.type,
+                                      "Custodian_Approved"
+                                    );
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                                  onClick={() => {
+                                    updateStatus(form.id, form.type, "Denied");
+                                  }}
+                                >
+                                  Deny
+                                </Button>
+                              </div>
+                            )}
 
-                                updateStatus(form.id, form.type, "Completed");
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                            >
-                              Complete
-                            </Button>
-                          )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                            {/* Lab Request: Completed button for Admin_Approved status */}
+                            {form.type === "lab-request" &&
+                              form.status === "Admin_Approved" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                    onClick={() => {
+                                      // Check if required fields are filled before marking as completed
+                                      const timeOut = form.details.time_out;
+                                      const remarks = form.details.remarks;
+
+                                      if (!timeOut || !remarks) {
+                                        const missingFields = [];
+                                        if (!timeOut) missingFields.push("Time Out");
+                                        if (!remarks) missingFields.push("Remarks");
+
+                                        alert(
+                                          `Please fill in the following required fields before marking as completed:\n\n${missingFields.join(
+                                            "\n"
+                                          )}\n\nClick "Edit" to update form details.`
+                                        );
+                                        return;
+                                      }
+
+                                      updateStatus(form.id, form.type, "Completed");
+                                    }}
+                                  >
+                                    Completed
+                                  </Button>
+                                </div>
+                              )}
+
+                            {/* Equipment Borrow: Returned and Lost buttons for Admin_Approved status */}
+                            {form.type === "equipment-borrow" &&
+                              form.status === "Admin_Approved" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      // Check if required fields are filled before marking returned
+                                      const returnedTime =
+                                        form.details.returned_time;
+                                      const remarks = form.details.remarks;
+
+                                      if (!returnedTime || !remarks) {
+                                        const missingFields = [];
+                                        if (!returnedTime)
+                                          missingFields.push("Returned Time");
+                                        if (!remarks)
+                                          missingFields.push("Remarks");
+
+                                        alert(
+                                          `Please fill in the following required fields before marking as returned:\n\n${missingFields.join(
+                                            "\n"
+                                          )}\n\nClick "Edit" to update form details.`
+                                        );
+                                        return;
+                                      }
+
+                                      updateStatus(
+                                        form.id,
+                                        form.type,
+                                        "Returned"
+                                      );
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                  >
+                                    Returned
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      updateStatus(form.id, form.type, "Lost");
+                                    }}
+                                    className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                                  >
+                                    Lost
+                                  </Button>
+                                </div>
+                              )}
+
+                            {/* Software Installation: Edit and Complete buttons for Custodian_Approved status */}
+                            {form.type === "software-install" &&
+                              form.status === "Custodian_Approved" && (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                    onClick={() => {
+                                      console.log(
+                                        "Edit software installation clicked, form:",
+                                        form
+                                      );
+                                      setSelectedForm(form);
+                                      setEditMode(true);
+                                      setShowDetails(true);
+                                    }}
+                                    title="Edit Installation Details"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                    onClick={() => {
+                                      console.log(
+                                        "Complete software installation clicked, form:",
+                                        form
+                                      );
+
+                                      // Check if required fields are filled before marking as completed
+                                      const installationRemarks =
+                                        form.details.installation_remarks;
+                                      const feedbackDate =
+                                        form.details.feedback_date;
+
+                                      if (
+                                        !installationRemarks ||
+                                        !feedbackDate
+                                      ) {
+                                        const missingFields = [];
+                                        if (!installationRemarks)
+                                          missingFields.push(
+                                            "Installation Remarks"
+                                          );
+                                        if (!feedbackDate)
+                                          missingFields.push("Feedback Date");
+
+                                        alert(
+                                          `Please fill in the following required fields before marking as completed:\n\n${missingFields.join(
+                                            "\n"
+                                          )}\n\nClick "Edit" to update form details.`
+                                        );
+                                        return;
+                                      }
+
+                                      updateStatus(
+                                        form.id,
+                                        form.type,
+                                        "Completed"
+                                      );
+                                    }}
+                                  >
+                                    Completed
+                                  </Button>
+                                </div>
+                              )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
@@ -730,7 +835,7 @@ const FormsPage = () => {
               "About to render FormDetailsModal (Custodian path) - selectedForm:",
               selectedForm,
               "showDetails:",
-              showDetails,
+              showDetails
             )}
             <FormDetailsModal
               show={showDetails}
@@ -764,7 +869,7 @@ const FormsPage = () => {
 
       <StatusFilter
         value={filter}
-        onChange={setFilter}
+        onChange={handleFilterChange}
         pendingCount={pendingCount}
         userRole={user?.role}
         onDateFilterChange={setDateFilter}
@@ -790,7 +895,7 @@ const FormsPage = () => {
             "About to render FormDetailsModal - selectedForm:",
             selectedForm,
             "showDetails:",
-            showDetails,
+            showDetails
           )}
           <FormDetailsModal
             show={showDetails}

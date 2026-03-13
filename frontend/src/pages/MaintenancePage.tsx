@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import { getLabPMCReports, type PMCReport } from "../api/maintenance";
 import QuarterlyReportsView from "../components/maintenance/QuarterlyReportsView";
 import SetScheduleModal from "../components/maintenance/SetScheduleModal";
+import { calculateWorstStatus } from "../utils/statusUtils";
 
 // Import workstation helper
 import { getLabWorkstationsForReport } from "../api/workstationReports";
 // Import auth to get assigned lab
 import { getUserAssignedLab } from "../api/dailyReports";
+// Import assets API
+import { getWorkstationAssets } from "../api/inventory";
 // ✅ IMPORT useAuth to get user role and lab_id
 import { useAuth } from "../context/AuthContext";
 
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceView from "../components/maintenance/MaintenanceView";
 import {
-  CheckCircle,
-  XCircle,
   Monitor,
   Plus,
   FileText,
@@ -34,6 +35,7 @@ const MaintenancePage = () => {
   // Data State
   const [reports, setReports] = useState<PMCReport[]>([]);
   const [labWorkstations, setLabWorkstations] = useState<any[]>([]);
+  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
 
   const [targetWorkstation, setTargetWorkstation] = useState<{
     id: number;
@@ -52,6 +54,7 @@ const MaintenancePage = () => {
 
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
 
   // List of Quarters for the new UI Tabs
   const quartersList = [
@@ -104,6 +107,24 @@ const MaintenancePage = () => {
       const wsData = await getLabWorkstationsForReport(labId);
       setLabWorkstations(wsData);
 
+      // Load assets for each workstation to calculate actual status
+      const assetsData: Record<number, any[]> = {};
+      for (const ws of wsData) {
+        try {
+          const assets = await getWorkstationAssets(ws.workstation_id);
+          // Transform assets to have status property
+          const transformedAssets = assets.map((asset: any) => ({
+            ...asset,
+            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+          }));
+          assetsData[ws.workstation_id] = transformedAssets;
+        } catch (error) {
+          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
+          assetsData[ws.workstation_id] = [];
+        }
+      }
+      setWorkstationAssets(assetsData);
+
       const reportsData = await getLabPMCReports(labId, selectedQuarter);
       setReports(reportsData);
     } catch (error) {
@@ -122,10 +143,8 @@ const MaintenancePage = () => {
       case "Operational":
         return "bg-green-100 text-green-800";
       case "For Repair":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-100 text-amber-800";
       case "For Replacement":
-      case "Defective":
-      case "Condemned":
         return "bg-red-100 text-red-800";
       case "For Upgrade":
         return "bg-blue-100 text-blue-800";
@@ -141,6 +160,11 @@ const MaintenancePage = () => {
 
   const handleServiceClick = () => {
     setView("create");
+  };
+
+  const handleReturnToView = () => {
+    setRefreshTrigger(Date.now()); // Trigger refresh
+    setView("view");
   };
 
   const sortedWorkstations = [...labWorkstations].sort((a, b) =>
@@ -178,7 +202,7 @@ const MaintenancePage = () => {
               <div className="flex items-center space-x-3 bg-gray-50 p-1 rounded-lg border border-gray-200">
                 <button
                   onClick={() => setActiveTab("all")}
-                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "all"
                       ? "bg-white text-blue-600 shadow-sm border border-gray-200"
                       : "text-gray-600 hover:text-gray-900"
@@ -188,7 +212,7 @@ const MaintenancePage = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("pending")}
-                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors ${
+                  className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "pending"
                       ? "bg-white text-blue-600 shadow-sm border border-gray-200"
                       : "text-gray-600 hover:text-gray-900"
@@ -206,7 +230,7 @@ const MaintenancePage = () => {
                     onClick={() =>
                       setShowScheduleDropdown(!showScheduleDropdown)
                     }
-                    className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors"
+                    className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   >
                     <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
                     <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
@@ -219,7 +243,7 @@ const MaintenancePage = () => {
                           setShowScheduleDropdown(false);
                           setShowScheduleModal(true);
                         }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg"
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg cursor-pointer"
                       >
                         <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set New
                         Schedule
@@ -230,7 +254,7 @@ const MaintenancePage = () => {
                             setShowScheduleDropdown(false);
                             handleResetAllSchedules();
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center rounded-b-lg border-t border-gray-100"
+                          className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center rounded-b-lg border-t border-gray-100 cursor-pointer"
                         >
                           <RotateCcw className="w-4 h-4 mr-2" /> Reset All
                           Schedules
@@ -242,7 +266,7 @@ const MaintenancePage = () => {
 
                 <button
                   onClick={() => setView("reports")}
-                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors"
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 >
                   <FileText className="w-4 h-4 mr-2" /> View Reports
                 </button>
@@ -353,6 +377,10 @@ const MaintenancePage = () => {
                         ws.workstation_id,
                       );
 
+                      // Calculate actual workstation status from components
+                      const assets = workstationAssets[ws.workstation_id] || [];
+                      const calculatedStatus = assets.length > 0 ? calculateWorstStatus(assets) : 'Functional';
+
                       return (
                         <tr
                           key={ws.workstation_id}
@@ -365,23 +393,21 @@ const MaintenancePage = () => {
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span
-                              className={`px-2.5 py-1 text-xs font-medium rounded-md ${getStatusColor(
-                                ws.current_status?.status_name,
+                              className={`px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                                calculatedStatus,
                               )}`}
                             >
-                              {ws.current_status?.status_name || "Unknown"}
+                              {calculatedStatus}
                             </span>
                           </td>
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {isServiced ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-100">
-                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
                                 Serviced
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-100">
-                                <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
                                 Pending
                               </span>
                             )}
@@ -415,6 +441,7 @@ const MaintenancePage = () => {
           quarter={selectedQuarter}
           onService={handleServiceClick}
           onBack={() => setView("list")}
+          refreshTrigger={refreshTrigger}
         />
       )}
 
@@ -423,8 +450,8 @@ const MaintenancePage = () => {
         <MaintenanceForm
           targetWorkstation={targetWorkstation}
           onSuccess={() => {
-            setView("list");
-            fetchData();
+            fetchData(); // Refresh main data
+            handleReturnToView(); // Return to view with refresh trigger
           }}
           onCancel={() => setView("list")}
         />

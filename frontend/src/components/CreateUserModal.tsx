@@ -87,10 +87,16 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div 
+        className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"
+        onClick={onClose}
+      ></div>
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-green-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
               <h3 className="text-lg font-semibold">Create New User</h3>
               <button

@@ -26,9 +26,16 @@ export interface PMCReport {
   updated_at?: string;
 
   // Relations
-  procedures?: {
-    procedure: { procedure_name: string; procedure_id: number };
+  pmc_report_procedures?: {
+    id: number;
+    pmc_id: number;
+    procedure_id: number;
     is_checked: boolean;
+    remarks?: string;
+    procedures?: {
+      procedure_id: number;
+      procedure_name: string;
+    };
   }[];
   service_logs?: ServiceLog[];
 }
@@ -97,11 +104,19 @@ export const getLabPMCReports = async (labId: number, quarter: string) => {
 export const getPMCReport = async (
   workstationId: number,
   quarter: string,
-): Promise<PMCReport> => {
-  const response = await api.get("/maintenance/pmc/detail", {
-    params: { workstation_id: workstationId, quarter },
-  });
-  return response.data;
+): Promise<PMCReport | null> => {
+  try {
+    const response = await api.get("/maintenance/pmc/detail", {
+      params: { workstation_id: workstationId, quarter },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      console.log("📋 No PMC report found for workstation", workstationId, "quarter", quarter);
+      return null;
+    }
+    throw error; // Re-throw other errors
+  }
 };
 
 // 3. CREATE REPORT
@@ -132,3 +147,34 @@ export const createRepairLog = async (
   const response = await api.post("/maintenance/pmc/repair", data);
   return response.data;
 };
+
+// 6. GET MAINTENANCE ANALYTICS
+export const getMaintenanceAnalytics = async () => {
+  const response = await api.get('/maintenance/analytics');
+  return response.data;
+};
+
+export interface MaintenanceAnalyticsData {
+  totalWorkstations: number;
+  completedReports: number;
+  uniqueWorkstationsWithMaintenance: number;
+  completionRate: number;
+  currentQuarter: string;
+  statusDistribution: Array<{
+    status: string;
+    count: number;
+  }>;
+  labCompletionData: Array<{
+    lab_name: string;
+    completed_reports: number;
+    completion_rate: number;
+  }>;
+  perLabAnalytics?: Array<{
+    lab_id: number;
+    lab_name: string;
+    totalWorkstations: number;
+    completedReports: number;
+    uniqueWorkstationsWithMaintenance: number;
+    completionRate: number;
+  }>;
+}

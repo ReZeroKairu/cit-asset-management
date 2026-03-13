@@ -125,19 +125,21 @@ const AssetFormInputs: React.FC<Props> = ({
       </div>
 
       {/* Quantity */}
-      <div>
+      {/* <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Quantity
         </label>
         <input
           type="number"
           name="quantity"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-gray-100 text-gray-600 cursor-not-allowed"
           value={formData.quantity}
           onChange={handleChange}
           min="1"
+          disabled
+          readOnly
         />
-      </div>
+      </div> */}
 
       {/* Property Tag */}
       <div>

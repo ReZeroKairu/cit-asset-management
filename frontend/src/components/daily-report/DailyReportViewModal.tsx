@@ -67,7 +67,7 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
       {/* Single Page Report View */}
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Report Header */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
+        <div className="bg-blue-50 p-6 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-sm font-medium text-gray-600">Report ID</div>

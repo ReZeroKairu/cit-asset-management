@@ -1,5 +1,6 @@
 // frontend/src/components/inventory/ViewWorkstationModal.tsx
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../api/axios";
 import EditAssetModal from "./EditAssetModal";
 import AddAssetModal from "./AddAssetModal";
@@ -92,15 +93,24 @@ const ViewWorkstationModal: React.FC<Props> = ({
 
   if (!show || !workstation) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Modal Backdrop */}
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 z-40"></div>
+      <div 
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999]"
+        onClick={onClose}
+      ></div>
 
       {/* Modal Content */}
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div 
+        className="fixed inset-0 z-[10000] overflow-y-auto"
+        onClick={onClose}
+      >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col">
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between flex-shrink-0">
               <div>
@@ -108,12 +118,12 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   {workstation.workstation_name}
                 </h3>
                 <p className="text-blue-100 text-sm">
-                  {workstation.laboratory?.lab_name || "No Laboratory"}
+                  {workstation.laboratories?.lab_name || "No Laboratory"}
                 </p>
               </div>
               <button
                 type="button"
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-blue-700 cursor-pointer"
                 onClick={onClose}
               >
                 <svg
@@ -140,15 +150,15 @@ const ViewWorkstationModal: React.FC<Props> = ({
                     Laboratory
                   </h4>
                   <p className="text-gray-900 font-medium">
-                    {workstation.laboratory?.lab_name || "N/A"}
+                    {workstation.laboratories?.lab_name || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  <h4 className="text-sm font-medium text-gray-500">
                     Location
                   </h4>
                   <p className="text-gray-900 font-medium">
-                    {workstation.laboratory?.location || "N/A"}
+                    {workstation.laboratories?.location || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -169,7 +179,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   Assigned Assets
                 </h4>
                 <button
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm"
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm cursor-pointer"
                   onClick={() => setShowAddModal(true)}
                 >
                   <svg
@@ -234,82 +244,76 @@ const ViewWorkstationModal: React.FC<Props> = ({
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                            {asset.details?.property_tag_no ||
-                              asset.property_tag_no ||
-                              "-"}
+                            {asset.asset_details?.property_tag_no || asset.units?.unit_name || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.units?.unit_name || asset.unit_name || "-"}
+                            {asset.units?.unit_name || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                            {asset.details?.serial_number ||
-                              asset.serial_number ||
-                              "-"}
+                            {asset.asset_details?.serial_number || "-"}
                           </td>
                           <td
                             className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate"
-                            title={asset.details?.description}
+                            title={asset.asset_details?.description}
                           >
-                            {asset.details?.description ||
-                              asset.description ||
-                              "-"}
+                            {asset.asset_details?.description || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.details?.current_status?.status_name)}`}
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.asset_details?.asset_statuses?.status_name)}`}
                             >
-                              {asset.details?.current_status?.status_name ||
+                              {asset.asset_details?.asset_statuses?.status_name ||
                                 "Unknown"}
                             </span>
                           </td>
                           <td
                             className="px-6 py-4 text-sm text-gray-500 max-w-[150px] truncate"
-                            title={asset.details?.asset_remarks}
+                            title={asset.asset_details?.asset_remarks}
                           >
-                            {asset.details?.asset_remarks || "-"}
+                            {asset.asset_details?.asset_remarks || "-"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                             <div className="flex justify-center space-x-2">
-                              <button
-                                onClick={() => handleEditAsset(asset)}
-                                className="text-amber-600 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 p-2 rounded-full transition-colors"
-                                title="Edit Asset Details"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleDeleteAsset(asset.asset_id)
-                                }
-                                className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-2 rounded-full transition-colors"
-                                title="Remove Asset"
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                  />
-                                </svg>
-                              </button>
+                            
+                          <button
+  onClick={() => handleEditAsset(asset)}
+  className="text-blue-600 hover:text-blue-800 p-2 transition-colors cursor-pointer"
+  title="Edit Asset Details"
+>
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
+  </svg>
+</button>
+
+<button
+  onClick={() => handleDeleteAsset(asset.asset_id)}
+  className="text-red-500 hover:text-red-600 p-2 transition-colors cursor-pointer"
+  title="Remove Asset"
+>
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+    />
+  </svg>
+</button>
                             </div>
                           </td>
                         </tr>
@@ -323,7 +327,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
             <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end border-t border-gray-200">
               <button
                 type="button"
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium cursor-pointer"
                 onClick={onClose}
               >
                 Close
@@ -351,7 +355,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
         preselectedWorkstation={workstation} // <--- Passed prop
       />
     </>
-  );
+    , document.body);
 };
 
 export default ViewWorkstationModal;

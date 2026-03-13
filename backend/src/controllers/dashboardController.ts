@@ -16,7 +16,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalLaboratories,
       totalDailyReports,
       totalUsers,
-      totalForms
+      totalForms,
+      pendingComplaints,
+      openComplaints,
+      inProgressComplaints,
+      servicedWorkstations,
+      unservicedWorkstations
     ] = await Promise.all([
       // Total assets count - filtered by user role
       userRole === "Custodian" && userId
@@ -124,7 +129,168 @@ export const getDashboardStats = async (req: Request, res: Response) => {
               // Software installations excluded - handled by custodians only
             ]);
             return labRequests + equipmentBorrows;
+          }),
+      
+      // Complaint stats - only count unfinished statuses (pending)
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: {
+                    in: ['Open', 'In_Progress']
+                  }
+                }
+              });
+            }
+            return 0;
           })
+        : prisma.complaints.count({
+            where: {
+              status: {
+                in: ['Open', 'In_Progress']
+              }
+            }
+          }),
+      
+      // Open complaints count - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: 'Open'
+                }
+              });
+            }
+            return 0;
+          })
+        : prisma.complaints.count({
+            where: { status: 'Open' }
+          }),
+      
+      // In Progress complaints count - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              return prisma.complaints.count({
+                where: { 
+                  lab_id: user.lab_id,
+                  status: 'In_Progress'
+                }
+              });
+            }
+            return 0;
+          })
+        : prisma.complaints.count({
+            where: { status: 'In_Progress' }
+          }),
+
+      // Serviced workstations count - workstations with recent maintenance reports (last 30 days)
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(user => {
+            if (user?.lab_id) {
+              // Count workstations that have had maintenance reports in the last 30 days
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              return prisma.pmc_reports.count({
+                where: {
+                  workstations: {
+                    lab_id: user.lab_id
+                  },
+                  created_at: {
+                    gte: thirtyDaysAgo
+                  }
+                }
+              });
+            }
+            return 0;
+          })
+        : (() => {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            return prisma.pmc_reports.count({
+              where: {
+                created_at: {
+                  gte: thirtyDaysAgo
+                }
+              }
+            });
+          })(),
+
+      // Unserviced workstations count - workstations without recent maintenance reports
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(async (user) => {
+            if (user?.lab_id) {
+              // Get total workstations in lab
+              const totalWorkstations = await prisma.workstations.count({
+                where: { lab_id: user.lab_id }
+              });
+              
+              // Get workstations with recent maintenance (last 30 days)
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              const servicedWorkstations = await prisma.pmc_reports.findMany({
+                where: {
+                  workstations: {
+                    lab_id: user.lab_id
+                  },
+                  created_at: {
+                    gte: thirtyDaysAgo
+                  }
+                },
+                select: {
+                  workstation_id: true
+                },
+                distinct: ['workstation_id']
+              });
+              
+              return Math.max(0, totalWorkstations - servicedWorkstations.length);
+            }
+            return 0;
+          })
+        : (async () => {
+            // Get total workstations
+            const totalWorkstations = await prisma.workstations.count();
+            
+            // Get workstations with recent maintenance (last 30 days)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const servicedWorkstations = await prisma.pmc_reports.findMany({
+              where: {
+                created_at: {
+                  gte: thirtyDaysAgo
+                }
+              },
+              select: {
+                workstation_id: true
+              },
+              distinct: ['workstation_id']
+            });
+            
+            return Math.max(0, totalWorkstations - servicedWorkstations.length);
+          })()
     ]);
 
     // Get recent pending daily reports (last 5) - filtered by user role
@@ -248,7 +414,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       const user = await prisma.users.findUnique({
         where: { user_id: userId },
         include: {
-          assigned_lab: {
+          laboratories: {
             select: {
               lab_id: true,
               lab_name: true,
@@ -257,7 +423,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }
         }
       });
-      userAssignedLab = user?.assigned_lab;
+      userAssignedLab = user?.laboratories;
     }
 
     const dashboardData = {
@@ -266,7 +432,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         totalLaboratories,
         totalDailyReports,
         totalUsers,
-        totalForms
+        totalForms,
+        totalComplaints: pendingComplaints,
+        openComplaints,
+        inProgressComplaints,
+        servicedWorkstations,
+        unservicedWorkstations
       },
       recentReports,
       assetsByLab: assetsByLabWithNames,

@@ -11,7 +11,7 @@ import DailyReportViewModal from "./DailyReportViewModal";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
-import { FileText, Eye, Download } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
 import api from "../../api/axios";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
@@ -217,11 +217,11 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Approved":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800";
       case "Pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -336,7 +336,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
-              Generate DAR Report
+              Generate DAR
             </Button>
           </div>
         </div>
@@ -360,7 +360,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               type="date"
               value={filters.start_date}
               onChange={(e) => handleFilterChange("start_date", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           <div>
@@ -371,13 +371,13 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               type="date"
               value={filters.end_date}
               onChange={(e) => handleFilterChange("end_date", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
             </button>
@@ -450,7 +450,11 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
-                  <tr key={report.report_id} className="hover:bg-gray-50">
+                  <tr 
+                    key={report.report_id} 
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
+                    onClick={() => handleView(report)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         Report #{report.report_id}
@@ -481,7 +485,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status || "Pending")}`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status || "Pending")}`}
                       >
                         {report.status || "Pending"}
                       </span>
@@ -490,18 +494,11 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleView(report)}
-                          className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                          title="View Report Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {viewMode === "my" && report.status === "Pending" && (
                           <button
                             onClick={() => handleEdit(report)}
-                            className="text-gray-600 hover:text-gray-800 flex items-center px-2 py-1 rounded hover:bg-gray-50 transition-colors cursor-pointer"
+                            className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                             title="Edit Report"
                           >
                             <svg
@@ -521,7 +518,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                         )}
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="text-green-600 hover:text-green-900 flex items-center px-2 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />

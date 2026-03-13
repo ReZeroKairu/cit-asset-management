@@ -96,8 +96,14 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <QrCode className="w-5 h-5" />
@@ -110,27 +116,12 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="base-url">Base URL</Label>
+            <Label htmlFor="path">Path</Label>
             <Input
-              id="base-url"
-              value={editableBaseUrl}
-              onChange={(e) => setEditableBaseUrl(e.target.value)}
-              placeholder="https://your-tunnel-domain.trycloudflare.com"
-            />
-            <p className="text-xs text-gray-500">
-              {window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                ? "Cloudflared tunnel URL for public access"
-                : "Current domain for public access"}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="custom-path">Custom Path</Label>
-            <Input
-              id="custom-path"
+              id="path"
               value={customPath}
               onChange={(e) => setCustomPath(e.target.value)}
-              placeholder="public-forms"
+              placeholder="/public-forms"
             />
             <p className="text-xs text-gray-500">
               Default path for public forms access
@@ -188,16 +179,6 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
                   <Download className="w-4 h-4 mr-2" />
                   Download QR
                 </Button>
-              </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <h4 className="font-semibold text-blue-900 mb-2 text-sm">How to use:</h4>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Users can scan this QR code with their phones</li>
-                  <li>• They'll be directed to the public forms page</li>
-                  <li>• No login required for form submission</li>
-                  <li>• Forms will appear as pending for review</li>
-                </ul>
               </div>
             </>
           )}

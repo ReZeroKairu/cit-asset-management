@@ -100,9 +100,15 @@ export const AssetTable: React.FC<Props> = ({
                     {isParentRow ? (
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                          asset.status === "Functional"
+                          asset.status === "Functional" || asset.status === "Working" || asset.status === "Operational"
                             ? "bg-green-100 text-green-800 border-green-200"
-                            : "bg-red-100 text-red-800 border-red-200"
+                            : asset.status === "For Replacement"
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : asset.status === "For Repair"
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : asset.status === "For Upgrade"
+                            ? "bg-blue-100 text-blue-800 border-blue-200"
+                            : "bg-gray-100 text-gray-800 border-gray-200"
                         }`}
                       >
                         {asset.status}
@@ -117,17 +123,14 @@ export const AssetTable: React.FC<Props> = ({
                             e.target.value,
                           )
                         }
-                        className={`block w-full pl-2 pr-8 py-1 text-sm border-gray-300 rounded-md outline-none ${
-                          ["Functional", "Working"].includes(asset.status)
-                            ? "text-green-700 bg-green-50"
-                            : "text-red-700 bg-red-50"
-                        }`}
+                        className="block w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900"
                       >
                         {statusOptions.length > 0 ? (
                           statusOptions.map((option) => (
                             <option
                               key={option.status_id}
                               value={option.status_name}
+                              className="text-gray-900"
                             >
                               {option.status_name}
                             </option>

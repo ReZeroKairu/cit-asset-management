@@ -193,6 +193,7 @@ const OneTimeFormPage = () => {
                 <div className="space-y-1 text-sm text-gray-600">
                   <p><strong>Type:</strong> {getFormTypeLabel(submittedForm.type)}</p>
                   <p><strong>Name:</strong> {submittedForm.data.faculty_student_name || submittedForm.data.faculty_name || 'N/A'}</p>
+                  <p><strong>User Type:</strong> {submittedForm.data.user_type || 'N/A'}</p>
                   <p><strong>Laboratory:</strong> {submittedForm.data.laboratory || 'N/A'}</p>
                   {custodianName && (
                     <p><strong>Custodian:</strong> {custodianName}</p>

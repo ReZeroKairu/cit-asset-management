@@ -142,8 +142,14 @@ const RepairModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -253,7 +259,19 @@ const RepairModal: React.FC<Props> = ({
                       {asset.unit_name}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {asset.property_tag_no || "No tag"} - {asset.status}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                        asset.status === "Functional" || asset.status === "Working" || asset.status === "Operational"
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : asset.status === "For Replacement"
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : asset.status === "For Repair"
+                              ? "bg-amber-100 text-amber-800 border-amber-200"
+                              : asset.status === "For Upgrade"
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : "bg-gray-100 text-gray-800 border-gray-200"
+                      }`}>
+                        {asset.status}
+                      </span>
                     </div>
                   </div>
                 </label>
@@ -335,11 +353,11 @@ const RepairModal: React.FC<Props> = ({
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white text-gray-900"
               required
             >
               {statusOptions.map((status) => (
-                <option key={status.status_id} value={status.status_name}>
+                <option key={status.status_id} value={status.status_name} className="text-gray-900">
                   {status.status_name}
                 </option>
               ))}
@@ -373,7 +391,7 @@ const RepairModal: React.FC<Props> = ({
             <button
               type="submit"
               disabled={loading || selectedAssets.size === 0}
-              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-amber-600 text-black rounded-md hover:bg-amber-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
