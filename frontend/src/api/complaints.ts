@@ -154,7 +154,7 @@ export const submitComplaint = async (data: ComplaintData) => {
 
 // Get all laboratories
 export const getLaboratories = async (): Promise<Laboratory[]> => {
-  const response = await fetch(`${API_BASE_URL}/public-complaints/laboratories`, {
+  const response = await fetch(`${API_BASE_URL}/public-complaints/public-laboratories`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ export const getLaboratories = async (): Promise<Laboratory[]> => {
 
 // Get workstations by laboratory
 export const getWorkstationsByLab = async (labId: number): Promise<Workstation[]> => {
-  const response = await fetch(`${API_BASE_URL}/public-complaints/laboratories/${labId}/workstations`, {
+  const response = await fetch(`${API_BASE_URL}/public-complaints/public-laboratories/${labId}/workstations`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
