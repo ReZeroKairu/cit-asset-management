@@ -205,3 +205,23 @@ export const updateSoftwareInstallDetails = async (id: number, details: any) => 
   const response = await api.put(`/forms/software-installations/${id}`, details);
   return response.data;
 };
+
+// CIT Lab Users API
+export const getCITLabUsersLogs = async (filters?: {
+  start_date?: string;
+  end_date?: string;
+  laboratory?: string;
+  user_type?: string;
+  search?: string;
+}) => {
+  const queryParams = new URLSearchParams();
+  if (filters?.start_date) queryParams.append("start_date", filters.start_date);
+  if (filters?.end_date) queryParams.append("end_date", filters.end_date);
+  if (filters?.laboratory) queryParams.append("laboratory", filters.laboratory);
+  if (filters?.user_type) queryParams.append("user_type", filters.user_type);
+  if (filters?.search) queryParams.append("search", filters.search);
+
+  // Use the authenticated API since this route now requires authentication
+  const response = await api.get(`/public-forms/cit-lab-users?${queryParams}`);
+  return response.data;
+};

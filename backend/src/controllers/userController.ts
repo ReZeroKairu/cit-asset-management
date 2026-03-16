@@ -44,7 +44,8 @@ export const getUserProfile = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       lab_id: user.lab_id,
-        laboratory: user.laboratories,
+      lab_name: user.laboratories?.lab_name || null,
+      laboratory: user.laboratories,
       created_at: user.created_at
     };
 

@@ -1,6 +1,6 @@
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, ArrowRight, MessageSquare } from "lucide-react";
+import { FileText, ArrowRight, MessageSquare, Users } from "lucide-react";
 
 const PublicLandingPage = () => {
   return (
@@ -15,7 +15,7 @@ const PublicLandingPage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
@@ -51,6 +51,26 @@ const PublicLandingPage = () => {
                 className="w-full"
               >
                 Submit Complaint
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center mb-4">
+                <Users className="w-8 h-8 text-purple-600 mr-3" />
+                <h2 className="text-xl font-semibold">CIT Lab Users</h2>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Log your laboratory usage for CIT lab user tracking and records.
+              </p>
+              <Button 
+                onClick={() => window.location.href = '/cit-lab-users'}
+                variant="outline"
+                className="w-full"
+              >
+                Log Lab Usage
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
