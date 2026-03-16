@@ -21,6 +21,7 @@ import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
 import complaintsRoutes from "./routes/complaintsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import auditRoutes from "./routes/auditRoutesSimple";
+import { auditMiddleware } from "./middleware/audit";
 
 const app = express();
 const prisma = new PrismaClient();
@@ -132,6 +133,12 @@ app.get("/audit-test", async (req, res) => {
       details: (error as Error).message 
     });
   }
+});
+
+// Test endpoint with audit middleware
+app.post("/audit-middleware-test", auditMiddleware('TEST', 'ENDPOINT'), async (req, res) => {
+  console.log('🔍 Test endpoint hit!');
+  res.json({ success: true, message: 'Audit middleware test successful!' });
 });
 
 // ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
