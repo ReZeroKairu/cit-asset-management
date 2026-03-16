@@ -14,6 +14,7 @@ import PublicLandingPage from "./pages/PublicLandingPage";
 import OneTimeFormPage from "./pages/OneTimeFormPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
 import ComplaintsManagementPage from "./pages/ComplaintsManagementPage";
+import CITLabUsersPage from "./pages/CITLabUsersPage";
 import MainLayout from "./components/layout/MainLayout";
 import { Card, CardContent } from "./components/ui/card";
 import MaintenancePage from "./pages/MaintenancePage";
@@ -315,12 +316,14 @@ function App() {
     | "login"
     | "maintenance"
     | "public-complaints"
+    | "cit-lab-users"
   >(() => {
     const path = window.location.pathname;
     if (path === "/login") return "login";
     if (path === "/public-forms") return "public-forms";
     if (path === "/complaints") return "complaints";
     if (path === "/public-complaints") return "public-complaints";
+    if (path === "/cit-lab-users") return "cit-lab-users";
     if (path === "/one-time" || path.startsWith("/one-time"))
       return "one-time-form";
 
@@ -350,6 +353,8 @@ function App() {
         setCurrentPage("complaints");
       } else if (path === "/public-complaints") {
         setCurrentPage("public-complaints");
+      } else if (path === "/cit-lab-users") {
+        setCurrentPage("cit-lab-users");
       } else if (path === "/one-time" || path.startsWith("/one-time")) {
         setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
@@ -390,6 +395,8 @@ function App() {
       window.history.pushState(null, "", "/complaints");
     } else if (page === "public-complaints") {
       window.history.pushState(null, "", "/public-complaints");
+    } else if (page === "cit-lab-users") {
+      window.history.pushState(null, "", "/cit-lab-users");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else if (page === "one-time-form") {
@@ -437,6 +444,8 @@ function App() {
         return <PublicFormsPage />;
       case "public-complaints":
         return <ComplaintsPage />;
+      case "cit-lab-users":
+        return <CITLabUsersPage />;
       case "complaints":
         return <ComplaintsPage />;
       case "complaints-management":
@@ -457,6 +466,7 @@ function App() {
     currentPage === "one-time-form" ||
     currentPage === "public-forms" ||
     currentPage === "public-complaints" ||
+    currentPage === "cit-lab-users" ||
     currentPage === "public-landing"
   ) {
     return renderPage();

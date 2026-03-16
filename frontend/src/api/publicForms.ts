@@ -1,10 +1,7 @@
 // Dynamic API URL detection
 export const getApiBaseUrl = () => {
-  const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001';
-  }
-  return `http://${hostname}:3001`;
+  // Use network IP to avoid CORS loopback issues
+  return 'http://172.72.100.78:3001';
 };
 
 const API_BASE_URL = getApiBaseUrl();

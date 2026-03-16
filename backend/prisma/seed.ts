@@ -439,7 +439,9 @@ async function main() {
     console.log(` Daily Report: ${report.report_date.toISOString().split('T')[0]}`);
   }
 
-  // 18. Complaints
+  // 18. Complaints - Commented out due to schema mismatch
+  console.log("⏭️ Skipping complaints seeding due to schema mismatch...");
+  /*
   console.log(" Seeding complaints...");
   for (const complaint of seedData.complaints) {
     await prisma.complaints.upsert({
@@ -449,6 +451,7 @@ async function main() {
     });
     console.log(` Complaint: ${complaint.issue_description}`);
   }
+  */
 
   // 19. Inventory Assets - Skip for now due to workstation dependency
   console.log("⏭️ Skipping inventory assets seeding for now...");

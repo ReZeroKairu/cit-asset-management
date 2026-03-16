@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { FileText, Calendar, MessageSquare } from "lucide-react";
+import { FileText, Calendar, MessageSquare, Users } from "lucide-react";
 import DailyReportList from "../components/daily-report/DailyReportList";
 import ArchiveComplaintsPage from "./ArchiveComplaintsPage.tsx";
 import ArchiveFormsPage from "./ArchiveFormsPage.tsx";
+import ArchiveCITLabUsersPage from "./ArchiveCITLabUsersPage.tsx";
 
 export const ArchivesPage = () => {
   const [activeTab, setActiveTab] = useState("reports");
@@ -44,6 +45,19 @@ export const ArchivesPage = () => {
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('cit-lab-users')}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'cit-lab-users'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              CIT Lab Users
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('forms')}
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'forms'
@@ -69,6 +83,11 @@ export const ArchivesPage = () => {
         {activeTab === 'complaints' && (
           <div>
             <ArchiveComplaintsPage />
+          </div>
+        )}
+        {activeTab === 'cit-lab-users' && (
+          <div>
+            <ArchiveCITLabUsersPage />
           </div>
         )}
         {activeTab === 'forms' && (

@@ -30,13 +30,20 @@ app.use(
   cors({
     origin: [
       'http://localhost:5173',
-      'http://localhost:5174',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
       'http://192.168.56.1:5173',
-      'http://192.168.56.1:5174',
+      'http://192.168.56.1:3000',
+      'http://192.168.56.1:3001',
       'http://192.168.111.21:5173',
-      'http://192.168.111.21:5174',
+      'http://192.168.111.21:3000',
+      'http://192.168.111.21:3001',
       'http://172.72.100.78:5173',
-      'http://172.72.100.78:5174'
+      'http://172.72.100.78:3000',
+      'http://172.72.100.78:3001'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -48,7 +55,7 @@ app.use(express.json());
 // Trust proxy to get real client IP addresses
 app.set('trust proxy', true);
 
-// Rate limiting for public forms (reasonable limits)
+// Rate limiting for public forms (reasonable limits) - only for POST requests
 const publicFormsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 6, // Allow 6 submissions per IP per hour
@@ -58,6 +65,8 @@ const publicFormsLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Apply rate limiting only to POST requests
+  skip: (req) => req.method !== 'POST'
 });
 
 // Skip rate limiting during development
