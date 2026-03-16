@@ -54,7 +54,8 @@ export const auditMiddleware = (action: string, entityType: string) => {
           const auditData: any = {
             action,
             description: `${action} ${entityType}${req.params.id ? ` #${req.params.id}` : ''}`,
-            ip_address: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] as string
+            ip_address: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] as string,
+            user_agent: req.headers['user-agent'] as string
           };
 
           // Only include user_id if we have a valid user
