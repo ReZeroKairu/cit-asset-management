@@ -20,7 +20,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     console.log('🔍 Parameters:', { page, limit, action: action || 'none', search: search || 'none' });
     
     try {
-      // Simple SQL query that works
+      // Simple SQL query that uses the audit_logs_view
       let sql = `
         SELECT 
           al.id,
@@ -28,11 +28,22 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
           al.action,
           al.description,
           al.created_at,
-          u.email,
-          u.full_name,
-          u.role
-        FROM audit_logs al
-        LEFT JOIN users u ON al.user_id = u.user_id
+          al.user_name,
+          al.user_email,
+          al.user_role,
+          al.user_type,
+          al.log_date,
+          al.log_time,
+          al.formatted_timestamp,
+          al.formatted_date,
+          al.formatted_time,
+          al.user_lab_name,
+          al.user_lab_location,
+          al.action_category,
+          al.priority_level,
+          al.searchable_text,
+          al.ip_address_display
+        FROM audit_logs_view al
         WHERE 1=1
       `;
       
@@ -48,12 +59,13 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         sql += ` AND (
           LOWER(al.action) LIKE LOWER(?) OR
           LOWER(al.description) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.email, '')) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.full_name, '')) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.role, '')) LIKE LOWER(?)
+          LOWER(al.user_email) LIKE LOWER(?) OR
+          LOWER(al.user_name) LIKE LOWER(?) OR
+          LOWER(al.user_role) LIKE LOWER(?) OR
+          LOWER(al.searchable_text) LIKE LOWER(?)
         )`;
         const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
       
       sql += ` ORDER BY al.created_at DESC LIMIT ? OFFSET ?`;
@@ -68,8 +80,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       // Count query
       let countSql = `
         SELECT COUNT(*) as total
-        FROM audit_logs al
-        LEFT JOIN users u ON al.user_id = u.user_id
+        FROM audit_logs_view al
         WHERE 1=1
       `;
       
@@ -84,30 +95,20 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         countSql += ` AND (
           LOWER(al.action) LIKE LOWER(?) OR
           LOWER(al.description) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.email, '')) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.full_name, '')) LIKE LOWER(?) OR
-          LOWER(COALESCE(u.role, '')) LIKE LOWER(?)
+          LOWER(al.user_email) LIKE LOWER(?) OR
+          LOWER(al.user_name) LIKE LOWER(?) OR
+          LOWER(al.user_role) LIKE LOWER(?) OR
+          LOWER(al.searchable_text) LIKE LOWER(?)
         )`;
         const searchTerm = `%${search}%`;
-        countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+        countParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
       
       const countResult = await prisma.$queryRawUnsafe(countSql, ...countParams) as any[];
       const total = countResult[0].total;
       
-      // Format results
-      const logs = results.map((row: any) => ({
-        id: row.id,
-        user_id: row.user_id,
-        action: row.action,
-        description: row.description,
-        created_at: row.created_at,
-        user: row.email ? {
-          email: row.email,
-          full_name: row.full_name || 'Unknown',
-          role: row.role || 'Unknown'
-        } : null
-      }));
+      // Format results - view already provides formatted data
+      const logs = results;
       
       console.log('📊 Results:', { found: logs.length, total });
       

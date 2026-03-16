@@ -65,42 +65,28 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
 
   const fetchLabs = async () => {
     try {
-      // Try network IP first for CORS compatibility
-      const possibleUrls = [
-        'http://172.72.100.78:3001/laboratories/public',
-        'http://localhost:3001/laboratories/public',
-        'http://127.0.0.1:3001/laboratories/public'
-      ];
+      // Use the correct public laboratories endpoint
+      const apiBaseUrl = getApiBaseUrl();
+      console.log(`🔄 Attempting to fetch labs from: ${apiBaseUrl}/laboratories/public`);
       
-      let labsData = null;
+      const response = await fetch(`${apiBaseUrl}/laboratories/public`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(10000) // Increased to 10 seconds
+      });
       
-      for (const url of possibleUrls) {
-        try {
-          console.log(`🔄 Attempting to fetch labs from: ${url}`);
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          labsData = data;
-          console.log('✅ Successfully fetched labs from:', url);
-          break;
-        } catch (error) {
-          console.warn(`❌ Failed to fetch from ${url}:`, error);
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
+      const data = await response.json();
+      console.log('✅ Successfully fetched labs:', data);
+      
       // Process fetched data
-      if (labsData) {
-        const labOptions = labsData.map((lab: any) => ({
+      if (data && Array.isArray(data)) {
+        const labOptions = data.map((lab: any) => ({
           value: lab.lab_name,
           label: lab.lab_name,
           monitor: lab.users?.find((user: any) => user.role === "Custodian")?.full_name || 'Not assigned',
@@ -109,25 +95,30 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
         setLabs(labOptions);
         console.log('✅ Labs processed:', labOptions.length);
       } else {
-        // Fallback data
-        const fallbackLabs = [
-          { value: "e-forum", label: "E-Forum", monitor: "SYSTEM ADMINISTRATOR", lab_id: 1 },
-          { value: "hardware-lab", label: "Hardware Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 2 },
-          { value: "software-lab", label: "Software Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 3 },
-          { value: "network-lab", label: "Network Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 4 }
-        ];
-        setLabs(fallbackLabs);
+        throw new Error('Invalid data format received');
       }
     } catch (error) {
-      console.error('❌ Critical error in fetchLabs:', error);
-      // Final fallback
+      console.error('❌ Error fetching labs:', error);
+      
+      // Check if it's a timeout error
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        console.log('⏰ Request timed out, using fallback data');
+      } else if (error instanceof Error && error.message.includes('Failed to fetch')) {
+        console.log('🔌 Network error, using fallback data');
+      } else {
+        console.log('❓ Unknown error, using fallback data');
+      }
+      
+      // Fallback data
       const fallbackLabs = [
         { value: "e-forum", label: "E-Forum", monitor: "SYSTEM ADMINISTRATOR", lab_id: 1 },
         { value: "hardware-lab", label: "Hardware Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 2 },
         { value: "software-lab", label: "Software Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 3 },
-        { value: "network-lab", label: "Network Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 4 }
+        { value: "network-lab", label: "Network Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 4 },
+        { value: "CIT-Lab 1", label: "CIT-Lab 1", monitor: "John Custodians", lab_id: 1 }
       ];
       setLabs(fallbackLabs);
+      console.log('🔄 Using fallback labs data');
     }
   };
 
@@ -152,12 +143,8 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
   }, []); // Only run once on mount
 
   const handleInputChange = (field: keyof FormData, value: string) => {
-    console.log('🔄 Field change:', field, '->', value);
-    console.log('📊 Current formData before change:', formData);
-    
     // Prevent form reset during typing
     if (formData[field] === value) {
-      console.log('⚠️ Field value unchanged, skipping update');
       return;
     }
     
@@ -166,8 +153,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
         ...prev,
         [field]: value
       };
-
-      console.log('📊 New formData after change:', newData);
 
       // Auto-populate monitored_by when laboratory is selected (like lab requests)
       if (field === 'laboratory') {
@@ -183,7 +168,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
           }
         } else {
           setIsMonitorAutoPopulated(false);
-          console.log('⚠️ No monitor found for lab:', value);
           setWorkstations([]);
         }
       }
@@ -192,7 +176,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       if (field === 'usage_type') {
         if (value === 'set-in-reservation') {
           newData.printing_pages = '';
-          console.log('🔄 Cleared printing_pages for set-in-reservation usage type');
         }
       }
 
@@ -388,6 +371,7 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
             value={formData.faculty_student_name}
             onChange={(e) => handleInputChange('faculty_student_name', e.target.value)}
             placeholder={`Enter ${userType === 'student' ? 'student' : 'faculty'} full name`}
+            className="capitalize-first"
             required
             disabled={disabled}
           />
@@ -486,13 +470,14 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
         />
       </div>
 
-      <div className="flex justify-end pt-4">
+      <div className="flex justify-center pt-4">
         <Button
           type="submit"
+          variant="outline"
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm min-w-[120px]"
           disabled={disabled || isSubmitting}
-          className="w-full md:w-auto"
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Log'}
+          {isSubmitting ? 'Submitting...' : 'Submit'}
         </Button>
       </div>
     </form>

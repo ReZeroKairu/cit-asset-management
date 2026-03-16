@@ -30,6 +30,12 @@ SELECT
     COALESCE(l.lab_name, 'N/A') AS user_lab_name,
     COALESCE(l.location, 'N/A') AS user_lab_location,
     
+    -- IP address information
+    CASE 
+        WHEN al.ip_address IS NOT NULL AND al.ip_address != '' THEN al.ip_address
+        ELSE 'Unknown'
+    END AS ip_address_display,
+    
     -- Computed fields for filtering and categorization
     CASE 
         WHEN al.user_id IS NULL THEN 'System'

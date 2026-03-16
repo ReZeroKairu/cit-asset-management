@@ -83,7 +83,8 @@ export class AuditService {
             id, user_id, action, description, created_at,
             log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
             user_name, user_email, user_role, user_lab_name, user_lab_location,
-            user_type, action_category, priority_level, searchable_text
+            user_type, action_category, priority_level, searchable_text,
+            ip_address_display
           FROM audit_logs_view 
           WHERE ${whereClause}
           ORDER BY created_at DESC 
@@ -148,6 +149,7 @@ export class AuditService {
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
           user_type, action_category, priority_level, searchable_text,
+          ip_address_display,
           CAST(user_action_rank AS SIGNED INTEGER) as user_action_rank
         FROM user_audit_logs_view 
         WHERE user_id = ?
@@ -170,7 +172,8 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text
+          user_type, action_category, priority_level, searchable_text,
+          ip_address_display
         FROM system_audit_logs_view 
         ORDER BY created_at DESC 
         LIMIT ?
@@ -191,7 +194,8 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text
+          user_type, action_category, priority_level, searchable_text,
+          ip_address_display
         FROM high_priority_audit_logs_view 
         ORDER BY created_at DESC 
         LIMIT ?
@@ -212,7 +216,8 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text
+          user_type, action_category, priority_level, searchable_text,
+          ip_address_display
         FROM recent_audit_logs_view 
         ORDER BY created_at DESC 
         LIMIT ?

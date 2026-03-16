@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const updatedUser = response.data;
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      console.log("User data refreshed successfully:", updatedUser);
+      // console.log("User data refreshed successfully:", updatedUser);
     } catch (error: any) {
       console.error("Failed to refresh user data:", error);
 

@@ -109,9 +109,9 @@ const CITLabUsersPage = () => {
                     onClick={() => {
                       setSubmittedForm(null);
                     }}
-                    className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white"
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    Log Another Entry
+                    Submit Again
                   </Button>
                 </div>
               </CardContent>

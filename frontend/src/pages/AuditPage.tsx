@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Shield, Clock, Filter, RefreshCw } from 'lucide-react';
+import { Shield, Filter, RefreshCw } from 'lucide-react';
 import api from '../api/axios';
 
 interface AuditLog {
@@ -25,6 +25,7 @@ interface AuditLog {
   action_category: string;
   priority_level: string;
   searchable_text: string;
+  ip_address_display: string;
 }
 
 const AuditPage = () => {
@@ -173,7 +174,21 @@ const AuditPage = () => {
               No audit logs found matching your criteria
             </div>
           ) : (
-            <div className="space-y-1">
+            <>
+              {/* Table Header */}
+              <div className="flex items-center justify-between p-2 border-b bg-gray-50 text-xs font-medium text-gray-700 rounded-t">
+                <div className="flex items-center space-x-2 flex-1 min-w-0">
+                  <div className="w-12 text-center">Action</div>
+                  <div className="flex-1">Details</div>
+                </div>
+                <div className="text-right">
+                  <div>IP Address</div>
+                  <div>Date & Time</div>
+                </div>
+              </div>
+              
+              {/* Table Rows */}
+              <div className="space-y-1">
               {logs.map((log) => (
                 <div key={log.id} className="flex items-center justify-between p-2 border rounded text-sm hover:bg-gray-50">
                   <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -187,12 +202,14 @@ const AuditPage = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 flex-shrink-0">
-                    <span className="text-xs">{formatDate(log.created_at)}</span>
+                  <div className="text-xs text-gray-500 flex-shrink-0 text-right">
+                    <div className="font-mono text-xs">{log.ip_address_display}</div>
+                    <div className="text-xs">{formatDate(log.created_at)}</div>
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -4,13 +4,15 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Button } from "../components/ui/button";
-import { Search, Filter, Users, RefreshCw } from "lucide-react";
+import { Search, Users, RefreshCw } from "lucide-react";
 import { getCITLabUsersLogs } from "../api/forms";
 import { getApiBaseUrl } from "../api/publicForms";
 import { useAuth } from "../context/AuthContext";
+import CITLabUsersDetailsModal from "../components/citlab/CITLabUsersDetailsModal";
 
 interface CITLabUsersLog {
   log_id: number;
+  date: string;
   usage_type: string;
   faculty_student_name: string;
   user_type: string;
@@ -22,30 +24,86 @@ interface CITLabUsersLog {
   monitored_by: string | null;
   ip_address: string | null;
   created_at: string;
+  // Enhanced fields from view
+  formatted_date?: string;
+  formatted_timestamp?: string;
+  formatted_created_date?: string;
+  formatted_created_time?: string;
+  usage_type_display?: string;
+  user_type_category?: string;
+  laboratory_display?: string;
+  year_level_display?: string;
+  ws_number_display?: string;
+  printing_pages_display?: string;
+  monitored_by_display?: string;
+  ip_address_display?: string;
+  usage_category?: string;
+  user_category?: string;
+  priority_level?: string;
+  day_of_week?: string;
+  month_name?: string;
+  time_of_day?: string;
 }
 
 // Memoized table row component to prevent unnecessary re-renders
-const LogTableRow = ({ log }: { log: CITLabUsersLog }) => {
+const LogTableRow = ({ log, onClick }: { log: CITLabUsersLog; onClick: (log: CITLabUsersLog) => void }) => {
+  const getUsageTypeLabel = (usageType: string) => {
+    return usageType === 'set-in-reservation' ? 'Set-in/Reservation' : 
+           usageType === 'printing' ? 'Printing' : 
+           usageType;
+  };
+
+  const getUsageTypeColor = (usageType: string) => {
+    switch (usageType) {
+      case 'printing':
+        return 'bg-orange-100 text-orange-800';
+      case 'set-in-reservation':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  // Use enhanced display fields from view, fallback to original fields for compatibility
+  const usageTypeDisplay = log.usage_type_display || getUsageTypeLabel(log.usage_type);
+  const laboratoryDisplay = log.laboratory_display || log.laboratory;
+  const userTypeCategory = log.user_type_category || log.user_type;
+  const monitoredByDisplay = log.monitored_by_display || log.monitored_by;
+  const createdTimeDisplay = log.formatted_created_time || new Date(log.created_at).toLocaleString();
+
   return (
-    <tr key={log.log_id} className="border-b hover:bg-gray-50 transition-colors">
+    <tr 
+      key={log.log_id} 
+      className="border-b hover:bg-blue-50 cursor-pointer transition-colors"
+      onClick={() => onClick(log)}
+    >
       <td className="py-4 px-4 font-medium">{log.faculty_student_name}</td>
       <td className="py-4 px-4">
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          log.user_type === 'Student' 
+          userTypeCategory === 'Student' 
             ? 'bg-blue-100 text-blue-800' 
             : 'bg-green-100 text-green-800'
         }`}>
-          {log.user_type}
+          {userTypeCategory}
         </span>
       </td>
-      <td className="py-4 px-4">{log.laboratory}</td>
-      <td className="py-4 px-4">{log.usage_type}</td>
+      <td className="py-4 px-4">{laboratoryDisplay}</td>
+      <td className="py-4 px-4">
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getUsageTypeColor(log.usage_type)}`}>
+          {usageTypeDisplay}
+        </span>
+      </td>
       <td className="py-4 px-4 max-w-lg" title={log.purpose}>
         <div className="text-sm leading-relaxed break-words">{log.purpose}</div>
       </td>
-      <td className="py-4 px-4">{log.monitored_by || '-'}</td>
+      <td className="py-4 px-4">{monitoredByDisplay || '-'}</td>
+      <td className="py-4 px-4">
+        <span className="font-mono text-xs text-gray-600">
+          {log.ip_address || 'Unknown'}
+        </span>
+      </td>
       <td className="py-4 px-4 text-gray-500 text-sm">
-        {new Date(log.created_at).toLocaleString()}
+        {createdTimeDisplay}
       </td>
     </tr>
   );
@@ -58,6 +116,7 @@ const ArchiveCITLabUsersPage = () => {
   const [filteredLogs, setFilteredLogs] = useState<CITLabUsersLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLog, setSelectedLog] = useState<CITLabUsersLog | null>(null);
   const [filters, setFilters] = useState({
     laboratory: "all",
     user_type: "all",
@@ -69,11 +128,6 @@ const ArchiveCITLabUsersPage = () => {
   const requestTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const { user, refreshUser } = useAuth();
-
-  console.log('🔍 Current user object:', user);
-  console.log('🔍 User role:', user?.role);
-  console.log('🔍 User lab_id:', user?.lab_id);
-  console.log('🔍 User lab_name:', user?.lab_name);
 
   // Refresh user data on mount
   useEffect(() => {
@@ -296,11 +350,9 @@ const ArchiveCITLabUsersPage = () => {
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Filter className="w-4 h-4 text-gray-600" />
-            <h3 className="font-semibold">Filters</h3>
-            <Button onClick={clearFilters} variant="ghost" size="sm">
-              Clear All
+          <div className="flex items-center justify-end mb-4">
+            <Button onClick={clearFilters} variant="outline" size="sm" className="hover:bg-gray-100 hover:text-gray-900 transition-colors">
+              Clear Filters
             </Button>
           </div>
           
@@ -386,12 +438,17 @@ const ArchiveCITLabUsersPage = () => {
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Usage Type</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Purpose</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Monitored By</th>
+                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">IP Address</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Submitted</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredLogs.map((log) => (
-                    <LogTableRow key={log.log_id} log={log} />
+                    <LogTableRow 
+                      key={log.log_id} 
+                      log={log} 
+                      onClick={setSelectedLog}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -399,6 +456,13 @@ const ArchiveCITLabUsersPage = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Enhanced Details Modal */}
+      <CITLabUsersDetailsModal
+        log={selectedLog!}
+        isOpen={!!selectedLog}
+        onClose={() => setSelectedLog(null)}
+      />
     </div>
   );
 };

@@ -4,7 +4,7 @@ import {
   createPublicEquipmentBorrow,
   createPublicSoftwareInstallation
 } from '../controllers/publicFormsController';
-import { createCITLabUser, getCITLabUsersLogs, getLabWorkstations } from '../controllers/citLabUsersController';
+import { createCITLabUser, getCITLabUsersLogs, getLabWorkstations, getCITLabUsersAnalytics, getRecentCITLabUsersLogs } from '../controllers/citLabUsersController';
 import { validate, labRequestSchema, equipmentBorrowSchema, softwareInstallationSchema } from '../middleware/validation';
 import { auditMiddleware } from '../middleware/audit';
 import { authenticateToken } from '../middleware/auth';
@@ -19,6 +19,8 @@ router.post('/cit-lab-users', auditMiddleware("CREATE", "cit lab users log"), cr
 
 // Protected view routes for CIT Lab Users logs (authentication required)
 router.get('/cit-lab-users', authenticateToken, getCITLabUsersLogs);
+router.get('/cit-lab-users/analytics', authenticateToken, getCITLabUsersAnalytics);
+router.get('/cit-lab-users/recent', authenticateToken, getRecentCITLabUsersLogs);
 
 // Public route for getting workstations for a specific lab
 router.get('/labs/:lab_id/workstations', getLabWorkstations);

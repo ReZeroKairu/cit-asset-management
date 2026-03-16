@@ -24,7 +24,6 @@ model asset_details {
   @@index([status_id])
 }
 
-
 model campuses {
   campus_id   Int           @id @default(autoincrement())
   campus_name String        @db.VarChar(50)
@@ -50,17 +49,18 @@ model complaints {
   created_at           DateTime          @default(now()) @db.Timestamp(0)
   updated_at           DateTime          @db.Timestamp(0)
   accepted_at          DateTime?         @db.Timestamp(0)
-  ip_address           String?            @db.VarChar(45)
+  ip_address           String?           @db.VarChar(45)
+  inventory_assets     inventory_assets? @relation(fields: [asset_id], references: [asset_id])
   users                users?            @relation(fields: [custodian_user_id], references: [user_id])
   laboratories         laboratories      @relation(fields: [lab_id], references: [lab_id])
   workstations         workstations?     @relation(fields: [workstation_id], references: [workstation_id])
-  inventory_assets     inventory_assets? @relation(fields: [asset_id], references: [asset_id])
 
   @@index([created_at])
   @@index([custodian_user_id])
   @@index([lab_id])
   @@index([status])
   @@index([asset_id])
+  @@index([workstation_id], map: "complaints_workstation_id_fkey")
 }
 
 model daily_report_procedures {
@@ -146,11 +146,11 @@ model inventory_assets {
   added_by_user_id   Int?
   date_added         DateTime?            @default(now()) @db.Timestamp(0)
   asset_details      asset_details?
+  complaints         complaints[]
   users              users?               @relation(fields: [added_by_user_id], references: [user_id])
   laboratories       laboratories?        @relation(fields: [lab_id], references: [lab_id])
   units              units?               @relation(fields: [unit_id], references: [unit_id])
   workstations       workstations?        @relation(fields: [workstation_id], references: [workstation_id])
-  complaints         complaints[]
   service_log_assets service_log_assets[]
 
   @@index([added_by_user_id], map: "added_by_user_id")
@@ -159,20 +159,19 @@ model inventory_assets {
   @@index([unit_id], map: "unit_id")
 }
 
-
 model laboratories {
-  lab_id                Int                     @id @default(autoincrement())
-  lab_name              String                  @db.VarChar(50)
-  location              String?                 @db.VarChar(50)
-  dept_id               Int?
-  in_charge_id          Int?
+  lab_id           Int                @id @default(autoincrement())
+  lab_name         String             @db.VarChar(50)
+  location         String?            @db.VarChar(50)
+  dept_id          Int?
+  in_charge_id     Int?
   complaints       complaints[]
-  daily_reports         daily_reports[]
-  inventory_assets      inventory_assets[]
-  departments           departments?            @relation(fields: [dept_id], references: [dept_id], map: "fk_lab_dept")
-  workstations          workstations[]
+  daily_reports    daily_reports[]
+  inventory_assets inventory_assets[]
+  departments      departments?       @relation(fields: [dept_id], references: [dept_id], map: "fk_lab_dept")
   pmc_reports      pmc_reports[]
-  users                 users[]
+  users            users[]
+  workstations     workstations[]
 
   @@index([dept_id], map: "dept_id")
   @@index([in_charge_id])
@@ -277,27 +276,27 @@ model asset_statuses {
 }
 
 model lab_requests {
-  request_id           Int                @id @default(autoincrement())
+  request_id           Int                 @id @default(autoincrement())
   user_id              Int?
-  date                 DateTime           @db.Date
-  usage_type           String             @db.VarChar(20)
-  faculty_student_name String             @db.VarChar(100)
-  year_level           String?            @db.VarChar(20)
-  laboratory           String             @db.VarChar(20)
-  printing_pages       String?            @db.VarChar(50)
-  ws_number            String?            @db.VarChar(50)
-  time_in              String?            @db.VarChar(10)
-  time_out             String?            @db.VarChar(10)
-  purpose              String             @db.Text
-  requested_by         String             @db.VarChar(100)
-  remarks              String?            @db.Text
-  monitored_by         String?            @db.VarChar(100)
-  approved_by          String?            @db.VarChar(100)
+  date                 DateTime            @db.Date
+  usage_type           String              @db.VarChar(20)
+  faculty_student_name String              @db.VarChar(100)
+  year_level           String?             @db.VarChar(20)
+  laboratory           String              @db.VarChar(20)
+  printing_pages       String?             @db.VarChar(50)
+  ws_number            String?             @db.VarChar(50)
+  time_in              String?             @db.VarChar(10)
+  time_out             String?             @db.VarChar(10)
+  purpose              String              @db.Text
+  requested_by         String              @db.VarChar(100)
+  remarks              String?             @db.Text
+  monitored_by         String?             @db.VarChar(100)
+  approved_by          String?             @db.VarChar(100)
   status               lab_requests_status @default(Pending)
-  created_at           DateTime           @default(now()) @db.Timestamp(0)
-  user_type            String?            @db.VarChar(20)
-  ip_address           String?            @db.VarChar(45)
-  users                users?             @relation(fields: [user_id], references: [user_id])
+  created_at           DateTime            @default(now()) @db.Timestamp(0)
+  user_type            String?             @db.VarChar(20)
+  ip_address           String?             @db.VarChar(45)
+  users                users?              @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
   @@map("lab_requests")
@@ -366,8 +365,8 @@ model software_installations {
   prepared_by          String?                       @db.VarChar(100)
   feedback_date        DateTime?                     @db.Date
   status               software_installations_status @default(Pending)
-  ip_address           String?                        @db.VarChar(45)
   created_at           DateTime                      @default(now()) @db.Timestamp(0)
+  ip_address           String?                       @db.VarChar(45)
   users                users?                        @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -391,6 +390,7 @@ model users {
   role                   users_role?              @default(Custodian)
   created_at             DateTime?                @default(now()) @db.Timestamp(0)
   lab_id                 Int?
+  audit_logs             audit_logs[]
   complaints             complaints[]
   daily_reports          daily_reports[]
   equipment_borrows      equipment_borrows[]
@@ -400,7 +400,6 @@ model users {
   pmc_reports            pmc_reports[]
   service_logs           service_logs[]
   software_installations software_installations[]
-  audit_logs             audit_logs[]
   laboratories           laboratories?            @relation(fields: [lab_id], references: [lab_id])
 
   @@index([lab_id], map: "users_lab_id_fkey")
@@ -410,7 +409,8 @@ model audit_logs {
   id          Int      @id @default(autoincrement())
   user_id     Int?
   action      String   @db.VarChar(50)
-  description String? @db.Text
+  description String?  @db.Text
+  ip_address  String?  @db.VarChar(45)
   created_at  DateTime @default(now())
   users       users?   @relation(fields: [user_id], references: [user_id])
 
@@ -434,26 +434,6 @@ model workstations {
   @@unique([workstation_name, lab_id])
   @@index([lab_id])
   @@index([status_id])
-}
-
-model cit_lab_logs {
-  log_id               Int    @id @default(autoincrement())
-  date                 DateTime @db.Date
-  usage_type           String @db.VarChar(20)
-  faculty_student_name String @db.VarChar(100)
-  year_level           String? @db.VarChar(20)
-  laboratory           String @db.VarChar(20)
-  printing_pages       String? @db.VarChar(50)
-  ws_number            String? @db.VarChar(50)
-  purpose              String @db.Text
-  monitored_by         String? @db.VarChar(100)
-  user_type            String? @db.VarChar(20)
-  ip_address           String? @db.VarChar(45)
-  created_at           DateTime @default(now()) @db.Timestamp(0)
-
-  @@index([created_at])
-  @@index([laboratory])
-  @@index([date])
 }
 
 enum users_role {
@@ -496,4 +476,24 @@ enum lab_requests_status {
   Custodian_Approved
   Denied
   Completed
+}
+
+model cit_lab_logs {
+  log_id               Int    @id @default(autoincrement())
+  date                 DateTime @db.Date
+  usage_type           String @db.VarChar(20)
+  faculty_student_name String @db.VarChar(100)
+  year_level           String? @db.VarChar(20)
+  laboratory           String @db.VarChar(20)
+  printing_pages       String? @db.VarChar(50)
+  ws_number            String? @db.VarChar(50)
+  purpose              String @db.Text
+  monitored_by         String? @db.VarChar(100)
+  user_type            String? @db.VarChar(20)
+  ip_address           String? @db.VarChar(45)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([created_at])
+  @@index([laboratory])
+  @@index([date])
 }
