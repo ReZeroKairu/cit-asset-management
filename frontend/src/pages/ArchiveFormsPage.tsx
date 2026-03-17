@@ -104,6 +104,8 @@ const ArchiveFormsPage = () => {
       // Filter for archived/completed forms only
       const archivedForms = transformedForms.filter(form => 
         form.status === "Approved" || 
+        form.status === "Admin_Approved" ||
+        form.status === "Custodian_Approved" ||
         form.status === "Rejected" || 
         form.status === "Completed" ||
         form.status === "Denied" ||
@@ -132,7 +134,7 @@ const ArchiveFormsPage = () => {
       if (dateFilter.start_date) {
         filteredForms = filteredForms.filter(form => {
           const formDate = new Date(form.createdAt);
-          const startDate = new Date(dateFilter.start_date);
+          const startDate = new Date(dateFilter.start_date + 'T00:00:00');
           return formDate >= startDate;
         });
       }
@@ -140,8 +142,7 @@ const ArchiveFormsPage = () => {
       if (dateFilter.end_date) {
         filteredForms = filteredForms.filter(form => {
           const formDate = new Date(form.createdAt);
-          const endDate = new Date(dateFilter.end_date);
-          endDate.setHours(23, 59, 59, 999); // Include entire end date
+          const endDate = new Date(dateFilter.end_date + 'T23:59:59');
           return formDate <= endDate;
         });
       }
@@ -161,6 +162,7 @@ const ArchiveFormsPage = () => {
         return "bg-yellow-100 text-yellow-800";
       case "Custodian_Approved":
         return "bg-blue-100 text-blue-800";
+      case "Admin_Approved":
       case "Approved":
         return "bg-green-100 text-green-800";
       case "Rejected":
@@ -181,6 +183,7 @@ const ArchiveFormsPage = () => {
     switch (status) {
       case "Pending":
         return <Clock className="w-4 h-4" />;
+      case "Admin_Approved":
       case "Approved":
       case "Completed":
         return null; // Remove icon for Completed status

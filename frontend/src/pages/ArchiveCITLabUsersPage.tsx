@@ -332,6 +332,8 @@ const ArchiveCITLabUsersPage = () => {
           <Users className="w-6 h-6 text-purple-600" />
           <h2 className="text-2xl font-bold text-gray-900">CIT Lab Users Logs</h2>
           <span className="text-sm text-gray-500">({filteredLogs.length} records)</span>
+        </div>
+        <div className="flex items-center space-x-2">
           <Button 
             onClick={() => {
               hasFetched.current = false;
@@ -344,18 +346,15 @@ const ArchiveCITLabUsersPage = () => {
             <RefreshCw className="w-4 h-4" />
             Refresh Data
           </Button>
+          <Button onClick={clearFilters} variant="outline" size="sm" className="hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            Clear Filters
+          </Button>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-end mb-4">
-            <Button onClick={clearFilters} variant="outline" size="sm" className="hover:bg-gray-100 hover:text-gray-900 transition-colors">
-              Clear Filters
-            </Button>
-          </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="laboratory">Laboratory</Label>

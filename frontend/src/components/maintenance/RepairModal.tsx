@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Wrench } from "lucide-react";
 import { createRepairLog } from "../../api/maintenance";
 
@@ -53,6 +53,21 @@ const RepairModal: React.FC<Props> = ({
       new_description: string;
     };
   }>({});
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [onClose]);
 
   const handleAssetToggle = (assetId: number) => {
     const newSelected = new Set(selectedAssets);
@@ -143,38 +158,41 @@ const RepairModal: React.FC<Props> = ({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <Wrench className="h-6 w-6 text-amber-600" />
+        <div className="bg-blue-600 px-6 py-4 text-white flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white rounded-lg">
+                <Wrench className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Repair Component
+                </h2>
+                <p className="text-blue-100 text-sm">
+                  {workstation.name} - {quarter} Quarter
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Repair Component
-              </h2>
-              <p className="text-sm text-gray-600">
-                {workstation.name} - {quarter} Quarter
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-700 transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5 text-white" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
               {error}
@@ -407,6 +425,7 @@ const RepairModal: React.FC<Props> = ({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

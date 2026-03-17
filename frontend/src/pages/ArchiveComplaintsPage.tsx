@@ -72,7 +72,7 @@ const ArchiveComplaintsPage = () => {
     if (startDate) {
       filtered = filtered.filter(complaint => {
         const complaintDate = new Date(complaint.created_at);
-        const start = new Date(startDate);
+        const start = new Date(startDate + 'T00:00:00');
         return complaintDate >= start;
       });
     }
@@ -80,8 +80,7 @@ const ArchiveComplaintsPage = () => {
     if (endDate) {
       filtered = filtered.filter(complaint => {
         const complaintDate = new Date(complaint.created_at);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Include entire end date
+        const end = new Date(endDate + 'T23:59:59');
         return complaintDate <= end;
       });
     }
@@ -197,10 +196,10 @@ const ArchiveComplaintsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     IP Address
                   </th>
                 </tr>
@@ -254,15 +253,14 @@ const ArchiveComplaintsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="space-y-1">
-                        {/* No actions needed for archived complaints - rows are clickable */}
-                        {complaint.ip_address && (
-                          <div className="text-xs text-gray-500">
-                            IP: {complaint.ip_address}
-                          </div>
-                        )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                      {/* No actions needed for archived complaints - rows are clickable */}
+                      <div className="text-xs text-gray-400">
+                        Click row for details
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {complaint.ip_address || 'Unknown'}
                     </td>
                   </tr>
                 ))}

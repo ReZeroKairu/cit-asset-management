@@ -48,6 +48,23 @@ const ViewWorkstationModal: React.FC<Props> = ({
     }
   }, [show, workstation]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   const fetchWorkstationAssets = async () => {
     try {
       setLoading(true);

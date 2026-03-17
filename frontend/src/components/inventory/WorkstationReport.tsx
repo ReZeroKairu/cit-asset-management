@@ -49,6 +49,23 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
     }
   }, [show, selectedLab]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   const fetchLabs = async () => {
     try {
       const response = await api.get("/laboratories");

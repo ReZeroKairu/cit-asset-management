@@ -40,6 +40,23 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
     }
   }, [show]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   const generateQRCode = async () => {
     const fullUrl = `${editableBaseUrl}/${customPath}`;
     setGeneratedUrl(fullUrl);

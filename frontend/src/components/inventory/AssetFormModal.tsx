@@ -1,5 +1,5 @@
 //frontend/src/component/inventory/AssetFormModal.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 interface ModalProps {
@@ -19,6 +19,21 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
     supplier_name: "",
     date_of_purchase: "",
   });
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -142,7 +142,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     // Start date filter
     if (filters.start_date) {
       const reportDate = new Date(report.report_date);
-      const startDate = new Date(filters.start_date);
+      const startDate = new Date(filters.start_date + 'T00:00:00');
       if (reportDate < startDate) {
         matchesFilter = false;
       }
@@ -151,7 +151,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     // End date filter
     if (filters.end_date) {
       const reportDate = new Date(report.report_date);
-      const endDate = new Date(filters.end_date);
+      const endDate = new Date(filters.end_date + 'T23:59:59');
       if (reportDate > endDate) {
         matchesFilter = false;
       }

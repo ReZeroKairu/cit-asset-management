@@ -1,5 +1,5 @@
 //frontend/src/components/daily-report/DailyReportViewModal.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "../ui/button";
 import type { DailyReport } from "../../api/dailyReports";
 
@@ -14,6 +14,23 @@ const DailyReportViewModal: React.FC<DailyReportViewModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onClose]);
+
   if (!report || !isOpen) return null;
 
   const formatDateTime = (dateString: string) => {

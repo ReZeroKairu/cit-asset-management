@@ -34,7 +34,12 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
 
     const fetchLabs = async () => {
       try {
-        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`);
+        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
         }

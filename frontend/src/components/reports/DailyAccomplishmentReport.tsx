@@ -34,6 +34,20 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     end_date: ''
   });
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   // Format date for display in modal
   const formatDisplayDateTime = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -80,8 +94,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     if (dateFilters.start_date || dateFilters.end_date) {
       filtered = filtered.filter(report => {
         const reportDate = new Date(report.report_date || report.created_at);
-        const startDate = dateFilters.start_date ? new Date(dateFilters.start_date) : null;
-        const endDate = dateFilters.end_date ? new Date(dateFilters.end_date) : null;
+        const startDate = dateFilters.start_date ? new Date(dateFilters.start_date + 'T00:00:00') : null;
+        const endDate = dateFilters.end_date ? new Date(dateFilters.end_date + 'T23:59:59') : null;
 
         if (startDate && reportDate < startDate) return false;
         if (endDate && reportDate > endDate) return false;
@@ -260,14 +274,15 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   };
 
   const generateAllReports = async () => {
-    if (availableReports.length === 0) {
-      alert("No reports available to generate.");
+    const reportsToGenerate = getFilteredReports();
+    if (reportsToGenerate.length === 0) {
+      alert("No reports available to generate with current filters.");
       return;
     }
 
     try {
       setLoading(true);
-      for (const report of availableReports) {
+      for (const report of reportsToGenerate) {
         // Get detailed report data including workstations and procedures
         const detailedReportResponse = await api.get(`/daily-reports/${report.report_id}`);
         const detailedReport = detailedReportResponse.data;
@@ -304,7 +319,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
           `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${new Date(detailedReport.report_date).toISOString().split("T")[0]}.docx`,
         );
       }
-      alert(`Successfully generated ${availableReports.length} reports!`);
+      alert(`Successfully generated ${reportsToGenerate.length} reports!`);
     } catch (error) {
       console.error("Bulk download failed:", error);
       alert("Failed to generate some reports. Please check if the template exists.");
@@ -317,11 +332,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
     <>
       {show && (
         <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+          className="fixed inset-0 backdrop-blur-md bg-black/20 overflow-y-auto h-full w-full z-50 flex items-center justify-center"
           onClick={onClose}
         >
           <div 
-            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
+            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 bg-white rounded-lg flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -332,11 +347,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  disabled={loading || (generateMode === 'single' && !reportData) || (generateMode === 'all' && availableReports.length === 0)}
+                  disabled={loading || (generateMode === 'single' && !reportData) || (generateMode === 'all' && getFilteredReports().length === 0)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer"
                 >
                   <FileDown className="w-4 h-4" />
-                  {generateMode === 'all' ? `Download All (${availableReports.length})` : 'Download Word Doc'}
+                  {generateMode === 'all' ? `Download All (${getFilteredReports().length})` : 'Download Word Doc'}
                 </button>
                 <button
                   onClick={onClose}
@@ -381,7 +396,15 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
               {/* Date Filters */}
               <div className="mt-4 space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Filter by Date Range:</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium text-gray-700">Filter by Date Range:</h4>
+                  <button
+                    onClick={() => setDateFilters({ start_date: '', end_date: '' })}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -4,6 +4,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
+import { useEffect } from "react";
 import { 
   MessageSquare, 
   User, 
@@ -67,6 +68,23 @@ const EnhancedComplaintDetailsModal = ({
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -137,6 +155,12 @@ const EnhancedComplaintDetailsModal = ({
                     <div>
                       <p className="text-sm text-gray-500">Year Level</p>
                       <p className="font-medium text-gray-900">Year {complaint.year_level}</p>
+                    </div>
+                  )}
+                  {complaint.ip_address && (
+                    <div>
+                      <p className="text-sm text-gray-500">IP Address</p>
+                      <p className="font-medium text-gray-900 font-mono text-sm">{complaint.ip_address}</p>
                     </div>
                   )}
                 </div>

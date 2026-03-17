@@ -4,9 +4,15 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { submitPublicLabRequest } from "../../api/publicForms";
 import { getApiBaseUrl } from "../../api/publicForms";
 import { useAuth } from "../../context/AuthContext";
+
+interface Workstation {
+  workstation_id: number;
+  workstation_name: string;
+  status_id: number;
+  workstation_remarks?: string;
+}
 
 // Year levels for students
 const yearLevels = [
@@ -31,10 +37,11 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
   const [selectedLab, setSelectedLab] = useState<string>('');
   const [userType, setUserType] = useState<'student' | 'faculty'>(user?.role === 'Admin' ? 'faculty' : 'student'); // New state for user type
+  const [workstations, setWorkstations] = useState<Workstation[]>([]);
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
-    usage_type: '',
+    usage_type: 'set-in-reservation', // Set default usage type
     faculty_student_name: '',
     year_level: '',
     laboratory: '',
@@ -54,7 +61,12 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   useEffect(() => {
     const fetchLabs = async () => {
       try {
-        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`);
+        const response = await fetch(`${getApiBaseUrl()}/laboratories/public`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
@@ -90,7 +102,8 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
   // Auto-populate lab when assignedLab is available
   useEffect(() => {
-    if (assignedLab && labs.length > 0) {
+    // Only auto-populate for non-one-time forms
+    if (!isOneTimeForm && assignedLab && labs.length > 0) {
       const assignedLabOption = labs.find(option => option.value === assignedLab);
       if (assignedLabOption) {
         setFormData(prev => ({
@@ -99,7 +112,7 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
         }));
       }
     }
-}, [formData.laboratory, labs]);
+  }, [formData.laboratory, labs, assignedLab, isOneTimeForm]);
 
   // Auto-populate custodian fields when lab is selected
   useEffect(() => {
@@ -146,11 +159,25 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
   // Handle lab selection from dropdown
   const handleLabSelection = (labValue: string) => {
+    console.log('🔄 handleLabSelection called with:', labValue);
     setSelectedLab(labValue);
-    setFormData(prev => ({
-      ...prev,
-      laboratory: labValue
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        laboratory: labValue
+      };
+      
+      // Fetch workstations for this lab
+      if (labValue && labValue !== 'e-forum') {
+        console.log('🚀 Calling fetchWorkstations for:', labValue);
+        fetchWorkstations(labValue);
+      } else {
+        console.log('🚫 Clearing workstations for E-Forum or empty');
+        setWorkstations([]);
+      }
+      
+      return newData;
+    });
   };
   
   // Filter laboratory options based on assigned lab and form type
@@ -161,23 +188,35 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
     // For public forms (not one-time), show all labs + E-Forum (exclude E-Forum for printing)
     if (!isOneTimeForm) {
       const labOptions = formData.usage_type === "printing" ? labs : [eForumOption, ...labs];
+      console.log('🔍 getLabOptions (public form):', { usage_type: formData.usage_type, labOptions });
       return labOptions;
     }
     
     // If no assigned lab, only return E-Forum (unless printing)
     if (!assignedLab) {
-      return formData.usage_type === "printing" ? [] : [eForumOption];
+      const options = formData.usage_type === "printing" ? [] : [eForumOption];
+      console.log('🔍 getLabOptions (no assigned lab):', { usage_type: formData.usage_type, options });
+      return options;
     }
     
-    // For one-time forms, only show the assigned lab and E-Forum (exclude E-Forum for printing)
-    const assignedLabOption = labs.find(option => option.value === assignedLab);
+    // For one-time forms, create assigned lab option directly and add E-Forum (exclude E-Forum for printing)
+    const assignedLabOption = { value: assignedLab, label: assignedLab };
     
-    if (assignedLabOption) {
-      return formData.usage_type === "printing" ? [assignedLabOption] : [assignedLabOption, eForumOption];
+    let options;
+    if (formData.usage_type === "printing") {
+      options = [assignedLabOption];
+    } else {
+      options = [assignedLabOption, eForumOption];
     }
     
-    // Fallback to E-Forum only if assigned lab not found (unless printing)
-    return formData.usage_type === "printing" ? [] : [eForumOption];
+    console.log('🔍 getLabOptions (one-time form):', { 
+      assignedLab, 
+      usage_type: formData.usage_type, 
+      options,
+      currentLabValue: formData.laboratory 
+    });
+    
+    return options;
   };
 
   // Update monitored_by when custodianName changes
@@ -190,44 +229,76 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
     }
   }, [custodianName]);
 
+  const fetchWorkstations = async (labName: string) => {
+    try {
+      const apiBaseUrl = getApiBaseUrl();
+      
+      // Get lab ID from lab name
+      const labResponse = await fetch(`${apiBaseUrl}/laboratories/public`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const labs = await labResponse.json();
+      
+      const lab = labs.find((l: any) => l.lab_name === labName);
+      
+      if (lab && lab.lab_id) {
+        const workstationResponse = await fetch(`${apiBaseUrl}/public-forms/labs/${lab.lab_id}/workstations`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        const workstationData = await workstationResponse.json();
+        
+        if (workstationData.success && Array.isArray(workstationData.data)) {
+          setWorkstations(workstationData.data);
+        } else {
+          setWorkstations([]);
+        }
+      } else {
+        setWorkstations([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching workstations:', error);
+      setWorkstations([]);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+
+      // Fetch workstations when laboratory is selected
+      if (field === 'laboratory') {
+        // Clear workstation selection when lab changes
+        newData.ws_number = '';
+        
+        // Fetch workstations for this lab
+        if (value && value !== 'e-forum') {
+          fetchWorkstations(value);
+        } else {
+          setWorkstations([]);
+        }
+      }
+
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simple debugging
-    console.log('Form submission - UserType:', userType);
-    console.log('Form submission - UsageType:', formData.usage_type);
-    console.log('Form submission - Template should be:', userType === 'student' && formData.usage_type === 'printing' ? 'lab-request-student-printing' : 'other');
-    
     // Network connectivity check
     if (!navigator.onLine) {
-      console.log('❌ Network check failed - User is offline');
       alert('You appear to be offline. Please check your internet connection and try again.');
       return;
     }
-    
-    // Comprehensive debugging before submission
-    console.log('🔍 FINAL FORM DATA CHECK:');
-    console.log('  - usage_type:', formData.usage_type);
-    console.log('  - faculty_student_name:', formData.faculty_student_name);
-    console.log('  - year_level:', formData.year_level);
-    console.log('  - laboratory:', formData.laboratory);
-    console.log('  - printing_pages:', formData.printing_pages);
-    console.log('  - ws_number:', formData.ws_number);
-    console.log('  - time_in:', formData.time_in);
-    console.log('  - time_out:', formData.time_out);
-    console.log('  - purpose:', formData.purpose);
-    console.log('  - requested_by:', formData.requested_by);
-    console.log('  - remarks:', formData.remarks);
-    console.log('  - monitored_by:', formData.monitored_by);
-    console.log('  - approved_by:', formData.approved_by);
-    console.log('  - userType:', userType);
     
     // Check if any validation failed
     const validationErrors = [];
@@ -408,13 +479,28 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
 
         <div className="space-y-2">
           <Label htmlFor="ws_number">Workstation Number</Label>
-          <Input
-            id="ws_number"
+          <Select
             value={formData.ws_number}
-            onChange={(e) => handleInputChange('ws_number', e.target.value)}
-            placeholder="e.g., WS-01, WS-02"
-            disabled={disabled}
-          />
+            onValueChange={(value) => handleInputChange("ws_number", value)}
+            disabled={!formData.laboratory || formData.laboratory === 'e-forum' || workstations.length === 0 || disabled}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={
+                formData.laboratory === 'e-forum' 
+                  ? 'Not applicable for E-Forum' 
+                  : workstations.length === 0 
+                    ? 'Select a laboratory first' 
+                    : 'Select workstation'
+              } />
+            </SelectTrigger>
+            <SelectContent>
+              {workstations.map((workstation) => (
+                <SelectItem key={workstation.workstation_id} value={workstation.workstation_name}>
+                  {workstation.workstation_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

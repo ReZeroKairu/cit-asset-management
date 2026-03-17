@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { type FormSubmission } from "../../types/forms";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -101,6 +101,23 @@ export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
       setIsInitialized(false);
     }
   }, [editMode, form, isInitialized]);
+  
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
   
   console.log('FormDetailsModal props:', { show, form: form ? 'exists' : 'null', userRole, editMode });
   console.log('Modal should render:', !(!show || !form));

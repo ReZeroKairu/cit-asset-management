@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Calendar } from "lucide-react";
 // ✅ Combined imports into a single, safe relative path
 import {
@@ -23,6 +23,21 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     "3rd": { start: "", end: "" },
     "4th": { start: "", end: "" },
   });
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [onClose]);
 
   const handleDateChange = (
     quarter: string,

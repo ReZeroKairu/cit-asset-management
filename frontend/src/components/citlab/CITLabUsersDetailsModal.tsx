@@ -1,5 +1,6 @@
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { useEffect } from "react";
 import { 
   Users, 
   User, 
@@ -62,6 +63,23 @@ const CITLabUsersDetailsModal = ({
       default: return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

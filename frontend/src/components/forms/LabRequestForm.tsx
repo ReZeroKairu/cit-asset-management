@@ -20,6 +20,13 @@ import { submitLabRequest } from "../../api/forms";
 import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
+interface Workstation {
+  workstation_id: number;
+  workstation_name: string;
+  status_id: number;
+  workstation_remarks?: string;
+}
+
 interface LabRequestFormData {
   date: string;
   usageType: "printing" | "set-in-reservation";
@@ -59,6 +66,7 @@ export const LabRequestForm = () => {
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [cooldownActive, setCooldownActive] = useState(false);
   const [assignedLab, setAssignedLab] = useState<string>('');
+  const [workstations, setWorkstations] = useState<Workstation[]>([]);
 
   const [formData, setFormData] = useState<LabRequestFormData>({
     date: "",
@@ -66,7 +74,7 @@ export const LabRequestForm = () => {
     userType: "student",
     facultyStudentName: "",
     yearLevel: "",
-    laboratory: "lab1",
+    laboratory: "",
     printingPages: "",
     wsNumber: "",
     timeIn: "",
@@ -94,7 +102,7 @@ export const LabRequestForm = () => {
           // Update form with fetched information
           setFormData(prev => ({
             ...prev,
-            laboratory: prev.laboratory === "e-forum" ? prev.laboratory : labName.toLowerCase().replace(/\s+/g, '-'), // Use actual lab name
+            laboratory: labName, // Use actual lab name
             requestedBy: prev.requestedBy, // Keep manual entry for requested by
             approvedBy: prev.approvedBy, // Keep manual entry for approved by
             monitoredBy: custodianName, // Auto-populate monitored by in all caps
@@ -132,11 +140,11 @@ export const LabRequestForm = () => {
       filteredOptions.push(eForumOption);
     }
     
-    // Add assigned lab using the actual lab name from database
+    // Add assigned lab using actual lab name from database
     if (assignedLab) {
-      // Create option for the assigned lab using its actual name
+      // Create option for assigned lab using its actual name
       const assignedLabOption = {
-        value: assignedLab.toLowerCase().replace(/\s+/g, '-'), // Create a simple value
+        value: assignedLab, // Use actual lab name as value
         label: assignedLab
       };
       filteredOptions.push(assignedLabOption);
@@ -145,11 +153,46 @@ export const LabRequestForm = () => {
     return filteredOptions;
   };
 
+  const fetchWorkstations = async (labName: string) => {
+    try {
+      // Get lab ID from lab name
+      const response = await api.get('/laboratories');
+      const labs = response.data;
+      const lab = labs.find((l: any) => l.lab_name === labName);
+      
+      if (lab && lab.lab_id) {
+        const workstationResponse = await api.get(`/workstations/lab/${lab.lab_id}`);
+        setWorkstations(workstationResponse.data);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching workstations:', error);
+      setWorkstations([]);
+    }
+  };
+
   const handleInputChange = (field: keyof LabRequestFormData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+
+      // Fetch workstations when laboratory is selected
+      if (field === 'laboratory') {
+        console.log('🔄 Laboratory changed to:', value);
+        // Clear workstation selection when lab changes
+        newData.wsNumber = '';
+        
+        // Fetch workstations for this lab
+        if (value && value !== 'e-forum') {
+          fetchWorkstations(value);
+        } else {
+          setWorkstations([]);
+        }
+      }
+
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,7 +239,7 @@ export const LabRequestForm = () => {
           userType: "student",
           facultyStudentName: "",
           yearLevel: "",
-          laboratory: "lab1",
+          laboratory: "",
           printingPages: "",
           wsNumber: "",
           timeIn: "",
@@ -376,12 +419,28 @@ export const LabRequestForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div>
               <Label htmlFor="wsNumber">WS No.</Label>
-              <Input
-                id="wsNumber"
+              <Select
                 value={formData.wsNumber}
-                onChange={(e) => handleInputChange("wsNumber", e.target.value)}
-                placeholder="Workstation number"
-              />
+                onValueChange={(value) => handleInputChange("wsNumber", value)}
+                disabled={!formData.laboratory || formData.laboratory === 'e-forum' || workstations.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    formData.laboratory === 'e-forum' 
+                      ? 'Not applicable for E-Forum' 
+                      : workstations.length === 0 
+                        ? 'Select a laboratory first' 
+                        : 'Select workstation'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {workstations.map((workstation) => (
+                    <SelectItem key={workstation.workstation_id} value={workstation.workstation_name}>
+                      {workstation.workstation_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="timeIn">Time In</Label>
