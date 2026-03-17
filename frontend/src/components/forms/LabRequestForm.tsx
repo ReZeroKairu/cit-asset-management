@@ -135,7 +135,7 @@ export const LabRequestForm = () => {
     // Filter options: include E-Forum + assigned lab if it exists (exclude E-Forum for printing)
     const filteredOptions: Array<{value: string, label: string}> = [];
     
-    // Only add E-Forum if usage type is not printing
+    // Always add E-Forum if usage type is not printing
     if (formData.usageType !== "printing") {
       filteredOptions.push(eForumOption);
     }

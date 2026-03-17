@@ -95,7 +95,7 @@ const InventoryAnalyticsSection = () => {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Inventory Status Analytics</CardTitle>
+            <CardTitle>System Status Analytics</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="animate-pulse">
@@ -112,7 +112,7 @@ const InventoryAnalyticsSection = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Inventory Status Analytics</CardTitle>
+          <CardTitle>System Status Analytics</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-red-500">{error || "No data available"}</p>
@@ -126,10 +126,10 @@ const InventoryAnalyticsSection = () => {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">
-          Inventory Status Analytics
+          System Status Analytics
         </h2>
         <p className="text-gray-600">
-          Monitor asset status distribution and laboratory health scores
+          Monitor system status distribution
         </p>
       </div>
 
