@@ -509,7 +509,6 @@ const CustodianInventoryAnalyticsSection = () => {
                 <AssetLifecycleChart 
                   data={filteredData.timelineData} 
                   title="Asset Lifecycle Distribution"
-                  chartType="bar"
                 />
               )}
             </CardContent>
