@@ -28,8 +28,8 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
     console.log('QR Generator hostname:', hostname);
     
     // Always use the network IP for API calls when accessing from network
-    if (hostname === '172.72.100.78') {
-      return 'http://172.72.100.78:3000';
+    if (hostname === '172.72.100.117') {
+      return 'http://172.72.100.117:3001';
     }
     // For localhost access, use localhost API
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -47,7 +47,7 @@ const QRCodeGenerator = ({ baseUrl }: QRCodeGeneratorProps) => {
     
     // For local development, use network IP for mobile scanning
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://172.72.100.78:3000'; // Use correct frontend network IP and port
+      return 'http://172.72.100.117:5173'; // Use correct frontend network IP and port
     }
     
     return window.location.origin;
