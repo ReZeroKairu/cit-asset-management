@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, Clock, CheckCircle, XCircle, Download } from "lucide-react";
+import { FileText, XCircle, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -9,6 +9,7 @@ import {
   getSoftwareInstallations,
 } from "../api/forms";
 import { generateFormDocument } from "../utils/formTemplateMapping";
+import { getFormStatusColor } from "../utils/statusUtils";
 import { type FormSubmission } from "../types/forms";
 
 const ArchiveFormsPage = () => {
@@ -41,25 +42,6 @@ const ArchiveFormsPage = () => {
       const labRequests = Array.isArray(labRequestsRes) ? labRequestsRes : labRequestsRes?.data || [];
       const equipmentBorrows = Array.isArray(equipmentBorrowsRes) ? equipmentBorrowsRes : equipmentBorrowsRes?.data || [];
       const softwareInstallations = Array.isArray(softwareInstallationsRes) ? softwareInstallationsRes : softwareInstallationsRes?.data || [];
-
-      // Combine all forms
-      const allForms: any[] = [
-        ...labRequests.map((req: any) => ({
-          ...req,
-          form_type: "lab-request",
-          form_id: req.request_id,
-        })),
-        ...equipmentBorrows.map((req: any) => ({
-          ...req,
-          form_type: "equipment-borrow",
-          form_id: req.borrow_id,
-        })),
-        ...softwareInstallations.map((req: any) => ({
-          ...req,
-          form_type: "software-install",
-          form_id: req.software_id,
-        })),
-      ];
 
       // Transform to FormSubmission structure (same as FormsManagementPage)
       const transformedForms: any[] = [
@@ -101,17 +83,25 @@ const ArchiveFormsPage = () => {
         })),
       ];
 
-      // Filter for archived/completed forms only
-      const archivedForms = transformedForms.filter(form => 
-        form.status === "Approved" || 
-        form.status === "Admin_Approved" ||
-        form.status === "Custodian_Approved" ||
-        form.status === "Rejected" || 
-        form.status === "Completed" ||
-        form.status === "Denied" ||
-        form.status === "Returned" ||
-        form.status === "Lost"
-      );
+      // Filter for archived/completed forms only - role-based filtering
+      let archivedForms = transformedForms.filter(form => {
+        if (user?.role === "Admin") {
+          // Admin sees Admin_Approved and Completed statuses
+          return form.status === "Admin_Approved" || form.status === "Completed";
+        } else if (user?.role === "Custodian") {
+          // Custodian sees only Completed, Lost, Denied, and Returned statuses
+          return form.status === "Completed" || 
+                 form.status === "Lost" || 
+                 form.status === "Denied" || 
+                 form.status === "Returned";
+        } else {
+          // Default fallback - show only truly archived statuses
+          return form.status === "Completed" ||
+                 form.status === "Lost" ||
+                 form.status === "Denied" ||
+                 form.status === "Returned";
+        }
+      });
 
       // Apply role-based filtering for custodians
       let filteredArchivedForms = archivedForms;
@@ -156,44 +146,12 @@ const ArchiveFormsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Custodian_Approved":
-        return "bg-blue-100 text-blue-800";
-      case "Admin_Approved":
-      case "Approved":
-        return "bg-green-100 text-green-800";
-      case "Rejected":
-      case "Denied":
-        return "bg-red-100 text-red-800";
-      case "Completed":
-        return "bg-green-100 text-green-800";
-      case "Returned":
-        return "bg-green-100 text-green-800";
-      case "Lost":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Pending":
-        return <Clock className="w-4 h-4" />;
-      case "Admin_Approved":
-      case "Approved":
-      case "Completed":
-        return null; // Remove icon for Completed status
-      case "Rejected":
       case "Denied":
         return <XCircle className="w-4 h-4" />;
-      case "Returned":
-        return null;
       case "Lost":
-        return null;
+        return <XCircle className="w-4 h-4" />;
       default:
         return null;
     }
@@ -340,10 +298,10 @@ const ArchiveFormsPage = () => {
             <table className="w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Form Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                     User Details
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
@@ -352,7 +310,7 @@ const ArchiveFormsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     Actions
                   </th>
                 </tr>
@@ -435,7 +393,7 @@ const ArchiveFormsPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(form.status)}`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getFormStatusColor(form.status)}`}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(form.status)}
                           {form.status.replace('_', ' ')}

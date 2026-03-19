@@ -443,7 +443,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${archiveMode ? 'w-20' : 'w-48'}`}>
                     Actions
                   </th>
                 </tr>
@@ -494,20 +494,22 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className={`${archiveMode ? 'flex justify-center' : 'flex items-center gap-2'}`} onClick={(e) => e.stopPropagation()}>
                         {/* Edit button for custodians with Pending status */}
-                        <div className="w-8 h-8 flex items-center justify-center">
-                          {viewMode === "my" && report.status === "Pending" && (
-                            <Button
-                              size="sm"
-                              className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
-                              onClick={() => handleEdit(report)}
-                              title="Edit Report"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
+                        {!archiveMode && (
+                          <div className="w-8 h-8 flex items-center justify-center">
+                            {viewMode === "my" && report.status === "Pending" && (
+                              <Button
+                                size="sm"
+                                className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                onClick={() => handleEdit(report)}
+                                title="Edit Report"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Download button */}
                         <div className="w-8 h-8 flex items-center justify-center">

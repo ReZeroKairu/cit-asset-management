@@ -44,3 +44,29 @@ export const calculateWorstStatus = (assets: Array<{ status: string; unit_name?:
 export const isFunctionalStatus = (status: string): boolean => {
   return ['Functional', 'Working', 'Operational'].includes(status);
 };
+
+// Form status utilities
+
+/**
+ * Get color class for form status
+ * @param status - Form status string
+ * @returns CSS class for status color
+ */
+export const getFormStatusColor = (status: string): string => {
+  switch (status) {
+    case "Pending":
+      return "bg-yellow-100 text-yellow-800";
+    case "Admin_Approved":
+      return "bg-green-100 text-green-800";
+    case "Completed":
+      return "bg-green-100 text-green-800";
+    case "Denied":
+      return "bg-red-100 text-red-800";
+    case "Returned":
+      return "bg-green-100 text-green-800";
+    case "Lost":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
