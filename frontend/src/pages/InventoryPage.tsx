@@ -305,34 +305,87 @@ const InventoryPage = () => {
 
       {/* Filter Toggle & Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        {/* Lab Filter - Top Row for Admins */}
-        {(user?.role === "Admin" ||
-          (user?.role === "Custodian" && availableLabs.length > 1)) && (
+        {/* Lab Filter & Toggles - Top Row for Admins only */}
+        {user?.role === "Admin" && availableLabs.length > 0 && (
+          <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="lab-filter"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Filter by Laboratory:
+                </label>
+                <select
+                  id="lab-filter"
+                  value={selectedLabId || ""}
+                  onChange={(e) =>
+                    setSelectedLabId(
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Laboratories</option>
+                  {availableLabs.map((lab) => (
+                    <option key={lab.lab_id} value={lab.lab_id}>
+                      {lab.lab_name} {lab.location && `(${lab.location})`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* View Toggles - Always show for all users */}
+              <>
+                <button
+                  onClick={() => setShowUnassignedAssets(false)}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    !showUnassignedAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🖥️ Workstations ({filteredWorkstations.length})
+                </button>
+                <button
+                  onClick={() => setShowUnassignedAssets(true)}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    showUnassignedAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  📦 Other Assets ({filteredUnassignedAssets.length})
+                </button>
+              </>
+            </div>
+          </div>
+        )}
+
+        {/* View Toggles for Custodians - Separate row without lab filter */}
+        {user?.role === "Custodian" && (
           <div className="mb-4 flex items-center justify-start">
-            <div className="flex items-center space-x-2">
-              <label
-                htmlFor="lab-filter"
-                className="text-sm font-medium text-gray-700"
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowUnassignedAssets(false)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  !showUnassignedAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                Filter by Laboratory:
-              </label>
-              <select
-                id="lab-filter"
-                value={selectedLabId || ""}
-                onChange={(e) =>
-                  setSelectedLabId(
-                    e.target.value ? Number(e.target.value) : null,
-                  )
-                }
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                🖥️ Workstations ({filteredWorkstations.length})
+              </button>
+              <button
+                onClick={() => setShowUnassignedAssets(true)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  showUnassignedAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                <option value="">All Laboratories</option>
-                {availableLabs.map((lab) => (
-                  <option key={lab.lab_id} value={lab.lab_id}>
-                    {lab.lab_name} {lab.location && `(${lab.location})`}
-                  </option>
-                ))}
-              </select>
+                📦 Other Assets ({filteredUnassignedAssets.length})
+              </button>
             </div>
           </div>
         )}
@@ -401,31 +454,7 @@ const InventoryPage = () => {
               </div>
             )}
 
-            <button
-              onClick={() => setShowUnassignedAssets(false)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                !showUnassignedAssets
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              🖥️ Workstations ({filteredWorkstations.length})
-            </button>
-            <button
-              onClick={() => setShowUnassignedAssets(true)}
-              className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                showUnassignedAssets
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              📦 Other Assets ({filteredUnassignedAssets.length})
-            </button>
-
-            {/* Removed Lab Filter */}
-          </div>
-
-          <div className="flex items-center space-x-2">
+            {/* Action Buttons - Moved beside search */}
             {!showUnassignedAssets && (
               <button
                 className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"

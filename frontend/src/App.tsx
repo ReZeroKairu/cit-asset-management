@@ -119,6 +119,8 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
         <p className="text-gray-600">
           {userRole === "Custodian" && userAssignedLab
             ? `Manage your laboratory assets and daily reports efficiently for ${userAssignedLab.lab_name}`
+            : userRole === "Admin"
+            ? "Manage reports efficiently"
             : "Manage your laboratory assets and daily reports efficiently"}
         </p>
       </div>
