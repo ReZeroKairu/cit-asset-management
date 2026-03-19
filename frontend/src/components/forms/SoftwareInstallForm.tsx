@@ -118,9 +118,20 @@ export const SoftwareInstallForm = () => {
   };
 
   const handleInputChange = (field: keyof SoftwareInstallFormData, value: string) => {
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'facultyName' || field === 'requestedBy') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
   };
 

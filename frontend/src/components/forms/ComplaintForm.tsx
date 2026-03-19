@@ -231,13 +231,24 @@ Please wait for the current complaint to be resolved before submitting a new one
       setError(null);
     }
     
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'faculty_student_name' && typeof value === 'string') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     if (field === 'workstation_id') {
       setFormData((prev: ComplaintData) => ({ 
         ...prev, 
         [field]: value === undefined ? undefined : parseInt(value) 
       }));
     } else {
-      setFormData((prev: ComplaintData) => ({ ...prev, [field]: value }));
+      setFormData((prev: ComplaintData) => ({ ...prev, [field]: processedValue }));
     }
   };
 

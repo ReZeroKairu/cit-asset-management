@@ -134,9 +134,20 @@ export const EquipmentBorrowForm = () => {
   };
 
   const handleInputChange = (field: keyof EquipmentBorrowFormData, value: string | Array<{unitQty: string; equipmentName: string}>) => {
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'facultyStudentName' && typeof value === 'string') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
   };
 

@@ -70,7 +70,7 @@ export const LabRequestForm = () => {
 
   const [formData, setFormData] = useState<LabRequestFormData>({
     date: "",
-    usageType: "printing",
+    usageType: user?.role === "Custodian" ? "set-in-reservation" : "printing",
     userType: "student",
     facultyStudentName: "",
     yearLevel: "",
@@ -107,6 +107,11 @@ export const LabRequestForm = () => {
             approvedBy: prev.approvedBy, // Keep manual entry for approved by
             monitoredBy: custodianName, // Auto-populate monitored by in all caps
           }));
+
+          // Fetch workstations for the auto-populated lab
+          if (labName && labName !== 'e-forum') {
+            fetchWorkstations(labName);
+          }
         } catch (error) {
           console.error('Error fetching assigned lab:', error);
           // Fallback to basic logic
@@ -172,9 +177,20 @@ export const LabRequestForm = () => {
 
   const handleInputChange = (field: keyof LabRequestFormData, value: string) => {
     setFormData(prev => {
+      let processedValue = value;
+      
+      // Process name fields to capitalize first letter of each word
+      if (field === 'facultyStudentName') {
+        processedValue = value
+          .toLowerCase()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
       const newData = {
         ...prev,
-        [field]: value
+        [field]: processedValue
       };
 
       // Fetch workstations when laboratory is selected

@@ -148,10 +148,21 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       return;
     }
     
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'faculty_student_name') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     setFormData(prev => {
       const newData = {
         ...prev,
-        [field]: value
+        [field]: processedValue
       };
 
       // Auto-populate monitored_by when laboratory is selected (like lab requests)
@@ -173,10 +184,8 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       }
 
       // Clear printing pages when switching to set-in-reservation
-      if (field === 'usage_type') {
-        if (value === 'set-in-reservation') {
-          newData.printing_pages = '';
-        }
+      if (field === 'usage_type' && value === 'set-in-reservation') {
+        newData.printing_pages = '';
       }
 
       return newData;

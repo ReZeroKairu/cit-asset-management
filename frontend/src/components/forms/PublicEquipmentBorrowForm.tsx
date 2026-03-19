@@ -158,9 +158,20 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     if (field === 'monitored_by' && custodianName) {
       return;
     }
+    
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'faculty_student_name' || field === 'requested_by') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
   };
 

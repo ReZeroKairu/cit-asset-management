@@ -268,10 +268,21 @@ export const PublicLabRequestForm = ({ onSubmit, disabled = false, custodianName
   };
 
   const handleInputChange = (field: string, value: string) => {
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'faculty_student_name' || field === 'requested_by') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     setFormData(prev => {
       const newData = {
         ...prev,
-        [field]: value
+        [field]: processedValue
       };
 
       // Fetch workstations when laboratory is selected

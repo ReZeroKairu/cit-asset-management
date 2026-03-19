@@ -143,9 +143,20 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
   }, [custodianName, formData.laboratory]);
 
   const handleInputChange = (field: string, value: string) => {
+    let processedValue = value;
+    
+    // Process name fields to capitalize first letter of each word
+    if (field === 'faculty_name' || field === 'requested_by') {
+      processedValue = value
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
   };
 
