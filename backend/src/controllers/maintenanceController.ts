@@ -3,6 +3,144 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// SCHEDULE MANAGEMENT FUNCTIONS
+
+// 1. GET all schedules for a lab and fiscal year
+export const getLabSchedules = async (req: Request, res: Response) => {
+  try {
+    const { lab_id, fiscal_year } = req.query;
+
+    if (!lab_id || !fiscal_year) {
+      return res.status(400).json({ error: "Lab ID and Fiscal Year are required" });
+    }
+
+    const schedules = await prisma.maintenance_schedules.findMany({
+      where: {
+        lab_id: Number(lab_id),
+        fiscal_year: String(fiscal_year),
+      },
+      orderBy: [
+        { quarter: "asc" }
+      ],
+    });
+
+    // Transform to the format expected by frontend
+    const formattedSchedules = schedules.reduce((acc, schedule) => {
+      acc[schedule.quarter] = {
+        start: schedule.start_date.toISOString().split('T')[0],
+        end: schedule.end_date.toISOString().split('T')[0],
+        servicingWeeks: Array.isArray(schedule.servicing_weeks) 
+          ? schedule.servicing_weeks 
+          : JSON.parse(schedule.servicing_weeks as string || '[]'),
+      };
+      return acc;
+    }, {} as Record<string, any>);
+
+    res.json(formattedSchedules);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch schedules" });
+  }
+};
+
+// 2. CREATE or UPDATE schedules for a lab
+export const upsertSchedules = async (req: Request, res: Response) => {
+  try {
+    const { lab_id, fiscal_year, schedules } = req.body;
+
+    if (!lab_id || !fiscal_year || !schedules) {
+      return res.status(400).json({ error: "Lab ID, Fiscal Year, and Schedules are required" });
+    }
+
+    const userId = (req as any).user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const createdQuarters: string[] = [];
+
+      for (const [quarter, scheduleData] of Object.entries(schedules)) {
+        const { start, end, servicingWeeks } = scheduleData as any;
+
+        // Only process if there's actual schedule data
+        if (start && end && servicingWeeks && servicingWeeks.length > 0) {
+          const existingSchedule = await tx.maintenance_schedules.findFirst({
+            where: {
+              lab_id: Number(lab_id),
+              fiscal_year: String(fiscal_year),
+              quarter: String(quarter),
+            },
+          });
+
+          if (existingSchedule) {
+            // Update existing schedule
+            await tx.maintenance_schedules.update({
+              where: { schedule_id: existingSchedule.schedule_id },
+              data: {
+                start_date: new Date(start),
+                end_date: new Date(end),
+                servicing_weeks: servicingWeeks,
+                updated_at: new Date(),
+              },
+            });
+          } else {
+            // Create new schedule
+            await tx.maintenance_schedules.create({
+              data: {
+                lab_id: Number(lab_id),
+                quarter: String(quarter),
+                fiscal_year: String(fiscal_year),
+                start_date: new Date(start),
+                end_date: new Date(end),
+                servicing_weeks: servicingWeeks,
+              },
+            });
+          }
+
+          createdQuarters.push(quarter);
+        }
+      }
+
+      return createdQuarters;
+    });
+
+    res.json({
+      message: "Schedules saved successfully",
+      scheduledQuarters: result,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to save schedules" });
+  }
+};
+
+// 3. DELETE all schedules for a lab and fiscal year
+export const deleteLabSchedules = async (req: Request, res: Response) => {
+  try {
+    const { lab_id, fiscal_year } = req.query;
+
+    if (!lab_id || !fiscal_year) {
+      return res.status(400).json({ error: "Lab ID and Fiscal Year are required" });
+    }
+
+    const result = await prisma.maintenance_schedules.deleteMany({
+      where: {
+        lab_id: Number(lab_id),
+        fiscal_year: String(fiscal_year),
+      },
+    });
+
+    res.json({
+      message: "Schedules deleted successfully",
+      deletedCount: result.count,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete schedules" });
+  }
+};
+
 // 1. GET Reports for a Lab & Quarter
 export const getLabPMCReports = async (req: Request, res: Response) => {
   try {

@@ -21,7 +21,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // ✅ BULLETPROOF FIX: Use the .set() method for modern Axios
+      config.headers.set("Authorization", `Bearer ${token}`);
     }
     return config;
   },
@@ -35,15 +36,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid, logout user
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      
-      // Only redirect to login if not already on login page
-      const currentPath = window.location.pathname;
-      if (currentPath !== '/login') {
-        window.location.href = "/login";
-      }
+      console.error("401 ERROR CAUGHT! Token might be invalid or rejected by backend.");
+
+      // 🛑 TEMPORARILY COMMENT OUT THE LOGOUT LOGIC FOR DEBUGGING
+      // localStorage.removeItem("token");
+      // localStorage.removeItem("user");
+      // const currentPath = window.location.pathname;
+      // if (currentPath !== '/login') {
+      //   window.location.href = "/login";
+      // }
     }
     return Promise.reject(error);
   }

@@ -9,6 +9,7 @@ interface Props {
   onEdit: (workstation: any) => void;
   onDelete: (id: number) => void;
   getStatusColor: (status?: string) => string;
+  pmcReports?: Record<number, any>;
 }
 
 const WorkstationTable: React.FC<Props> = ({
@@ -17,6 +18,7 @@ const WorkstationTable: React.FC<Props> = ({
   onEdit,
   onDelete,
   getStatusColor,
+  pmcReports = {},
 }) => {
   const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
 
@@ -51,6 +53,15 @@ const WorkstationTable: React.FC<Props> = ({
       return workstation.asset_statuses?.status_name || 'Functional';
     }
     return calculateWorstStatus(assets);
+  };
+
+  // Get remarks from PMC report or fallback to workstation remarks
+  const getWorkstationRemarks = (workstation: any) => {
+    const pmcReport = pmcReports[workstation.workstation_id];
+    if (pmcReport?.overall_remarks) {
+      return pmcReport.overall_remarks;
+    }
+    return workstation.workstation_remarks || "-";
   };
   return (
     <div className="overflow-x-auto">
@@ -117,9 +128,9 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
-                  title={workstation.workstation_remarks}
+                  title={getWorkstationRemarks(workstation)}
                 >
-                  {workstation.workstation_remarks || "-"}
+                  {getWorkstationRemarks(workstation)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button

@@ -34,6 +34,7 @@ interface OtherItem {
 
 interface Props {
   targetWorkstation: { id: number; name: string } | null;
+  selectedQuarter?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -54,6 +55,7 @@ const SYSTEM_UNIT_TYPES = [
 
 const MaintenanceForm: React.FC<Props> = ({
   targetWorkstation,
+  selectedQuarter,
   onSuccess,
   onCancel,
 }) => {
@@ -76,7 +78,7 @@ const MaintenanceForm: React.FC<Props> = ({
     lab_id: null,
     workstation_id: null,
     report_date: new Date().toISOString().split("T")[0],
-    quarter: getCurrentQuarter(),
+    quarter: selectedQuarter || getCurrentQuarter(),
     general_remarks: "",
     workstation_status: "Functional",
   });

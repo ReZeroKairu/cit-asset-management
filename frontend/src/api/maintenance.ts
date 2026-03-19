@@ -154,6 +154,32 @@ export const getMaintenanceAnalytics = async () => {
   return response.data;
 };
 
+// 7. GET MULTIPLE PMC REPORTS FOR WORKSTATIONS
+export const getWorkstationPMCReports = async (
+  workstationIds: number[],
+  quarter: string
+): Promise<Record<number, PMCReport | null>> => {
+  const reports: Record<number, PMCReport | null> = {};
+  
+  // Fetch reports in parallel
+  const promises = workstationIds.map(async (workstationId) => {
+    try {
+      const report = await getPMCReport(workstationId, quarter);
+      return { workstationId, report };
+    } catch (error) {
+      console.error(`Failed to fetch PMC report for workstation ${workstationId}:`, error);
+      return { workstationId, report: null };
+    }
+  });
+
+  const results = await Promise.all(promises);
+  results.forEach(({ workstationId, report }) => {
+    reports[workstationId] = report;
+  });
+
+  return reports;
+};
+
 export interface MaintenanceAnalyticsData {
   totalWorkstations: number;
   completedReports: number;

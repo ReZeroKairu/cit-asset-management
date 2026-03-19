@@ -13,12 +13,10 @@ import {
   Keyboard,
   Network,
   AlignLeft,
-  Download,
   History,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { generateQPMCReport } from "../../utils/reportGenerator";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
 
@@ -63,60 +61,18 @@ const MaintenanceView: React.FC<Props> = ({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log("🔍 MAINTENANCE VIEW - Fetching data for:", {
-        workstationId: workstation.id,
-        quarter,
-      });
-
       const assetData = await getWorkstationAssets(workstation.id);
       setAssets(assetData);
-
-      console.log("📦 MAINTENANCE VIEW - Assets loaded:", {
-        count: assetData.length,
-        assets: assetData.map((asset: any) => ({
-          asset_id: asset.asset_id,
-          unit_name: asset.unit_name,
-          status: asset.status,
-          remarks: asset.asset_remarks || "NONE",
-          property_tag_no: asset.property_tag_no || "N/A",
-        })),
-      });
 
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);
 
-      if (reportData) {
-        console.log("📋 MAINTENANCE VIEW - PMC Report loaded:", {
-          pmc_id: reportData?.pmc_id || "NULL",
-          overall_remarks: reportData?.overall_remarks || "NULL",
-          software_name: reportData?.software_name || "NULL",
-          connectivity_type: reportData?.connectivity_type || "NULL",
-          connectivity_speed: reportData?.connectivity_speed || "NULL",
-          workstation_status: reportData?.workstation_status || "NULL",
-        });
-      } else {
-        console.log("📋 MAINTENANCE VIEW - No PMC report found (first service)");
-      }
-
-      // Fetch service history
       const historyData = await getServiceHistory(workstation.id, quarter);
       setServiceLogs(historyData);
 
-      console.log("📚 MAINTENANCE VIEW - Service history loaded:", {
-        count: historyData.length,
-        logs: historyData.map((log: any) => ({
-          log_id: log.log_id,
-          service_type: log.service_type,
-          remarks: log.remarks || "NULL",
-          service_date: log.service_date,
-        })),
-      });
-
-      // Fetch status options
       const statuses = await getAssetStatuses();
       setStatusOptions(statuses);
     } catch (error) {
-      console.error("❌ MAINTENANCE VIEW - Failed to load details:", error);
       setPmcReport(null);
       setServiceLogs([]);
     } finally {
@@ -128,150 +84,7 @@ const MaintenanceView: React.FC<Props> = ({
     fetchData();
   }, [fetchData, refreshTrigger]);
 
-  // --- REPORT GENERATION HANDLER ---
-  const handleDownloadReport = () => {
-    if (!pmcReport) return;
-
-    // 1. Format the Database Report Date (e.g., "February 13, 2026")
-    const reportDate = new Date(pmcReport.report_date);
-    const formattedDate = reportDate.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-
-    // 2. Get the ACTUAL Current Time right now for the report generation
-    const currentTime = new Date();
-    const formattedTime = currentTime.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const completedProcedures = pmcReport.procedures || [];
-
-    // 1. Map Procedures to Checkmarks
-    const checkProc = (name: string) =>
-      completedProcedures.some((p: any) => 
-        (p.procedure_name || p.procedure?.procedure_name) === name
-      )
-        ? "☑"
-        : "☐";
-
-    // 2. Map Statuses to Table Checkmarks with Color Coding
-    const mapStatus = (status: string) => ({
-      func: ["Functional", "Working", "Operational"].includes(status)
-        ? "bg-green-100 text-green-800 border-green-200"
-        : status === "For Replacement"
-          ? "bg-red-100 text-red-800 border-red-200"
-          : status === "For Repair"
-            ? "bg-amber-100 text-amber-800 border-amber-200"
-            : status === "For Upgrade"
-              ? "bg-blue-100 text-blue-800 border-blue-200"
-              : "bg-gray-100 text-gray-800 border-gray-200",
-      rep: status === "For Repair" ? "✓" : "",
-      upg: status === "For Upgrade" ? "✓" : "",
-      repl: status === "For Replacement" ? "✓" : "",
-    });
-
-    // 3. Separate Assets into Peripherals and System Components
-    const systemComponents = assets.filter((asset) =>
-      SYSTEM_UNIT_TYPES.some(
-        (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
-    );
-    const peripheralComponents = assets.filter(
-      (asset) =>
-        !SYSTEM_UNIT_TYPES.some(
-          (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-        )
-    );
-
-    // 4. Start building the list with Peripherals first
-    const componentsList = peripheralComponents.map((asset) => ({
-      name: asset.unit_name,
-      ...mapStatus(asset.status),
-      tag: asset.property_tag_no || "N/A",
-      remarks: asset.asset_remarks || "",
-    }));
-
-    // 5. Add the "System Unit" Parent row with shared utility
-    const systemUnitStatus = calculateWorstStatus(systemComponents);
-
-    componentsList.push({
-      name: "System Unit",
-      ...mapStatus(systemUnitStatus),
-      tag: "N/A",
-      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
-    });
-
-    // 6. Add the System Unit Components right under it
-    systemComponents.forEach((asset) => {
-      componentsList.push({
-        name: `   ↳ ${asset.unit_name}`,
-        ...mapStatus(asset.status),
-        tag: asset.property_tag_no || "N/A",
-        remarks: asset.asset_remarks || "",
-      });
-    });
-
-    // 7. Add Software & Network Items explicitly at the bottom
-    componentsList.push({
-      name: "Software",
-      ...mapStatus(pmcReport.software_status),
-      tag: "N/A",
-      remarks: pmcReport.software_name || "",
-    });
-
-    const connTypeStr =
-      pmcReport.connectivity_type === "Wired"
-        ? "☑ Wired   ☐ Wireless"
-        : pmcReport.connectivity_type === "Wireless"
-        ? "☐ Wired   ☑ Wireless"
-        : "☐ Wired   ☐ Wireless";
-
-    componentsList.push({
-      name: "Connectivity Type",
-      ...mapStatus(pmcReport.connectivity_type_status),
-      tag: "N/A",
-      remarks: connTypeStr,
-    });
-
-    componentsList.push({
-      name: "Connectivity Speed",
-      ...mapStatus(pmcReport.connectivity_speed_status),
-      tag: "N/A",
-      remarks: pmcReport.connectivity_speed || "",
-    });
-
-    const rawCustodianName =
-      pmcReport?.user?.full_name ||
-      (user as any)?.full_name ||
-      (user as any)?.name ||
-      (user as any)?.fullName ||
-      "YOUR NAME HERE";
-
-    // 4. Construct Final Payload
-    const templateData = {
-      date: formattedDate,
-      time: formattedTime,
-      lab: workstation.lab_name || "N/A",
-      workstation: workstation.name,
-      hw_main: checkProc("Hardware Maintenance"),
-      sw_main: checkProc("Software Maintenance"),
-      sec_main: checkProc("Security Maintenance"),
-      net_main: checkProc("Network Maintenance"),
-      sys_perf: checkProc("System Performance"),
-      reg_clean: checkProc("Regular Cleaning"),
-      components: componentsList,
-      overall_remarks: pmcReport.overall_remarks || "N/A",
-      custodian: rawCustodianName.toUpperCase(),
-    };
-
-    // Trigger Download
-    generateQPMCReport(templateData);
-  };
-
-  // --- Data Processing ---
+  // --- Data Processing (on-page display not changed) ---
   const systemAssets = assets.filter((asset) =>
     SYSTEM_UNIT_TYPES.some(
       (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
@@ -283,8 +96,6 @@ const MaintenanceView: React.FC<Props> = ({
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
       )
   );
-
-  // Use shared utility to calculate System Unit (Overall) status
   const systemUnitStatus = calculateWorstStatus(systemAssets);
 
   const parentSystemUnit = {
@@ -316,14 +127,9 @@ const MaintenanceView: React.FC<Props> = ({
   ];
 
   const completedProcedures = (pmcReport?.procedures || []).filter((p: any) => {
-    // Safety check: ensure procedure object has required properties
-    if (!p || typeof p === 'undefined') {
-      console.warn('⚠️ Undefined procedure object:', p);
-      return false;
-    }
+    if (!p || typeof p === 'undefined') return false;
     return true;
   }).map((p: any) => {
-    // Transform to consistent structure
     return {
       procedure_id: p.procedure_id || p.procedure?.procedure_id || 0,
       procedure_name: p.procedure_name || p.procedure?.procedure_name || 'Unknown Procedure',
@@ -448,7 +254,6 @@ const MaintenanceView: React.FC<Props> = ({
   if (loading)
     return <div className="p-12 text-center text-gray-500">Loading...</div>;
 
-  // Calculate workstation status from ALL assets (system + peripherals)
   const allAssets = [...systemAssets, ...peripheralAssets];
   const calculatedWorkstationStatus = calculateWorstStatus(allAssets);
 
@@ -490,16 +295,7 @@ const MaintenanceView: React.FC<Props> = ({
             </button>
           )}
 
-          {/* Download Report Button (Only shows if report exists) */}
-          {pmcReport && (
-            <button
-              onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm cursor-pointer"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              QPMC Report
-            </button>
-          )}
+         
         </div>
       </div>
 

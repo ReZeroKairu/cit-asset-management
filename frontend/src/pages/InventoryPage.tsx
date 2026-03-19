@@ -3,6 +3,8 @@ import api from "../api/axios";
 import { getLaboratories } from "../api/laboratories";
 import { getInventory, deleteAsset } from "../api/inventory";
 import { getAllWorkstations } from "../api/workstations";
+import { getWorkstationPMCReports } from "../api/maintenance";
+import { getCurrentQuarter } from "../utils/quarterLogic";
 import AddAssetModal from "../components/inventory/AddAssetModal";
 import EditAssetModal from "../components/inventory/EditAssetModal";
 import ViewWorkstationModal from "../components/inventory/ViewWorkstationModal";
@@ -89,12 +91,20 @@ const InventoryPage = () => {
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [pmcReports, setPmcReports] = useState<Record<number, any>>({});
 
   useEffect(() => {
     fetchInventory();
     fetchWorkstations();
     fetchLaboratories();
   }, []);
+
+  // Fetch PMC reports when workstations change
+  useEffect(() => {
+    if (workstations.length > 0) {
+      fetchPMCReports();
+    }
+  }, [workstations]);
 
   const fetchInventory = async () => {
     try {
@@ -120,6 +130,17 @@ const InventoryPage = () => {
       setLaboratories(labs);
     } catch (err) {
       console.error("Error fetching laboratories:", err);
+    }
+  };
+
+  const fetchPMCReports = async () => {
+    try {
+      const currentQuarter = getCurrentQuarter();
+      const workstationIds = workstations.map(ws => ws.workstation_id);
+      const reports = await getWorkstationPMCReports(workstationIds, currentQuarter);
+      setPmcReports(reports);
+    } catch (err) {
+      console.error("Error fetching PMC reports:", err);
     }
   };
 
@@ -358,6 +379,7 @@ const InventoryPage = () => {
             onEdit={handleEditWorkstation}
             onDelete={handleDeleteWorkstation}
             getStatusColor={getStatusColor}
+            pmcReports={pmcReports}
           />
         ) : (
           <UnassignedAssetTable

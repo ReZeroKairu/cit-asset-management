@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { getLabPMCReports, type PMCReport } from "../api/maintenance";
 import QuarterlyReportsView from "../components/maintenance/QuarterlyReportsView";
 import SetScheduleModal from "../components/maintenance/SetScheduleModal";
+import ViewScheduleModal from "../components/maintenance/ViewScheduleModal";
 import { calculateWorstStatus } from "../utils/statusUtils";
+import { deleteLabSchedules, getLabSchedules } from "../api/schedule";
 
 // Import workstation helper
 import { getLabWorkstationsForReport } from "../api/workstationReports";
@@ -15,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 
 import MaintenanceForm from "../components/maintenance/MaintenanceForm";
 import MaintenanceView from "../components/maintenance/MaintenanceView";
+import PasswordVerificationModal from "../components/auth/PasswordVerificationModal";
 import {
   Monitor,
   Plus,
@@ -50,11 +53,17 @@ const MaintenancePage = () => {
   // Schedule state
   const [openQuarters, setOpenQuarters] = useState<string[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
   const [showScheduleDropdown, setShowScheduleDropdown] = useState(false);
+  const [savedSchedules, setSavedSchedules] = useState<Record<string, any>>({});
+  const [currentFiscalYear, setCurrentFiscalYear] = useState("2025-2026");
 
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
   const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
+  
+  // Password verification modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // List of Quarters for the new UI Tabs
   const quartersList = [
@@ -64,30 +73,89 @@ const MaintenancePage = () => {
     { id: "4th", num: "Q4", label: "4th Quarter" },
   ];
 
-  // Mock fetch for schedules (Later, replace with actual API call)
+// Fetch actual schedules and auto-select current quarter
   useEffect(() => {
-    if (userLabId) {
-      // Pretend the 1st Quarter is already open in the database for now
-      setOpenQuarters(["1st"]);
-    }
-  }, [userLabId]);
+    const loadSchedules = async () => {
+      if (userLabId) {
+        try {
+          const schedules = await getLabSchedules(userLabId, currentFiscalYear);
+          const scheduledQuarters = Object.keys(schedules);
 
-  const handleScheduleSuccess = (newlyScheduledQuarters: string[]) => {
+          if (scheduledQuarters.length > 0) {
+            // 1. Unlock the quarters that have schedules
+            setOpenQuarters(scheduledQuarters);
+            setSavedSchedules(schedules);
+
+            // 2. Figure out which quarter we are currently in based on today's date!
+            const today = new Date();
+            let activeQuarter = scheduledQuarters[0]; // Default to the first available if none match
+
+            for (const [quarter, dates] of Object.entries(schedules)) {
+              // Convert the saved string dates to actual Date objects
+              const startDate = new Date((dates as any).start);
+              const endDate = new Date((dates as any).end);
+              
+              // If today falls between the start and end date, this is our active quarter
+              if (today >= startDate && today <= endDate) {
+                activeQuarter = quarter;
+                break; 
+              }
+            }
+            
+            // 3. Set the UI to the correct quarter
+            setSelectedQuarter(activeQuarter);
+
+          } else {
+            setOpenQuarters(["1st"]);
+          }
+        } catch (error) {
+          console.error("Failed to load existing schedules:", error);
+          setOpenQuarters(["1st"]);
+        }
+      }
+    };
+
+    loadSchedules();
+  }, [userLabId, currentFiscalYear]);
+
+  const handleScheduleSuccess = (newlyScheduledQuarters: string[], schedules?: any, fiscalYear?: string) => {
     setOpenQuarters((prev) => {
       const combined = new Set([...prev, ...newlyScheduledQuarters]);
       return Array.from(combined);
     });
+    if (schedules) {
+      setSavedSchedules(schedules);
+    }
+    if (fiscalYear) {
+      setCurrentFiscalYear(fiscalYear);
+    }
     setShowScheduleModal(false);
   };
 
-  const handleResetAllSchedules = () => {
+  const handleResetAllSchedules = async () => {
+    // Show password verification modal
+    setShowPasswordModal(true);
+  };
+
+  const handlePasswordVerified = async () => {
+    // Password was verified, now show confirmation dialog
     if (
       window.confirm(
         "Are you sure you want to reset all quarter schedules? This will remove all scheduled quarters.",
       )
     ) {
-      setOpenQuarters([]);
-      setSelectedQuarter("1st"); // Reset to default quarter
+      try {
+        if (userLabId) {
+          await deleteLabSchedules(userLabId, currentFiscalYear);
+        }
+        setOpenQuarters([]);
+        setSelectedQuarter("1st"); // Reset to default quarter
+        setSavedSchedules({}); // Clear saved schedules
+        alert("All schedules have been reset successfully.");
+      } catch (error) {
+        console.error("Failed to reset schedules:", error);
+        alert("Failed to reset schedules. Please try again.");
+      }
     }
   };
 
@@ -232,7 +300,7 @@ const MaintenancePage = () => {
                     }
                     className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   >
-                    <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set Schedule
+                    <Plus className="w-4 h-4 mr-2 text-blue-600" /> View Schedules
                     <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
                   </button>
 
@@ -241,13 +309,14 @@ const MaintenancePage = () => {
                       <button
                         onClick={() => {
                           setShowScheduleDropdown(false);
-                          setShowScheduleModal(true);
+                          setShowViewScheduleModal(true);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center rounded-t-lg cursor-pointer"
                       >
-                        <Plus className="w-4 h-4 mr-2 text-blue-600" /> Set New
-                        Schedule
+                        <Plus className="w-4 h-4 mr-2 text-blue-600" /> View
+                        Schedules
                       </button>
+                      
                       {openQuarters.length > 0 && (
                         <button
                           onClick={() => {
@@ -449,6 +518,7 @@ const MaintenancePage = () => {
       {(view === "create" || view === "edit") && (
         <MaintenanceForm
           targetWorkstation={targetWorkstation}
+          selectedQuarter={selectedQuarter}
           onSuccess={() => {
             fetchData(); // Refresh main data
             handleReturnToView(); // Return to view with refresh trigger
@@ -475,6 +545,29 @@ const MaintenancePage = () => {
           onSuccess={handleScheduleSuccess}
         />
       )}
+
+      {/* VIEW SCHEDULE MODAL */}
+      {showViewScheduleModal && (
+        <ViewScheduleModal
+          labId={userLabId}
+          onClose={() => setShowViewScheduleModal(false)}
+          onSetSchedule={() => {
+            setShowViewScheduleModal(false);
+            setShowScheduleModal(true);
+          }}
+          existingSchedules={savedSchedules}
+          fiscalYear={currentFiscalYear}
+        />
+      )}
+
+      {/* PASSWORD VERIFICATION MODAL */}
+      <PasswordVerificationModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={handlePasswordVerified}
+        title="Verify Password to Reset Schedules"
+        message="Enter your password to reset all quarter schedules:"
+      />
     </div>
   );
 };
