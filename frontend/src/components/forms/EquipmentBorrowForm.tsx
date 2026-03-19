@@ -137,7 +137,7 @@ export const EquipmentBorrowForm = () => {
     let processedValue = value;
     
     // Process name fields to capitalize first letter of each word
-    if (field === 'facultyStudentName' && typeof value === 'string') {
+    if ((field === 'facultyStudentName' || field === 'requestedBy') && typeof value === 'string') {
       processedValue = value
         .toLowerCase()
         .split(' ')

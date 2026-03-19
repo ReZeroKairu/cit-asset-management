@@ -180,7 +180,7 @@ export const LabRequestForm = () => {
       let processedValue = value;
       
       // Process name fields to capitalize first letter of each word
-      if (field === 'facultyStudentName') {
+      if (field === 'facultyStudentName' || field === 'requestedBy') {
         processedValue = value
           .toLowerCase()
           .split(' ')

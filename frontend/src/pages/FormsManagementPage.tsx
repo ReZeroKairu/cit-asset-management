@@ -645,12 +645,12 @@ export const FormsManagementPage = () => {
             setShowDetails(false);
             setSelectedForm(null);
           }}
-          onUpdateStatus={(
+          onUpdateStatus={async (
             formId: number,
             formType: string,
             newStatus: string
           ) => {
-            updateStatus(formId, formType, newStatus);
+            await updateStatus(formId, formType, newStatus);
           }}
           onUpdate={fetchForms} // Refresh forms data after save
           userRole={user?.role}

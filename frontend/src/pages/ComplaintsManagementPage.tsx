@@ -359,10 +359,10 @@ const ComplaintsManagementPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Submitted
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
                 </tr>
@@ -420,7 +420,7 @@ const ComplaintsManagementPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {/* Show Accept/Deny buttons for Open complaints - but not for admins */}
                         {complaint.status === "Open" && !isAdmin && (

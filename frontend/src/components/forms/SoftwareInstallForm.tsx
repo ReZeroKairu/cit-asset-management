@@ -277,9 +277,9 @@ export const SoftwareInstallForm = () => {
           </div>
 
           <div>
-            <Label htmlFor="software-requestedBy">Requested by</Label>
+            <Label htmlFor="requestedBy">Requested by</Label>
             <Input
-              id="software-requestedBy"
+              id="requestedBy"
               value={formData.requestedBy}
               onChange={(e) => handleInputChange("requestedBy", e.target.value)}
               placeholder="Your name"

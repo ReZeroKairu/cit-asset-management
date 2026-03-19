@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, XCircle, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../api/forms";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import { getFormStatusColor } from "../utils/statusUtils";
+import { formatUserType, formatUsageType, formatLaboratory } from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
 
 const ArchiveFormsPage = () => {
@@ -146,15 +147,8 @@ const ArchiveFormsPage = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Denied":
-        return <XCircle className="w-4 h-4" />;
-      case "Lost":
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return null;
-    }
+  const getStatusIcon = () => {
+    return null;
   };
 
   const handleViewForm = (form: any) => {
@@ -301,7 +295,7 @@ const ArchiveFormsPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Form Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
                     User Details
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
@@ -329,12 +323,12 @@ const ArchiveFormsPage = () => {
                         {form.type === "software-install" && `Software Installation`}
                       </div>
                       {form.details?.purpose && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                        <div className="text-sm text-gray-500 mt-1 truncate max-w-sm">
                           {form.details.purpose}
                         </div>
                       )}
                       {form.type === "software-install" && form.details?.software_list && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                        <div className="text-sm text-gray-500 mt-1 truncate max-w-sm">
                           {form.details.software_list}
                         </div>
                       )}
@@ -350,43 +344,33 @@ const ArchiveFormsPage = () => {
                         {form.type === 'lab-request' && (
                           <>
                             {form.details?.user_type && (
-                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                              <span className="capitalize">{formatUserType(form.details.user_type)}</span>
                             )}
                             {form.details?.usage_type && (
-                              <span> • {form.details.usage_type.replace('-', ' ')}</span>
+                              <span> • {formatUsageType(form.details.usage_type)}</span>
                             )}
                             {form.laboratory && (
-                              <span> • {form.laboratory}</span>
+                              <span> • {formatLaboratory(form.laboratory)}</span>
                             )}
                           </>
                         )}
                         {form.type === 'software-install' && (
                           <>
                             {form.details?.user_type && (
-                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                              <span className="capitalize">{formatUserType(form.details.user_type)}</span>
+                            )}
+                            {form.laboratory && (
+                              <span> • {formatLaboratory(form.laboratory)}</span>
                             )}
                           </>
                         )}
                         {form.type === 'equipment-borrow' && (
                           <>
                             {form.details?.user_type && (
-                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                              <span className="capitalize">{formatUserType(form.details.user_type)}</span>
                             )}
                             {form.laboratory && (
-                              <span> • {form.laboratory}</span>
-                            )}
-                          </>
-                        )}
-                        {form.type === 'software-install' && (
-                          <>
-                            {form.details?.user_type && (
-                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
-                            )}
-                            {form.details?.user_type && form.laboratory && (
-                              <span> • </span>
-                            )}
-                            {form.laboratory && (
-                              <span>{form.laboratory}</span>
+                              <span> • {formatLaboratory(form.laboratory)}</span>
                             )}
                           </>
                         )}
@@ -395,7 +379,7 @@ const ArchiveFormsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getFormStatusColor(form.status)}`}>
                         <span className="flex items-center gap-1">
-                          {getStatusIcon(form.status)}
+                          {getStatusIcon()}
                           {form.status.replace('_', ' ')}
                         </span>
                       </span>
