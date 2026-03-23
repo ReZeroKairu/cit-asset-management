@@ -95,7 +95,11 @@ const InventoryAnalyticsSection = () => {
       <div className="space-y-6">
         <Card>
           <CardHeader>
+<<<<<<< HEAD
             <CardTitle>System Status Analytics</CardTitle>
+=======
+            <CardTitle>Inventory Status Analytics</CardTitle>
+>>>>>>> origin/jesi-branch
           </CardHeader>
           <CardContent>
             <div className="animate-pulse">
@@ -112,7 +116,11 @@ const InventoryAnalyticsSection = () => {
     return (
       <Card>
         <CardHeader>
+<<<<<<< HEAD
           <CardTitle>System Status Analytics</CardTitle>
+=======
+          <CardTitle>Inventory Status Analytics</CardTitle>
+>>>>>>> origin/jesi-branch
         </CardHeader>
         <CardContent>
           <p className="text-red-500">{error || "No data available"}</p>
@@ -126,10 +134,17 @@ const InventoryAnalyticsSection = () => {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">
+<<<<<<< HEAD
           System Status Analytics
         </h2>
         <p className="text-gray-600">
           Monitor system status distribution
+=======
+          Inventory Status Analytics
+        </h2>
+        <p className="text-gray-600">
+          Monitor asset status distribution and laboratory health scores
+>>>>>>> origin/jesi-branch
         </p>
       </div>
 
@@ -274,6 +289,11 @@ const InventoryAnalyticsSection = () => {
                 <div className="text-sm text-gray-600">Completion Rate ({maintenanceData.currentQuarter} Quarter)</div>
                 <div className="text-lg font-semibold text-green-600 mt-2">{maintenanceData.completedReports}</div>
                 <div className="text-xs text-gray-500">Reports Completed</div>
+<<<<<<< HEAD
+=======
+                <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.uniqueWorkstationsWithMaintenance}</div>
+                <div className="text-xs text-gray-500">Workstations with Maintenance</div>
+>>>>>>> origin/jesi-branch
                 <div className="text-lg font-semibold text-gray-700 mt-2">{maintenanceData.totalWorkstations}</div>
                 <div className="text-xs text-gray-500">Total Workstations</div>
               </div>
@@ -299,6 +319,32 @@ const InventoryAnalyticsSection = () => {
                   </ResponsiveContainer>
                 </div>
               )}
+<<<<<<< HEAD
+=======
+              
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={maintenanceData.statusDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="status" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="count">
+                    {maintenanceData.statusDistribution.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={MAINTENANCE_COLORS[entry.status as keyof typeof MAINTENANCE_COLORS] || "#8884d8"} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+>>>>>>> origin/jesi-branch
             </CardContent>
           </Card>
         )}

@@ -6,6 +6,9 @@ import {
   getServiceHistory,
   createRepairLog,
   getMaintenanceAnalytics,
+  getLabSchedules,
+  upsertSchedules,
+  deleteLabSchedules,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
 import { auditMiddleware } from "../middleware/audit";
@@ -35,10 +38,24 @@ router.get("/pmc/history", getServiceHistory);
 
 // 5. Create a repair/replacement log
 // POST /api/maintenance/pmc/repair
-router.post("/pmc/repair", auditMiddleware("CREATE", "repair log"), createRepairLog);
+router.post("/pmc/repair", createRepairLog);
 
 // 6. Get preventive maintenance analytics for dashboard
 // GET /api/maintenance/analytics
 router.get("/analytics", getMaintenanceAnalytics);
+
+// ✅ SCHEDULE MANAGEMENT ROUTES
+
+// 7. Get all schedules for a lab and fiscal year
+// GET /api/maintenance/schedules?lab_id=1&fiscal_year=2025-2026
+router.get("/schedules", getLabSchedules);
+
+// 8. Create or update schedules for a lab
+// POST /api/maintenance/schedules
+router.post("/schedules", upsertSchedules);
+
+// 9. Delete all schedules for a lab and fiscal year
+// DELETE /api/maintenance/schedules?lab_id=1&fiscal_year=2025-2026
+router.delete("/schedules", deleteLabSchedules);
 
 export default router;

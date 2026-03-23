@@ -3,8 +3,8 @@ import { FileText, Download, ArrowLeft, Loader2 } from "lucide-react";
 import { getLabPMCReports, getPMCReport } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
-import { generateQPMCReport } from "../../utils/reportGenerator";
 import { calculateWorstStatus } from "../../utils/statusUtils";
+import { generateQPMCReportFromDb } from "../../utils/generateQPMC";
 
 interface Props {
   labId: number | null;
@@ -26,6 +26,15 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(
     null
   );
+  const [workstationAssets, setWorkstationAssets] = useState<{
+    [key: number]: any[];
+  }>({});
+
+  // Calculate real workstation status based on assets (same logic as MaintenanceView)
+  const calculateWorkstationStatus = (assets: any[]) => {
+    if (!assets || assets.length === 0) return "Functional";
+    return calculateWorstStatus(assets);
+  };
 
   const quartersList = [
     { id: "1st", num: "Q1", label: "1st Quarter" },
@@ -40,62 +49,64 @@ const QuarterlyReportsView: React.FC<Props> = ({
     return ws ? ws.workstation_name : wsId;
   };
 
-  // Fetch workstation reports for this quarter
+  // Fetch workstation reports and assets for this quarter
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchReportsAndAssets = async () => {
       if (!labId) return;
       setLoadingReports(true);
       try {
         const reportsData = await getLabPMCReports(labId, selectedQuarter);
         setReports(reportsData);
+
+        // Fetch assets for each workstation to calculate real status
+        const assetsPromises = reportsData.map(async (report: any) => {
+          try {
+            const assets = await getWorkstationAssets(report.workstation_id);
+            return { workstationId: report.workstation_id, assets };
+          } catch (error) {
+            console.error(
+              `Failed to fetch assets for workstation ${report.workstation_id}:`,
+              error
+            );
+            return { workstationId: report.workstation_id, assets: [] };
+          }
+        });
+
+        const assetsResults = await Promise.all(assetsPromises);
+        const assetsMap = assetsResults.reduce((acc, result) => {
+          acc[result.workstationId] = result.assets;
+          return acc;
+        }, {} as { [key: number]: any[] });
+
+        setWorkstationAssets(assetsMap);
       } catch (error) {
         console.error("Failed to fetch reports", error);
         setReports([]);
+        setWorkstationAssets({});
       } finally {
         setLoadingReports(false);
       }
     };
-    fetchReports();
+    fetchReportsAndAssets();
   }, [labId, selectedQuarter]);
 
   const handleDownloadWorkstationReport = async (report: any) => {
     setDownloadingReportId(report.pmc_id);
-
     try {
-      // Fetch detailed report data
       const detailedReport = await getPMCReport(
         report.workstation_id,
         selectedQuarter
       );
-
-      // Fetch workstation assets
       const assetData = await getWorkstationAssets(report.workstation_id);
-      const formattedAssets = assetData.map((item: any) => ({
-        asset_id: item.asset_id,
-        unit_name: item.units?.unit_name || item.unit_name || "Unknown",
-        property_tag_no:
-          item.details?.property_tag_no || item.property_tag_no || "N/A",
-        asset_remarks: item.details?.asset_remarks || item.asset_remarks || "",
-        status:
-          item.details?.current_status?.status_name ||
-          item.status ||
-          "Functional",
-        description: item.details?.description || item.description || "",
-      }));
-
-      // ✅ Use getWorkstationName() for the generated file
-      const wsName = getWorkstationName(report.workstation_id);
-      const finalName = String(wsName).toLowerCase().includes("workstation")
-        ? wsName
-        : `${wsName}`;
-
-      await generateWorkstationReport(
-        detailedReport,
-        formattedAssets,
-        finalName
-      );
-    } catch (error) {
-      console.error("Failed to download report:", error);
+      // Use the same shared function:
+      await generateQPMCReportFromDb({
+        pmcReport: detailedReport,
+        assets: assetData,
+        lab: labName,
+        workstation: getWorkstationName(report.workstation_id),
+        user,
+      });
+    } catch (err) {
       alert("Failed to generate workstation report.");
     } finally {
       setDownloadingReportId(null);
@@ -182,7 +193,7 @@ const QuarterlyReportsView: React.FC<Props> = ({
       name: "System Unit",
       ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
+      remarks: systemUnitStatus === "Functional" ? "Functional" : "",
     });
 
     // Add System Unit Components
@@ -319,20 +330,20 @@ const QuarterlyReportsView: React.FC<Props> = ({
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Workstation
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[35%]">
+                  Workstation Details
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Service Date
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[15%]">
+                  Last Service Date
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[15%]">
                   Serviced By
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[20%]">
+                  Current Status
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Action
+                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[15%]">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -360,73 +371,120 @@ const QuarterlyReportsView: React.FC<Props> = ({
                   </td>
                 </tr>
               ) : (
-                reports.map((report) => {
-                  // ✅ Use the helper function here to grab the correct name
-                  const wsName = getWorkstationName(report.workstation_id);
-                  const displayTitle = String(wsName)
-                    .toLowerCase()
-                    .includes("workstation")
-                    ? wsName
-                    : `Workstation ${wsName}`;
+                [...reports]
+                  .sort((a, b) => {
+                    const wsNameA = getWorkstationName(a.workstation_id);
+                    const wsNameB = getWorkstationName(b.workstation_id);
+                    const displayTitleA = String(wsNameA)
+                      .toLowerCase()
+                      .includes("workstation")
+                      ? wsNameA
+                      : `Workstation ${wsNameA}`;
+                    const displayTitleB = String(wsNameB)
+                      .toLowerCase()
+                      .includes("workstation")
+                      ? wsNameB
+                      : `Workstation ${wsNameB}`;
+                    return displayTitleA.localeCompare(displayTitleB);
+                  })
+                  .map((report) => {
+                    // ✅ Use the helper function here to grab the correct name
+                    const wsName = getWorkstationName(report.workstation_id);
+                    const displayTitle = String(wsName)
+                      .toLowerCase()
+                      .includes("workstation")
+                      ? wsName
+                      : `Workstation ${wsName}`;
 
-                  return (
-                    <tr
-                      key={report.pmc_id}
-                      className="hover:bg-blue-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <FileText className="w-5 h-5 text-blue-500 mr-3" />
-                          <div>
-                            <span className="text-sm font-medium text-gray-900 block">
-                              {displayTitle}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {report.service_count > 1
-                                ? `Serviced ${report.service_count} times`
-                                : "First service this quarter"}
-                            </span>
+                    // Calculate real workstation status based on current assets
+                    const assets =
+                      workstationAssets[report.workstation_id] || [];
+                    const calculatedWorkstationStatus =
+                      calculateWorkstationStatus(assets);
+
+                    return (
+                      <tr
+                        key={report.pmc_id}
+                        className="hover:bg-blue-50/50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-start space-x-3">
+                            <FileText className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-semibold text-gray-900 truncate">
+                                {displayTitle}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                {report.service_count > 1
+                                  ? `${report.service_count} services this quarter`
+                                  : "First service this quarter"}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(report.report_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {report.user?.full_name || "Custodian"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
-                            report.workstation_status === "For Repair"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {report.workstation_status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <button
-                          onClick={() =>
-                            handleDownloadWorkstationReport(report)
-                          }
-                          disabled={downloadingReportId === report.pmc_id}
-                          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                          {downloadingReportId === report.pmc_id ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4 mr-2" />
-                          )}
-                          {downloadingReportId === report.pmc_id
-                            ? "Generating..."
-                            : "Download Report"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 font-medium">
+                            {new Date(report.report_date).toLocaleDateString()}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {new Date(report.report_date).toLocaleTimeString(
+                              [],
+                              { hour: "2-digit", minute: "2-digit" }
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {report.user?.full_name || "Custodian"}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {report.user?.role || "Staff"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                              calculatedWorkstationStatus === "Functional" ||
+                              calculatedWorkstationStatus === "Working" ||
+                              calculatedWorkstationStatus === "Operational"
+                                ? "bg-green-100 text-green-700 border border-green-200"
+                                : calculatedWorkstationStatus ===
+                                  "For Replacement"
+                                ? "bg-red-100 text-red-700 border border-red-200"
+                                : calculatedWorkstationStatus === "For Repair"
+                                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                                : calculatedWorkstationStatus === "For Upgrade"
+                                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                                : "bg-gray-100 text-gray-700 border border-gray-200"
+                            }`}
+                          >
+                            {calculatedWorkstationStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={() =>
+                              handleDownloadWorkstationReport(report)
+                            }
+                            disabled={downloadingReportId === report.pmc_id}
+                            className="inline-flex items-center justify-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full"
+                          >
+                            {downloadingReportId === report.pmc_id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4 mr-2" />
+                                Download
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

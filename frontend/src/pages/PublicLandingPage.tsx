@@ -1,6 +1,12 @@
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, ArrowRight, MessageSquare, Users, Shield } from "lucide-react";
+import {
+  FileText,
+  ArrowRight,
+  MessageSquare,
+  Users,
+  Shield,
+} from "lucide-react";
 
 const PublicLandingPage = () => {
   return (
@@ -20,14 +26,17 @@ const PublicLandingPage = () => {
                   <FileText className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit Forms</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Submit Forms
+                  </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Submit requests for laboratory usage, equipment borrowing, and software installation without login.
+                    Submit requests for laboratory usage, equipment borrowing,
+                    and software installation without login.
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => window.location.href = '/public-forms'}
+              <Button
+                onClick={() => (window.location.href = "/public-forms")}
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
@@ -44,14 +53,17 @@ const PublicLandingPage = () => {
                   <MessageSquare className="w-6 h-6 text-orange-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit Complaint</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Submit Complaint
+                  </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Report issues with laboratory equipment, software, or facilities.
+                    Report issues with laboratory equipment, software, or
+                    facilities.
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => window.location.href = '/public-complaints'}
+              <Button
+                onClick={() => (window.location.href = "/public-complaints")}
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
@@ -68,14 +80,17 @@ const PublicLandingPage = () => {
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">CIT Lab Users</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    CIT Lab Users
+                  </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    For CIT Students & Faculty Laboratory and Workstation usage. Fill out this log to track and monitor your records.
+                    For CIT Students & Faculty Laboratory and Workstation usage.
+                    Fill out this log to track and monitor your records.
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => window.location.href = '/cit-lab-users'}
+              <Button
+                onClick={() => (window.location.href = "/cit-lab-users")}
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
@@ -92,14 +107,17 @@ const PublicLandingPage = () => {
                   <Shield className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Staff Portal</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Staff Portal
+                  </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Login to access the full management system for staff and administrators.
+                    Login to access the full management system for staff and
+                    administrators.
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => window.location.href = '/login'}
+              <Button
+                onClick={() => (window.location.href = "/login")}
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
@@ -109,7 +127,7 @@ const PublicLandingPage = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="mt-8 text-center text-gray-500 text-sm">
           <p>College of Information Technology</p>
           <p>&copy; 2026 CIT Asset Management System</p>

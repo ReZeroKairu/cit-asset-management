@@ -4,19 +4,19 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Download, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { submitEquipmentBorrow } from "../../api/forms";
 
 // Year levels for students
-const yearLevels = [
-  "1",
-  "2", 
-  "3",
-  "4",
-  "5"
-];
+const yearLevels = ["1", "2", "3", "4", "5"];
 import { generateFormDocument } from "../../utils/formTemplateMapping";
 import api from "../../api/axios";
 
@@ -28,7 +28,7 @@ interface EquipmentBorrowFormData {
   yearLevel: string;
   releaseTime: string;
   returnedTime: string;
-  equipmentList: Array<{unitQty: string; equipmentName: string}>;
+  equipmentList: Array<{ unitQty: string; equipmentName: string }>;
   purpose: string;
   requestedBy: string;
   approvedBy: string;
@@ -38,14 +38,16 @@ interface EquipmentBorrowFormData {
 
 export const EquipmentBorrowForm = () => {
   const { user } = useAuth();
-  
+
   // If user is not authenticated, show a message
   if (!user) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Authentication Required</h3>
+            <h3 className="text-lg font-semibold text-red-600 mb-2">
+              Authentication Required
+            </h3>
             <p className="text-gray-600">Please log in to access this form.</p>
           </div>
         </CardContent>
@@ -56,7 +58,7 @@ export const EquipmentBorrowForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
   const [cooldownActive, setCooldownActive] = useState(false);
-  const [assignedLab, setAssignedLab] = useState<string>('');
+  const [assignedLab, setAssignedLab] = useState<string>("");
 
   const [formData, setFormData] = useState<EquipmentBorrowFormData>({
     date: "",
@@ -80,26 +82,34 @@ export const EquipmentBorrowForm = () => {
       // Fetch assigned lab name
       const fetchAssignedLab = async () => {
         try {
-          const response = await api.get(`/api/one-time-forms/users/${user.id}/assigned-lab`);
-          const labName = response.data.labName || '';
+          const response = await api.get(
+            `/api/one-time-forms/users/${user.id}/assigned-lab`
+          );
+          const labName = response.data.labName || "";
           setAssignedLab(labName);
-          
+
           // Set custodian name in all caps
-          const custodianName = user.role === 'Admin' ? 'SYSTEM ADMINISTRATOR' : user.name.toUpperCase();
+          const custodianName =
+            user.role === "Admin"
+              ? "SYSTEM ADMINISTRATOR"
+              : user.name.toUpperCase();
 
           // Update form with fetched information
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            laboratory: labName.toLowerCase().replace(/\s+/g, '-'), // Use actual lab name (no E-Forum option)
+            laboratory: labName.toLowerCase().replace(/\s+/g, "-"), // Use actual lab name (no E-Forum option)
             requestedBy: prev.requestedBy, // Keep manual entry for requested by
             approvedBy: prev.approvedBy, // Keep manual entry for approved by
             monitoredBy: custodianName, // Auto-populate monitored by in all caps
           }));
         } catch (error) {
-          console.error('Error fetching assigned lab:', error);
+          console.error("Error fetching assigned lab:", error);
           // Fallback to basic logic
-          const custodianName = user.role === 'Admin' ? 'SYSTEM ADMINISTRATOR' : user.name.toUpperCase();
-          setFormData(prev => ({
+          const custodianName =
+            user.role === "Admin"
+              ? "SYSTEM ADMINISTRATOR"
+              : user.name.toUpperCase();
+          setFormData((prev) => ({
             ...prev,
             monitoredBy: custodianName,
           }));
@@ -116,61 +126,74 @@ export const EquipmentBorrowForm = () => {
     if (!assignedLab) {
       return [];
     }
-    
+
     // Only show assigned lab for Equipment Borrow form
-    const filteredOptions: Array<{value: string, label: string}> = [];
-    
+    const filteredOptions: Array<{ value: string; label: string }> = [];
+
     // Add assigned lab using the actual lab name from database
     if (assignedLab) {
       // Create option for the assigned lab using its actual name
       const assignedLabOption = {
-        value: assignedLab.toLowerCase().replace(/\s+/g, '-'), // Create a simple value
-        label: assignedLab
+        value: assignedLab.toLowerCase().replace(/\s+/g, "-"), // Create a simple value
+        label: assignedLab,
       };
       filteredOptions.push(assignedLabOption);
     }
-    
+
     return filteredOptions;
   };
 
-  const handleInputChange = (field: keyof EquipmentBorrowFormData, value: string | Array<{unitQty: string; equipmentName: string}>) => {
+  const handleInputChange = (
+    field: keyof EquipmentBorrowFormData,
+    value: string | Array<{ unitQty: string; equipmentName: string }>
+  ) => {
     let processedValue = value;
-    
+
     // Process name fields to capitalize first letter of each word
-    if ((field === 'facultyStudentName' || field === 'requestedBy') && typeof value === 'string') {
+    if (
+      (field === "facultyStudentName" || field === "requestedBy") &&
+      typeof value === "string"
+    ) {
       processedValue = value
         .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
     }
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
-      [field]: processedValue
+      [field]: processedValue,
     }));
   };
 
-  const handleEquipmentListChange = (index: number, field: 'unitQty' | 'equipmentName', value: string) => {
-    setFormData(prev => ({
+  const handleEquipmentListChange = (
+    index: number,
+    field: "unitQty" | "equipmentName",
+    value: string
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      equipmentList: prev.equipmentList.map((item, i) => 
+      equipmentList: prev.equipmentList.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
-      )
+      ),
     }));
   };
 
   const addEquipmentItem = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      equipmentList: [...prev.equipmentList, { unitQty: "", equipmentName: "" }]
+      equipmentList: [
+        ...prev.equipmentList,
+        { unitQty: "", equipmentName: "" },
+      ],
     }));
   };
 
   const removeEquipmentItem = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      equipmentList: prev.equipmentList.filter((_, i) => i !== index)
+      equipmentList: prev.equipmentList.filter((_, i) => i !== index),
     }));
   };
 
@@ -198,7 +221,7 @@ export const EquipmentBorrowForm = () => {
       });
 
       if (response.success) {
-        console.log('✅ Equipment borrow submission successful:', response);
+        console.log("✅ Equipment borrow submission successful:", response);
         setSubmitMessage("Equipment borrow request submitted successfully!");
         setCooldownActive(true);
         // Reset cooldown after 5 seconds
@@ -226,8 +249,10 @@ export const EquipmentBorrowForm = () => {
           });
         }, 2000); // Reset form after 2 seconds
       } else {
-        console.log('❌ Equipment borrow submission failed:', response);
-        setSubmitMessage(response.message || "Failed to submit equipment borrow request");
+        console.log("❌ Equipment borrow submission failed:", response);
+        setSubmitMessage(
+          response.message || "Failed to submit equipment borrow request"
+        );
         // Clear error message after 5 seconds
         setTimeout(() => {
           setSubmitMessage(null);
@@ -245,7 +270,7 @@ export const EquipmentBorrowForm = () => {
     try {
       // Create form data object that matches the expected structure for template generation
       const formDataForTemplate = {
-        type: 'equipment-borrow',
+        type: "equipment-borrow",
         details: {
           date: formData.date,
           laboratory: formData.laboratory,
@@ -267,11 +292,11 @@ export const EquipmentBorrowForm = () => {
         date: formData.date,
         equipment_list: formData.equipmentList,
       };
-      
+
       await generateFormDocument(formDataForTemplate);
     } catch (error) {
-      console.error('Error generating equipment report:', error);
-      alert('Error generating report. Please try again.');
+      console.error("Error generating equipment report:", error);
+      alert("Error generating report. Please try again.");
     }
   };
 
@@ -299,7 +324,13 @@ export const EquipmentBorrowForm = () => {
             </div>
             <div>
               <Label htmlFor="laboratory">Laboratory</Label>
-              <Select value={formData.laboratory} onValueChange={(value) => handleInputChange("laboratory", value)} required>
+              <Select
+                value={formData.laboratory}
+                onValueChange={(value) =>
+                  handleInputChange("laboratory", value)
+                }
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select laboratory" />
                 </SelectTrigger>
@@ -314,7 +345,13 @@ export const EquipmentBorrowForm = () => {
             </div>
             <div>
               <Label htmlFor="userType">User Type</Label>
-              <Select value={formData.userType} onValueChange={(value: "student" | "faculty") => handleInputChange("userType", value)} required>
+              <Select
+                value={formData.userType}
+                onValueChange={(value: "student" | "faculty") =>
+                  handleInputChange("userType", value)
+                }
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select user type" />
                 </SelectTrigger>
@@ -329,29 +366,39 @@ export const EquipmentBorrowForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="equipment-facultyStudentName">{formData.userType === 'faculty' ? 'Faculty Name' : 'Student Name'}</Label>
+              <Label htmlFor="equipment-facultyStudentName">
+                {formData.userType === "faculty"
+                  ? "Faculty Name"
+                  : "Student Name"}
+              </Label>
               <Input
                 id="equipment-facultyStudentName"
                 value={formData.facultyStudentName}
-                onChange={(e) => handleInputChange("facultyStudentName", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("facultyStudentName", e.target.value)
+                }
                 placeholder="Enter full name"
                 className="capitalize-first"
                 required
               />
             </div>
-            {formData.userType === 'student' && (
+            {formData.userType === "student" && (
               <div>
                 <Label htmlFor="equipment-yearLevel">Year Level</Label>
                 <Select
                   value={formData.yearLevel}
-                  onValueChange={(value) => handleInputChange("yearLevel", value)}
+                  onValueChange={(value) =>
+                    handleInputChange("yearLevel", value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select year level" />
                   </SelectTrigger>
                   <SelectContent>
-                    {yearLevels.map(level => (
-                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    {yearLevels.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -366,7 +413,9 @@ export const EquipmentBorrowForm = () => {
                 id="releaseTime"
                 type="time"
                 value={formData.releaseTime}
-                onChange={(e) => handleInputChange("releaseTime", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("releaseTime", e.target.value)
+                }
               />
             </div>
             <div>
@@ -375,7 +424,9 @@ export const EquipmentBorrowForm = () => {
                 id="returnedTime"
                 type="time"
                 value={formData.returnedTime}
-                onChange={(e) => handleInputChange("returnedTime", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("returnedTime", e.target.value)
+                }
               />
             </div>
           </div>
@@ -389,12 +440,21 @@ export const EquipmentBorrowForm = () => {
                 <div></div>
               </div>
               {formData.equipmentList.map((item, index) => (
-                <div key={index} className="grid grid-cols-3 gap-4 mb-2 items-center">
+                <div
+                  key={index}
+                  className="grid grid-cols-3 gap-4 mb-2 items-center"
+                >
                   <div>
                     <Input
                       id={`equipment-name-${index}`}
                       value={item.equipmentName}
-                      onChange={(e) => handleEquipmentListChange(index, 'equipmentName', e.target.value)}
+                      onChange={(e) =>
+                        handleEquipmentListChange(
+                          index,
+                          "equipmentName",
+                          e.target.value
+                        )
+                      }
                       placeholder="Equipment name"
                       required
                     />
@@ -403,7 +463,13 @@ export const EquipmentBorrowForm = () => {
                     <Input
                       id={`equipment-qty-${index}`}
                       value={item.unitQty}
-                      onChange={(e) => handleEquipmentListChange(index, 'unitQty', e.target.value)}
+                      onChange={(e) =>
+                        handleEquipmentListChange(
+                          index,
+                          "unitQty",
+                          e.target.value
+                        )
+                      }
                       placeholder="Unit/Quantity"
                       required
                     />
@@ -463,19 +529,21 @@ export const EquipmentBorrowForm = () => {
               <Input
                 id="equipment-approvedBy"
                 value={formData.approvedBy}
-                onChange={(e) => handleInputChange("approvedBy", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("approvedBy", e.target.value)
+                }
                 placeholder="DR. MARCO MARVIN L. RADO"
                 required
               />
             </div>
-            <div className="text-right text-sm text-gray-600 mt-6">
-              Dean
-            </div>
+            <div className="text-right text-sm text-gray-600 mt-6">Dean</div>
           </div>
 
           <div className="border-t pt-6">
-            <h3 className="font-semibold mb-4">MONITORING FORM FOR BORROWED EQUIPMENT</h3>
-            
+            <h3 className="font-semibold mb-4">
+              MONITORING FORM FOR BORROWED EQUIPMENT
+            </h3>
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="equipment-remarks">Remarks</Label>
@@ -493,7 +561,9 @@ export const EquipmentBorrowForm = () => {
                 <Input
                   id="equipment-monitoredBy"
                   value={formData.monitoredBy}
-                  onChange={(e) => handleInputChange("monitoredBy", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("monitoredBy", e.target.value)
+                  }
                   placeholder="Laboratory Custodian name"
                   readOnly // Make read-only since it's auto-populated
                 />
@@ -504,20 +574,24 @@ export const EquipmentBorrowForm = () => {
           <div className="flex justify-between items-center pt-6">
             <div></div>
             <div className="flex justify-center ml-32">
-              <Button 
-                type="submit" 
-                variant="outline" 
-                className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+              <Button
+                type="submit"
+                variant="outline"
+                className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
                 disabled={isSubmitting || cooldownActive}
               >
-                {isSubmitting ? 'Submitting...' : cooldownActive ? 'Please wait...' : 'Submit Form'}
+                {isSubmitting
+                  ? "Submitting..."
+                  : cooldownActive
+                  ? "Please wait..."
+                  : "Submit Form"}
               </Button>
             </div>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => generateEquipmentReport()} 
-              className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => generateEquipmentReport()}
+              className="flex items-center gap-2 px-6 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
               disabled={isSubmitting}
             >
               <Download className="w-4 h-4" />
@@ -528,11 +602,13 @@ export const EquipmentBorrowForm = () => {
 
         {/* Success/Error Message */}
         {submitMessage && (
-          <div className={`p-4 rounded-lg ${
-            submitMessage.includes('successfully') 
-              ? 'bg-green-50 border border-green-200 text-green-800' 
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
+          <div
+            className={`p-4 rounded-lg ${
+              submitMessage.includes("successfully")
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}
+          >
             {submitMessage}
           </div>
         )}

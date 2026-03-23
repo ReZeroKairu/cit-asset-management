@@ -3,8 +3,8 @@ import axios from "axios";
 
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001';
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:3001";
   }
   return `http://${hostname}:3001`;
 };
@@ -21,7 +21,8 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // ✅ BULLETPROOF FIX: Use the .set() method for modern Axios
+      config.headers.set("Authorization", `Bearer ${token}`);
     }
     return config;
   },
@@ -38,11 +39,18 @@ api.interceptors.response.use(
       // Token expired or invalid, logout user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      
+
       // Only redirect to login if not already on login page AND not on public pages
       const currentPath = window.location.pathname;
-      const publicPages = ['/login', '/public-forms', '/public-complaints', '/complaints', '/one-time', '/public-landing'];
-      
+      const publicPages = [
+        "/login",
+        "/public-forms",
+        "/public-complaints",
+        "/complaints",
+        "/one-time",
+        "/public-landing",
+      ];
+
       if (!publicPages.includes(currentPath)) {
         window.location.href = "/login";
       }

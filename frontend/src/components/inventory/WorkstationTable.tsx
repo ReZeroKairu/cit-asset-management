@@ -9,6 +9,7 @@ interface Props {
   onEdit: (workstation: any) => void;
   onDelete: (id: number) => void;
   getStatusColor: (status?: string) => string;
+  pmcReports?: Record<number, any>;
 }
 
 const WorkstationTable: React.FC<Props> = ({
@@ -17,6 +18,7 @@ const WorkstationTable: React.FC<Props> = ({
   onEdit,
   onDelete,
   getStatusColor,
+  pmcReports = {},
 }) => {
   // Local implementation if not provided
   const defaultGetStatusColor = (status?: string) => {
@@ -37,7 +39,9 @@ const WorkstationTable: React.FC<Props> = ({
   };
 
   const statusColor = getStatusColor || defaultGetStatusColor;
-  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
+  const [workstationAssets, setWorkstationAssets] = useState<
+    Record<number, any[]>
+  >({});
 
   // Load assets for each workstation
   useEffect(() => {
@@ -48,12 +52,24 @@ const WorkstationTable: React.FC<Props> = ({
           // Transform assets to have status property
           const transformedAssets = assets.map((asset: any) => ({
             ...asset,
-            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+            status:
+              asset.details?.current_status?.status_name ||
+              asset.status ||
+              "Functional",
           }));
-          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: transformedAssets }));
+          setWorkstationAssets((prev) => ({
+            ...prev,
+            [ws.workstation_id]: transformedAssets,
+          }));
         } catch (error) {
-          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
-          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: [] }));
+          console.error(
+            `Failed to load assets for workstation ${ws.workstation_id}:`,
+            error
+          );
+          setWorkstationAssets((prev) => ({
+            ...prev,
+            [ws.workstation_id]: [],
+          }));
         }
       }
     };
@@ -67,7 +83,7 @@ const WorkstationTable: React.FC<Props> = ({
   const getCalculatedStatus = (workstation: any) => {
     const assets = workstationAssets[workstation.workstation_id] || [];
     if (assets.length === 0) {
-      return workstation.asset_statuses?.status_name || 'Functional';
+      return workstation.asset_statuses?.status_name || "Functional";
     }
     return calculateWorstStatus(assets);
   };
@@ -128,7 +144,7 @@ const WorkstationTable: React.FC<Props> = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      getCalculatedStatus(workstation),
+                      getCalculatedStatus(workstation)
                     )}`}
                   >
                     {getCalculatedStatus(workstation)}
@@ -136,9 +152,9 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
-                  title={workstation.workstation_remarks}
+                  title={getWorkstationRemarks(workstation)}
                 >
-                  {workstation.workstation_remarks || "-"}
+                  {getWorkstationRemarks(workstation)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button

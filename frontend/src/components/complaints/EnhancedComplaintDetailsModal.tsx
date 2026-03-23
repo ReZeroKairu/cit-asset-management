@@ -4,7 +4,10 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
+<<<<<<< HEAD
 import { useEffect } from "react";
+=======
+>>>>>>> origin/jesi-branch
 import { 
   MessageSquare, 
   User, 
@@ -69,6 +72,7 @@ const EnhancedComplaintDetailsModal = ({
     }
   };
 
+<<<<<<< HEAD
   // Add ESC key support
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -86,6 +90,8 @@ const EnhancedComplaintDetailsModal = ({
     };
   }, [isOpen, onClose]);
 
+=======
+>>>>>>> origin/jesi-branch
   if (!isOpen) return null;
 
   return (
@@ -157,12 +163,15 @@ const EnhancedComplaintDetailsModal = ({
                       <p className="font-medium text-gray-900">Year {complaint.year_level}</p>
                     </div>
                   )}
+<<<<<<< HEAD
                   {complaint.ip_address && (
                     <div>
                       <p className="text-sm text-gray-500">IP Address</p>
                       <p className="font-medium text-gray-900 font-mono text-sm">{complaint.ip_address}</p>
                     </div>
                   )}
+=======
+>>>>>>> origin/jesi-branch
                 </div>
               </CardContent>
             </Card>

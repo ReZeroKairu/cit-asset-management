@@ -41,7 +41,10 @@ export interface Complaint {
   created_at: string;
   updated_at: string;
   accepted_at?: string;
+<<<<<<< HEAD
   ip_address?: string;
+=======
+>>>>>>> origin/jesi-branch
   laboratories?: {
     lab_id: number;
     lab_name: string;
@@ -108,6 +111,7 @@ export const submitComplaint = async (data: ComplaintData) => {
 
   if (!response.ok) {
     const error = await response.json();
+<<<<<<< HEAD
     
     // Handle rate limiting specifically
     if (response.status === 429) {
@@ -146,6 +150,8 @@ export const submitComplaint = async (data: ComplaintData) => {
       });
     }
     
+=======
+>>>>>>> origin/jesi-branch
     throw new Error(error.message || 'Failed to submit complaint');
   }
 
@@ -154,7 +160,11 @@ export const submitComplaint = async (data: ComplaintData) => {
 
 // Get all laboratories
 export const getLaboratories = async (): Promise<Laboratory[]> => {
+<<<<<<< HEAD
   const response = await fetch(`${API_BASE_URL}/public-complaints/public-laboratories`, {
+=======
+  const response = await fetch(`${API_BASE_URL}/public-complaints/laboratories`, {
+>>>>>>> origin/jesi-branch
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -163,6 +173,7 @@ export const getLaboratories = async (): Promise<Laboratory[]> => {
 
   if (!response.ok) {
     const error = await response.json();
+<<<<<<< HEAD
     
     // Handle rate limiting specifically
     if (response.status === 429) {
@@ -177,6 +188,8 @@ export const getLaboratories = async (): Promise<Laboratory[]> => {
       statusText: response.statusText,
       message: error.message
     });
+=======
+>>>>>>> origin/jesi-branch
     throw new Error(error.message || 'Failed to fetch laboratories');
   }
 
@@ -185,7 +198,11 @@ export const getLaboratories = async (): Promise<Laboratory[]> => {
 
 // Get workstations by laboratory
 export const getWorkstationsByLab = async (labId: number): Promise<Workstation[]> => {
+<<<<<<< HEAD
   const response = await fetch(`${API_BASE_URL}/public-complaints/public-laboratories/${labId}/workstations`, {
+=======
+  const response = await fetch(`${API_BASE_URL}/public-complaints/laboratories/${labId}/workstations`, {
+>>>>>>> origin/jesi-branch
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -194,6 +211,7 @@ export const getWorkstationsByLab = async (labId: number): Promise<Workstation[]
 
   if (!response.ok) {
     const error = await response.json();
+<<<<<<< HEAD
     
     // Handle rate limiting specifically
     if (response.status === 429) {
@@ -208,6 +226,8 @@ export const getWorkstationsByLab = async (labId: number): Promise<Workstation[]
       statusText: response.statusText,
       message: error.message
     });
+=======
+>>>>>>> origin/jesi-branch
     throw new Error(error.message || 'Failed to fetch workstations');
   }
 

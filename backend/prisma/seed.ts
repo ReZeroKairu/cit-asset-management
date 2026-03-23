@@ -1,30 +1,30 @@
 // backend/prisma/seed.ts
-import { PrismaClient, users_role, lab_requests_status, equipment_borrows_status, software_installations_status, daily_reports_status, complaints_status } from "@prisma/client";
+import {
+  PrismaClient,
+  users_role,
+  lab_requests_status,
+  equipment_borrows_status,
+  software_installations_status,
+  daily_reports_status,
+  complaints_status,
+} from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🔄 Starting database seeding...");
+  console.log("🔄 Starting database seeding for users...");
 
   const seedData = {
-    // 1. USERS: Only 1 Admin and 1 Custodian
+    // 1. USERS: Only 1 Admin and 2 Custodians
     users: [
       {
-        user_id: 1,
-        full_name: "System Administrator",
-        email: "admin@cit.edu",
+        user_id: 4,
+        full_name: "Jesi",
+        email: "jesi@cit.edu",
         role: users_role.Admin,
         lab_id: null,
-        password_hash: await bcrypt.hash("admin123", 10),
-      },
-      {
-        user_id: 2,
-        full_name: "John Custodian",
-        email: "custodian@cit.edu",
-        role: users_role.Custodian,
-        lab_id: 1, // We will handle this carefully
-        password_hash: await bcrypt.hash("password123", 10),
+        password_hash: await bcrypt.hash("jesi123", 10),
       },
       {
         user_id: 3,
@@ -191,7 +191,6 @@ async function main() {
     ],
 
     // Example Data for Tables
-    
 
     inventoryAssets: [
       {
@@ -327,62 +326,12 @@ async function main() {
   // ✅ 4. Users (Phase 1: Create without Lab Assignment)
   // We strip the lab_id here to prevent the "Foreign Key Constraint" error
   for (const user of seedData.users) {
-    const { lab_id, ...userData } = user; // Separate lab_id from the rest
     await prisma.users.upsert({
       where: { user_id: user.user_id },
-      update: userData, // Update without lab_id
-      create: { ...userData, lab_id: null }, // Create with lab_id as null
-    });
-    console.log(`👤 User Created (Pending Lab): ${user.full_name}`);
-  }
-
-  // 5. Device Types
-  for (const item of seedData.deviceTypes) {
-    await prisma.device_types.upsert({
-      where: { device_type_id: item.device_type_id },
-      update: item,
-      create: item,
-    });
-  }
-
-  // 6. Units
-  for (const unit of seedData.units) {
-    await prisma.units.upsert({
-      where: { unit_id: unit.unit_id },
-      update: unit,
-      create: unit,
-    });
-    console.log(`✅ Unit: ${unit.unit_name}`);
-  }
-
-  // 7. Asset Statuses
-  for (const status of seedData.assetStatuses) {
-    await prisma.asset_statuses.upsert({
-      where: { status_id: status.status_id },
-      update: status,
-      create: status,
-    });
-    console.log(`✅ Asset Status: ${status.status_name}`);
-  }
-
-  // 8. Laboratories (must be seeded before users that reference them)
-  for (const lab of seedData.laboratories) {
-    await prisma.laboratories.upsert({
-      where: { lab_id: lab.lab_id },
-      update: { ...lab, in_charge_id: null }, // Remove in_charge_id temporarily
-      create: { ...lab, in_charge_id: null },
-    });
-    console.log(` Laboratory: ${lab.lab_name}`);
-  }
-
-  // 9. Users (now that labs exist)
-  for (const user of seedData.users) {
-    await prisma.users.upsert({
-      where: { email: user.email },
       update: user,
       create: user,
     });
-    console.log(` User: ${user.full_name} (${user.email})`);
+    console.log(`👤 User Upserted: ${user.full_name} (${user.email})`);
   }
 
   // 10. Workstations
@@ -436,7 +385,9 @@ async function main() {
       update: report,
       create: report,
     });
-    console.log(` Daily Report: ${report.report_date.toISOString().split('T')[0]}`);
+    console.log(
+      ` Daily Report: ${report.report_date.toISOString().split("T")[0]}`
+    );
   }
 
   // 18. Complaints - Commented out due to schema mismatch

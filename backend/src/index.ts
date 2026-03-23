@@ -30,48 +30,48 @@ const prisma = new PrismaClient();
 app.use(
   cors({
     origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3001',
-      'http://192.168.56.1:5173',
-      'http://192.168.56.1:3000',
-      'http://192.168.56.1:3001',
-      'http://192.168.111.21:5173',
-      'http://192.168.111.21:3000',
-      'http://192.168.111.21:3001',
-      'http://172.72.100.117:5173',
-      'http://172.72.100.117:3000',
-      'http://172.72.100.117:3001'
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:3001",
+      "http://192.168.56.1:5173",
+      "http://192.168.56.1:3000",
+      "http://192.168.56.1:3001",
+      "http://192.168.111.21:5173",
+      "http://192.168.111.21:3000",
+      "http://192.168.111.21:3001",
+      "http://172.72.100.117:5173",
+      "http://172.72.100.117:3000",
+      "http://172.72.100.117:3001",
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  }),
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
 );
 
 app.use(express.json());
 
 // Trust proxy to get real client IP addresses
-app.set('trust proxy', true);
+app.set("trust proxy", true);
 
 // Rate limiting for public forms (reasonable limits) - only for POST requests
 const publicFormsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 6, // Allow 6 submissions per IP per hour
   message: {
-    error: 'Too many form submissions. Please try again in an hour.',
-    retryAfter: '1 hour'
+    error: "Too many form submissions. Please try again in an hour.",
+    retryAfter: "1 hour",
   },
   standardHeaders: true,
   legacyHeaders: false,
   // Apply rate limiting only to POST requests
-  skip: (req) => req.method !== 'POST'
+  skip: (req) => req.method !== "POST",
 });
 
 // Skip rate limiting during development
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   // console.log('🚀 Development mode: Rate limiting disabled for public forms');
 } else {
   // console.log('🛡️ Production mode: Rate limiting active (10 submissions/hour per IP)');
@@ -82,8 +82,8 @@ const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: {
-    error: 'Too many requests. Please try again later.',
-    retryAfter: '15 minutes'
+    error: "Too many requests. Please try again later.",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -109,37 +109,41 @@ app.use("/audit", auditRoutes); // handles audit logs (admin only)
 app.get("/audit-test", async (req, res) => {
   try {
     // console.log('🔍 Direct audit test route hit!');
-    
+
     // Direct database query
-    const result = await prisma.$queryRawUnsafe(`
+    const result = (await prisma.$queryRawUnsafe(`
       SELECT id, user_id, action, description, created_at 
       FROM audit_logs 
       ORDER BY created_at DESC 
       LIMIT 5
-    `) as any[];
-    
+    `)) as any[];
+
     // console.log('📊 Direct query result:', result);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       logs: result,
       count: result.length,
-      message: 'Direct query successful!' 
+      message: "Direct query successful!",
     });
   } catch (error) {
-    console.error('❌ Direct query error:', error);
-    res.status(500).json({ 
-      error: 'Direct query failed', 
-      details: (error as Error).message 
+    console.error("❌ Direct query error:", error);
+    res.status(500).json({
+      error: "Direct query failed",
+      details: (error as Error).message,
     });
   }
 });
 
 // Test endpoint with audit middleware
-app.post("/audit-middleware-test", auditMiddleware('TEST', 'ENDPOINT'), async (req, res) => {
-  console.log('🔍 Test endpoint hit!');
-  res.json({ success: true, message: 'Audit middleware test successful!' });
-});
+app.post(
+  "/audit-middleware-test",
+  auditMiddleware("TEST", "ENDPOINT"),
+  async (req, res) => {
+    console.log("🔍 Test endpoint hit!");
+    res.json({ success: true, message: "Audit middleware test successful!" });
+  }
+);
 
 // ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
 app.use("/maintenance", maintenanceRoutes);
@@ -151,11 +155,11 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((err: any, req: any, res: any, next: any) => {
-  console.error('🚨 Global error handler caught:', err);
+  console.error("🚨 Global error handler caught:", err);
   res.status(500).json({
     success: false,
-    message: 'Internal server error',
-    error: err.message || 'Unknown error'
+    message: "Internal server error",
+    error: err.message || "Unknown error",
   });
 });
 
@@ -165,7 +169,7 @@ const getLanIpv4Address = (): string | null => {
   for (const name of Object.keys(nets)) {
     const addrs = nets[name] || [];
     for (const addr of addrs) {
-      if (addr && addr.family === 'IPv4' && !addr.internal) {
+      if (addr && addr.family === "IPv4" && !addr.internal) {
         return addr.address;
       }
     }
@@ -174,10 +178,33 @@ const getLanIpv4Address = (): string | null => {
   return null;
 };
 
-app.listen(config.port, '0.0.0.0', () => {
+const getLanIpv4Address = (): string | null => {
+  const nets = os.networkInterfaces();
+
+  for (const name of Object.keys(nets)) {
+    const addrs = nets[name] || [];
+    for (const addr of addrs) {
+      if (addr && addr.family === "IPv4" && !addr.internal) {
+        return addr.address;
+      }
+    }
+  }
+
+  return null;
+};
+
+app.listen(config.port, "0.0.0.0", () => {
   console.log(`Server running on http://localhost:${config.port}`);
   const lanIp = getLanIpv4Address();
   if (lanIp) {
-    console.log(`Server also accessible on network: http://${lanIp}:${config.port}`);
+    console.log(
+      `Server also accessible on network: http://${lanIp}:${config.port}`
+    );
+  }
+  const lanIp = getLanIpv4Address();
+  if (lanIp) {
+    console.log(
+      `Server also accessible on network: http://${lanIp}:${config.port}`
+    );
   }
 });

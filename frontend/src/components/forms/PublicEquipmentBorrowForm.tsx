@@ -3,17 +3,17 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { getApiBaseUrl } from "../../api/publicForms";
 
 // Year levels for students
-const yearLevels = [
-  "1",
-  "2", 
-  "3",
-  "4",
-  "5"
-];
+const yearLevels = ["1", "2", "3", "4", "5"];
 
 interface PublicEquipmentBorrowFormProps {
   onSubmit?: (data: any) => void;
@@ -23,11 +23,17 @@ interface PublicEquipmentBorrowFormProps {
   isOneTimeForm?: boolean;
 }
 
-export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodianName, assignedLab, isOneTimeForm }: PublicEquipmentBorrowFormProps) => {
+export const PublicEquipmentBorrowForm = ({
+  onSubmit,
+  disabled = false,
+  custodianName,
+  assignedLab,
+  isOneTimeForm,
+}: PublicEquipmentBorrowFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [labs, setLabs] = useState<Array<{value: string, label: string}>>([]);
-  const [userType, setUserType] = useState<'student' | 'faculty'>('student'); // New state for user type
-  
+  const [labs, setLabs] = useState<Array<{ value: string; label: string }>>([]);
+  const [userType, setUserType] = useState<"student" | "faculty">("student"); // New state for user type
+
   // Fetch all labs from database (fallback when not provided an assigned lab)
   useEffect(() => {
     if (assignedLab) return;
@@ -35,23 +41,25 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     const fetchLabs = async () => {
       try {
         const response = await fetch(`${getApiBaseUrl()}/laboratories/public`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
         if (!response.ok) {
-          throw new Error(`Failed to fetch labs: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch labs: ${response.status} ${response.statusText}`
+          );
         }
 
         const labsData = await response.json();
         const labOptions = labsData.map((lab: any) => ({
           value: lab.lab_name,
-          label: lab.lab_name
+          label: lab.lab_name,
         }));
         setLabs(labOptions);
       } catch (error) {
-        console.error('Failed to fetch labs:', error);
+        console.error("Failed to fetch labs:", error);
       }
     };
 
@@ -69,39 +77,39 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     return labs;
   };
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    faculty_student_name: '',
-    year_level: '',
-    laboratory: '',
-    equipment_list: [{ equipmentName: '', unitQty: '' }],
-    purpose: '',
-    release_time: '',
-    returned_time: '',
-    requested_by: '', // Default value for public submissions
-    remarks: '',
-    monitored_by: '', // Will be set by useEffect
-    approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
-    user_type: 'student' // Add user_type field for database storage
+    date: new Date().toISOString().split("T")[0],
+    faculty_student_name: "",
+    year_level: "",
+    laboratory: "",
+    equipment_list: [{ equipmentName: "", unitQty: "" }],
+    purpose: "",
+    release_time: "",
+    returned_time: "",
+    requested_by: "", // Default value for public submissions
+    remarks: "",
+    monitored_by: "", // Will be set by useEffect
+    approved_by: "DR. MARCO MARVIN L. RADO", // Pre-filled approval
+    user_type: "student", // Add user_type field for database storage
   });
 
   // If assignedLab is provided, pre-fill the laboratory field.
   useEffect(() => {
     if (!assignedLab) return;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       laboratory: prev.laboratory || assignedLab,
     }));
-  }, [formData.laboratory, custodianName]);   
+  }, [formData.laboratory, custodianName]);
 
   // Auto-populate approved_by and prepared_by based on selected lab custodian (if custodianName prop is not explicitly provided)
   useEffect(() => {
     if (custodianName) return;
     if (!formData.laboratory) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        approved_by: 'DR. MARCO MARVIN L. RADO', // Keep default approved by
-        prepared_by: '',
-        monitored_by: '', // Clear monitored_by
+        approved_by: "DR. MARCO MARVIN L. RADO", // Keep default approved by
+        prepared_by: "",
+        monitored_by: "", // Clear monitored_by
       }));
       return;
     }
@@ -109,33 +117,39 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
     const fetchCustodian = async () => {
       try {
         const encodedLabName = encodeURIComponent(formData.laboratory);
-        const response = await fetch(`${getApiBaseUrl()}/laboratories/public/${encodedLabName}/custodian`);
-        
+        const response = await fetch(
+          `${getApiBaseUrl()}/laboratories/public/${encodedLabName}/custodian`
+        );
+
         if (!response.ok) {
-          throw new Error(`Failed to fetch custodian: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Failed to fetch custodian: ${response.status} ${response.statusText}`
+          );
         }
 
         const custodianData = await response.json();
-        
-        const resolvedCustodianName = custodianData.users?.[0]?.full_name ||
+
+        const resolvedCustodianName =
+          custodianData.users?.[0]?.full_name ||
           custodianData.in_charge?.full_name ||
           custodianData.full_name ||
-          custodianData.users?.find((u: any) => u.role === 'Custodian')?.full_name ||
-          '';
+          custodianData.users?.find((u: any) => u.role === "Custodian")
+            ?.full_name ||
+          "";
 
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          approved_by: 'DR. MARCO MARVIN L. RADO', // Keep default approved by
+          approved_by: "DR. MARCO MARVIN L. RADO", // Keep default approved by
           prepared_by: resolvedCustodianName, // Custodian as prepared by
           monitored_by: resolvedCustodianName, // Also update monitored_by
         }));
       } catch (error) {
-        console.error('Failed to fetch custodian:', error);
-        setFormData(prev => ({
+        console.error("Failed to fetch custodian:", error);
+        setFormData((prev) => ({
           ...prev,
-          approved_by: 'DR. MARCO MARVIN L. RADO', // Keep default approved by
-          prepared_by: '',
-          monitored_by: '', // Clear monitored_by on error
+          approved_by: "DR. MARCO MARVIN L. RADO", // Keep default approved by
+          prepared_by: "",
+          monitored_by: "", // Clear monitored_by on error
         }));
       }
     };
@@ -146,73 +160,88 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
   // Update monitored_by when custodianName changes
   useEffect(() => {
     if (custodianName) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        monitored_by: custodianName // Auto-populate monitored by only
+        monitored_by: custodianName, // Auto-populate monitored by only
       }));
     }
   }, [custodianName]);
 
   const handleInputChange = (field: string, value: string) => {
     // Prevent changes to monitored_by if custodianName is provided
-    if (field === 'monitored_by' && custodianName) {
+    if (field === "monitored_by" && custodianName) {
       return;
     }
-    
+
     let processedValue = value;
-    
+
     // Process name fields to capitalize first letter of each word
-    if (field === 'faculty_student_name' || field === 'requested_by') {
+    if (field === "faculty_student_name" || field === "requested_by") {
       processedValue = value
         .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
     }
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: processedValue
+      [field]: processedValue,
     }));
   };
 
-  const handleEquipmentChange = (index: number, field: string, value: string | number) => {
+  const handleEquipmentChange = (
+    index: number,
+    field: string,
+    value: string | number
+  ) => {
     const newEquipmentList = [...formData.equipment_list];
     newEquipmentList[index] = {
       ...newEquipmentList[index],
-      [field]: value
+      [field]: value,
     };
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      equipment_list: newEquipmentList
+      equipment_list: newEquipmentList,
     }));
   };
 
   const addEquipment = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      equipment_list: [...prev.equipment_list, { equipmentName: '', unitQty: '' }]
+      equipment_list: [
+        ...prev.equipment_list,
+        { equipmentName: "", unitQty: "" },
+      ],
     }));
   };
 
   const removeEquipment = (index: number) => {
-    const newEquipmentList = formData.equipment_list.filter((_, i) => i !== index);
-    setFormData(prev => ({
+    const newEquipmentList = formData.equipment_list.filter(
+      (_, i) => i !== index
+    );
+    setFormData((prev) => ({
       ...prev,
-      equipment_list: newEquipmentList
+      equipment_list: newEquipmentList,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Network connectivity check
     if (!navigator.onLine) {
-      alert('You appear to be offline. Please check your internet connection and try again.');
+      alert(
+        "You appear to be offline. Please check your internet connection and try again."
+      );
       return;
     }
-    
-    if (!formData.faculty_student_name || !formData.laboratory || !formData.purpose) {
-      alert('Please fill in all required fields');
+
+    if (
+      !formData.faculty_student_name ||
+      !formData.laboratory ||
+      !formData.purpose
+    ) {
+      alert("Please fill in all required fields");
       return;
     }
 
@@ -222,41 +251,41 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
       const formDataWithUserType = {
         ...formData,
         userType: userType, // Add user type to determine template name
-        user_type: userType // Add user_type field for database storage
+        user_type: userType, // Add user_type field for database storage
       };
-      
+
       // Call parent's onSubmit to show success message
       if (onSubmit) {
         onSubmit(formDataWithUserType);
       }
-      
+
       // Reset form
       setFormData({
-        date: new Date().toISOString().split('T')[0],
-        faculty_student_name: '',
-        year_level: '',
-        laboratory: '',
-        equipment_list: [{ equipmentName: '', unitQty: '' }],
-        purpose: '',
-        release_time: '',
-        returned_time: '',
-        requested_by: '', // Default value for public submissions
-        remarks: '',
-        monitored_by: '',
-        approved_by: 'DR. MARCO MARVIN L. RADO', // Pre-filled approval
-        user_type: userType
+        date: new Date().toISOString().split("T")[0],
+        faculty_student_name: "",
+        year_level: "",
+        laboratory: "",
+        equipment_list: [{ equipmentName: "", unitQty: "" }],
+        purpose: "",
+        release_time: "",
+        returned_time: "",
+        requested_by: "", // Default value for public submissions
+        remarks: "",
+        monitored_by: "",
+        approved_by: "DR. MARCO MARVIN L. RADO", // Pre-filled approval
+        user_type: userType,
       });
     } catch (error) {
-      console.error('Error submitting equipment borrow:', error);
-      
+      console.error("Error submitting equipment borrow:", error);
+
       // Better error handling
-      let errorMessage = 'Unknown error occurred';
+      let errorMessage = "Unknown error occurred";
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (typeof error === 'string') {
+      } else if (typeof error === "string") {
         errorMessage = error;
       }
-      
+
       alert(`Error submitting equipment borrow: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
@@ -272,7 +301,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
             id="date"
             type="date"
             value={formData.date}
-            onChange={(e) => handleInputChange('date', e.target.value)}
+            onChange={(e) => handleInputChange("date", e.target.value)}
             required
             disabled={disabled}
           />
@@ -280,7 +309,12 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
 
         <div className="space-y-2">
           <Label htmlFor="user_type">User Type *</Label>
-          <Select value={userType} onValueChange={(value: 'student' | 'faculty') => setUserType(value)} required disabled={disabled}>
+          <Select
+            value={userType}
+            onValueChange={(value: "student" | "faculty") => setUserType(value)}
+            required
+            disabled={disabled}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select user type" />
             </SelectTrigger>
@@ -292,31 +326,37 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="faculty_student_name">{userType === 'faculty' ? 'Faculty Name' : 'Student Name'} *</Label>
+          <Label htmlFor="faculty_student_name">
+            {userType === "faculty" ? "Faculty Name" : "Student Name"} *
+          </Label>
           <Input
             id="faculty_student_name"
             value={formData.faculty_student_name}
-            onChange={(e) => handleInputChange('faculty_student_name', e.target.value)}
+            onChange={(e) =>
+              handleInputChange("faculty_student_name", e.target.value)
+            }
             placeholder="Enter your full name"
             required
             disabled={disabled}
           />
         </div>
 
-        {userType === 'student' && (
+        {userType === "student" && (
           <div className="space-y-2">
             <Label htmlFor="year_level">Year Level</Label>
             <Select
               value={formData.year_level}
-              onValueChange={(value) => handleInputChange('year_level', value)}
+              onValueChange={(value) => handleInputChange("year_level", value)}
               disabled={disabled}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select year level" />
               </SelectTrigger>
               <SelectContent>
-                {yearLevels.map(level => (
-                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                {yearLevels.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -325,7 +365,12 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
 
         <div className="space-y-2">
           <Label htmlFor="laboratory">Laboratory *</Label>
-          <Select value={formData.laboratory} onValueChange={(value) => handleInputChange('laboratory', value)} required disabled={disabled}>
+          <Select
+            value={formData.laboratory}
+            onValueChange={(value) => handleInputChange("laboratory", value)}
+            required
+            disabled={disabled}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select laboratory" />
             </SelectTrigger>
@@ -345,7 +390,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
             id="release_time"
             type="time"
             value={formData.release_time}
-            onChange={(e) => handleInputChange('release_time', e.target.value)}
+            onChange={(e) => handleInputChange("release_time", e.target.value)}
             disabled={disabled}
             required
           />
@@ -355,47 +400,60 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
         <input
           type="hidden"
           value={formData.returned_time}
-          onChange={(e) => handleInputChange('returned_time', e.target.value)}
+          onChange={(e) => handleInputChange("returned_time", e.target.value)}
         />
       </div>
 
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Label>Equipment List *</Label>
-          <Button type="button" onClick={addEquipment} variant="outline" size="sm" disabled={disabled}>
+          <Button
+            type="button"
+            onClick={addEquipment}
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+          >
             Add Equipment
           </Button>
         </div>
-        
+
         {formData.equipment_list.map((equipment, index) => (
-          <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg">
+          <div
+            key={index}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg"
+          >
             <div className="space-y-2">
               <Label>Equipment Name</Label>
               <Input
                 value={equipment.equipmentName}
-                onChange={(e) => handleEquipmentChange(index, 'equipmentName', e.target.value)}
+                onChange={(e) =>
+                  handleEquipmentChange(index, "equipmentName", e.target.value)
+                }
                 placeholder="Enter equipment name"
                 required
                 disabled={disabled}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Quantity</Label>
               <Input
                 value={equipment.unitQty}
-                onChange={(e) => handleEquipmentChange(index, 'unitQty', e.target.value)}
+                onChange={(e) =>
+                  handleEquipmentChange(index, "unitQty", e.target.value)
+                }
                 placeholder="Enter quantity"
                 required
                 disabled={disabled}
               />
             </div>
-            
+
             <div className="flex items-end">
-              <Button 
-                type="button" 
-                onClick={() => removeEquipment(index)} 
-                variant="destructive" 
+              <Button
+                type="button"
+                onClick={() => removeEquipment(index)}
+                variant="destructive"
                 size="sm"
                 disabled={disabled}
               >
@@ -411,7 +469,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
         <Textarea
           id="purpose"
           value={formData.purpose}
-          onChange={(e) => handleInputChange('purpose', e.target.value)}
+          onChange={(e) => handleInputChange("purpose", e.target.value)}
           placeholder="Describe the purpose of equipment borrowing"
           rows={3}
           required
@@ -425,7 +483,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
           <Input
             id="requested_by"
             value={formData.requested_by}
-            onChange={(e) => handleInputChange('requested_by', e.target.value)}
+            onChange={(e) => handleInputChange("requested_by", e.target.value)}
             placeholder="Your name"
             disabled={disabled}
           />
@@ -436,7 +494,7 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
           <Input
             id="approved_by"
             value={formData.approved_by}
-            onChange={(e) => handleInputChange('approved_by', e.target.value)}
+            onChange={(e) => handleInputChange("approved_by", e.target.value)}
             placeholder="DR. MARCO MARVIN L. RADO"
             disabled // Make disabled to prevent cursor and clicking
           />
@@ -446,32 +504,56 @@ export const PublicEquipmentBorrowForm = ({ onSubmit, disabled = false, custodia
           <Label htmlFor="monitored_by">Monitored By</Label>
           <Input
             id="monitored_by"
-            value={custodianName ? custodianName.toUpperCase() : formData.monitored_by}
-            onChange={!custodianName ? (e) => handleInputChange('monitored_by', e.target.value) : undefined}
+            value={
+              custodianName
+                ? custodianName.toUpperCase()
+                : formData.monitored_by
+            }
+            onChange={
+              !custodianName
+                ? (e) => handleInputChange("monitored_by", e.target.value)
+                : undefined
+            }
             placeholder="Lab monitor name"
-            disabled={disabled || !!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Disabled by default, only enabled for E-Forum
-            readOnly={!!custodianName || (!formData.laboratory || formData.laboratory !== 'e-forum')} // Read-only by default, only enabled for E-Forum
+            disabled={
+              disabled ||
+              !!custodianName ||
+              !formData.laboratory ||
+              formData.laboratory !== "e-forum"
+            } // Disabled by default, only enabled for E-Forum
+            readOnly={
+              !!custodianName ||
+              !formData.laboratory ||
+              formData.laboratory !== "e-forum"
+            } // Read-only by default, only enabled for E-Forum
           />
-          {(custodianName || (formData.laboratory && formData.laboratory !== 'e-forum')) && (
-            <p className="text-sm text-gray-500">This field is automatically set by the assigned custodian</p>
+          {(custodianName ||
+            (formData.laboratory && formData.laboratory !== "e-forum")) && (
+            <p className="text-sm text-gray-500">
+              This field is automatically set by the assigned custodian
+            </p>
           )}
-          {formData.laboratory === 'e-forum' && (
-            <p className="text-sm text-gray-500">E-Forum requires manual monitor assignment</p>
+          {formData.laboratory === "e-forum" && (
+            <p className="text-sm text-gray-500">
+              E-Forum requires manual monitor assignment
+            </p>
           )}
           {!formData.laboratory && (
-            <p className="text-sm text-gray-500">This field will auto-populate when a laboratory is selected</p>
+            <p className="text-sm text-gray-500">
+              This field will auto-populate when a laboratory is selected
+            </p>
           )}
         </div>
       </div>
 
       <div className="flex justify-center pt-6">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           variant="outline"
-          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm" 
+          className="px-8 py-3 border-gray-300 hover:bg-gray-50 font-medium shadow-sm"
           disabled={disabled || isSubmitting}
         >
-          {isSubmitting ? 'Submitting...' : 'Submit'}
+          {isSubmitting ? "Submitting..." : "Submit"}
         </Button>
       </div>
     </form>

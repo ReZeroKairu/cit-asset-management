@@ -8,7 +8,29 @@ import { config } from "../config";
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_change_me";
 
-export const login = async (req: Request, res: Response) => {
+export const verifyPassword = async (req: Request, res: Response) => {
+  const { password } = req.body;
+  const userId = (req as any).user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  try {
+    // Find user by ID
+    const user = await prisma.users.findUnique({ where: { user_id: userId } });
+    if (!user) return res.status(401).json({ error: "User not found" });
+
+    // Compare provided password with stored hash
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    
+    res.json({ valid: isValid });
+  } catch (error) {
+    console.error("Password verification error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+  export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {

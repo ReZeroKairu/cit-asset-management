@@ -23,15 +23,15 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
   // Add ESC key support
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('keydown', handleEscapeKey);
+    document.addEventListener("keydown", handleEscapeKey);
 
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [onClose]);
 
@@ -48,23 +48,23 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    >
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return createPortal(
     <>
-      <div 
+      <div
         className="fixed inset-0 backdrop-blur-md bg-black/20 z-[9999]"
         onClick={onClose}
       ></div>
-      <div 
+      <div
         className="fixed inset-0 z-[10000] overflow-y-auto"
         onClick={onClose}
       >
         <div className="flex items-center justify-center min-h-screen px-4 py-6">
-          <div 
+          <div
             className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -91,7 +91,10 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+            <form
+              onSubmit={handleSubmit}
+              className="flex-1 overflow-y-auto p-6"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -119,7 +122,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Laboratory</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Laboratory
+                  </label>
                   <select
                     name="lab_id"
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
@@ -131,7 +136,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Unit Type
+                  </label>
                   <select
                     name="unit_id"
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
@@ -144,7 +151,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Serial Number
+                  </label>
                   <input
                     type="text"
                     name="serial_number"
@@ -153,7 +162,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity
+                  </label>
                   <input
                     type="number"
                     name="quantity"
@@ -164,7 +175,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date of Purchase</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Purchase
+                  </label>
                   <input
                     type="date"
                     name="date_of_purchase"
@@ -173,7 +186,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Supplier Name
+                  </label>
                   <input
                     type="text"
                     name="supplier_name"
@@ -183,7 +198,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
                   <textarea
                     name="description"
                     className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
@@ -226,8 +243,9 @@ const AssetFormModal: React.FC<ModalProps> = ({ onClose, onSave }) => {
           </div>
         </div>
       </div>
-    </>
-    , document.body);
+    </>,
+    document.body
+  );
 };
 
 export default AssetFormModal;

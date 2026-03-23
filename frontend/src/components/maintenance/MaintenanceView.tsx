@@ -12,12 +12,10 @@ import {
   Keyboard,
   Network,
   AlignLeft,
-  Download,
   History,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { generateQPMCReport } from "../../utils/reportGenerator";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
 
@@ -84,32 +82,9 @@ const MaintenanceView: React.FC<Props> = ({
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);
 
-      if (reportData) {
-        console.log("📋 MAINTENANCE VIEW - PMC Report loaded:", {
-          pmc_id: reportData?.pmc_id || "NULL",
-          overall_remarks: reportData?.overall_remarks || "NULL",
-          software_name: reportData?.software_name || "NULL",
-          connectivity_type: reportData?.connectivity_type || "NULL",
-          connectivity_speed: reportData?.connectivity_speed || "NULL",
-          workstation_status: reportData?.workstation_status || "NULL",
-        });
-      } else {
-        console.log("📋 MAINTENANCE VIEW - No PMC report found (first service)");
-      }
-
       // Fetch service history
       const historyData = await getServiceHistory(workstation.id, quarter);
       setServiceLogs(historyData);
-
-      console.log("📚 MAINTENANCE VIEW - Service history loaded:", {
-        count: historyData.length,
-        logs: historyData.map((log: any) => ({
-          log_id: log.log_id,
-          service_type: log.service_type,
-          remarks: log.remarks || "NULL",
-          service_date: log.service_date,
-        })),
-      });
 
       // Fetch status options
       const statuses = await getAssetStatuses();
@@ -150,8 +125,8 @@ const MaintenanceView: React.FC<Props> = ({
 
     // 1. Map Procedures to Checkmarks
     const checkProc = (name: string) =>
-      completedProcedures.some((p: any) => 
-        (p.procedure_name || p.procedure?.procedure_name) === name
+      completedProcedures.some(
+        (p: any) => (p.procedure_name || p.procedure?.procedure_name) === name
       )
         ? "☑"
         : "☐";
@@ -194,7 +169,7 @@ const MaintenanceView: React.FC<Props> = ({
       name: "System Unit",
       ...mapStatus(systemUnitStatus),
       tag: "N/A",
-      remarks: systemUnitStatus === 'Functional' ? "Functional" : "",
+      remarks: systemUnitStatus === "Functional" ? "Functional" : "",
     });
 
     // 6. Add the System Unit Components right under it
@@ -276,6 +251,7 @@ const MaintenanceView: React.FC<Props> = ({
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
       )
   );
+  const systemUnitStatus = calculateWorstStatus(systemAssets);
 
   // Use shared utility to calculate System Unit (Overall) status
   const systemUnitStatus = calculateWorstStatus(systemAssets);
@@ -308,21 +284,26 @@ const MaintenanceView: React.FC<Props> = ({
     },
   ];
 
-  const completedProcedures = (pmcReport?.procedures || []).filter((p: any) => {
-    // Safety check: ensure procedure object has required properties
-    if (!p || typeof p === 'undefined') {
-      console.warn('⚠️ Undefined procedure object:', p);
-      return false;
-    }
-    return true;
-  }).map((p: any) => {
-    // Transform to consistent structure
-    return {
-      procedure_id: p.procedure_id || p.procedure?.procedure_id || 0,
-      procedure_name: p.procedure_name || p.procedure?.procedure_name || 'Unknown Procedure',
-      is_checked: p.is_checked || false,
-    };
-  });
+  const completedProcedures = (pmcReport?.procedures || [])
+    .filter((p: any) => {
+      // Safety check: ensure procedure object has required properties
+      if (!p || typeof p === "undefined") {
+        console.warn("⚠️ Undefined procedure object:", p);
+        return false;
+      }
+      return true;
+    })
+    .map((p: any) => {
+      // Transform to consistent structure
+      return {
+        procedure_id: p.procedure_id || p.procedure?.procedure_id || 0,
+        procedure_name:
+          p.procedure_name ||
+          p.procedure?.procedure_name ||
+          "Unknown Procedure",
+        is_checked: p.is_checked || false,
+      };
+    });
 
   const ReadOnlyTable = ({
     title,
@@ -415,15 +396,18 @@ const MaintenanceView: React.FC<Props> = ({
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        ["Functional", "Working", "Operational"].includes(item.status)
+                        ["Functional", "Working", "Operational"].includes(
+                          item.status
+                        )
                           ? "bg-green-100 text-green-800"
-                          : item.status === "For Replacement" || item.status === "Not Functional"
-                            ? "bg-red-100 text-red-800"
-                            : item.status === "For Repair"
-                              ? "bg-amber-100 text-amber-800"
-                              : item.status === "For Upgrade"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
+                          : item.status === "For Replacement" ||
+                            item.status === "Not Functional"
+                          ? "bg-red-100 text-red-800"
+                          : item.status === "For Repair"
+                          ? "bg-amber-100 text-amber-800"
+                          : item.status === "For Upgrade"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
                       }`}
                     >
                       {item.status}
@@ -519,15 +503,17 @@ const MaintenanceView: React.FC<Props> = ({
             <>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
-                  calculatedWorkstationStatus === "Functional" || calculatedWorkstationStatus === "Working" || calculatedWorkstationStatus === "Operational"
+                  calculatedWorkstationStatus === "Functional" ||
+                  calculatedWorkstationStatus === "Working" ||
+                  calculatedWorkstationStatus === "Operational"
                     ? "bg-green-100 text-green-800 border-green-200"
                     : calculatedWorkstationStatus === "For Replacement"
-                      ? "bg-red-100 text-red-800 border-red-200"
-                      : calculatedWorkstationStatus === "For Repair"
-                        ? "bg-amber-100 text-amber-800 border-amber-200"
-                        : calculatedWorkstationStatus === "For Upgrade"
-                          ? "bg-blue-100 text-blue-800 border-blue-200"
-                          : "bg-gray-100 text-gray-800 border-gray-200"
+                    ? "bg-red-100 text-red-800 border-red-200"
+                    : calculatedWorkstationStatus === "For Repair"
+                    ? "bg-amber-100 text-amber-800 border-amber-200"
+                    : calculatedWorkstationStatus === "For Upgrade"
+                    ? "bg-blue-100 text-blue-800 border-blue-200"
+                    : "bg-gray-100 text-gray-800 border-gray-200"
                 }`}
               >
                 {calculatedWorkstationStatus}

@@ -3,6 +3,8 @@ import api from "../api/axios";
 import { getLaboratories } from "../api/laboratories";
 import { getInventory, deleteAsset } from "../api/inventory";
 import { getAllWorkstations } from "../api/workstations";
+import { getWorkstationPMCReports } from "../api/maintenance";
+import { getCurrentQuarter } from "../utils/quarterLogic";
 import AddAssetModal from "../components/inventory/AddAssetModal";
 import EditAssetModal from "../components/inventory/EditAssetModal";
 import ViewWorkstationModal from "../components/inventory/ViewWorkstationModal";
@@ -12,6 +14,7 @@ import WorkstationReport from "../components/inventory/WorkstationReport";
 import { useAuth } from "../context/AuthContext";
 // ✅ IMPORT ICONS HERE
 import { Plus, FileText, Search } from "lucide-react";
+import UploadAssetModal from "../components/inventory/UploadAssetModal";
 
 // Import our newly extracted table components
 import WorkstationTable from "../components/inventory/WorkstationTable";
@@ -89,12 +92,21 @@ const InventoryPage = () => {
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
   const [workstationSearch, setWorkstationSearch] = useState<string>("");
   const [assetSearch, setAssetSearch] = useState<string>("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [pmcReports, setPmcReports] = useState<Record<number, any>>({});
 
   useEffect(() => {
     fetchInventory();
     fetchWorkstations();
     fetchLaboratories();
   }, []);
+
+  // Fetch PMC reports when workstations change
+  useEffect(() => {
+    if (workstations.length > 0) {
+      fetchPMCReports();
+    }
+  }, [workstations]);
 
   const fetchInventory = async () => {
     try {
@@ -123,6 +135,20 @@ const InventoryPage = () => {
     }
   };
 
+  const fetchPMCReports = async () => {
+    try {
+      const currentQuarter = getCurrentQuarter();
+      const workstationIds = workstations.map((ws) => ws.workstation_id);
+      const reports = await getWorkstationPMCReports(
+        workstationIds,
+        currentQuarter
+      );
+      setPmcReports(reports);
+    } catch (err) {
+      console.error("Error fetching PMC reports:", err);
+    }
+  };
+
   const handleEdit = (asset: Asset) => {
     setEditingAsset(asset);
     setShowEditModal(true);
@@ -133,26 +159,31 @@ const InventoryPage = () => {
     const shouldDelete = window.confirm(
       "Are you sure you want to delete this asset? This action cannot be undone."
     );
-    
+
     if (!shouldDelete) return;
-    
+
     try {
       await deleteAsset(assetId);
-      
+
       // Remove the deleted asset from state instead of refreshing all data
-      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
-      setWorkstations(prev => prev.map(ws => ({
-        ...ws,
-        assets: ws.assets?.filter(asset => asset.asset_id !== assetId) || []
-      })));
-      
+      setAssets((prev) => prev.filter((asset) => asset.asset_id !== assetId));
+      setWorkstations((prev) =>
+        prev.map((ws) => ({
+          ...ws,
+          assets:
+            ws.assets?.filter((asset) => asset.asset_id !== assetId) || [],
+        }))
+      );
+
       // Show success message without using alert (which can cause focus issues)
       console.log("Asset deleted successfully");
-      
     } catch (err: any) {
       console.error("Failed to delete asset:", err);
       // Use console.error instead of alert to avoid focus issues
-      console.error("Delete error:", err.response?.data?.error || "Failed to delete asset");
+      console.error(
+        "Delete error:",
+        err.response?.data?.error || "Failed to delete asset"
+      );
     }
   };
 
@@ -169,7 +200,7 @@ const InventoryPage = () => {
   const handleDeleteWorkstation = async (workstationId: number) => {
     if (
       !confirm(
-        "Are you sure you want to delete this workstation? This will also remove all asset assignments.",
+        "Are you sure you want to delete this workstation? This will also remove all asset assignments."
       )
     )
       return;
@@ -198,7 +229,7 @@ const InventoryPage = () => {
 
   // --- Filtering Logic ---
   const unassignedAssets = (assets || []).filter(
-    (asset: any) => !asset.workstation && !asset.workstation_id,
+    (asset: any) => !asset.workstation && !asset.workstation_id
   );
 
   const filteredWorkstations = (
@@ -206,14 +237,20 @@ const InventoryPage = () => {
       ? (workstations || []).filter((ws) => ws.lab_id === selectedLabId)
       : [...(workstations || [])]
   )
-    .filter((ws) => 
-      (ws.workstation_name || '').toLowerCase().includes(workstationSearch.toLowerCase())
+    .filter((ws) =>
+      (ws.workstation_name || "")
+        .toLowerCase()
+        .includes(workstationSearch.toLowerCase())
     )
     .sort((a, b) =>
-      (a.workstation_name || '').localeCompare(b.workstation_name || '', undefined, {
-        numeric: true,
-        sensitivity: "base",
-      }),
+      (a.workstation_name || "").localeCompare(
+        b.workstation_name || "",
+        undefined,
+        {
+          numeric: true,
+          sensitivity: "base",
+        }
+      )
     );
 
   const filteredUnassignedAssets = unassignedAssets
@@ -221,29 +258,42 @@ const InventoryPage = () => {
       const searchTerm = assetSearch.toLowerCase();
       return (
         // Basic asset fields
-        (asset.item_name || '').toLowerCase().includes(searchTerm) ||
+        (asset.item_name || "").toLowerCase().includes(searchTerm) ||
         // Asset details fields (the actual data structure)
-        (asset.asset_details?.property_tag_no || '').toLowerCase().includes(searchTerm) ||
-        (asset.asset_details?.description || '').toLowerCase().includes(searchTerm) ||
-        (asset.asset_details?.serial_number || '').toLowerCase().includes(searchTerm) ||
+        (asset.asset_details?.property_tag_no || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        (asset.asset_details?.description || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        (asset.asset_details?.serial_number || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
         // Related fields
-        (asset.units?.unit_name || '').toLowerCase().includes(searchTerm) ||
-        (asset.laboratories?.lab_name || '').toLowerCase().includes(searchTerm) ||
+        (asset.units?.unit_name || "").toLowerCase().includes(searchTerm) ||
+        (asset.laboratories?.lab_name || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
         // Numeric fields converted to string
-        (asset.quantity?.toString() || '').includes(searchTerm) ||
-        (asset.asset_id?.toString() || '').includes(searchTerm) ||
+        (asset.quantity?.toString() || "").includes(searchTerm) ||
+        (asset.asset_id?.toString() || "").includes(searchTerm) ||
         // Date fields (search year, month, day)
-        (asset.date_of_purchase ? new Date(asset.date_of_purchase).toLocaleDateString().toLowerCase().includes(searchTerm) : false)
+        (asset.date_of_purchase
+          ? new Date(asset.date_of_purchase)
+              .toLocaleDateString()
+              .toLowerCase()
+              .includes(searchTerm)
+          : false)
       );
     })
-    .filter((asset) => selectedLabId ? asset.lab_id === selectedLabId : true);
+    .filter((asset) => (selectedLabId ? asset.lab_id === selectedLabId : true));
 
   const availableLabs =
     user?.role === "Admin"
       ? laboratories
       : user?.lab_id
-        ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
-        : [];
+      ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
+      : [];
 
   useEffect(() => {
     if (user?.role === "Custodian" && user.lab_id && !selectedLabId) {
@@ -321,10 +371,10 @@ const InventoryPage = () => {
                   value={selectedLabId || ""}
                   onChange={(e) =>
                     setSelectedLabId(
-                      e.target.value ? Number(e.target.value) : null,
+                      e.target.value ? Number(e.target.value) : null
                     )
                   }
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 px-3 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">All Laboratories</option>
                   {availableLabs.map((lab) => (
@@ -334,7 +384,7 @@ const InventoryPage = () => {
                   ))}
                 </select>
               </div>
-              
+
               {/* View Toggles - Always show for all users */}
               <>
                 <button
@@ -460,24 +510,46 @@ const InventoryPage = () => {
                 className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
               >
-                <Plus className="w-4 h-4 mr-2" /> Add Workstation
+                <Plus className="w-4 h-4 mr-1.5" /> Add Workstation
               </button>
             )}
-
             {(user?.role === "Admin" || user?.role === "Custodian") && (
               <>
                 <button
                   className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowModal(true)}
                 >
-                  <Plus className="w-4 h-4 mr-2" /> Add Asset
+                  <Plus className="w-4 h-4 mr-1.5" /> Add Asset
                 </button>
                 <button
                   className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowWorkstationReport(true)}
                 >
-                  <FileText className="w-4 h-4 mr-2" /> Workstation Report
+                  <FileText className="w-4 h-4 mr-1.5" /> Workstation Report
                 </button>
+                {/* ✅ Show Upload Data button if Custodian */}
+                {user?.role === "Custodian" && (
+                  <button
+                    className="h-9 px-3 bg-[#eab308] text-white text-sm rounded-md hover:bg-yellow-600 flex items-center font-medium transition-colors cursor-pointer"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    {/* Simple upload icon, adjust as needed */}
+                    <svg
+                      className="w-4 h-4 mr-1.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v16h16V4M12 16V8M12 8l4 4M12 8l-4 4"
+                      />
+                    </svg>
+                    Upload Data (XLSX)
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -493,6 +565,7 @@ const InventoryPage = () => {
             onEdit={handleEditWorkstation}
             onDelete={handleDeleteWorkstation}
             getStatusColor={getStatusColor}
+            pmcReports={pmcReports}
           />
         ) : (
           <UnassignedAssetTable
@@ -550,6 +623,14 @@ const InventoryPage = () => {
       <WorkstationReport
         show={showWorkstationReport}
         onClose={() => setShowWorkstationReport(false)}
+      />
+      <UploadAssetModal
+        show={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => {
+          fetchInventory();
+          fetchWorkstations();
+        }}
       />
     </div>
   );

@@ -18,10 +18,31 @@ const prisma = new PrismaClient();
 router.get("/", authenticateToken, getInventory);
 
 // Protected routes require authentication
-router.post("/", authenticateToken, auditMiddleware("CREATE", "inventory"), createAsset);
-router.post("/batch", authenticateToken, auditMiddleware("CREATE", "inventory"), batchCreateAssets);
-router.put("/:id", authenticateToken, auditMiddleware("UPDATE", "inventory"), updateAsset);
-router.delete("/:id", authenticateToken, requireRole(["Admin", "Custodian"]), auditMiddleware("DELETE", "inventory"), deleteAsset);
+router.post(
+  "/",
+  authenticateToken,
+  auditMiddleware("CREATE", "inventory"),
+  createAsset
+);
+router.post(
+  "/batch",
+  authenticateToken,
+  auditMiddleware("CREATE", "inventory"),
+  batchCreateAssets
+);
+router.put(
+  "/:id",
+  authenticateToken,
+  auditMiddleware("UPDATE", "inventory"),
+  updateAsset
+);
+router.delete(
+  "/:id",
+  authenticateToken,
+  requireRole(["Admin", "Custodian"]),
+  auditMiddleware("DELETE", "inventory"),
+  deleteAsset
+);
 
 // ✅ ADD THIS ROUTE
 router.get("/statuses", getAssetStatuses);

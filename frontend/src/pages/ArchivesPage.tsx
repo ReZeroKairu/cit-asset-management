@@ -12,18 +12,20 @@ export const ArchivesPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Archives</h1>
-        <p className="text-gray-600">View historical reports and form submissions</p>
+        <p className="text-gray-600">
+          View historical reports and form submissions
+        </p>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('reports')}
+            onClick={() => setActiveTab("reports")}
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'reports'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "reports"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -32,11 +34,11 @@ export const ArchivesPage = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('complaints')}
+            onClick={() => setActiveTab("complaints")}
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'complaints'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "complaints"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -45,11 +47,11 @@ export const ArchivesPage = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('cit-lab-users')}
+            onClick={() => setActiveTab("cit-lab-users")}
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'cit-lab-users'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "cit-lab-users"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -58,11 +60,11 @@ export const ArchivesPage = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('forms')}
+            onClick={() => setActiveTab("forms")}
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'forms'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "forms"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -75,23 +77,28 @@ export const ArchivesPage = () => {
 
       {/* Tab Content */}
       <div className="mt-6">
-        {activeTab === 'reports' && (
+        {activeTab === "reports" && (
           <div>
-            <DailyReportList viewMode="all" adminMode={false} archiveMode={true} />
+            <DailyReportList
+              viewMode="all"
+              adminMode={false}
+              archiveMode={true}
+            />
           </div>
         )}
-        {activeTab === 'complaints' && (
+        {activeTab === "complaints" && (
           <div>
             <ArchiveComplaintsPage />
           </div>
         )}
-        {activeTab === 'cit-lab-users' && (
+        {activeTab === "cit-lab-users" && (
           <div>
             <ArchiveCITLabUsersPage />
           </div>
         )}
-        {activeTab === 'forms' && (
+        {activeTab === "forms" && (
           <div>
+            <ArchiveFormsPage />
             <ArchiveFormsPage />
           </div>
         )}

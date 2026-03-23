@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { getInventoryAnalytics, type InventoryAnalyticsData } from "../../api/inventoryAnalytics";
 import WorkstationTimeline from "./WorkstationTimeline";
+<<<<<<< HEAD
 import AssetLifecycleChart from "./AssetLifecycleChart";
+=======
+>>>>>>> origin/jesi-branch
 import { useAuth } from "../../context/AuthContext";
 import { Search } from "lucide-react";
 
@@ -22,7 +25,10 @@ const CustodianInventoryAnalyticsSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [yearFilter, setYearFilter] = useState('all');
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+<<<<<<< HEAD
   const [lifecycleView, setLifecycleView] = useState<'timeline' | 'chart'>('chart');
+=======
+>>>>>>> origin/jesi-branch
   const { user } = useAuth();
 
   useEffect(() => {
@@ -138,9 +144,15 @@ const CustodianInventoryAnalyticsSection = () => {
     return summary;
   }, [filteredData?.timelineData]);
 
+<<<<<<< HEAD
   const { assetsByWorkstation, filteredWorkstations } = useMemo(() => {
     if (!filteredData?.timelineData) {
       return { assetsByWorkstation: [], filteredWorkstations: [] };
+=======
+  const { assetsByWorkstation, filteredWorkstations, unassignedAssets } = useMemo(() => {
+    if (!filteredData?.timelineData) {
+      return { assetsByWorkstation: [], filteredWorkstations: [], unassignedAssets: [] };
+>>>>>>> origin/jesi-branch
     }
     
     // Separate actual workstations from "Not Assigned" assets
@@ -246,7 +258,12 @@ const CustodianInventoryAnalyticsSection = () => {
     return { 
       groupedWorkstations: grouped, 
       assetsByWorkstation: Object.values(grouped), 
+<<<<<<< HEAD
       filteredWorkstations: displayData
+=======
+      filteredWorkstations: displayData,
+      unassignedAssets: filteredUnassigned
+>>>>>>> origin/jesi-branch
     };
   }, [filteredData?.timelineData, searchTerm, yearFilter, showUnassignedOnly]);
 
@@ -289,10 +306,17 @@ const CustodianInventoryAnalyticsSection = () => {
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-gray-900">
+<<<<<<< HEAD
           Asset Analytics
         </h2>
         <p className="text-gray-600">
           Track and manage your laboratory assets
+=======
+          Asset Lifecycle Analytics
+        </h2>
+        <p className="text-gray-600">
+          Track and manage your laboratory asset lifecycle
+>>>>>>> origin/jesi-branch
         </p>
       </div>
 
@@ -379,6 +403,7 @@ const CustodianInventoryAnalyticsSection = () => {
         {filteredData.timelineData && filteredData.timelineData.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
+<<<<<<< HEAD
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <CardTitle>Asset Analysis</CardTitle>
@@ -510,6 +535,110 @@ const CustodianInventoryAnalyticsSection = () => {
                   data={filteredData.timelineData} 
                   title="Asset Lifecycle Distribution"
                 />
+=======
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle>Asset Lifecycle Timelines</CardTitle>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={showUnassignedOnly ? 'unassigned' : 'workstations'}
+                    onChange={(e) => setShowUnassignedOnly(e.target.value === 'unassigned')}
+                    className="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[140px]"
+                  >
+                    <option value="workstations">🖥️ Workstations</option>
+                    <option value="unassigned">📦 Unassigned</option>
+                  </select>
+                  <select
+                    value={yearFilter}
+                    onChange={(e) => setYearFilter(e.target.value)}
+                    className="text-sm border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Years</option>
+                    <option value="Y1">Y1 (0-1 years)</option>
+                    <option value="Y2">Y2 (2 years)</option>
+                    <option value="Y3">Y3 (3 years)</option>
+                    <option value="Y4">Y4 (4 years)</option>
+                    <option value="Y5">Y5 (5+ years)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Search Filter */}
+              <div className="mt-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <input
+                      type="text"
+                      placeholder={showUnassignedOnly ? "Search unassigned assets..." : "Search workstations..."}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="text-sm border border-gray-300 rounded-md px-3 py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full max-w-64"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
+                  {!showUnassignedOnly && filteredWorkstations.length !== assetsByWorkstation.length && (
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      {filteredWorkstations.length} of {assetsByWorkstation.length} workstations
+                    </div>
+                  )}
+                  {showUnassignedOnly && (
+                    <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                      {filteredWorkstations.length} unassigned assets
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600 mt-3">
+                {showUnassignedOnly 
+                  ? 'Track unassigned assets that need workstation assignment' 
+                  : 'Track asset age by workstation (hover to view all assets)'
+                }
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredWorkstations
+                  .slice(0, 6)
+                  .map((workstation: any) => (
+                    <WorkstationTimeline
+                      key={workstation.workstation_name}
+                      workstation_name={workstation.workstation_name}
+                      assets={workstation.assets}
+                      yearFilter={yearFilter}
+                    />
+                  ))}
+              </div>
+              
+              {/* Timeline Summary */}
+              {timelineSummary.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Lifecycle Summary</h4>
+                  <div className="grid grid-cols-5 gap-3 text-xs">
+                    <div className="text-center">
+                      <div className="text-blue-600 font-bold">{timelineSummary[0].year1}</div>
+                      <div className="text-blue-600 font-bold">Y1</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-green-600 font-bold">{timelineSummary[0].year2}</div>
+                      <div className="text-green-600 font-bold">Y2</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-yellow-600 font-bold">{timelineSummary[0].year3}</div>
+                      <div className="text-yellow-600 font-bold">Y3</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-orange-600 font-bold">{timelineSummary[0].year4}</div>
+                      <div className="text-orange-600 font-bold">Y4</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-red-600 font-bold">{timelineSummary[0].year5}</div>
+                      <div className="text-red-600 font-bold">Y5</div>
+                    </div>
+                  </div>
+                </div>
+>>>>>>> origin/jesi-branch
               )}
             </CardContent>
           </Card>
