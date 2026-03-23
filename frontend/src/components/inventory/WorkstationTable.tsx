@@ -90,7 +90,18 @@ const WorkstationTable: React.FC<Props> = ({
 
   // Get workstation remarks
   const getWorkstationRemarks = (workstation: any) => {
-    return workstation.workstation_remarks || "No remarks";
+    // First check for workstation remarks
+    if (workstation.workstation_remarks) {
+      return workstation.workstation_remarks;
+    }
+    
+    // Then check for PMC report overall remarks
+    const pmcReport = pmcReports[workstation.workstation_id];
+    if (pmcReport?.overall_remarks) {
+      return pmcReport.overall_remarks;
+    }
+    
+    return "No remarks";
   };
   return (
     <div className="overflow-x-auto">
