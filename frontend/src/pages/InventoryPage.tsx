@@ -139,13 +139,32 @@ const InventoryPage = () => {
 
   const fetchPMCReports = async () => {
     try {
-      const currentQuarter = getCurrentQuarter();
+      const quarters = ["1st", "2nd", "3rd", "4th"];
       const workstationIds = workstations.map((ws) => ws.workstation_id);
-      const reports = await getWorkstationPMCReports(
-        workstationIds,
-        currentQuarter
-      );
-      setPmcReports(reports);
+      
+      // Fetch PMC reports for all quarters to find the latest
+      const allReports: Record<number, any> = {};
+      
+      for (const quarter of quarters) {
+        try {
+          const reports = await getWorkstationPMCReports(workstationIds, quarter);
+          
+          // Merge reports, keeping the latest for each workstation
+          Object.entries(reports).forEach(([workstationId, report]) => {
+            const existingReport = allReports[parseInt(workstationId)];
+            
+            // If no existing report or this one is newer, use this report
+            if (!existingReport || (report && new Date(report.report_date) > new Date(existingReport.report_date))) {
+              allReports[parseInt(workstationId)] = report;
+            }
+          });
+        } catch (err) {
+          // Silently handle quarters with no reports
+          console.warn(`No reports found for ${quarter} quarter`);
+        }
+      }
+      
+      setPmcReports(allReports);
     } catch (err) {
       console.error("Error fetching PMC reports:", err);
     }

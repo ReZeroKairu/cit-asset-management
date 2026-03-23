@@ -98,7 +98,10 @@ const WorkstationTable: React.FC<Props> = ({
     // Then check for PMC report overall remarks
     const pmcReport = pmcReports[workstation.workstation_id];
     if (pmcReport?.overall_remarks) {
-      return pmcReport.overall_remarks;
+      // Add quarter information if available
+      const quarter = pmcReport.quarter || 'Unknown';
+      const remarks = pmcReport.overall_remarks;
+      return `${quarter}: ${remarks}`;
     }
     
     return "No remarks";
