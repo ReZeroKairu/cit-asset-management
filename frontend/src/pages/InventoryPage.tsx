@@ -92,6 +92,8 @@ const InventoryPage = () => {
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
   const [workstationSearch, setWorkstationSearch] = useState<string>("");
   const [assetSearch, setAssetSearch] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [pmcReports, setPmcReports] = useState<Record<number, any>>({});
 
@@ -252,6 +254,17 @@ const InventoryPage = () => {
         }
       )
     );
+
+  // Pagination logic for workstations
+  const totalPages = Math.ceil(filteredWorkstations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedWorkstations = filteredWorkstations.slice(startIndex, endIndex);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [workstationSearch, selectedLabId]);
 
   const filteredUnassignedAssets = unassignedAssets
     .filter((asset) => {
@@ -457,7 +470,10 @@ const InventoryPage = () => {
                     id="workstation-search"
                     type="text"
                     value={workstationSearch}
-                    onChange={(e) => setWorkstationSearch(e.target.value)}
+                    onChange={(e) => {
+                      setWorkstationSearch(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
                     placeholder="Search by name..."
                     className="pl-10 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
                   />
@@ -559,14 +575,45 @@ const InventoryPage = () => {
       {/* Main Content Rendered via Components */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {!showUnassignedAssets ? (
-          <WorkstationTable
-            workstations={filteredWorkstations}
-            onView={handleViewWorkstation}
-            onEdit={handleEditWorkstation}
-            onDelete={handleDeleteWorkstation}
-            getStatusColor={getStatusColor}
-            pmcReports={pmcReports}
-          />
+          <>
+            <WorkstationTable
+              workstations={paginatedWorkstations}
+              onView={handleViewWorkstation}
+              onEdit={handleEditWorkstation}
+              onDelete={handleDeleteWorkstation}
+              getStatusColor={getStatusColor}
+              pmcReports={pmcReports}
+            />
+            
+            {/* Pagination Controls for Workstations */}
+            {totalPages > 1 && (
+              <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkstations.length)} of{" "}
+                  {filteredWorkstations.length} workstations
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <UnassignedAssetTable
             assets={filteredUnassignedAssets}
