@@ -468,16 +468,7 @@ const MaintenanceView: React.FC<Props> = ({
             </button>
           )}
 
-          {/* Download Report Button (Only shows if report exists) */}
-          {pmcReport && (
-            <button
-              onClick={handleDownloadReport}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center shadow-sm cursor-pointer"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              QPMC Report
-            </button>
-          )}
+          
         </div>
       </div>
 
