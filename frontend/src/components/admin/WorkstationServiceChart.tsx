@@ -1,0 +1,366 @@
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useAuth } from "../../context/AuthContext";
+import { getInventoryAnalytics, type InventoryAnalyticsData } from "../../api/inventoryAnalytics";
+import { getLabSchedules } from "../../api/schedule";
+import { getUserAssignedLab } from "../../api/dailyReports";
+
+interface WorkstationServiceData {
+  workstation_name: string;
+  serviced: number;
+  unserviced: number;
+  total: number;
+  serviceRate: number;
+  assetCount?: number;
+  wellMaintainedAssetCount?: number;
+}
+
+const WorkstationServiceChart = () => {
+  const [data, setData] = useState<InventoryAnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userLabId, setUserLabId] = useState<number | null>(null);
+  const [currentFiscalYear, setCurrentFiscalYear] = useState("2025-2026");
+  const [savedSchedules, setSavedSchedules] = useState<Record<string, any>>({});
+  const [activeQuarter, setActiveQuarter] = useState<string>("1st");
+  const { user } = useAuth();
+
+  // Get current quarter based on actual schedules (aligned with MaintenancePage)
+  const getCurrentQuarterBasedOnSchedules = () => {
+    if (!savedSchedules || Object.keys(savedSchedules).length === 0) {
+      return "1st Quarter (No Schedule)";
+    }
+
+    const today = new Date();
+    let currentQuarter = Object.keys(savedSchedules)[0]; // Default to first available
+
+    // Find which quarter we are currently in based on actual schedule dates
+    for (const [quarter, dates] of Object.entries(savedSchedules)) {
+      const startDate = new Date((dates as any).start);
+      const endDate = new Date((dates as any).end);
+
+      // If today falls between the start and end date, this is our active quarter
+      if (today >= startDate && today <= endDate) {
+        currentQuarter = quarter;
+        break;
+      }
+    }
+
+    return `${currentQuarter} Quarter (${currentFiscalYear})`;
+  };
+
+  // Load schedules and determine active quarter
+  useEffect(() => {
+    const loadSchedules = async () => {
+      if (userLabId) {
+        try {
+          const schedules = await getLabSchedules(userLabId, currentFiscalYear);
+          setSavedSchedules(schedules);
+
+          // Determine current quarter based on schedule dates
+          if (Object.keys(schedules).length > 0) {
+            const today = new Date();
+            let foundQuarter = Object.keys(schedules)[0]; // Default to first available
+
+            for (const [quarter, dates] of Object.entries(schedules)) {
+              const startDate = new Date((dates as any).start);
+              const endDate = new Date((dates as any).end);
+
+              if (today >= startDate && today <= endDate) {
+                foundQuarter = quarter;
+                break;
+              }
+            }
+            setActiveQuarter(foundQuarter);
+          }
+        } catch (error) {
+          console.error("Failed to load schedules:", error);
+        }
+      }
+    };
+
+    loadSchedules();
+  }, [userLabId, currentFiscalYear]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Get user lab info first
+        const userData = await getUserAssignedLab();
+        if (userData?.assigned_lab) {
+          setUserLabId(userData.assigned_lab.lab_id);
+        }
+        
+        const analyticsData = await getInventoryAnalytics();
+        setData(analyticsData);
+      } catch (err) {
+        console.error("Failed to fetch inventory analytics:", err);
+        setError("Failed to load workstation service data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Process data for custodian's lab only
+  const workstationServiceData = useMemo(() => {
+    if (!data?.timelineData || !user?.lab_id) return [];
+
+    // Filter assets for custodian's lab
+    const labAssets = data.timelineData.filter(asset => asset.lab_id === user.lab_id);
+    
+    // Group assets by workstation and determine workstation service status
+    const workstationMap = new Map<string, { assets: any[] }>();
+    
+    labAssets.forEach(asset => {
+      const workstationName = asset.workstation_name || 'Unassigned';
+      
+      if (!workstationMap.has(workstationName)) {
+        workstationMap.set(workstationName, { assets: [] });
+      }
+      
+      const current = workstationMap.get(workstationName)!;
+      current.assets.push(asset);
+    });
+
+    // Determine service status for each workstation
+    // A workstation is considered "serviced" if it has at least 50% well-maintained assets
+    // Well-maintained assets are those in Y1-Y2 (timeline_position <= 2)
+    const workstationData: WorkstationServiceData[] = Array.from(workstationMap.entries())
+      .map(([workstationName, workstationData]) => {
+        const assets = workstationData.assets;
+        const wellMaintainedAssets = assets.filter(asset => asset.timeline_position <= 2).length;
+        const totalAssets = assets.length;
+        
+        // Workstation is serviced if at least 50% of assets are well-maintained
+        const isServiced = totalAssets > 0 && (wellMaintainedAssets / totalAssets) >= 0.5;
+        
+        return {
+          workstation_name: workstationName,
+          serviced: isServiced ? 1 : 0, // Count the workstation as 1 if serviced
+          unserviced: isServiced ? 0 : 1, // Count the workstation as 1 if unserviced
+          total: 1, // Each workstation counts as 1
+          serviceRate: isServiced ? 100 : 0, // Either 100% serviced or 0% serviced
+          assetCount: totalAssets, // Keep asset count for reference
+          wellMaintainedAssetCount: wellMaintainedAssets
+        };
+      })
+      .filter(item => item.total > 0) // Only show workstations with assets
+      .sort((a, b) => b.serviceRate - a.serviceRate); // Sort by service rate (serviced first)
+
+    return workstationData;
+  }, [data, user?.lab_id]);
+
+  // Create summary data for the chart
+  const chartData = useMemo(() => {
+    if (workstationServiceData.length === 0) {
+      return [
+        { category: 'Serviced Workstations', count: 0, percentage: 0, fill: '#10b981' },
+        { category: 'Pending Service Workstations', count: 0, percentage: 0, fill: '#ef4444' }
+      ];
+    }
+
+    const servicedCount = workstationServiceData.filter(ws => ws.serviced === 1).length;
+    const pendingCount = workstationServiceData.filter(ws => ws.unserviced === 1).length;
+    
+    return [
+      {
+        category: 'Serviced Workstations',
+        count: servicedCount,
+        percentage: (servicedCount / workstationServiceData.length) * 100,
+        fill: '#10b981'
+      },
+      {
+        category: 'Pending Service Workstations', 
+        count: pendingCount,
+        percentage: (pendingCount / workstationServiceData.length) * 100,
+        fill: '#ef4444'
+      }
+    ];
+  }, [workstationServiceData]);
+
+  // Summary statistics
+  const summaryStats = useMemo(() => {
+    if (workstationServiceData.length === 0) {
+      return {
+        totalWorkstations: 0,
+        totalAssets: 0,
+        totalServiced: 0,
+        totalUnserviced: 0,
+        averageServiceRate: 0
+      };
+    }
+
+    const servicedWorkstations = workstationServiceData.filter(ws => ws.serviced === 1).length;
+    const unservicedWorkstations = workstationServiceData.filter(ws => ws.unserviced === 1).length;
+    const totalAssets = workstationServiceData.reduce((sum, ws) => sum + (ws.assetCount || 0), 0);
+
+    return {
+      totalWorkstations: workstationServiceData.length,
+      totalAssets: totalAssets,
+      totalServiced: servicedWorkstations,
+      totalUnserviced: unservicedWorkstations,
+      averageServiceRate: workstationServiceData.length > 0 ? (servicedWorkstations / workstationServiceData.length) * 100 : 0
+    };
+  }, [workstationServiceData]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Current Quarter Service Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse">
+            <div className="h-48 bg-gray-200 rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Current Quarter Service Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-red-500">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (workstationServiceData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Current Quarter Service Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-gray-500">No workstation data available for current quarter</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-900 mb-2">{data.category}</p>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-600">Count:</span>
+              <span className="font-medium">{data.count}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-900">Percentage:</span>
+              <span className="font-medium">{data.percentage.toFixed(1)}%</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-2">
+          <CardTitle className="text-lg">Current Quarter Service Status</CardTitle>
+          <p className="text-sm text-gray-600">
+            Workstation service performance for {getCurrentQuarterBasedOnSchedules()}
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="text-center p-3 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{summaryStats.totalWorkstations}</div>
+            <div className="text-xs text-blue-600 font-medium">Workstations</div>
+          </div>
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-600">{summaryStats.totalAssets}</div>
+            <div className="text-xs text-gray-600 font-medium">Total Assets</div>
+          </div>
+          <div className="text-center p-3 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{summaryStats.totalServiced}</div>
+            <div className="text-xs text-green-600 font-medium">Serviced</div>
+          </div>
+          <div className="text-center p-3 bg-red-50 rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{summaryStats.totalUnserviced}</div>
+            <div className="text-xs text-red-600 font-medium">Pending Service</div>
+          </div>
+          <div className="text-center p-3 bg-purple-50 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600">{summaryStats.averageServiceRate.toFixed(1)}%</div>
+            <div className="text-xs text-purple-600 font-medium">Service Coverage</div>
+          </div>
+        </div>
+
+        {/* Percentage Breakdown Chart */}
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 30, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="category"
+                stroke="#6b7280"
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
+              <YAxis 
+                stroke="#6b7280"
+                fontSize={12}
+                tick={{ fontSize: 11 }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar 
+                dataKey="percentage" 
+                fill="url(#colorGradient)"
+                name="Percentage"
+                radius={[8, 8, 0, 0]}
+                label={({ value }) => `${Number(value).toFixed(1)}%`}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Performance Indicators */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                <span className="text-gray-600">Service Status Breakdown - {getCurrentQuarterBasedOnSchedules()}</span>
+              </div>
+            </div>
+            <div className="text-gray-500">
+              {summaryStats.totalServiced} of {summaryStats.totalWorkstations} workstations serviced ({summaryStats.averageServiceRate.toFixed(1)}%)
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default WorkstationServiceChart;

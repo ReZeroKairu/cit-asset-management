@@ -7,6 +7,7 @@ import {
 } from "../../api/inventoryAnalytics";
 import WorkstationTimeline from "./WorkstationTimeline";
 import AssetLifecycleChart from "./AssetLifecycleChart";
+import WorkstationServiceChart from "./WorkstationServiceChart";
 import { useAuth } from "../../context/AuthContext";
 import { Search } from "lucide-react";
 
@@ -624,6 +625,9 @@ const CustodianInventoryAnalyticsSection = () => {
           </Card>
         )}
       </div>
+
+      {/* Workstation Service Chart - Full Width Section */}
+      <WorkstationServiceChart />
     </div>
   );
 };
