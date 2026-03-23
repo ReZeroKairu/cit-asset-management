@@ -99,7 +99,6 @@ export const ArchivesPage = () => {
         {activeTab === "forms" && (
           <div>
             <ArchiveFormsPage />
-            <ArchiveFormsPage />
           </div>
         )}
       </div>

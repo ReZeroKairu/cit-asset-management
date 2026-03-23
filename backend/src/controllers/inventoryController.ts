@@ -240,7 +240,6 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
         } catch (error: any) {
           // Handle duplicate property_tag_no error
           if (error.code === 'P2002' && error.meta?.target === 'property_tag_no') {
-            console.warn(`⚠️ Property tag "${asset.property_tag_no}" already exists, skipping asset creation`);
             // Continue with other assets, don't fail the entire transaction
             continue;
           }
@@ -250,14 +249,13 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
       }
       return results;
     });
-
     res.status(201).json({
       message: `Successfully created ${createdAssets.length} assets`,
       assets: createdAssets,
     });
   } catch (error: any) {
     console.error("Batch Create Error:", error);
-    res.status(500).json({ error: "Failed to create assets" });
+    res.status(500).json({ error: "Failed to create assets", details: error.message });
   }
 };
 
@@ -267,10 +265,7 @@ export const deleteAsset = async (req: Request, res: Response) => {
     const { id } = req.params;
     const assetId = Number(id);
 
-    console.log(`Attempting to delete asset ${assetId} by user ${req.user?.userId} (${req.user?.role})`);
-
     if (!assetId || isNaN(assetId)) {
-      console.log(`Invalid asset ID: ${id}`);
       return res.status(400).json({ error: "Invalid asset ID" });
     }
 
@@ -285,7 +280,6 @@ export const deleteAsset = async (req: Request, res: Response) => {
     });
 
     if (!existingAsset) {
-      console.log(`Asset not found: ${assetId}`);
       return res.status(404).json({ error: "Asset not found" });
     }
 
@@ -296,15 +290,11 @@ export const deleteAsset = async (req: Request, res: Response) => {
       service_log_assets: existingAsset.service_log_assets?.length || 0
     };
 
-    console.log(`Asset ${assetId} has related records:`, relatedRecords);
-
     // Check if there are related records that need cascade deletion
     const hasRelatedRecords = Object.values(relatedRecords).some(count => count > 0);
 
     // If there are related records, delete them first (cascade delete)
     if (hasRelatedRecords) {
-      console.log(`Asset ${assetId} has related records, performing cascade delete`);
-      
       try {
         // Delete related records in the correct order (respecting foreign key constraints)
         
@@ -313,7 +303,6 @@ export const deleteAsset = async (req: Request, res: Response) => {
           await prisma.service_log_assets.deleteMany({
             where: { asset_id: assetId }
           });
-          console.log(`Deleted ${relatedRecords.service_log_assets} service log records`);
         }
         
         // 2. Delete complaints
@@ -321,7 +310,6 @@ export const deleteAsset = async (req: Request, res: Response) => {
           await prisma.complaints.deleteMany({
             where: { asset_id: assetId }
           });
-          console.log(`Deleted ${relatedRecords.complaints} complaint records`);
         }
         
         // 3. Delete asset details
@@ -329,12 +317,10 @@ export const deleteAsset = async (req: Request, res: Response) => {
           await prisma.asset_details.delete({
             where: { asset_id: assetId }
           });
-          console.log(`Deleted asset details record`);
         }
         
         console.log(`Cascade delete completed for asset ${assetId}`);
       } catch (cascadeError) {
-        console.error(`Cascade delete failed for asset ${assetId}:`, cascadeError);
         return res.status(500).json({ 
           error: "Failed to delete related records",
           message: "Please contact administrator to delete this asset"
@@ -347,10 +333,8 @@ export const deleteAsset = async (req: Request, res: Response) => {
       where: { asset_id: assetId },
     });
 
-    console.log(`Asset ${assetId} deleted successfully by user ${req.user?.userId}`);
     res.json({ message: "Asset deleted successfully" });
   } catch (error) {
-    console.error("Error deleting asset:", error);
     
     // Check for foreign key constraint errors
     if (error instanceof Error) {
@@ -436,8 +420,7 @@ export const updateAsset = async (req: Request, res: Response) => {
 
     res.json(updatedAsset);
   } catch (error) {
-    console.error("Error updating asset:", error);
-    res.status(500).json({ error: "Failed to update asset" });
+    res.status(500).json({ error: "Failed to create asset" });
   }
 };
 

@@ -87,6 +87,11 @@ const WorkstationTable: React.FC<Props> = ({
     }
     return calculateWorstStatus(assets);
   };
+
+  // Get workstation remarks
+  const getWorkstationRemarks = (workstation: any) => {
+    return workstation.workstation_remarks || "No remarks";
+  };
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -143,7 +148,7 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor(
                       getCalculatedStatus(workstation)
                     )}`}
                   >

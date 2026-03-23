@@ -15,9 +15,11 @@ import {
   History,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
+import { generateQPMCReport } from "@/utils/reportGenerator";
 
 interface Props {
   workstation: { id: number; name: string; lab_name?: string };
@@ -251,7 +253,6 @@ const MaintenanceView: React.FC<Props> = ({
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
       )
   );
-  const systemUnitStatus = calculateWorstStatus(systemAssets);
 
   // Use shared utility to calculate System Unit (Overall) status
   const systemUnitStatus = calculateWorstStatus(systemAssets);

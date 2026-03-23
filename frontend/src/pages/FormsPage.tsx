@@ -15,7 +15,11 @@ import { useFormsData } from "../hooks/useFormsData";
 import { useFormStatus } from "../hooks/useFormStatus";
 import { useFormFiltering } from "../hooks/useFormFiltering";
 import { getFormStatusColor } from "../utils/statusUtils";
-import { formatUserType, formatUsageType, formatLaboratory } from "../utils/formatUtils";
+import {
+  formatUserType,
+  formatUsageType,
+  formatLaboratory,
+} from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
 
 // ─── Submitted Forms Table ────────────────────────────────────────────────────
@@ -25,7 +29,11 @@ interface SubmittedFormsTableProps {
   loading: boolean;
   userRole: users_role | undefined;
   onRowClick: (form: FormSubmission) => void;
-  onUpdateStatus: (formId: number, formType: string, newStatus: string) => Promise<void>;
+  onUpdateStatus: (
+    formId: number,
+    formType: string,
+    newStatus: string
+  ) => Promise<void>;
   onEditForm: (form: FormSubmission) => void;
   onDownloadForm: (form: FormSubmission) => void;
   getStatusColor: (status: string) => string;
@@ -33,10 +41,14 @@ interface SubmittedFormsTableProps {
 
 const getFormTypeLabel = (type: string) => {
   switch (type) {
-    case "lab-request":       return "Lab Request";
-    case "equipment-borrow":  return "Equipment Borrow";
-    case "software-install":  return "Software Install";
-    default:                  return type;
+    case "lab-request":
+      return "Lab Request";
+    case "equipment-borrow":
+      return "Equipment Borrow";
+    case "software-install":
+      return "Software Install";
+    default:
+      return type;
   }
 };
 
@@ -45,7 +57,9 @@ const FormMetaLine = ({ form }: { form: FormSubmission }) => {
     return (
       <>
         {form.details?.user_type && (
-          <span className="capitalize">{formatUserType(form.details.user_type)}</span>
+          <span className="capitalize">
+            {formatUserType(form.details.user_type)}
+          </span>
         )}
         {form.details?.usage_type && (
           <span> &bull; {formatUsageType(form.details.usage_type)}</span>
@@ -61,16 +75,23 @@ const FormMetaLine = ({ form }: { form: FormSubmission }) => {
     return (
       <>
         {form.details?.user_type && (
-          <span className="capitalize">{formatUserType(form.details.user_type)}</span>
+          <span className="capitalize">
+            {formatUserType(form.details.user_type)}
+          </span>
         )}
         {form.laboratory && (
-          <span>{form.details?.user_type ? " \u2022 " : ""}{formatLaboratory(form.laboratory)}</span>
+          <span>
+            {form.details?.user_type ? " \u2022 " : ""}
+            {formatLaboratory(form.laboratory)}
+          </span>
         )}
       </>
     );
   }
 
-  return form.laboratory ? <span>{formatLaboratory(form.laboratory)}</span> : null;
+  return form.laboratory ? (
+    <span>{formatLaboratory(form.laboratory)}</span>
+  ) : null;
 };
 
 const SubmittedFormsTable = ({
@@ -101,7 +122,10 @@ const SubmittedFormsTable = ({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
-      <table className="w-full divide-y divide-gray-200" style={{ minWidth: "680px" }}>
+      <table
+        className="w-full divide-y divide-gray-200"
+        style={{ minWidth: "680px" }}
+      >
         <thead className="bg-gray-50">
           <tr>
             <th
@@ -147,7 +171,8 @@ const SubmittedFormsTable = ({
               className="hover:bg-blue-50 cursor-pointer transition-colors"
               onClick={(e) => {
                 const target = e.target as HTMLElement;
-                if (target.tagName === "INPUT" || target.tagName === "BUTTON") return;
+                if (target.tagName === "INPUT" || target.tagName === "BUTTON")
+                  return;
                 onRowClick(form);
               }}
             >
@@ -187,7 +212,9 @@ const SubmittedFormsTable = ({
               {/* Status */}
               <td className="px-4 py-3 align-middle text-center">
                 <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${getStatusColor(form.status)}`}
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${getStatusColor(
+                    form.status
+                  )}`}
                 >
                   {form.status.replace(/_/g, " ")}
                 </span>
@@ -232,10 +259,10 @@ const SubmittedFormsTable = ({
 // ─── Tab Nav ──────────────────────────────────────────────────────────────────
 
 const TAB_ITEMS = [
-  { id: "submitted",        label: "Submitted Forms"    },
-  { id: "lab-request",      label: "Lab Request"        },
-  { id: "equipment-borrow", label: "Equipment Borrow"   },
-  { id: "software-install", label: "Software Install"   },
+  { id: "submitted", label: "Submitted Forms" },
+  { id: "lab-request", label: "Lab Request" },
+  { id: "equipment-borrow", label: "Equipment Borrow" },
+  { id: "software-install", label: "Software Install" },
 ] as const;
 
 type TabId = (typeof TAB_ITEMS)[number]["id"] | "qr-code";
@@ -246,9 +273,17 @@ const FormsPage = () => {
   const { user } = useAuth();
   const { forms, loading, refetchForms } = useFormsData();
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
-  const { updateStatus, handleBulkApprove } = useFormStatus(refetchForms, selectedForms);
-  const { filter, setDateFilter, filteredForms, pendingCount, handleFilterChange } =
-    useFormFiltering(forms);
+  const { updateStatus, handleBulkApprove } = useFormStatus(
+    refetchForms,
+    selectedForms
+  );
+  const {
+    filter,
+    setDateFilter,
+    filteredForms,
+    pendingCount,
+    handleFilterChange,
+  } = useFormFiltering(forms);
 
   const [showDetails, setShowDetails] = useState(false);
   const [selectedForm, setSelectedForm] = useState<FormSubmission | null>(null);
@@ -334,7 +369,9 @@ const FormsPage = () => {
         {/* Tab content */}
         {activeTab === "submitted" && (
           <div className="space-y-3">
-            <h2 className="text-base font-semibold text-gray-800">Submitted Forms</h2>
+            <h2 className="text-base font-semibold text-gray-800">
+              Submitted Forms
+            </h2>
             <SubmittedFormsTable
               forms={filteredForms}
               loading={loading}
@@ -346,28 +383,34 @@ const FormsPage = () => {
               onUpdateStatus={updateStatus}
               onEditForm={handleEditForm}
               onDownloadForm={handleDownloadForm}
-              getStatusColor={getFormStatusColor} 
+              getStatusColor={getFormStatusColor}
             />
           </div>
         )}
 
         {activeTab === "lab-request" && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-gray-800">Lab Request Form</h2>
+            <h2 className="text-base font-semibold text-gray-800">
+              Lab Request Form
+            </h2>
             <LabRequestForm />
           </div>
         )}
 
         {activeTab === "equipment-borrow" && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-gray-800">Equipment Borrow Form</h2>
+            <h2 className="text-base font-semibold text-gray-800">
+              Equipment Borrow Form
+            </h2>
             <EquipmentBorrowForm />
           </div>
         )}
 
         {activeTab === "software-install" && (
           <div className="space-y-6">
-            <h2 className="text-base font-semibold text-gray-800">Software Installation Form</h2>
+            <h2 className="text-base font-semibold text-gray-800">
+              Software Installation Form
+            </h2>
             <SoftwareInstallForm />
           </div>
         )}

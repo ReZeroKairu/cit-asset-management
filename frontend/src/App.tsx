@@ -29,7 +29,6 @@ import {
   Wrench,
   ClipboardList,
   MessageSquare,
-  MessageSquare,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "./api/dashboard";
 
@@ -279,6 +278,8 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
                   <MessageSquare className="w-6 h-6 text-orange-600" />
                 </div>
               </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* ✅ NEW: Complaints Dashboard Card - Only for Custodians */}

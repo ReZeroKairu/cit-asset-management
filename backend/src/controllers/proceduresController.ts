@@ -13,7 +13,6 @@ export const getAllProcedures = async (req: Request, res: Response) => {
 
     res.json(procedures);
   } catch (error) {
-    console.error("Error fetching procedures:", error);
     res.status(500).json({ error: "Failed to fetch procedures" });
   }
 };
@@ -21,15 +20,11 @@ export const getAllProcedures = async (req: Request, res: Response) => {
 // GET: Get procedures for a specific daily report
 export const getReportProcedures = async (req: Request, res: Response) => {
   try {
-    console.log('Backend: getReportProcedures called with params:', req.params); // Debug log
     const { reportId } = req.params;
 
     if (!reportId) {
-      console.log('Backend: No reportId provided'); // Debug log
       return res.status(400).json({ error: "Report ID is required" });
     }
-
-    console.log('Backend: Looking for procedures with report_id:', Number(reportId)); // Debug log
 
     const reportProcedures = await prisma.daily_report_procedures.findMany({
       where: { report_id: Number(reportId) }
@@ -43,25 +38,17 @@ export const getReportProcedures = async (req: Request, res: Response) => {
       where: { procedure_id: { in: procedureIds } }
     });
 
-    // Format the response
-    const formattedProcedures = reportProcedures.map(rp => {
-      const procedure = procedures.find(p => p.procedure_id === rp.procedure_id);
-      
-      return {
-        procedure_id: rp.procedure_id,
-        procedure_name: procedure?.procedure_name || 'Unknown Procedure',
-        category: procedure?.category || null,
-        overall_status: rp.overall_status,
-        overall_remarks: rp.overall_remarks
-      };
-    });
+    // Format procedures to match frontend expectations
+    const formattedProcedures = procedures.map(procedure => ({
+      procedure_id: procedure.procedure_id,
+      procedure_name: procedure.procedure_name,
+      procedure_description: "", // No description field in schema
+      category: procedure.category || "",
+      is_checked: reportProcedures.some(rp => rp.procedure_id === procedure.procedure_id)
+    }));
 
-    console.log('Backend: Formatted procedures:', formattedProcedures.length); // Debug log
-    console.log('Backend: Sending response'); // Debug log
     res.json(formattedProcedures);
   } catch (error) {
-    console.error("Error fetching report procedures:", error);
-    console.error("Backend error details:", error); // Debug log
     res.status(500).json({ error: "Failed to fetch report procedures" });
   }
 };
@@ -107,7 +94,6 @@ export const saveReportProcedures = async (req: Request, res: Response) => {
       procedures: result
     });
   } catch (error) {
-    console.error("Error saving report procedures:", error);
     res.status(500).json({ error: "Failed to save report procedures" });
   }
 };
@@ -128,7 +114,6 @@ export const getWorkstationProcedures = async (req: Request, res: Response) => {
 
     res.json(workstationProcedures);
   } catch (error) {
-    console.error("Error fetching workstation procedures:", error);
     res.status(500).json({ error: "Failed to fetch workstation procedures" });
   }
 };

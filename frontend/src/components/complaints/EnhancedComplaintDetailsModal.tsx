@@ -4,14 +4,11 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Badge } from "../ui/badge";
-<<<<<<< HEAD
 import { useEffect } from "react";
-=======
->>>>>>> origin/jesi-branch
-import { 
-  MessageSquare, 
-  User, 
-  MapPin, 
+import {
+  MessageSquare,
+  User,
+  MapPin,
   Package,
   FileText,
   Calendar,
@@ -21,7 +18,7 @@ import {
   AlertTriangle,
   Edit,
   Save,
-  X
+  X,
 } from "lucide-react";
 import type { Complaint } from "../../api/complaints";
 
@@ -50,56 +47,63 @@ const EnhancedComplaintDetailsModal = ({
   remarksText = "",
   setRemarksText,
   completionDate = "",
-  setCompletionDate
+  setCompletionDate,
 }: EnhancedComplaintDetailsModalProps) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Open": return <Clock className="w-4 h-4" />;
-      case "In_Progress": return <AlertTriangle className="w-4 h-4" />;
-      case "Resolved": return <CheckCircle className="w-4 h-4" />;
-      case "Denied": return <XCircle className="w-4 h-4" />;
-      default: return <MessageSquare className="w-4 h-4" />;
+      case "Open":
+        return <Clock className="w-4 h-4" />;
+      case "In_Progress":
+        return <AlertTriangle className="w-4 h-4" />;
+      case "Resolved":
+        return <CheckCircle className="w-4 h-4" />;
+      case "Denied":
+        return <XCircle className="w-4 h-4" />;
+      default:
+        return <MessageSquare className="w-4 h-4" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Open": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "In_Progress": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Resolved": return "bg-green-100 text-green-800 border-green-200";
-      case "Denied": return "bg-red-100 text-red-800 border-red-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
+      case "Open":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "In_Progress":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Resolved":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "Denied":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-<<<<<<< HEAD
   // Add ESC key support
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isOpen) {
+      if (event.key === "Escape" && isOpen) {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener("keydown", handleEscapeKey);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
   }, [isOpen, onClose]);
 
-=======
->>>>>>> origin/jesi-branch
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center p-4 z-50"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -110,7 +114,9 @@ const EnhancedComplaintDetailsModal = ({
               <MessageSquare className="w-6 h-6" />
               <div>
                 <h2 className="text-xl font-bold">Complaint Details</h2>
-                <p className="text-blue-100 text-sm">#{complaint.complaint_id}</p>
+                <p className="text-blue-100 text-sm">
+                  #{complaint.complaint_id}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -129,12 +135,19 @@ const EnhancedComplaintDetailsModal = ({
           {/* Status Badge */}
           <div className="mb-6">
             <div className="flex items-center gap-2">
-              <Badge className={`flex items-center gap-2 px-3 py-2 border ${getStatusColor(complaint.status)}`}>
+              <Badge
+                className={`flex items-center gap-2 px-3 py-2 border ${getStatusColor(
+                  complaint.status
+                )}`}
+              >
                 {getStatusIcon(complaint.status)}
-                <span className="font-medium">{complaint.status.replace('_', ' ')}</span>
+                <span className="font-medium">
+                  {complaint.status.replace("_", " ")}
+                </span>
               </Badge>
               <span className="text-sm text-gray-500">
-                Submitted on {new Date(complaint.created_at).toLocaleDateString()}
+                Submitted on{" "}
+                {new Date(complaint.created_at).toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -146,32 +159,39 @@ const EnhancedComplaintDetailsModal = ({
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <User className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-gray-900">User Information</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    User Information
+                  </h3>
                 </div>
                 <div className="space-y-2">
                   <div>
                     <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium text-gray-900">{complaint.faculty_student_name}</p>
+                    <p className="font-medium text-gray-900">
+                      {complaint.faculty_student_name}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">User Type</p>
-                    <p className="font-medium text-gray-900">{complaint.user_type}</p>
+                    <p className="font-medium text-gray-900">
+                      {complaint.user_type}
+                    </p>
                   </div>
                   {complaint.year_level && (
                     <div>
                       <p className="text-sm text-gray-500">Year Level</p>
-                      <p className="font-medium text-gray-900">Year {complaint.year_level}</p>
+                      <p className="font-medium text-gray-900">
+                        Year {complaint.year_level}
+                      </p>
                     </div>
                   )}
-<<<<<<< HEAD
                   {complaint.ip_address && (
                     <div>
                       <p className="text-sm text-gray-500">IP Address</p>
-                      <p className="font-medium text-gray-900 font-mono text-sm">{complaint.ip_address}</p>
+                      <p className="font-medium text-gray-900 font-mono text-sm">
+                        {complaint.ip_address}
+                      </p>
                     </div>
                   )}
-=======
->>>>>>> origin/jesi-branch
                 </div>
               </CardContent>
             </Card>
@@ -187,13 +207,16 @@ const EnhancedComplaintDetailsModal = ({
                   <div>
                     <p className="text-sm text-gray-500">Laboratory</p>
                     <p className="font-medium text-gray-900">
-                      {complaint.laboratories?.lab_name || `Lab ${complaint.lab_id}`}
+                      {complaint.laboratories?.lab_name ||
+                        `Lab ${complaint.lab_id}`}
                     </p>
                   </div>
                   {complaint.workstations && (
                     <div>
                       <p className="text-sm text-gray-500">Workstation</p>
-                      <p className="font-medium text-gray-900">{complaint.workstations.workstation_name}</p>
+                      <p className="font-medium text-gray-900">
+                        {complaint.workstations.workstation_name}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -207,9 +230,13 @@ const EnhancedComplaintDetailsModal = ({
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Package className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-semibold text-gray-900">Asset Information</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Asset Information
+                  </h3>
                 </div>
-                <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{complaint.asset_info}</p>
+                <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
+                  {complaint.asset_info}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -219,10 +246,14 @@ const EnhancedComplaintDetailsModal = ({
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <FileText className="w-5 h-5 text-orange-600" />
-                <h3 className="font-semibold text-gray-900">Issue Description</h3>
+                <h3 className="font-semibold text-gray-900">
+                  Issue Description
+                </h3>
               </div>
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <p className="text-gray-900 leading-relaxed">{complaint.issue_description}</p>
+                <p className="text-gray-900 leading-relaxed">
+                  {complaint.issue_description}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -232,9 +263,11 @@ const EnhancedComplaintDetailsModal = ({
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Edit className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-semibold text-gray-900">Custodian Remarks</h3>
+                <h3 className="font-semibold text-gray-900">
+                  Custodian Remarks
+                </h3>
               </div>
-              
+
               {isEditing && onSave ? (
                 <div className="space-y-4">
                   <Textarea
@@ -245,7 +278,9 @@ const EnhancedComplaintDetailsModal = ({
                     className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                   />
                   <div>
-                    <Label className="text-sm font-medium text-gray-700">Completion Date</Label>
+                    <Label className="text-sm font-medium text-gray-700">
+                      Completion Date
+                    </Label>
                     <Input
                       type="date"
                       value={completionDate}
@@ -271,10 +306,7 @@ const EnhancedComplaintDetailsModal = ({
                         </>
                       )}
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={onEditToggle}
-                    >
+                    <Button variant="outline" onClick={onEditToggle}>
                       Cancel
                     </Button>
                   </div>
@@ -283,13 +315,16 @@ const EnhancedComplaintDetailsModal = ({
                 <div className="space-y-3">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[80px]">
                     <p className="text-gray-900">
-                      {complaint.remarks || 'No remarks added yet'}
+                      {complaint.remarks || "No remarks added yet"}
                     </p>
                   </div>
                   {complaint.resolved_at && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="w-4 h-4" />
-                      <span>Completed: {new Date(complaint.resolved_at).toLocaleDateString()}</span>
+                      <span>
+                        Completed:{" "}
+                        {new Date(complaint.resolved_at).toLocaleDateString()}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -308,7 +343,7 @@ const EnhancedComplaintDetailsModal = ({
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-gray-500 mb-1">Monitored By</p>
               <p className="font-medium text-gray-900">
-                {complaint.monitored_by || 'Not assigned'}
+                {complaint.monitored_by || "Not assigned"}
               </p>
             </div>
           </div>

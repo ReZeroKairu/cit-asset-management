@@ -158,8 +158,6 @@ export const getLabPMCReports = async (req: Request, res: Response) => {
       include: {
         pmc_report_procedures: {
           include: { procedures: true },
-        pmc_report_procedures: {
-          include: { procedures: true },
         },
       },
     });
@@ -192,28 +190,16 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
               },
             },
           },
-      include: {
-        pmc_report_procedures: {
-          include: { 
-            procedures: {
-              select: {
-                procedure_id: true,
-                procedure_name: true,
-              },
-            },
-          },
         },
         service_logs: {
           orderBy: { service_date: "desc" },
           include: {
             users: {
-            users: {
               select: { user_id: true, full_name: true },
             },
-            service_log_assets: {
+  
             service_log_assets: {
               include: {
-                inventory_assets: {
                 inventory_assets: {
                   include: {
                     units: true,
@@ -221,7 +207,7 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
                 },
               },
             },
-            service_log_procedures: {
+    
             service_log_procedures: {
               include: {
                 procedures: {
@@ -230,12 +216,8 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
                     procedure_name: true,
                   },
                 },
-                procedures: {
-                  select: {
-                    procedure_id: true,
-                    procedure_name: true,
-                  },
-                },
+            
+                
               },
             },
           },
@@ -273,32 +255,7 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
     };
 
     res.json(responseData);
-    // ✅ FIX: Simple response with procedures mapping
-    const responseData = {
-      pmc_id: report.pmc_id,
-      report_date: report.report_date,
-      quarter: report.quarter,
-      lab_id: report.lab_id,
-      user_id: report.user_id,
-      workstation_id: report.workstation_id,
-      workstation_status: report.workstation_status,
-      overall_remarks: report.overall_remarks,
-      software_name: report.software_name,
-      software_status: report.software_status,
-      connectivity_type: report.connectivity_type,
-      connectivity_type_status: report.connectivity_type_status,
-      connectivity_speed: report.connectivity_speed,
-      connectivity_speed_status: report.connectivity_speed_status,
-      service_count: report.service_count,
-      updated_at: report.updated_at,
-      procedures: report.pmc_report_procedures?.map((proc: any) => ({
-        procedure_id: proc.procedure_id,
-        procedure_name: proc.procedures?.procedure_name || 'Unknown Procedure',
-        is_checked: proc.is_checked,
-      })) || [],
-    };
-
-    res.json(responseData);
+    
   } catch (error) {
     console.error("❌ GET PMC REPORT DETAIL - Error:", error);
     console.error("❌ GET PMC REPORT DETAIL - Error:", error);
@@ -327,45 +284,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
       asset_actions = [],
     } = req.body;
 
-    const user_id = req.user?.userId;
-
-    // ✅ LOGGING: Log incoming data for debugging
-    console.log("🔧 CREATE PMC REPORT - Incoming Data:", {
-      lab_id,
-      workstation_id,
-      quarter,
-      workstation_status,
-      overall_remarks: overall_remarks || "MISSING",
-      software_name,
-      software_status,
-      connectivity_type,
-      connectivity_type_status,
-      connectivity_speed,
-      connectivity_speed_status,
-      procedure_ids,
-      service_type,
-      asset_actions_count: asset_actions.length,
-      user_id,
-    });
-
-    // ✅ LOGGING: Log incoming data for debugging
-    console.log("🔧 CREATE PMC REPORT - Incoming Data:", {
-      lab_id,
-      workstation_id,
-      quarter,
-      workstation_status,
-      overall_remarks: overall_remarks || "MISSING",
-      software_name,
-      software_status,
-      connectivity_type,
-      connectivity_type_status,
-      connectivity_speed,
-      connectivity_speed_status,
-      procedure_ids,
-      service_type,
-      asset_actions_count: asset_actions.length,
-      user_id,
-    });
+    const user_id = (req as any).user?.userId;
 
     const result = await prisma.$transaction(async (tx) => {
       // Check if a report already exists for this workstation + quarter
@@ -383,18 +302,8 @@ export const createPMCReport = async (req: Request, res: Response) => {
         // Capture the status before update
         workstation_status_before = existingReport.workstation_status;
 
-        console.log("📝 UPDATING EXISTING PMC REPORT:", {
-          pmc_id: existingReport.pmc_id,
-          current_overall_remarks: existingReport.overall_remarks || "NONE",
-          new_overall_remarks: overall_remarks || "MISSING",
-        });
-
-        console.log("📝 UPDATING EXISTING PMC REPORT:", {
-          pmc_id: existingReport.pmc_id,
-          current_overall_remarks: existingReport.overall_remarks || "NONE",
-          new_overall_remarks: overall_remarks || "MISSING",
-        });
-
+        
+        
         // UPDATE the existing report and increment service_count
         report = await tx.pmc_reports.update({
           where: { pmc_id: existingReport.pmc_id },
@@ -413,29 +322,15 @@ export const createPMCReport = async (req: Request, res: Response) => {
           },
         });
 
-        console.log("✅ PMC REPORT UPDATED:", {
-          pmc_id: report.pmc_id,
-          saved_overall_remarks: report.overall_remarks || "NULL",
-        });
-
-        console.log("✅ PMC REPORT UPDATED:", {
-          pmc_id: report.pmc_id,
-          saved_overall_remarks: report.overall_remarks || "NULL",
-        });
-
+        
+        
         // Delete old procedures and re-create
         await tx.pmc_report_procedures.deleteMany({
           where: { pmc_id: existingReport.pmc_id },
         });
       } else {
-        console.log("🆕 CREATING NEW PMC REPORT:", {
-          overall_remarks: overall_remarks || "MISSING",
-        });
-
-        console.log("🆕 CREATING NEW PMC REPORT:", {
-          overall_remarks: overall_remarks || "MISSING",
-        });
-
+        
+        
         // CREATE a new report with service_count: 1
         report = await tx.pmc_reports.create({
           data: {
@@ -454,20 +349,12 @@ export const createPMCReport = async (req: Request, res: Response) => {
             connectivity_speed_status,
             service_count: 1,
             updated_at: new Date(),
-            updated_at: new Date(),
+   
           },
         });
 
-        console.log("✅ PMC REPORT CREATED:", {
-          pmc_id: report.pmc_id,
-          saved_overall_remarks: report.overall_remarks || "NULL",
-        });
-
-        console.log("✅ PMC REPORT CREATED:", {
-          pmc_id: report.pmc_id,
-          saved_overall_remarks: report.overall_remarks || "NULL",
-        });
-        workstation_status_before = "Not Previously Serviced";
+        
+                workstation_status_before = "Not Previously Serviced";
       }
 
       // 🔄 SYNC: Update inventory status based on maintenance status
@@ -504,12 +391,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
           }
         }
         
-        console.log("🔧 DETERMINING WORKSTATION STATUS FROM ASSETS:", {
-          individualStatuses: assetStatuses,
-          highestPriority,
-          determinedWorkstationStatus: workstationStatus
-        });
-        
+                
         // Update workstation with the determined status
         const workstationStatusRecord = await tx.asset_statuses.findFirst({
           where: { status_name: workstationStatus }
@@ -523,13 +405,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
             }
           });
 
-          console.log("✅ WORKSTATION STATUS UPDATED FROM ASSETS:", {
-            workstation_id: Number(workstation_id),
-            new_status: workstationStatus,
-            new_status_id: workstationStatusRecord.status_id,
-            based_on: assetStatuses
-          });
-        }
+                  }
       } else {
         // Fallback to overall workstation status if no individual asset actions
         const workstationStatusRecord = await tx.asset_statuses.findFirst({
@@ -544,12 +420,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
             }
           });
 
-          console.log("✅ WORKSTATION STATUS UPDATED FROM OVERALL:", {
-            workstation_id: Number(workstation_id),
-            new_status: workstation_status,
-            new_status_id: workstationStatusRecord.status_id
-          });
-        }
+                  }
       }
 
       // 🔄 SYNC: Update inventory status based on maintenance status
@@ -586,12 +457,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
           }
         }
         
-        console.log("🔧 DETERMINING WORKSTATION STATUS FROM ASSETS:", {
-          individualStatuses: assetStatuses,
-          highestPriority,
-          determinedWorkstationStatus: workstationStatus
-        });
-        
+                
         // Update workstation with the determined status
         const workstationStatusRecord = await tx.asset_statuses.findFirst({
           where: { status_name: workstationStatus }
@@ -605,13 +471,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
             }
           });
 
-          console.log("✅ WORKSTATION STATUS UPDATED FROM ASSETS:", {
-            workstation_id: Number(workstation_id),
-            new_status: workstationStatus,
-            new_status_id: workstationStatusRecord.status_id,
-            based_on: assetStatuses
-          });
-        }
+                  }
       } else {
         // Fallback to overall workstation status if no individual asset actions
         const workstationStatusRecord = await tx.asset_statuses.findFirst({
@@ -626,28 +486,13 @@ export const createPMCReport = async (req: Request, res: Response) => {
             }
           });
 
-          console.log("✅ WORKSTATION STATUS UPDATED FROM OVERALL:", {
-            workstation_id: Number(workstation_id),
-            new_status: workstation_status,
-            new_status_id: workstationStatusRecord.status_id
-          });
-        }
+                  }
       }
 
       // Link procedures
       if (procedure_ids && procedure_ids.length > 0) {
-        console.log("🔗 LINKING PROCEDURES:", {
-          pmc_id: report.pmc_id,
-          procedure_ids,
-          count: procedure_ids.length,
-        });
-
-        console.log("🔗 LINKING PROCEDURES:", {
-          pmc_id: report.pmc_id,
-          procedure_ids,
-          count: procedure_ids.length,
-        });
-
+        
+        
         await tx.pmc_report_procedures.createMany({
           data: procedure_ids.map((id: number) => ({
             pmc_id: report.pmc_id,
@@ -656,36 +501,13 @@ export const createPMCReport = async (req: Request, res: Response) => {
           })),
         });
 
-        console.log("✅ PROCEDURES LINKED SUCCESSFULLY");
-      } else {
-        console.log("⚠️ NO PROCEDURES TO LINK - procedure_ids array is empty");
-
-        console.log("✅ PROCEDURES LINKED SUCCESSFULLY");
-      } else {
-        console.log("⚠️ NO PROCEDURES TO LINK - procedure_ids array is empty");
-      }
+              } else {
+        
+              }
 
       // Create service log entry
-      console.log("📋 CREATING SERVICE LOG:", {
-        pmc_id: report.pmc_id,
-        service_type,
-        service_date: report_date,
-        performed_by: user_id,
-        remarks: overall_remarks || "MISSING",
-        workstation_status_before,
-        workstation_status_after: workstation_status,
-      });
-
-      console.log("📋 CREATING SERVICE LOG:", {
-        pmc_id: report.pmc_id,
-        service_type,
-        service_date: report_date,
-        performed_by: user_id,
-        remarks: overall_remarks || "MISSING",
-        workstation_status_before,
-        workstation_status_after: workstation_status,
-      });
-
+      
+      
       const serviceLog = await tx.service_logs.create({
         data: {
           pmc_id: report.pmc_id,
@@ -695,7 +517,6 @@ export const createPMCReport = async (req: Request, res: Response) => {
           remarks: overall_remarks,
           workstation_status_before,
           workstation_status_after: workstation_status,
-          service_log_procedures:
           service_log_procedures:
             procedure_ids && procedure_ids.length > 0
               ? {
@@ -707,7 +528,6 @@ export const createPMCReport = async (req: Request, res: Response) => {
                   },
                 }
               : undefined,
-          service_log_assets:
           service_log_assets:
             asset_actions.length > 0
               ? {
@@ -727,17 +547,7 @@ export const createPMCReport = async (req: Request, res: Response) => {
               : undefined,
         },
       });
-
-      console.log("✅ SERVICE LOG CREATED:", {
-        log_id: serviceLog.log_id,
-        saved_remarks: serviceLog.remarks || "NULL",
-      });
-
-      console.log("✅ SERVICE LOG CREATED:", {
-        log_id: serviceLog.log_id,
-        saved_remarks: serviceLog.remarks || "NULL",
-      });
-
+      
       return { report, serviceLog };
     });
 
@@ -759,13 +569,11 @@ export const getServiceHistory = async (req: Request, res: Response) => {
 
     const whereClause: any = {
       pmc_reports: {
-      pmc_reports: {
         workstation_id: Number(workstation_id),
       },
     };
 
     if (quarter) {
-      whereClause.pmc_reports.quarter = String(quarter);
       whereClause.pmc_reports.quarter = String(quarter);
     }
 
@@ -774,26 +582,20 @@ export const getServiceHistory = async (req: Request, res: Response) => {
       orderBy: { service_date: "desc" },
       include: {
         users: {
-        users: {
           select: { user_id: true, full_name: true },
         },
         service_log_assets: {
-        service_log_assets: {
           include: {
-            inventory_assets: {
             inventory_assets: {
               include: {
                 units: true,
-                asset_details: true,
                 asset_details: true,
               },
             },
           },
         },
         service_log_procedures: {
-        service_log_procedures: {
           include: {
-            procedures: true,
             procedures: true,
           },
         },
@@ -820,7 +622,7 @@ export const createRepairLog = async (req: Request, res: Response) => {
       asset_actions = [],
     } = req.body;
 
-    const user_id = req.user?.userId;
+    const user_id = (req as any).user?.userId;
 
     if (!workstation_id || !quarter) {
       return res
@@ -859,32 +661,23 @@ export const createRepairLog = async (req: Request, res: Response) => {
           const oldAsset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },
             include: { asset_details: true },
-            include: { asset_details: true },
           });
 
           if (oldAsset?.asset_details) {
-          if (oldAsset?.asset_details) {
-            // Find "Decommissioned" or "Disposed" status
-            const decommissionedStatus = await tx.asset_statuses.findFirst({
-              where: {
-                OR: [
-                  { status_name: "Decommissioned" },
-                  { status_name: "Disposed" },
-                  { status_name: "Replaced" },
-                ],
-              },
+            // Find "Lost" status for replaced assets
+            const lostStatus = await tx.asset_statuses.findFirst({
+              where: { status_name: "Lost" },
             });
 
-            await tx.asset_details.update({
-              where: { detail_id: oldAsset.asset_details.detail_id },
-              where: { detail_id: oldAsset.asset_details.detail_id },
-              data: {
-                status_id:
-                  decommissionedStatus?.status_id || oldAsset.asset_details.status_id,
-                  decommissionedStatus?.status_id || oldAsset.asset_details.status_id,
-                asset_remarks: `Replaced on ${new Date(service_date).toLocaleDateString()}. ${action.remarks || ""}`,
-              },
-            });
+            if (lostStatus) {
+              await tx.asset_details.update({
+                where: { detail_id: oldAsset.asset_details.detail_id },
+                data: {
+                  status_id: lostStatus.status_id,
+                  asset_remarks: `Replaced on ${new Date(service_date).toLocaleDateString()}. ${action.remarks || ""}`,
+                },
+              });
+            }
           }
 
           // Create new asset if replacement details provided
@@ -900,8 +693,7 @@ export const createRepairLog = async (req: Request, res: Response) => {
                 unit_id: oldAsset?.unit_id,
                 added_by_user_id: Number(user_id),
                 asset_details: {
-                asset_details: {
-                  create: {
+          create: {
                     property_tag_no: action.new_property_tag,
                     serial_number: action.new_serial_number,
                     description: action.new_description,
@@ -923,10 +715,8 @@ export const createRepairLog = async (req: Request, res: Response) => {
           const asset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },
             include: { asset_details: true },
-            include: { asset_details: true },
           });
 
-          if (asset?.asset_details) {
           if (asset?.asset_details) {
             // Find "Functional" status
             const functionalStatus = await tx.asset_statuses.findFirst({
@@ -935,16 +725,13 @@ export const createRepairLog = async (req: Request, res: Response) => {
 
             await tx.asset_details.update({
               where: { detail_id: asset.asset_details.detail_id },
-              where: { detail_id: asset.asset_details.detail_id },
               data: {
                 status_id:
-                  functionalStatus?.status_id || asset.asset_details.status_id,
-                  functionalStatus?.status_id || asset.asset_details.status_id,
+                        functionalStatus?.status_id || asset.asset_details.status_id,
                 asset_remarks: action.remarks
                   ? `${action.action} on ${new Date(service_date).toLocaleDateString()}: ${action.remarks}`
                   : asset.asset_details.asset_remarks,
-                  : asset.asset_details.asset_remarks,
-              },
+                 },
             });
           }
         }
@@ -975,7 +762,6 @@ export const createRepairLog = async (req: Request, res: Response) => {
           remarks,
           workstation_status_before,
           workstation_status_after,
-          service_log_assets: {
           service_log_assets: {
             createMany: {
               data: asset_actions.map((action: any) => ({
@@ -1018,8 +804,8 @@ export const createRepairLog = async (req: Request, res: Response) => {
 // 6. GET Preventive Maintenance Analytics for Dashboard
 export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
-    const userRole = req.user?.role;
+    const userId = (req as any).user?.userId;
+    const userRole = (req as any).user?.role;
     
     let whereClause = {};
     
@@ -1167,12 +953,10 @@ const syncInventoryStatusWithMaintenance = async (
   tx: any
 ) => {
   try {
-    console.log("🔄 SYNCING STATUS:", { workstationId, maintenanceStatus });
-
+    
     // Use exact same statuses - no mapping needed
     const targetStatusName = maintenanceStatus; // Use status directly
-    console.log("🎯 USING EXACT STATUS:", { from: maintenanceStatus, to: targetStatusName });
-
+    
     // Find the status ID
     const statusRecord = await tx.asset_statuses.findFirst({
       where: { status_name: targetStatusName }
@@ -1193,15 +977,7 @@ const syncInventoryStatusWithMaintenance = async (
       }
     });
 
-    console.log("📦 FOUND ASSETS:", {
-      workstationId,
-      assetCount: workstationAssets.length,
-      assets: workstationAssets.map((a: any) => ({
-        asset_id: a.asset_id,
-        current_status: a.asset_details?.status_id
-      }))
-    });
-
+    
     // Update all assets for this workstation
     if (workstationAssets.length > 0) {
       await tx.asset_details.updateMany({
@@ -1217,15 +993,8 @@ const syncInventoryStatusWithMaintenance = async (
         }
       });
 
-      console.log("✅ STATUS SYNCED:", {
-        workstationId,
-        assetsUpdated: workstationAssets.length,
-        newStatusId: statusRecord.status_id,
-        newStatusName: targetStatusName
-      });
-    } else {
-      console.log("⚠️ No assets found for workstation:", workstationId);
-    }
+          } else {
+          }
 
   } catch (error) {
     console.error("❌ STATUS SYNC ERROR:", error);
@@ -1244,15 +1013,7 @@ const syncIndividualAssetStatuses = async (
   tx: any
 ) => {
   try {
-    console.log("🔄 SYNCING INDIVIDUAL ASSETS:", {
-      assetCount: assetActions.length,
-      assets: assetActions.map(a => ({
-        asset_id: a.asset_id,
-        from: a.status_before,
-        to: a.status_after
-      }))
-    });
-
+    
     for (const assetAction of assetActions) {
       // Find status ID for the new status
       const statusRecord = await tx.asset_statuses.findFirst({
@@ -1274,13 +1035,7 @@ const syncIndividualAssetStatuses = async (
         }
       });
 
-      console.log("✅ ASSET STATUS SYNCED:", {
-        asset_id: assetAction.asset_id,
-        from: assetAction.status_before,
-        to: assetAction.status_after,
-        newStatusId: statusRecord.status_id
-      });
-    }
+          }
 
   } catch (error) {
     console.error("❌ INDIVIDUAL ASSET SYNC ERROR:", error);

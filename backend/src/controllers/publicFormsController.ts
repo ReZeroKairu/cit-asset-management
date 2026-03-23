@@ -53,7 +53,9 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
     // Capture client IP address with comprehensive fallbacks
     const clientIP =
       req.ip ||
-      (req.headers["x-forwarded-for"] as string) ||
+      (Array.isArray(req.headers["x-forwarded-for"]) 
+        ? req.headers["x-forwarded-for"][0] 
+        : req.headers["x-forwarded-for"] as string) ||
       (req.headers["x-real-ip"] as string) ||
       req.connection?.remoteAddress ||
       req.socket?.remoteAddress ||
@@ -63,7 +65,6 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
       date,
       usage_type,
       faculty_student_name,
-      user_type,
       user_type,
       year_level,
       laboratory,
@@ -88,7 +89,7 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
       printing_pages,
       ws_number,
       time_in,
-      time_out: time_out || null, // Empty string → null
+      time_out,
       purpose,
       requested_by,
       remarks,
@@ -101,10 +102,7 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
     // Validate the transformed data
     try {
       labRequestSchema.parse(transformedData);
-      console.log("✅ Validation passed");
     } catch (validationError) {
-      console.error("❌ Validation failed:", validationError);
-
       // Handle ZodError specifically
       if (validationError instanceof ZodError) {
         return res.status(400).json({
@@ -158,7 +156,6 @@ export const createPublicLabRequest = async (req: Request, res: Response) => {
       data: labRequest,
     });
   } catch (error) {
-    console.error("Error creating public lab request:", error);
     res.status(500).json({
       success: false,
       message: "Failed to submit lab request",
@@ -174,18 +171,27 @@ export const createPublicEquipmentBorrow = async (
 ) => {
   try {
     // Capture client IP address with comprehensive fallbacks
-    const clientIP =
-      req.ip ||
-      (req.headers["x-forwarded-for"] as string) ||
-      (req.headers["x-real-ip"] as string) ||
-      req.connection?.remoteAddress ||
-      req.socket?.remoteAddress ||
-      "Unknown";
+    const getClientIP = (): string => {
+      const xForwardedFor = req.headers["x-forwarded-for"];
+      if (Array.isArray(xForwardedFor)) {
+        return xForwardedFor[0]; // Take the first IP from the array
+      }
+      if (typeof xForwardedFor === "string") {
+        return xForwardedFor.split(",")[0].trim(); // Take the first IP if comma-separated
+      }
+      
+      return req.ip ||
+        (req.headers["x-real-ip"] as string) ||
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress ||
+        "Unknown";
+    };
+    
+    const clientIP = getClientIP();
 
     const {
       date,
       faculty_student_name,
-      user_type,
       user_type,
       year_level,
       laboratory,
@@ -206,7 +212,6 @@ export const createPublicEquipmentBorrow = async (
       data: {
         date: new Date(date),
         faculty_student_name,
-        user_type,
         user_type,
         year_level,
         laboratory,
@@ -229,7 +234,6 @@ export const createPublicEquipmentBorrow = async (
       data: equipmentBorrow,
     });
   } catch (error) {
-    console.error("Error creating public equipment borrow:", error);
     res.status(500).json({
       success: false,
       message: "Failed to submit equipment borrow request",
@@ -247,7 +251,9 @@ export const createPublicSoftwareInstallation = async (
     // Capture client IP address with comprehensive fallbacks
     const clientIP =
       req.ip ||
-      (req.headers["x-forwarded-for"] as string) ||
+      (Array.isArray(req.headers["x-forwarded-for"]) 
+        ? req.headers["x-forwarded-for"][0] 
+        : req.headers["x-forwarded-for"] as string) ||
       (req.headers["x-real-ip"] as string) ||
       req.connection?.remoteAddress ||
       req.socket?.remoteAddress ||
@@ -288,7 +294,6 @@ export const createPublicSoftwareInstallation = async (
       data: softwareInstallation,
     });
   } catch (error) {
-    console.error("Error creating public software installation:", error);
     res.status(500).json({
       success: false,
       message: "Failed to submit software installation request",
