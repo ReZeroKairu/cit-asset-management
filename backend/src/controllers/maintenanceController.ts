@@ -112,13 +112,13 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
       String(quarter)
     );
 
+    if (!report) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+
     res.json(report);
   } catch (error: any) {
     console.error("❌ GET PMC REPORT DETAIL - Error:", error);
-    
-    if (error.message === "Report not found") {
-      return res.status(404).json({ error: "Report not found" });
-    }
     
     res.status(500).json({ error: "Failed to fetch report detail" });
   }

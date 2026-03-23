@@ -75,7 +75,7 @@ export class PMCReportService {
     });
 
     if (!report) {
-      throw new Error("Report not found");
+      return null;
     }
 
     // Transform response with procedures mapping
