@@ -141,9 +141,14 @@ const HomePage = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
                 <p className="text-sm font-medium text-gray-600">
                   Total Assets
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.totalAssets}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.totalAssets}
+                  </p>
+                  <p className="text-sm text-purple-600 font-medium">
+                    ({(stats.servicedWorkstations || 0) + (stats.unservicedWorkstations || 0)} WS)
+                  </p>
+                </div>
                 <p className="text-xs text-blue-600 mt-1">
                   Click to view assets →
                 </p>

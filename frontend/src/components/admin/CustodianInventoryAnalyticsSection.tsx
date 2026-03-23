@@ -543,17 +543,33 @@ const CustodianInventoryAnalyticsSection = () => {
             <CardContent>
               {lifecycleView === "timeline" ? (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredWorkstations
-                      .slice(0, 6)
-                      .map((workstation: any) => (
-                        <WorkstationTimeline
-                          key={workstation.workstation_name}
-                          workstation_name={workstation.workstation_name}
-                          assets={workstation.assets}
-                          yearFilter={yearFilter}
-                        />
-                      ))}
+                  {/* Scroll instruction */}
+                  {filteredWorkstations.length > 6 && (
+                    <div className="text-xs text-gray-500 mb-2 flex items-center">
+                      <span>📜</span>
+                      <span className="ml-1">Scroll to see all {filteredWorkstations.length} workstations</span>
+                    </div>
+                  )}
+                  <div className="relative">
+                    {/* Scroll indicator */}
+                    {filteredWorkstations.length > 6 && (
+                      <div className="absolute top-2 right-2 z-10 bg-blue-600 text-white text-xs px-2 py-1 rounded-full shadow-md">
+                        {filteredWorkstations.length} workstations
+                      </div>
+                    )}
+                    <div className="max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredWorkstations
+                          .map((workstation: any) => (
+                            <WorkstationTimeline
+                              key={workstation.workstation_name}
+                              workstation_name={workstation.workstation_name}
+                              assets={workstation.assets}
+                              yearFilter={yearFilter}
+                            />
+                          ))}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Timeline Summary */}
@@ -599,7 +615,8 @@ const CustodianInventoryAnalyticsSection = () => {
                 </>
               ) : (
                 <AssetLifecycleChart
-                  data={filteredData.timelineData}
+                  data={filteredData.timelineData?.filter(asset => asset.asset_id !== 0) || []}
+                  totalWorkstations={filteredWorkstations.length}
                   title="Asset Lifecycle Distribution"
                 />
               )}
