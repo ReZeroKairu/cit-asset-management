@@ -25,6 +25,7 @@ import {
   Lock,
   RotateCcw,
   ChevronDown,
+  Search,
 } from "lucide-react";
 
 const MaintenancePage = () => {
@@ -66,6 +67,11 @@ const MaintenancePage = () => {
 
   // Password verification modal state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Search and pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // List of Quarters for the new UI Tabs
   const quartersList = [
@@ -253,6 +259,22 @@ const MaintenancePage = () => {
     })
   );
 
+  // Filter workstations based on search term
+  const filteredWorkstations = sortedWorkstations.filter(ws =>
+    ws.workstation_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredWorkstations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedWorkstations = filteredWorkstations.slice(startIndex, endIndex);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   return (
     <div className="space-y-6 p-6 bg-slate-50 min-h-screen">
       {/* Header */}
@@ -426,6 +448,21 @@ const MaintenancePage = () => {
                       : "Workstation Status"}
                   </h3>
                 </div>
+                
+                {/* Search Bar */}
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search workstations..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                </div>
               </div>
 
               <table className="min-w-full divide-y divide-gray-100">
@@ -443,19 +480,21 @@ const MaintenancePage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-50">
-                  {sortedWorkstations.length === 0 ? (
+                  {paginatedWorkstations.length === 0 ? (
                     <tr>
                       <td
                         colSpan={3}
                         className="px-6 py-12 text-center text-gray-500"
                       >
-                        {userLabId
+                        {searchTerm 
+                          ? "No workstations found matching your search."
+                          : userLabId
                           ? "No workstations found in your laboratory."
                           : "Loading laboratory data..."}
                       </td>
                     </tr>
                   ) : (
-                    sortedWorkstations.map((ws) => {
+                    paginatedWorkstations.map((ws) => {
                       const isServiced = !!findReportForWorkstation(
                         ws.workstation_id
                       );
@@ -505,12 +544,40 @@ const MaintenancePage = () => {
                   )}
                 </tbody>
               </table>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkstations.length)} of{" "}
+                    {filteredWorkstations.length} workstations
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-700">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <div className="bg-white px-6 py-4 border-t border-gray-100 text-xs text-gray-400">
-                Showing status for{" "}
-                <span className="font-medium text-gray-600">
-                  {sortedWorkstations.length}
-                </span>{" "}
-                workstations in {selectedQuarter} Quarter
+                {searchTerm 
+                  ? `Found ${filteredWorkstations.length} workstations matching "${searchTerm}"`
+                  : `Showing status for ${filteredWorkstations.length} workstations in ${selectedQuarter} Quarter`}
               </div>
             </div>
           </div>
