@@ -1,4 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
+import { PlusCircle } from "lucide-react";
+import { getUnits } from "../../../api/inventory";
+import AddUnitModal from "./AddUnitModal";
 
 interface Props {
   formData: any;
@@ -13,6 +16,8 @@ interface Props {
   workstations: any[];
   preselectedWorkstation?: any;
   userRole?: string;
+  units: any[];
+  setUnits: (units: any[]) => void;
 }
 
 const AssetFormInputs: React.FC<Props> = ({
@@ -24,9 +29,27 @@ const AssetFormInputs: React.FC<Props> = ({
   workstations,
   preselectedWorkstation,
   userRole,
+  units,
+  setUnits,
 }) => {
+  const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+
+  const handleAddUnit = async () => {
+    // Refresh the units list
+    try {
+      const updatedUnits = await getUnits();
+      setUnits(updatedUnits);
+    } catch (error) {
+      console.error("Failed to refresh units:", error);
+    }
+  };
+
+  const getCurrentDeviceType = () => {
+    return deviceTypes.find(dt => dt.device_type_id === Number(formData.device_type));
+  };
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8 bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-inner">
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8 bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-inner">
       {/* Device Type */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1">
@@ -49,9 +72,22 @@ const AssetFormInputs: React.FC<Props> = ({
 
       {/* Unit Name */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Unit Name <span className="text-red-500">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-sm font-semibold text-gray-700">
+            Unit Name <span className="text-red-500">*</span>
+          </label>
+          {formData.device_type && (
+            <button
+              type="button"
+              onClick={() => setIsAddUnitModalOpen(true)}
+              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              title="Add new unit"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Add Unit
+            </button>
+          )}
+        </div>
         <select
           name="unit_id"
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow bg-white disabled:bg-gray-100 disabled:text-gray-400"
@@ -200,6 +236,16 @@ const AssetFormInputs: React.FC<Props> = ({
         />
       </div>
     </div>
+
+    {/* Add Unit Modal */}
+    <AddUnitModal
+      show={isAddUnitModalOpen}
+      onClose={() => setIsAddUnitModalOpen(false)}
+      onSuccess={handleAddUnit}
+      deviceTypeId={Number(formData.device_type)}
+      deviceTypeName={getCurrentDeviceType()?.device_type_name || ""}
+    />
+    </>
   );
 };
 

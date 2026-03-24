@@ -344,6 +344,8 @@ const AddAssetModal: React.FC<Props> = ({
                 workstations={workstations}
                 preselectedWorkstation={preselectedWorkstation}
                 userRole={user?.role}
+                units={units}
+                setUnits={setUnits}
               />
 
               <div className="flex justify-between items-center mb-4">

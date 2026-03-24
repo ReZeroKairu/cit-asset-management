@@ -188,7 +188,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         <DashboardCard
           title="Total Assets"
           value={stats.totalAssets}
-          subtitle={`(${(stats.servicedWorkstations || 0) + (stats.unservicedWorkstations || 0)} WS)`}
+          subtitle={`(${(stats.servicedWorkstations || 0) + (stats.unservicedWorkstations || 0)} Workstations)`}
           icon={Package}
           iconBgColor="bg-blue-100"
           iconColor="text-blue-600"

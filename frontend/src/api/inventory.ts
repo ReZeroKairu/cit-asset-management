@@ -75,6 +75,12 @@ export const getUnits = async (deviceTypeId?: number) => {
   return response.data;
 };
 
+// Create new unit
+export const createUnit = async (data: { unit_name: string; device_type_id: number }) => {
+  const response = await api.post("/inventory/units", data);
+  return response.data;
+};
+
 // Get device types (e.g. PC Devices, Network Devices)
 export const getDeviceTypes = async () => {
   const response = await api.get("/inventory/device-types");
