@@ -248,7 +248,7 @@ const WorkstationServiceChart = () => {
     const workstationMap = new Map<string, { assets: any[] }>();
     
     labAssets.forEach(asset => {
-      const workstationName = asset.workstation_name || 'Unassigned';
+      const workstationName = asset.workstation_name || 'Not Assigned';
       
       if (!workstationMap.has(workstationName)) {
         workstationMap.set(workstationName, { assets: [] });
@@ -294,7 +294,7 @@ const WorkstationServiceChart = () => {
           wellMaintainedAssetCount: wellMaintainedAssets
         };
       })
-      .filter(item => item.total > 0) // Only show workstations with assets
+      .filter(item => item.total > 0 && item.workstation_name !== 'Not Assigned') // Only show actual workstations, not unassigned assets
       .sort((a, b) => b.serviceRate - a.serviceRate); // Sort by service rate (serviced first)
 
     return workstationData;

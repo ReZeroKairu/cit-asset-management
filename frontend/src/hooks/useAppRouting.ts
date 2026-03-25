@@ -19,7 +19,8 @@ export type PageType =
   | "login"
   | "maintenance"
   | "public-complaints"
-  | "cit-lab-users";
+  | "cit-lab-users"
+  | "disposals";
 
 const getInitialPage = (): PageType => {
   const path = window.location.pathname;
@@ -28,6 +29,7 @@ const getInitialPage = (): PageType => {
   if (path === "/complaints") return "complaints";
   if (path === "/public-complaints") return "public-complaints";
   if (path === "/cit-lab-users") return "cit-lab-users";
+  if (path === "/disposals") return "disposals";
   if (path === "/one-time" || path.startsWith("/one-time"))
     return "one-time-form";
 
@@ -63,6 +65,8 @@ export const useAppRouting = () => {
         setCurrentPage("public-complaints");
       } else if (path === "/cit-lab-users") {
         setCurrentPage("cit-lab-users");
+      } else if (path === "/disposals") {
+        setCurrentPage("disposals");
       } else if (path === "/one-time" || path.startsWith("/one-time")) {
         setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
@@ -88,6 +92,8 @@ export const useAppRouting = () => {
       window.history.pushState(null, "", "/public-complaints");
     } else if (page === "cit-lab-users") {
       window.history.pushState(null, "", "/cit-lab-users");
+    } else if (page === "disposals") {
+      window.history.pushState(null, "", "/disposals");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else if (page === "one-time-form") {

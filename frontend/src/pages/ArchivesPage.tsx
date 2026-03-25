@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { FileText, Calendar, MessageSquare, Users } from "lucide-react";
+import { FileText, Calendar, MessageSquare, Users, PackageMinus } from "lucide-react";
 import DailyReportList from "../components/daily-report/DailyReportList";
 import ArchiveComplaintsPage from "./ArchiveComplaintsPage.tsx";
 import ArchiveFormsPage from "./ArchiveFormsPage.tsx";
+import ArchiveDisposalsPage from "./ArchiveDisposalsPage.tsx";
 import ArchiveCITLabUsersPage from "./ArchiveCITLabUsersPage.tsx";
 
 export const ArchivesPage = () => {
@@ -72,6 +73,19 @@ export const ArchivesPage = () => {
               Forms
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab("disposals")}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "disposals"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <PackageMinus className="w-4 h-4" />
+              Disposals
+            </div>
+          </button>
         </nav>
       </div>
 
@@ -99,6 +113,11 @@ export const ArchivesPage = () => {
         {activeTab === "forms" && (
           <div>
             <ArchiveFormsPage />
+          </div>
+        )}
+        {activeTab === "disposals" && (
+          <div>
+            <ArchiveDisposalsPage />
           </div>
         )}
       </div>
