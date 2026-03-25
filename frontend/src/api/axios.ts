@@ -2,8 +2,11 @@
 import axios from "axios";
 
 const getApiBaseUrl = () => {
-  // Use localhost for development
-  return "http://localhost:3001";
+  // Use network IP when accessing from network, localhost for local development
+  const isNetworkAccess = window.location.hostname.includes('172.72.102.4');
+  return isNetworkAccess 
+    ? "http://172.72.102.4:3001" 
+    : "http://localhost:3001";
 };
 
 const api = axios.create({
