@@ -340,57 +340,71 @@ const CustodianInventoryAnalyticsSection = () => {
             <CardTitle className="text-lg">Asset Status Overview</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={filteredData.statusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => {
-                    const dataItem =
-                      filteredData.statusDistribution[entry.index];
-                    return `${dataItem.status_name}: ${
-                      entry.percent ? (entry.percent * 100).toFixed(1) : "0.0"
-                    }%`;
-                  }}
-                  outerRadius={70}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {filteredData.statusDistribution.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={
-                        COLORS[entry.status_name as keyof typeof COLORS] ||
-                        "#8884d8"
-                      }
-                    />
+            {filteredData.statusDistribution.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={filteredData.statusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => {
+                        const dataItem =
+                          filteredData.statusDistribution[entry.index];
+                        return `${dataItem.status_name}: ${
+                          entry.percent ? (entry.percent * 100).toFixed(1) : "0.0"
+                        }%`;
+                      }}
+                      outerRadius={70}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {filteredData.statusDistribution.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            COLORS[entry.status_name as keyof typeof COLORS] ||
+                            "#8884d8"
+                          }
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  {filteredData.statusDistribution.map((status) => (
+                    <div
+                      key={status.status_name}
+                      className="flex items-center gap-2"
+                    >
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{
+                          backgroundColor:
+                            COLORS[status.status_name as keyof typeof COLORS] ||
+                            "#8884d8",
+                        }}
+                      />
+                      <span className="text-sm text-gray-600">
+                        {status.status_name} ({status.count})
+                      </span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 flex flex-wrap gap-2 justify-center">
-              {filteredData.statusDistribution.map((status) => (
-                <div
-                  key={status.status_name}
-                  className="flex items-center gap-2"
-                >
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{
-                      backgroundColor:
-                        COLORS[status.status_name as keyof typeof COLORS] ||
-                        "#8884d8",
-                    }}
-                  />
-                  <span className="text-sm text-gray-600">
-                    {status.status_name} ({status.count})
-                  </span>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-gray-500">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">📊</div>
+                  <div className="text-sm font-medium mb-1">No Asset Status Data Available</div>
+                  <div className="text-xs text-gray-400">
+                    Asset status information will appear here once assets are added to the system
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Lab Status Summary */}
             {filteredData.labStatusData.length > 0 && (

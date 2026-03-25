@@ -87,6 +87,69 @@ export const getDeviceTypes = async () => {
   return response.data;
 };
 
+// Asset Lifecycle Timeline View API
+export interface AssetLifecycleTimeline {
+  asset_id: number;
+  property_tag_no: string;
+  serial_number: string;
+  description: string;
+  quantity: number;
+  asset_remarks: string;
+  current_age_years: number;
+  current_age_months: number;
+  current_age_days: number;
+  timeline_position: number;
+  lifecycle_stage: string;
+  lifecycle_status: string;
+  status_name: string;
+  status_id: number;
+  unit_name: string;
+  unit_id: number;
+  device_type_name: string;
+  device_type_id: number;
+  workstation_name: string;
+  workstation_id: number | null;
+  lab_name: string;
+  lab_id: number | null;
+  lab_location: string;
+  asset_name: string;
+  date_of_purchase: string | null;
+  formatted_purchase_date: string;
+  date_added: string;
+  formatted_added_date: string;
+  added_by_name: string;
+  added_by_email: string;
+  current_date: string;
+  assignment_status: string;
+  age_category: string;
+  searchable_text: string;
+}
+
+// Get asset lifecycle timeline data
+export const getAssetLifecycleTimeline = async (labId?: number) => {
+  const query = labId ? `?lab_id=${labId}` : "";
+  const response = await api.get(`/inventory/lifecycle-timeline${query}`);
+  return response.data as AssetLifecycleTimeline[];
+};
+
+// Get asset lifecycle summary
+export interface AssetLifecycleSummary {
+  lifecycle_stage: string;
+  lifecycle_status: string;
+  asset_count: number;
+  lab_count: number;
+  workstation_count: number;
+  avg_age_years: number;
+  assigned_count: number;
+  unassigned_count: number;
+}
+
+export const getAssetLifecycleSummary = async (labId?: number) => {
+  const query = labId ? `?lab_id=${labId}` : "";
+  const response = await api.get(`/inventory/lifecycle-summary${query}`);
+  return response.data as AssetLifecycleSummary[];
+};
+
 // ✅ UPDATED FUNCTION: Correctly maps the current remarks
 export const getWorkstationAssets = async (workstationId: number) => {
   const data = await getInventory({ workstation_id: workstationId });

@@ -399,6 +399,38 @@ const InventoryAnalyticsSection = () => {
                     </ResponsiveContainer>
                   </div>
                 )}
+
+              {/* Historical Data Section */}
+              {maintenanceData.historicalData &&
+                maintenanceData.historicalData.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">
+                      Previous Quarters
+                    </h4>
+                    <div className="space-y-2">
+                      {maintenanceData.historicalData.map((quarter) => (
+                        <div key={quarter.quarter} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-gray-700">
+                              {quarter.quarter} Quarter
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-gray-600">
+                              {quarter.completedReports} completed
+                            </span>
+                            <span className={`font-medium ${
+                              quarter.completionRate > 0 ? 'text-green-600' : 'text-gray-500'
+                            }`}>
+                              {quarter.completionRate.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </CardContent>
           </Card>
         )}

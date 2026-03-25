@@ -113,14 +113,24 @@ export const getPMCReportDetail = async (req: Request, res: Response) => {
     );
 
     if (!report) {
-      return res.status(404).json({ error: "Report not found" });
+      return res.status(404).json({ 
+        error: "No PMC report found for this workstation and quarter",
+        details: {
+          workstation_id: Number(workstation_id),
+          quarter: String(quarter),
+          message: "Please create a PMC report for this workstation and quarter first"
+        }
+      });
     }
 
     res.json(report);
   } catch (error: any) {
     console.error("❌ GET PMC REPORT DETAIL - Error:", error);
     
-    res.status(500).json({ error: "Failed to fetch report detail" });
+    res.status(500).json({ 
+      error: error.message || "Failed to fetch report detail",
+      details: error.stack 
+    });
   }
 };
 
@@ -260,5 +270,33 @@ export const getMaintenanceAnalytics = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching maintenance analytics:", error);
     res.status(500).json({ message: "Failed to fetch maintenance analytics" });
+  }
+};
+
+// 2. GET Multiple PMC Reports for Workstations (Batch endpoint)
+export const getWorkstationPMCReportsBatch = async (req: Request, res: Response) => {
+  try {
+    const { workstation_ids, quarter } = req.query;
+
+    if (!workstation_ids || !quarter) {
+      return res.status(400).json({ error: "Workstation IDs and Quarter are required" });
+    }
+
+    // Parse workstation_ids from comma-separated string
+    const workstationIdArray = String(workstation_ids).split(',').map(id => Number(id.trim()));
+    
+    const reports = await PMCReportService.getWorkstationPMCReportsBatch(
+      workstationIdArray,
+      String(quarter)
+    );
+
+    res.json(reports);
+  } catch (error: any) {
+    console.error("❌ GET PMC REPORTS BATCH - Error:", error);
+    
+    res.status(500).json({ 
+      error: error.message || "Failed to fetch batch PMC reports",
+      details: error.stack 
+    });
   }
 };

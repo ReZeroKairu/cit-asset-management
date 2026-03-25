@@ -15,6 +15,12 @@ export class PMCReportService {
         pmc_report_procedures: {
           include: { procedures: true },
         },
+        workstations: {
+          select: {
+            workstation_id: true,
+            workstation_name: true,
+          },
+        },
       },
     });
 
@@ -73,7 +79,7 @@ export class PMCReportService {
         },
       },
     });
-
+    
     if (!report) {
       return null;
     }
@@ -332,6 +338,103 @@ export class PMCReportService {
       });
       
       return { report, serviceLog };
+    });
+
+    return result;
+  }
+
+  // GET Multiple Reports for Workstations (Batch method)
+  static async getWorkstationPMCReportsBatch(workstationIds: number[], quarter: string) {
+    const reports = await prisma.pmc_reports.findMany({
+      where: {
+        workstation_id: { in: workstationIds },
+        quarter,
+      },
+      include: {
+        pmc_report_procedures: {
+          include: { 
+            procedures: {
+              select: {
+                procedure_id: true,
+                procedure_name: true,
+              },
+            },
+          },
+        },
+        service_logs: {
+          orderBy: { service_date: "desc" },
+          include: {
+            users: {
+              select: { user_id: true, full_name: true },
+            },
+            service_log_assets: {
+              include: {
+                inventory_assets: {
+                  include: {
+                    units: true,
+                  },
+                },
+              },
+            },
+            service_log_procedures: {
+              include: {
+                procedures: {
+                  select: {
+                    procedure_id: true,
+                    procedure_name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        workstations: {
+          select: {
+            workstation_id: true,
+            workstation_name: true,
+          },
+        },
+      },
+    });
+
+    // Convert to Record<number, PMCReport | null> format
+    const result: Record<number, any> = {};
+    
+    // Initialize all workstations with null
+    workstationIds.forEach(id => {
+      result[id] = null;
+    });
+
+    // Map found reports to their workstation IDs
+    reports.forEach(report => {
+      result[report.workstation_id] = {
+        pmc_id: report.pmc_id,
+        report_date: report.report_date,
+        quarter: report.quarter,
+        lab_id: report.lab_id,
+        user_id: report.user_id,
+        workstation_id: report.workstation_id,
+        workstation_status: report.workstation_status,
+        overall_remarks: report.overall_remarks,
+        software_name: report.software_name,
+        software_status: report.software_status,
+        connectivity_type: report.connectivity_type,
+        connectivity_type_status: report.connectivity_type_status,
+        connectivity_speed: report.connectivity_speed,
+        connectivity_speed_status: report.connectivity_speed_status,
+        service_count: report.service_count,
+        updated_at: report.updated_at,
+        pmc_report_procedures: report.pmc_report_procedures?.map((proc: any) => ({
+          id: proc.id,
+          pmc_id: proc.pmc_id,
+          procedure_id: proc.procedure_id,
+          is_checked: proc.is_checked,
+          remarks: proc.remarks,
+          procedures: proc.procedures,
+        })) || [],
+        service_logs: report.service_logs || [],
+        workstations: report.workstations,
+      };
     });
 
     return result;

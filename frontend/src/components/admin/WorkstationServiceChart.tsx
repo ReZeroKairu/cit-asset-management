@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getInventoryAnalytics, type InventoryAnalyticsData } from "../../api/inventoryAnalytics";
 import { getLabSchedules } from "../../api/schedule";
 import { getUserAssignedLab } from "../../api/dailyReports";
+import { getLabPMCReports } from "../../api/maintenance";
 
 interface WorkstationServiceData {
   workstation_name: string;
@@ -21,10 +22,13 @@ const WorkstationServiceChart = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userLabId, setUserLabId] = useState<number | null>(null);
-  const [currentFiscalYear, setCurrentFiscalYear] = useState("2025-2026");
   const [savedSchedules, setSavedSchedules] = useState<Record<string, any>>({});
   const [activeQuarter, setActiveQuarter] = useState<string>("1st");
+  const [pmcReports, setPmcReports] = useState<any[]>([]); // Add PMC reports state
   const { user } = useAuth();
+  
+  // Fixed fiscal year constant
+  const currentFiscalYear = "2025-2026";
 
   // Get current quarter based on actual schedules (aligned with MaintenancePage)
   const getCurrentQuarterBasedOnSchedules = () => {
@@ -50,7 +54,7 @@ const WorkstationServiceChart = () => {
     return `${currentQuarter} Quarter (${currentFiscalYear})`;
   };
 
-  // Load schedules and determine active quarter
+  // Load schedules and determine active quarter based on today's date
   useEffect(() => {
     const loadSchedules = async () => {
       if (userLabId) {
@@ -58,21 +62,55 @@ const WorkstationServiceChart = () => {
           const schedules = await getLabSchedules(userLabId, currentFiscalYear);
           setSavedSchedules(schedules);
 
-          // Determine current quarter based on schedule dates
+          // Automatically determine current quarter based on today's date
           if (Object.keys(schedules).length > 0) {
             const today = new Date();
-            let foundQuarter = Object.keys(schedules)[0]; // Default to first available
+            let foundQuarter = null;
 
+            // Find which quarter contains today's date
             for (const [quarter, dates] of Object.entries(schedules)) {
               const startDate = new Date((dates as any).start);
               const endDate = new Date((dates as any).end);
 
+              // If today falls between the start and end date, this is our active quarter
               if (today >= startDate && today <= endDate) {
                 foundQuarter = quarter;
                 break;
               }
             }
-            setActiveQuarter(foundQuarter);
+
+            // If no quarter matches today's date, find the next upcoming quarter
+            if (!foundQuarter) {
+              const upcomingQuarters = Object.entries(schedules)
+                .filter(([, dates]) => {
+                  const startDate = new Date((dates as any).start);
+                  return startDate > today;
+                })
+                .sort(([, a], [, b]) => {
+                  const dateA = new Date((a as any).start);
+                  const dateB = new Date((b as any).start);
+                  return dateA.getTime() - dateB.getTime();
+                });
+
+              if (upcomingQuarters.length > 0) {
+                foundQuarter = upcomingQuarters[0][0];
+              } else {
+                // If no upcoming quarters, use the last quarter
+                const allQuarters = Object.entries(schedules)
+                  .sort(([, a], [, b]) => {
+                    const dateA = new Date((a as any).start);
+                    const dateB = new Date((b as any).start);
+                    return dateB.getTime() - dateA.getTime();
+                  });
+                if (allQuarters.length > 0) {
+                  foundQuarter = allQuarters[0][0];
+                }
+              }
+            }
+
+            if (foundQuarter) {
+              setActiveQuarter(foundQuarter);
+            }
           }
         } catch (error) {
           console.error("Failed to load schedules:", error);
@@ -82,6 +120,67 @@ const WorkstationServiceChart = () => {
 
     loadSchedules();
   }, [userLabId, currentFiscalYear]);
+
+  // Auto-refresh every hour to check for quarter changes
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      if (userLabId) {
+        loadSchedules();
+      }
+    }, 60 * 60 * 1000); // Check every hour
+
+    return () => clearInterval(refreshInterval);
+  }, [userLabId, currentFiscalYear]);
+
+  // Helper function to reload schedules (for interval)
+  const loadSchedules = async () => {
+    if (userLabId) {
+      try {
+        const schedules = await getLabSchedules(userLabId, currentFiscalYear);
+        setSavedSchedules(schedules);
+
+        // Re-determine current quarter based on today's date
+        if (Object.keys(schedules).length > 0) {
+          const today = new Date();
+          let foundQuarter = null;
+
+          for (const [quarter, dates] of Object.entries(schedules)) {
+            const startDate = new Date((dates as any).start);
+            const endDate = new Date((dates as any).end);
+
+            if (today >= startDate && today <= endDate) {
+              foundQuarter = quarter;
+              break;
+            }
+          }
+
+          // If no active quarter, find next upcoming
+          if (!foundQuarter) {
+            const upcomingQuarters = Object.entries(schedules)
+              .filter(([quarter, dates]) => {
+                const startDate = new Date((dates as any).start);
+                return startDate > today;
+              })
+              .sort(([, a], [, b]) => {
+                const dateA = new Date((a as any).start);
+                const dateB = new Date((b as any).start);
+                return dateA.getTime() - dateB.getTime();
+              });
+
+            if (upcomingQuarters.length > 0) {
+              foundQuarter = upcomingQuarters[0][0];
+            }
+          }
+
+          if (foundQuarter && foundQuarter !== activeQuarter) {
+            setActiveQuarter(foundQuarter);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to refresh schedules:", error);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,6 +193,39 @@ const WorkstationServiceChart = () => {
         
         const analyticsData = await getInventoryAnalytics();
         setData(analyticsData);
+
+        // Determine current quarter first, then fetch PMC reports
+        if (userData?.assigned_lab?.lab_id) {
+          try {
+            const schedules = await getLabSchedules(userData.assigned_lab.lab_id, currentFiscalYear);
+            
+            // Auto-detect current quarter based on today's date
+            if (Object.keys(schedules).length > 0) {
+              const today = new Date();
+              let foundQuarter = null;
+
+              for (const [quarter, dates] of Object.entries(schedules)) {
+                const startDate = new Date((dates as any).start);
+                const endDate = new Date((dates as any).end);
+
+                if (today >= startDate && today <= endDate) {
+                  foundQuarter = quarter;
+                  break;
+                }
+              }
+
+              if (foundQuarter) {
+                setActiveQuarter(foundQuarter);
+                
+                // Now fetch PMC reports for the CORRECT quarter
+                const pmcData = await getLabPMCReports(userData.assigned_lab.lab_id, foundQuarter);
+                setPmcReports(pmcData);
+              }
+            }
+          } catch (scheduleError) {
+            console.error('Failed to load schedules:', scheduleError);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch inventory analytics:", err);
         setError("Failed to load workstation service data");
@@ -103,7 +235,7 @@ const WorkstationServiceChart = () => {
     };
 
     fetchData();
-  }, []);
+  }, []); // Remove activeQuarter dependency to prevent infinite loops
 
   // Process data for custodian's lab only
   const workstationServiceData = useMemo(() => {
@@ -126,22 +258,36 @@ const WorkstationServiceChart = () => {
       current.assets.push(asset);
     });
 
-    // Determine service status for each workstation
-    // A workstation is considered "serviced" if it has at least 50% well-maintained assets
-    // Well-maintained assets are those in Y1-Y2 (timeline_position <= 2)
+    // Determine service status for each workstation based on actual PMC reports
     const workstationData: WorkstationServiceData[] = Array.from(workstationMap.entries())
       .map(([workstationName, workstationData]) => {
         const assets = workstationData.assets;
         const wellMaintainedAssets = assets.filter(asset => asset.timeline_position <= 2).length;
         const totalAssets = assets.length;
         
-        // Workstation is serviced if at least 50% of assets are well-maintained
-        const isServiced = totalAssets > 0 && (wellMaintainedAssets / totalAssets) >= 0.5;
+        // Check if there's actual PMC service data for this workstation in the current quarter
+        const hasServiceRecords = pmcReports.some(report => {
+          // Get workstation name from the relationship
+          const pmcWorkstationName = report.workstations?.workstation_name;
+          
+          // Try multiple matching approaches
+          const matchById = report.workstation_id === assets[0]?.workstation_id;
+          const matchByName = pmcWorkstationName === workstationName;
+          
+          // Try matching workstation_name with different formats
+          const matchByNameToId = pmcWorkstationName?.toString() === workstationName;
+          const matchByIdToName = report.workstation_id?.toString() === workstationName;
+          
+          return matchById || matchByName || matchByNameToId || matchByIdToName;
+        });
+        
+        // Workstation is serviced only if there are actual service records
+        const isServiced = hasServiceRecords;
         
         return {
           workstation_name: workstationName,
-          serviced: isServiced ? 1 : 0, // Count the workstation as 1 if serviced
-          unserviced: isServiced ? 0 : 1, // Count the workstation as 1 if unserviced
+          serviced: isServiced ? 1 : 0, // Count workstation as 1 if serviced
+          unserviced: isServiced ? 0 : 1, // Count workstation as 1 if unserviced
           total: 1, // Each workstation counts as 1
           serviceRate: isServiced ? 100 : 0, // Either 100% serviced or 0% serviced
           assetCount: totalAssets, // Keep asset count for reference
@@ -152,7 +298,7 @@ const WorkstationServiceChart = () => {
       .sort((a, b) => b.serviceRate - a.serviceRate); // Sort by service rate (serviced first)
 
     return workstationData;
-  }, [data, user?.lab_id]);
+  }, [data, user?.lab_id, pmcReports]);
 
   // Create summary data for the chart
   const chartData = useMemo(() => {

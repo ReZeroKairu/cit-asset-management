@@ -63,6 +63,31 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     reader.readAsBinaryString(file);
   };
 
+  // Helper function to format Excel dates for display
+  const formatDisplayValue = (val: any, key: string): string => {
+    // Handle date_of_purchase column specifically
+    if (key === 'date_of_purchase' && val) {
+      // Handle Excel serial numbers
+      if (typeof val === 'number' && val > 1000) {
+        const excelDate = new Date((val - 25569) * 86400 * 1000);
+        return excelDate.toLocaleDateString();
+      }
+      // Handle string dates
+      if (typeof val === 'string') {
+        const parsedDate = new Date(val);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toLocaleDateString();
+        }
+      }
+      // Handle Date objects
+      if (val instanceof Date && !isNaN(val.getTime())) {
+        return val.toLocaleDateString();
+      }
+    }
+    // For all other values, just convert to string
+    return String(val);
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setErrors([]);
@@ -74,20 +99,52 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         return;
       }
 
-      // Transform date_of_purchase to ISO if not already
-      const assetsPayload = parsedData.map((row: any) => ({
-        property_tag_no: row.property_tag_no?.trim() || null,
-        quantity: Number(row.quantity),
-        description: row.description?.trim() || null,
-        serial_number: row.serial_number?.trim() || null,
-        date_of_purchase: row.date_of_purchase
-          ? new Date(row.date_of_purchase).toISOString()
-          : null,
-        unit_id: Number(row.unit_id),
-        device_type: Number(row.device_type),
-        lab_id: Number(row.lab_id),
-        workstation_id: row.workstation_id ? Number(row.workstation_id) : null,
-      }));
+      // Transform date_of_purchase - handle Excel serial numbers and date formats
+      const assetsPayload = parsedData.map((row: any) => {
+        let processedDate: string | null = null;
+
+        if (row.date_of_purchase) {
+          const dateValue = row.date_of_purchase;
+
+          // Handle Excel serial numbers (Excel stores dates as days since 1900-01-01)
+          if (typeof dateValue === 'number' && dateValue > 1000) {
+            // Excel serial number to JavaScript Date
+            // Excel's epoch starts at 1900-01-01, but Excel incorrectly treats 1900 as a leap year
+            // So we need to subtract 1 day for dates after 1900-02-28
+            const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
+            processedDate = excelDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            console.log(`Excel serial ${dateValue} converted to ${processedDate}`);
+          }
+          // Handle string dates
+          else if (typeof dateValue === 'string') {
+            const parsedDate = new Date(dateValue);
+            if (!isNaN(parsedDate.getTime())) {
+              processedDate = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              console.log(`String date "${dateValue}" converted to ${processedDate}`);
+            }
+          }
+          // Handle JavaScript Date objects
+          else if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+            processedDate = dateValue.toISOString().split('T')[0]; // YYYY-MM-DD format
+            console.log(`Date object converted to ${processedDate}`);
+          }
+          else {
+            console.log(`Unrecognized date format:`, dateValue, typeof dateValue);
+          }
+        }
+
+        return {
+          property_tag_no: row.property_tag_no?.trim() || null,
+          quantity: Number(row.quantity),
+          description: row.description?.trim() || null,
+          serial_number: row.serial_number?.trim() || null,
+          date_of_purchase: processedDate,
+          unit_id: Number(row.unit_id),
+          device_type: Number(row.device_type),
+          lab_id: Number(row.lab_id),
+          workstation_id: row.workstation_id ? Number(row.workstation_id) : null,
+        };
+      });
 
       await batchCreateAssets(assetsPayload);
 
@@ -108,10 +165,10 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   return createPortal(
     <>
       <div
-        className="fixed inset-0 bg-black/40 z-[9999]"
+        className="fixed inset-0 bg-black/40 z-9999"
         onClick={onClose}
       ></div>
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center">
+      <div className="fixed inset-0 z-10000 flex items-center justify-center">
         <div className="bg-white p-6 rounded-lg shadow-xl w-[500px]">
           <h3 className="text-lg font-semibold mb-4">Upload Assets (XLSX)</h3>
           <div>
@@ -152,8 +209,8 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
                 <tbody>
                   {parsedData.map((row, idx) => (
                     <tr key={idx}>
-                      {Object.values(row).map((val, i) => (
-                        <td key={i} className="px-2 py-1">{String(val)}</td>
+                      {Object.entries(row).map(([key, val], i) => (
+                        <td key={i} className="px-2 py-1">{formatDisplayValue(val, key)}</td>
                       ))}
                     </tr>
                   ))}
