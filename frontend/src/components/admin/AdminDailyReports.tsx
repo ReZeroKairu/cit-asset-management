@@ -327,13 +327,23 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               Review and manage all custodian daily reports
             </p>
           </div>
-          <button
-            onClick={() => setShowDARModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
-          >
-            <FileText className="w-4 h-4" />
-            Generate DAR
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedReports.length > 0 && (
+              <button
+                onClick={handleApproveAll}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
+              >
+                Approve All ({selectedReports.length})
+              </button>
+            )}
+            <button
+              onClick={() => setShowDARModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              Generate DAR
+            </button>
+          </div>
         </div>
       </div>
 
@@ -380,34 +390,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-gray-900">
-                All Daily Reports
-              </h2>
-              <p className="text-sm text-gray-500">
-                {filters.start_date || filters.end_date
-                  ? "Filtered results"
-                  : "Showing all pending reports"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {selectedReports.length > 0 && (
-                <button
-                  onClick={handleApproveAll}
-                  disabled={loading}
-                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50 cursor-pointer"
-                >
-                  Approve Selected ({selectedReports.length})
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {filteredReports.length === 0 ? (
+      {filteredReports.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -432,7 +415,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </p>
           </div>
         ) : (
-          <div>
+          <div className="bg-white shadow-lg rounded-lg">
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -570,7 +553,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </table>
           </div>
         )}
-      </div>
 
       {/* Daily Accomplishment Report Modal */}
       <DailyAccomplishmentReport

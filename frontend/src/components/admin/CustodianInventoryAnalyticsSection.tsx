@@ -627,7 +627,9 @@ const CustodianInventoryAnalyticsSection = () => {
       </div>
 
       {/* Workstation Service Chart - Full Width Section */}
-      <WorkstationServiceChart />
+      <div className="w-full">
+        <WorkstationServiceChart />
+      </div>
     </div>
   );
 };

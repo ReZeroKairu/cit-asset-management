@@ -310,8 +310,8 @@ const WorkstationServiceChart = () => {
         </div>
 
         {/* Percentage Breakdown Chart */}
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height={256}>
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 30, left: 30, bottom: 20 }}

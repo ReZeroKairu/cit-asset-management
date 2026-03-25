@@ -2,8 +2,8 @@
 import axios from "axios";
 
 const getApiBaseUrl = () => {
-  // Always use the static IP address
-  return "http://172.72.102.4:3001";
+  // Use localhost for development
+  return "http://localhost:3001";
 };
 
 const api = axios.create({
