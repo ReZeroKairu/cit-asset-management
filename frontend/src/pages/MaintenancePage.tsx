@@ -25,6 +25,7 @@ import {
   Lock,
   RotateCcw,
   ChevronDown,
+  Search,
 } from "lucide-react";
 
 const MaintenancePage = () => {
@@ -38,7 +39,9 @@ const MaintenancePage = () => {
   // Data State
   const [reports, setReports] = useState<PMCReport[]>([]);
   const [labWorkstations, setLabWorkstations] = useState<any[]>([]);
-  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
+  const [workstationAssets, setWorkstationAssets] = useState<
+    Record<number, any[]>
+  >({});
 
   const [targetWorkstation, setTargetWorkstation] = useState<{
     id: number;
@@ -61,9 +64,14 @@ const MaintenancePage = () => {
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
   const [refreshTrigger, setRefreshTrigger] = useState<number>(Date.now());
-  
+
   // Password verification modal state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  // Search and pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // List of Quarters for the new UI Tabs
   const quartersList = [
@@ -73,7 +81,7 @@ const MaintenancePage = () => {
     { id: "4th", num: "Q4", label: "4th Quarter" },
   ];
 
-// Fetch actual schedules and auto-select current quarter
+  // Fetch actual schedules and auto-select current quarter
   useEffect(() => {
     const loadSchedules = async () => {
       if (userLabId) {
@@ -94,17 +102,16 @@ const MaintenancePage = () => {
               // Convert the saved string dates to actual Date objects
               const startDate = new Date((dates as any).start);
               const endDate = new Date((dates as any).end);
-              
+
               // If today falls between the start and end date, this is our active quarter
               if (today >= startDate && today <= endDate) {
                 activeQuarter = quarter;
-                break; 
+                break;
               }
             }
-            
+
             // 3. Set the UI to the correct quarter
             setSelectedQuarter(activeQuarter);
-
           } else {
             setOpenQuarters(["1st"]);
           }
@@ -118,7 +125,11 @@ const MaintenancePage = () => {
     loadSchedules();
   }, [userLabId, currentFiscalYear]);
 
-  const handleScheduleSuccess = (newlyScheduledQuarters: string[], schedules?: any, fiscalYear?: string) => {
+  const handleScheduleSuccess = (
+    newlyScheduledQuarters: string[],
+    schedules?: any,
+    fiscalYear?: string
+  ) => {
     setOpenQuarters((prev) => {
       const combined = new Set([...prev, ...newlyScheduledQuarters]);
       return Array.from(combined);
@@ -141,7 +152,7 @@ const MaintenancePage = () => {
     // Password was verified, now show confirmation dialog
     if (
       window.confirm(
-        "Are you sure you want to reset all quarter schedules? This will remove all scheduled quarters.",
+        "Are you sure you want to reset all quarter schedules? This will remove all scheduled quarters."
       )
     ) {
       try {
@@ -183,11 +194,17 @@ const MaintenancePage = () => {
           // Transform assets to have status property
           const transformedAssets = assets.map((asset: any) => ({
             ...asset,
-            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+            status:
+              asset.details?.current_status?.status_name ||
+              asset.status ||
+              "Functional",
           }));
           assetsData[ws.workstation_id] = transformedAssets;
         } catch (error) {
-          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
+          console.error(
+            `Failed to load assets for workstation ${ws.workstation_id}:`,
+            error
+          );
           assetsData[ws.workstation_id] = [];
         }
       }
@@ -239,8 +256,24 @@ const MaintenancePage = () => {
     a.workstation_name.localeCompare(b.workstation_name, undefined, {
       numeric: true,
       sensitivity: "base",
-    }),
+    })
   );
+
+  // Filter workstations based on search term
+  const filteredWorkstations = sortedWorkstations.filter(ws =>
+    ws.workstation_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredWorkstations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedWorkstations = filteredWorkstations.slice(startIndex, endIndex);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-6 p-6 bg-slate-50 min-h-screen">
@@ -300,7 +333,8 @@ const MaintenancePage = () => {
                     }
                     className="h-10 px-4 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   >
-                    <Plus className="w-4 h-4 mr-2 text-blue-600" /> View Schedules
+                    <Plus className="w-4 h-4 mr-2 text-blue-600" /> View
+                    Schedules
                     <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
                   </button>
 
@@ -316,7 +350,7 @@ const MaintenancePage = () => {
                         <Plus className="w-4 h-4 mr-2 text-blue-600" /> View
                         Schedules
                       </button>
-                      
+
                       {openQuarters.length > 0 && (
                         <button
                           onClick={() => {
@@ -362,8 +396,8 @@ const MaintenancePage = () => {
                       !isOpen
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed rounded-xl px-5 py-3 mb-2 border border-gray-200"
                         : isActive
-                          ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
-                          : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
+                        ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
+                        : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
                     }`}
                   >
                     {isActive && isOpen && (
@@ -371,7 +405,9 @@ const MaintenancePage = () => {
                     )}
 
                     <div
-                      className={`w-full flex justify-between items-center ${isActive ? "pl-1" : ""}`}
+                      className={`w-full flex justify-between items-center ${
+                        isActive ? "pl-1" : ""
+                      }`}
                     >
                       <div>
                         <span className="text-2xl font-bold leading-none block text-left mb-1">
@@ -382,8 +418,8 @@ const MaintenancePage = () => {
                             !isOpen
                               ? "text-gray-400"
                               : isActive
-                                ? "text-gray-500"
-                                : "text-blue-100"
+                              ? "text-gray-500"
+                              : "text-blue-100"
                           }`}
                         >
                           {q.label}
@@ -412,6 +448,21 @@ const MaintenancePage = () => {
                       : "Workstation Status"}
                   </h3>
                 </div>
+                
+                {/* Search Bar */}
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search workstations..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                </div>
               </div>
 
               <table className="min-w-full divide-y divide-gray-100">
@@ -429,26 +480,31 @@ const MaintenancePage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-50">
-                  {sortedWorkstations.length === 0 ? (
+                  {paginatedWorkstations.length === 0 ? (
                     <tr>
                       <td
                         colSpan={3}
                         className="px-6 py-12 text-center text-gray-500"
                       >
-                        {userLabId
+                        {searchTerm 
+                          ? "No workstations found matching your search."
+                          : userLabId
                           ? "No workstations found in your laboratory."
                           : "Loading laboratory data..."}
                       </td>
                     </tr>
                   ) : (
-                    sortedWorkstations.map((ws) => {
+                    paginatedWorkstations.map((ws) => {
                       const isServiced = !!findReportForWorkstation(
-                        ws.workstation_id,
+                        ws.workstation_id
                       );
 
                       // Calculate actual workstation status from components
                       const assets = workstationAssets[ws.workstation_id] || [];
-                      const calculatedStatus = assets.length > 0 ? calculateWorstStatus(assets) : 'Functional';
+                      const calculatedStatus =
+                        assets.length > 0
+                          ? calculateWorstStatus(assets)
+                          : "Functional";
 
                       return (
                         <tr
@@ -463,7 +519,7 @@ const MaintenancePage = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <span
                               className={`px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                                calculatedStatus,
+                                calculatedStatus
                               )}`}
                             >
                               {calculatedStatus}
@@ -472,11 +528,11 @@ const MaintenancePage = () => {
 
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             {isServiced ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                                 Serviced
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
                                 Pending
                               </span>
                             )}
@@ -484,15 +540,44 @@ const MaintenancePage = () => {
                         </tr>
                       );
                     })
+                    // ...
                   )}
                 </tbody>
               </table>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkstations.length)} of{" "}
+                    {filteredWorkstations.length} workstations
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-700">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <div className="bg-white px-6 py-4 border-t border-gray-100 text-xs text-gray-400">
-                Showing status for{" "}
-                <span className="font-medium text-gray-600">
-                  {sortedWorkstations.length}
-                </span>{" "}
-                workstations in {selectedQuarter} Quarter
+                {searchTerm 
+                  ? `Found ${filteredWorkstations.length} workstations matching "${searchTerm}"`
+                  : `Showing status for ${filteredWorkstations.length} workstations in ${selectedQuarter} Quarter`}
               </div>
             </div>
           </div>

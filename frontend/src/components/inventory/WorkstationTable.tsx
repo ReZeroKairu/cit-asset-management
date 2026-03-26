@@ -20,7 +20,28 @@ const WorkstationTable: React.FC<Props> = ({
   getStatusColor,
   pmcReports = {},
 }) => {
-  const [workstationAssets, setWorkstationAssets] = useState<Record<number, any[]>>({});
+  // Local implementation if not provided
+  const defaultGetStatusColor = (status?: string) => {
+    switch (status) {
+      case "Functional":
+      case "Working":
+      case "Operational":
+        return "bg-green-100 text-green-800";
+      case "For Repair":
+        return "bg-yellow-100 text-yellow-800";
+      case "For Replacement":
+        return "bg-red-100 text-red-800";
+      case "For Upgrade":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const statusColor = getStatusColor || defaultGetStatusColor;
+  const [workstationAssets, setWorkstationAssets] = useState<
+    Record<number, any[]>
+  >({});
 
   // Load assets for each workstation
   useEffect(() => {
@@ -31,12 +52,24 @@ const WorkstationTable: React.FC<Props> = ({
           // Transform assets to have status property
           const transformedAssets = assets.map((asset: any) => ({
             ...asset,
-            status: asset.details?.current_status?.status_name || asset.status || 'Functional'
+            status:
+              asset.details?.current_status?.status_name ||
+              asset.status ||
+              "Functional",
           }));
-          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: transformedAssets }));
+          setWorkstationAssets((prev) => ({
+            ...prev,
+            [ws.workstation_id]: transformedAssets,
+          }));
         } catch (error) {
-          console.error(`Failed to load assets for workstation ${ws.workstation_id}:`, error);
-          setWorkstationAssets(prev => ({ ...prev, [ws.workstation_id]: [] }));
+          console.error(
+            `Failed to load assets for workstation ${ws.workstation_id}:`,
+            error
+          );
+          setWorkstationAssets((prev) => ({
+            ...prev,
+            [ws.workstation_id]: [],
+          }));
         }
       }
     };
@@ -50,18 +83,28 @@ const WorkstationTable: React.FC<Props> = ({
   const getCalculatedStatus = (workstation: any) => {
     const assets = workstationAssets[workstation.workstation_id] || [];
     if (assets.length === 0) {
-      return workstation.asset_statuses?.status_name || 'Functional';
+      return workstation.asset_statuses?.status_name || "Functional";
     }
     return calculateWorstStatus(assets);
   };
 
-  // Get remarks from PMC report or fallback to workstation remarks
+  // Get workstation remarks
   const getWorkstationRemarks = (workstation: any) => {
+    // First check for workstation remarks
+    if (workstation.workstation_remarks) {
+      return workstation.workstation_remarks;
+    }
+    
+    // Then check for PMC report overall remarks
     const pmcReport = pmcReports[workstation.workstation_id];
     if (pmcReport?.overall_remarks) {
-      return pmcReport.overall_remarks;
+      // Add quarter information if available
+      const quarter = pmcReport.quarter || 'Unknown';
+      const remarks = pmcReport.overall_remarks;
+      return `${quarter}: ${remarks}`;
     }
-    return workstation.workstation_remarks || "-";
+    
+    return "No remarks";
   };
   return (
     <div className="overflow-x-auto">
@@ -119,8 +162,8 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                      getCalculatedStatus(workstation),
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor(
+                      getCalculatedStatus(workstation)
                     )}`}
                   >
                     {getCalculatedStatus(workstation)}

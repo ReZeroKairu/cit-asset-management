@@ -35,7 +35,16 @@ export const verifyPassword = async (req: Request, res: Response) => {
 
   try {
     // 1. Find user
-    const user = await prisma.users.findUnique({ where: { email } });
+    const user = await prisma.users.findUnique({ 
+      where: { email },
+      include: {
+        laboratories: {
+          select: {
+            lab_name: true,
+          },
+        },
+      },
+    });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
     // 2. Compare Password (Input vs Hash in DB)
@@ -58,6 +67,7 @@ export const verifyPassword = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         lab_id: user.lab_id, // Include lab assignment for custodians
+        lab_name: user.laboratories?.lab_name || null, // Include lab name
       },
     });
   } catch (error) {

@@ -39,13 +39,13 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
   const getServiceTypeBadgeColor = (serviceType: string) => {
     switch (serviceType) {
       case "REPAIR":
-        return "bg-amber-100 text-amber-800 border-amber-200";
+        return "bg-amber-100 text-amber-800";
       case "REPLACEMENT":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-800";
       case "UPGRADE":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -71,8 +71,8 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
             {/* Icon Circle */}
             <div
               className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${getServiceTypeBadgeColor(
-                log.service_type,
-              )} border-2`}
+                log.service_type
+              )}`}
             >
               {getServiceTypeIcon(log.service_type)}
             </div>
@@ -85,7 +85,7 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded border ${getServiceTypeBadgeColor(
-                        log.service_type,
+                        log.service_type
                       )}`}
                     >
                       {log.service_type}

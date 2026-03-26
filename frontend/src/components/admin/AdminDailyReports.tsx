@@ -20,7 +20,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(
-    null,
+    null
   );
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReports, setSelectedReports] = useState<number[]>([]);
@@ -41,13 +41,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const loadReports = async () => {
     try {
       setLoading(true);
-      console.log('Loading admin daily reports...');
+      console.log("Loading admin daily reports...");
       // For admin view, show only pending reports
       const data = await getAllDailyReports({ status: "Pending" });
-      console.log('Admin reports data received:', data);
+      console.log("Admin reports data received:", data);
       setReports(data.data || data);
     } catch (err: any) {
-      console.error('Error loading admin reports:', err);
+      console.error("Error loading admin reports:", err);
       setError(err.response?.data?.error || "Failed to load reports");
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
 
   const handleSelectAll = () => {
     const pendingReports = filteredReports.filter(
-      (report) => report.status === "Pending",
+      (report) => report.status === "Pending"
     );
     if (selectedReports.length === pendingReports.length) {
       setSelectedReports([]);
@@ -94,7 +94,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     setSelectedReports((prev) =>
       prev.includes(reportId)
         ? prev.filter((id) => id !== reportId)
-        : [...prev, reportId],
+        : [...prev, reportId]
     );
   };
 
@@ -107,7 +107,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     try {
       setLoading(true);
       const promises = selectedReports.map((reportId) =>
-        updateDailyReport(reportId, { status: "Approved" }),
+        updateDailyReport(reportId, { status: "Approved" })
       );
       await Promise.all(promises);
       setSelectedReports([]);
@@ -134,7 +134,14 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     });
   };
 
-  console.log('AdminDailyReports render - reports:', reports, 'loading:', loading, 'error:', error);
+  console.log(
+    "AdminDailyReports render - reports:",
+    reports,
+    "loading:",
+    loading,
+    "error:",
+    error
+  );
 
   const filteredReports = (reports || []).filter((report) => {
     let matchesFilter = true;
@@ -142,7 +149,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     // Start date filter
     if (filters.start_date) {
       const reportDate = new Date(report.report_date);
-      const startDate = new Date(filters.start_date);
+      const startDate = new Date(filters.start_date + "T00:00:00");
       if (reportDate < startDate) {
         matchesFilter = false;
       }
@@ -151,7 +158,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     // End date filter
     if (filters.end_date) {
       const reportDate = new Date(report.report_date);
-      const endDate = new Date(filters.end_date);
+      const endDate = new Date(filters.end_date + "T23:59:59");
       if (reportDate > endDate) {
         matchesFilter = false;
       }
@@ -167,58 +174,60 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const handleGenerateReport = async (report: DailyReport) => {
     try {
       console.log("Generating report for:", report.report_id);
-      
+
       // Show loading state
       setError("");
-      
+
       // Check if report_id exists
       if (!report.report_id) {
         throw new Error("Report ID is missing");
       }
-      
+
       // Use the same API call as DailyAccomplishmentReport that works
       console.log("Fetching detailed report data for ID:", report.report_id);
       const response = await api.get(`/daily-reports/${report.report_id}`);
       const detailedReport = response.data;
-      
+
       console.log("Detailed report data:", detailedReport);
-      
+
       // Check if detailedReport exists and has the expected structure
       if (!detailedReport) {
         console.error("No data returned from API");
         throw new Error("API returned no data for this report");
       }
-      
+
       // Process workstation data in same way as DailyAccomplishmentReport
-      const processedWorkstations = detailedReport.workstation_items?.map((item: any) => ({
-        workstation_id: item.workstation_id,
-        workstation_name: item.workstation_name || 'Unknown Workstation',
-        status: item.status || 'Working',
-        remarks: item.remarks || ''
-      })) || [];
-      
+      const processedWorkstations =
+        detailedReport.workstation_items?.map((item: any) => ({
+          workstation_id: item.workstation_id,
+          workstation_name: item.workstation_name || "Unknown Workstation",
+          status: item.status || "Working",
+          remarks: item.remarks || "",
+        })) || [];
+
       console.log("Processed workstations:", processedWorkstations);
-      
+
       // Use procedures data directly from API response
       const proceduresData = detailedReport.procedures || [];
       console.log("Procedures data:", proceduresData);
-      
+
       // Map the report data to template format in same way as DailyAccomplishmentReport
       const templateData = mapReportDataToTemplate({
         lab_name: detailedReport.laboratories?.lab_name || "Unknown Lab",
         lab_id: detailedReport.lab_id,
-        custodian_name: detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
+        custodian_name:
+          detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
         noted_by: "DR. MARCO MARVIN L. RADO",
         general_remarks: detailedReport.general_remarks || "",
         workstations: processedWorkstations,
         procedures: proceduresData,
         report_id: detailedReport.report_id,
         created_at: detailedReport.created_at || detailedReport.report_date,
-        report_date: detailedReport.report_date
+        report_date: detailedReport.report_date,
       });
-      
+
       console.log("Template data:", templateData);
-      
+
       // Determine template based on lab_id
       const getLabTemplate = (labId: number): string => {
         switch (labId) {
@@ -232,22 +241,31 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             return "/Lab2_DAR.docx"; // Default template
         }
       };
-      
+
       const templateFile = getLabTemplate(detailedReport.lab_id);
-      const reportDate = detailedReport.report_date ? new Date(detailedReport.report_date) : new Date();
-      const fileName = `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${reportDate.toISOString().split("T")[0]}.docx`;
-      
+      const reportDate = detailedReport.report_date
+        ? new Date(detailedReport.report_date)
+        : new Date();
+      const fileName = `Daily_Accomplishment_Report_Lab${
+        detailedReport.lab_id
+      }_${detailedReport.report_id}_${
+        reportDate.toISOString().split("T")[0]
+      }.docx`;
+
       console.log("Using template:", templateFile);
       console.log("File name:", fileName);
-      
+
       // Generate and download the report
       await generateTemplateReport(templateFile, templateData, fileName);
-      
+
       console.log("Report generated successfully!");
-      
     } catch (error) {
       console.error("Failed to generate report:", error);
-      setError(`Failed to generate report. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(
+        `Failed to generate report. Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
@@ -300,7 +318,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="space-y-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -309,13 +327,23 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               Review and manage all custodian daily reports
             </p>
           </div>
-          <button
-            onClick={() => setShowDARModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
-          >
-            <FileText className="w-4 h-4" />
-            Generate DAR
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedReports.length > 0 && (
+              <button
+                onClick={handleApproveAll}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
+              >
+                Approve All ({selectedReports.length})
+              </button>
+            )}
+            <button
+              onClick={() => setShowDARModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              Generate DAR
+            </button>
+          </div>
         </div>
       </div>
 
@@ -362,34 +390,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-gray-900">
-                All Daily Reports
-              </h2>
-              <p className="text-sm text-gray-500">
-                {filters.start_date || filters.end_date
-                  ? "Filtered results"
-                  : "Showing all pending reports"}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {selectedReports.length > 0 && (
-                <button
-                  onClick={handleApproveAll}
-                  disabled={loading}
-                  className="px-3 py-1 text-sm font-medium text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50 cursor-pointer"
-                >
-                  Approve Selected ({selectedReports.length})
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {filteredReports.length === 0 ? (
+      {filteredReports.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -414,8 +415,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden">
-            <table className="w-full divide-y divide-gray-200 table-fixed">
+          <div className="bg-white shadow-lg rounded-lg">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -453,15 +454,18 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
-                  <tr 
-                    key={report.report_id} 
+                  <tr
+                    key={report.report_id}
                     className="hover:bg-blue-50 cursor-pointer transition-colors"
                     onClick={(e) => {
                       // Check if click is on checkbox or in checkbox column
-                      if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
+                      if (
+                        e.target instanceof HTMLInputElement &&
+                        e.target.type === "checkbox"
+                      ) {
                         return; // Don't open modal if clicking checkbox
                       }
-                      if ((e.target as HTMLElement).closest('td:first-child')) {
+                      if ((e.target as HTMLElement).closest("td:first-child")) {
                         return; // Don't open modal if clicking in first column (checkbox column)
                       }
                       handleViewReport(report);
@@ -473,7 +477,9 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                           <input
                             type="checkbox"
                             checked={selectedReports.includes(report.report_id)}
-                            onChange={() => handleSelectReport(report.report_id)}
+                            onChange={() =>
+                              handleSelectReport(report.report_id)
+                            }
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                           />
                         </div>
@@ -509,7 +515,9 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status || "Pending")}`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          report.status || "Pending"
+                        )}`}
                       >
                         {report.status || "Pending"}
                       </span>
@@ -518,10 +526,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => handleGenerateReport(report)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
                           title="Generate Report"
                         >
                           <Download className="w-4 h-4" />
@@ -542,14 +553,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
             </table>
           </div>
         )}
-      </div>
 
       {/* Daily Accomplishment Report Modal */}
       <DailyAccomplishmentReport
         show={showDARModal}
         onClose={() => setShowDARModal(false)}
         archiveMode={false}
-        pageContext={'daily-reports'}
+        pageContext={"daily-reports"}
       />
     </div>
   );

@@ -12,7 +12,11 @@ import { upsertSchedules } from "../../api/schedule";
 interface Props {
   labId: number | null;
   onClose: () => void;
-  onSuccess: (scheduledQuarters: string[], schedules?: Record<string, QuarterSchedule>, fiscalYear?: string) => void;
+  onSuccess: (
+    scheduledQuarters: string[],
+    schedules?: Record<string, QuarterSchedule>,
+    fiscalYear?: string
+  ) => void;
 }
 
 interface QuarterSchedule {
@@ -24,14 +28,12 @@ interface QuarterSchedule {
 const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
   const [fiscalYear, setFiscalYear] = useState("2025-2026");
 
-  const [schedules, setSchedules] = useState<Record<string, QuarterSchedule>>(
-    {
-      "1st": { start: "", end: "", servicingWeeks: [] },
-      "2nd": { start: "", end: "", servicingWeeks: [] },
-      "3rd": { start: "", end: "", servicingWeeks: [] },
-      "4th": { start: "", end: "", servicingWeeks: [] },
-    }
-  );
+  const [schedules, setSchedules] = useState<Record<string, QuarterSchedule>>({
+    "1st": { start: "", end: "", servicingWeeks: [] },
+    "2nd": { start: "", end: "", servicingWeeks: [] },
+    "3rd": { start: "", end: "", servicingWeeks: [] },
+    "4th": { start: "", end: "", servicingWeeks: [] },
+  });
 
   // Load existing schedules when modal opens
   useEffect(() => {
@@ -53,7 +55,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
   const handleDateChange = (
     quarter: string,
     field: "start" | "end",
-    value: string,
+    value: string
   ) => {
     setSchedules((prev) => ({
       ...prev,
@@ -67,7 +69,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
       const newWeeks = currentWeeks.includes(week)
         ? currentWeeks.filter((w) => w !== week)
         : [...currentWeeks, week];
-      
+
       return {
         ...prev,
         [quarter]: { ...prev[quarter], servicingWeeks: newWeeks },
@@ -79,7 +81,10 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     e.preventDefault();
 
     const validSchedules = Object.entries(schedules)
-      .filter(([_, dates]) => dates.start && dates.end && dates.servicingWeeks.length > 0)
+      .filter(
+        ([_, dates]) =>
+          dates.start && dates.end && dates.servicingWeeks.length > 0
+      )
       .map(([quarter, dates]) => ({
         lab_id: labId,
         quarter,
@@ -91,7 +96,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
 
     if (validSchedules.length === 0) {
       return alert(
-        "Please set the start and end dates for at least one quarter and select servicing weeks.",
+        "Please set the start and end dates for at least one quarter and select servicing weeks."
       );
     }
 
@@ -102,9 +107,14 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     try {
       // Call the API to save schedules
       const response = await upsertSchedules(labId, fiscalYear, schedules);
-      
+
       alert(
-        `Successfully scheduled ${response.scheduledQuarters.length} quarters with ${validSchedules.reduce((acc, s) => acc + s.servicing_weeks.length, 0)} servicing weeks for AY ${fiscalYear}!`,
+        `Successfully scheduled ${
+          response.scheduledQuarters.length
+        } quarters with ${validSchedules.reduce(
+          (acc, s) => acc + s.servicing_weeks.length,
+          0
+        )} servicing weeks for AY ${fiscalYear}!`
       );
       onSuccess(response.scheduledQuarters, schedules, fiscalYear);
     } catch (error) {
@@ -123,11 +133,11 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
               Set Yearly Maintenance Schedule
             </h3>
             <p className="text-sm text-gray-500">
-              Define the maintenance windows and servicing weeks for the fiscal year.
+              Define the maintenance windows and servicing weeks for the fiscal
+              year.
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -137,7 +147,10 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-6 space-y-6 overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 flex flex-col p-6 space-y-6 overflow-hidden"
+        >
           <div className="w-1/3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Academic Year
@@ -155,116 +168,135 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
             <div className="overflow-auto flex-1">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Quarter
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Start Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    End Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[300px]">
-                    Servicing Weeks
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {/* ✅ We ignore monthsLabel now by using Object.keys since it is dynamic */}
-                {Object.keys(fiscalQuarterMonths).map((quarterId) => {
-                  const availableWeeks = getWeeksInDateRange(
-                    schedules[quarterId].start,
-                    schedules[quarterId].end
-                  );
-                  
-                  return (
-                    <tr key={quarterId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          {quarterId} Quarter
-                        </div>
-                        <div className="text-xs text-gray-500 flex items-center mt-0.5">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {getMonthsBetweenDates(
-                            schedules[quarterId].start,
-                            schedules[quarterId].end,
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="date"
-                          value={schedules[quarterId].start}
-                          onChange={(e) =>
-                            handleDateChange(quarterId, "start", e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="date"
-                          value={schedules[quarterId].end}
-                          onChange={(e) =>
-                            handleDateChange(quarterId, "end", e.target.value)
-                          }
-                          className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        {availableWeeks.length > 0 ? (
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap gap-1">
-                              {availableWeeks.map((week) => {
-                                const weekRange = formatWeekRange(
-                                  schedules[quarterId].start,
-                                  week
-                                );
-                                
-                                return (
-                                  <button
-                                    key={week}
-                                    type="button"
-                                    onClick={() => handleWeekToggle(quarterId, week)}
-                                    className={`px-2 py-1 text-xs rounded-md transition-colors cursor-pointer ${
-                                      schedules[quarterId].servicingWeeks.includes(week)
-                                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }`}
-                                    title={`Week ${week}: ${weekRange}`}
-                                  >
-                                    <Clock className="w-3 h-3 inline mr-1" />
-                                    W{week}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {schedules[quarterId].servicingWeeks.length > 0 && (
-                              <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                                <strong>Selected weeks:</strong>
-                                <div className="mt-1 space-y-1">
-                                  {schedules[quarterId].servicingWeeks.map((week) => (
-                                    <div key={week} className="flex justify-between">
-                                      <span>Week {week}:</span>
-                                      <span className="text-blue-700">{formatWeekRange(schedules[quarterId].start, week)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Quarter
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Start Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      End Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[300px]">
+                      Servicing Weeks
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {/* ✅ We ignore monthsLabel now by using Object.keys since it is dynamic */}
+                  {Object.keys(fiscalQuarterMonths).map((quarterId) => {
+                    const availableWeeks = getWeeksInDateRange(
+                      schedules[quarterId].start,
+                      schedules[quarterId].end
+                    );
+
+                    return (
+                      <tr key={quarterId} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-gray-900">
+                            {quarterId} Quarter
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center mt-0.5">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {getMonthsBetweenDates(
+                              schedules[quarterId].start,
+                              schedules[quarterId].end
                             )}
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">
-                            Set dates to see weeks
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="date"
+                            value={schedules[quarterId].start}
+                            onChange={(e) =>
+                              handleDateChange(
+                                quarterId,
+                                "start",
+                                e.target.value
+                              )
+                            }
+                            className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="date"
+                            value={schedules[quarterId].end}
+                            onChange={(e) =>
+                              handleDateChange(quarterId, "end", e.target.value)
+                            }
+                            className="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-blue-500 cursor-pointer cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          {availableWeeks.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-1">
+                                {availableWeeks.map((week) => {
+                                  const weekRange = formatWeekRange(
+                                    schedules[quarterId].start,
+                                    week
+                                  );
+
+                                  return (
+                                    <button
+                                      key={week}
+                                      type="button"
+                                      onClick={() =>
+                                        handleWeekToggle(quarterId, week)
+                                      }
+                                      className={`px-2 py-1 text-xs rounded-md transition-colors cursor-pointer ${
+                                        schedules[
+                                          quarterId
+                                        ].servicingWeeks.includes(week)
+                                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                      }`}
+                                      title={`Week ${week}: ${weekRange}`}
+                                    >
+                                      <Clock className="w-3 h-3 inline mr-1" />W
+                                      {week}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {schedules[quarterId].servicingWeeks.length >
+                                0 && (
+                                <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                                  <strong>Selected weeks:</strong>
+                                  <div className="mt-1 space-y-1">
+                                    {schedules[quarterId].servicingWeeks.map(
+                                      (week) => (
+                                        <div
+                                          key={week}
+                                          className="flex justify-between"
+                                        >
+                                          <span>Week {week}:</span>
+                                          <span className="text-blue-700">
+                                            {formatWeekRange(
+                                              schedules[quarterId].start,
+                                              week
+                                            )}
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">
+                              Set dates to see weeks
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
 

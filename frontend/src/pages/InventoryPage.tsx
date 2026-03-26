@@ -13,7 +13,7 @@ import AddWorkstationModal from "../components/inventory/AddWorkstationModal";
 import WorkstationReport from "../components/inventory/WorkstationReport";
 import { useAuth } from "../context/AuthContext";
 // ✅ IMPORT ICONS HERE
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Search } from "lucide-react";
 import UploadAssetModal from "../components/inventory/UploadAssetModal";
 
 // Import our newly extracted table components
@@ -23,16 +23,16 @@ import UnassignedAssetTable from "../components/inventory/UnassignedAssetTable";
 interface Asset {
   asset_id: number;
   lab_id?: number;
-  property_tag_no: string;
-  item_name: string;
-  description: string;
-  serial_number: string;
-  quantity: number;
-  date_of_purchase: string;
+  property_tag_no?: string;
+  item_name?: string;
+  description?: string;
+  serial_number?: string;
+  quantity?: number;
+  date_of_purchase?: string;
   laboratories?: { lab_id: number; lab_name: string };
   units?: { unit_name: string };
   workstation?: { workstation_name: string };
-  details?: {
+  asset_details?: {
     property_tag_no: string;
     item_name: string;
     description: string;
@@ -90,6 +90,10 @@ const InventoryPage = () => {
   const [showWorkstationReport, setShowWorkstationReport] = useState(false);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
+  const [workstationSearch, setWorkstationSearch] = useState<string>("");
+  const [assetSearch, setAssetSearch] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [pmcReports, setPmcReports] = useState<Record<number, any>>({});
 
@@ -136,9 +140,37 @@ const InventoryPage = () => {
   const fetchPMCReports = async () => {
     try {
       const currentQuarter = getCurrentQuarter();
-      const workstationIds = workstations.map(ws => ws.workstation_id);
-      const reports = await getWorkstationPMCReports(workstationIds, currentQuarter);
-      setPmcReports(reports);
+      const workstationIds = workstations.map((ws) => ws.workstation_id);
+      
+      // Only fetch for current quarter first
+      try {
+        const reports = await getWorkstationPMCReports(workstationIds, currentQuarter);
+        setPmcReports(reports);
+      } catch (err) {
+        // If current quarter has no reports, try other quarters
+        const quarters = ["1st", "2nd", "3rd", "4th"].filter(q => q !== currentQuarter);
+        const allReports: Record<number, any> = {};
+        
+        for (const quarter of quarters) {
+          try {
+            const reports = await getWorkstationPMCReports(workstationIds, quarter);
+            
+            // Merge reports, keeping the latest for each workstation
+            Object.entries(reports).forEach(([workstationId, report]) => {
+              const existingReport = allReports[parseInt(workstationId)];
+              
+              // If no existing report or this one is newer, use this report
+              if (!existingReport || (report && new Date(report.report_date) > new Date(existingReport.report_date))) {
+                allReports[parseInt(workstationId)] = report;
+              }
+            });
+          } catch (err) {
+            // Silently handle quarters with no reports
+          }
+        }
+        
+        setPmcReports(allReports);
+      }
     } catch (err) {
       console.error("Error fetching PMC reports:", err);
     }
@@ -150,19 +182,35 @@ const InventoryPage = () => {
   };
 
   const handleDelete = async (assetId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this asset? This action cannot be undone.",
-      )
-    )
-      return;
+    // Use a custom confirmation instead of browser confirm to avoid focus issues
+    const shouldDelete = window.confirm(
+      "Are you sure you want to delete this asset? This action cannot be undone."
+    );
+
+    if (!shouldDelete) return;
+
     try {
       await deleteAsset(assetId);
-      await fetchInventory();
-      await fetchWorkstations();
+
+      // Remove the deleted asset from state instead of refreshing all data
+      setAssets((prev) => prev.filter((asset) => asset.asset_id !== assetId));
+      setWorkstations((prev) =>
+        prev.map((ws) => ({
+          ...ws,
+          assets:
+            ws.assets?.filter((asset) => asset.asset_id !== assetId) || [],
+        }))
+      );
+
+      // Show success message without using alert (which can cause focus issues)
+      console.log("Asset deleted successfully");
     } catch (err: any) {
       console.error("Failed to delete asset:", err);
-      alert(err.response?.data?.error || "Failed to delete asset");
+      // Use console.error instead of alert to avoid focus issues
+      console.error(
+        "Delete error:",
+        err.response?.data?.error || "Failed to delete asset"
+      );
     }
   };
 
@@ -179,7 +227,7 @@ const InventoryPage = () => {
   const handleDeleteWorkstation = async (workstationId: number) => {
     if (
       !confirm(
-        "Are you sure you want to delete this workstation? This will also remove all asset assignments.",
+        "Are you sure you want to delete this workstation? This will also remove all asset assignments."
       )
     )
       return;
@@ -207,37 +255,98 @@ const InventoryPage = () => {
   };
 
   // --- Filtering Logic ---
-  const unassignedAssets = assets.filter(
-    (asset: any) => !asset.workstation && !asset.workstation_id,
+  const unassignedAssets = (assets || []).filter(
+    (asset: any) => !asset.workstation && !asset.workstation_id
   );
 
   const filteredWorkstations = (
     selectedLabId
-      ? workstations.filter((ws) => ws.lab_id === selectedLabId)
-      : [...workstations]
-  ).sort((a, b) =>
-    a.workstation_name.localeCompare(b.workstation_name, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }),
-  );
+      ? (workstations || []).filter((ws) => ws.lab_id === selectedLabId)
+      : [...(workstations || [])]
+  )
+    .filter((ws) =>
+      (ws.workstation_name || "")
+        .toLowerCase()
+        .includes(workstationSearch.toLowerCase())
+    )
+    .sort((a, b) =>
+      (a.workstation_name || "").localeCompare(
+        b.workstation_name || "",
+        undefined,
+        {
+          numeric: true,
+          sensitivity: "base",
+        }
+      )
+    );
 
-  const filteredUnassignedAssets = selectedLabId
-    ? unassignedAssets.filter((asset) => asset.lab_id === selectedLabId)
-    : unassignedAssets;
+  // Pagination logic for workstations
+  const totalPages = Math.ceil(filteredWorkstations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedWorkstations = filteredWorkstations.slice(startIndex, endIndex);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [workstationSearch, selectedLabId]);
+
+  const filteredUnassignedAssets = unassignedAssets
+    .filter((asset) => {
+      const searchTerm = assetSearch.toLowerCase();
+      return (
+        // Basic asset fields
+        (asset.item_name || "").toLowerCase().includes(searchTerm) ||
+        // Asset details fields (the actual data structure)
+        (asset.asset_details?.property_tag_no || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        (asset.asset_details?.description || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        (asset.asset_details?.serial_number || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        // Related fields
+        (asset.units?.unit_name || "").toLowerCase().includes(searchTerm) ||
+        (asset.laboratories?.lab_name || "")
+          .toLowerCase()
+          .includes(searchTerm) ||
+        // Numeric fields converted to string
+        (asset.quantity?.toString() || "").includes(searchTerm) ||
+        (asset.asset_id?.toString() || "").includes(searchTerm) ||
+        // Date fields (search year, month, day)
+        (asset.date_of_purchase
+          ? new Date(asset.date_of_purchase)
+              .toLocaleDateString()
+              .toLowerCase()
+              .includes(searchTerm)
+          : false)
+      );
+    })
+    .filter((asset) => (selectedLabId ? asset.lab_id === selectedLabId : true));
 
   const availableLabs =
     user?.role === "Admin"
       ? laboratories
       : user?.lab_id
-        ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
-        : [];
+      ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
+      : [];
 
   useEffect(() => {
     if (user?.role === "Custodian" && user.lab_id && !selectedLabId) {
       setSelectedLabId(user.lab_id);
+    } else if (user?.role === "Custodian" && !user.lab_id) {
+      // Custodian with no lab assignment - clear any selection
+      setSelectedLabId(null);
     }
   }, [user, selectedLabId]);
+
+  // Clear search when switching between views
+  useEffect(() => {
+    setWorkstationSearch("");
+    setAssetSearch("");
+  }, [showUnassignedAssets]);
 
   const getStatusColor = (statusName?: string) => {
     switch (statusName) {
@@ -265,54 +374,42 @@ const InventoryPage = () => {
           Manage workstations and their assigned inventory assets
         </p>
         {/* Lab Assigned Indicator for Custodians */}
-        {user?.role === "Custodian" && user?.lab_id && (
-          <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            📍 Assigned Lab:{" "}
-            {availableLabs.find((lab) => lab.lab_id === user.lab_id)
-              ?.lab_name || "Loading..."}
+        {user?.role === "Custodian" && (
+          <div className="mt-2">
+            {user?.lab_id ? (
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                📍 Assigned Lab:{" "}
+                {availableLabs.find((lab) => lab.lab_id === user.lab_id)
+                  ?.lab_name || "Loading..."}
+              </div>
+            ) : (
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                ⚠️ No Laboratory Assigned - Contact Administrator
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Filter Toggle & Controls */}
-      <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          
-          {/* LEFT SIDE: Tabs & Optional Lab Filter */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowUnassignedAssets(false)}
-                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
-                  !showUnassignedAssets
-                    ? "bg-[#1d4ed8] text-white" // Standard Tailwind blue-700/600 look
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                🖥️ Workstations ({filteredWorkstations.length})
-              </button>
-              <button
-                onClick={() => setShowUnassignedAssets(true)}
-                className={`h-9 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer flex items-center ${
-                  showUnassignedAssets
-                    ? "bg-[#1d4ed8] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                📦 Other Assets ({filteredUnassignedAssets.length})
-              </button>
-            </div>
-
-            {/* Lab Filter (kept here so you don't lose the functionality, styled to match) */}
-            {(user?.role === "Admin" ||
-              (user?.role === "Custodian" && availableLabs.length > 1)) && (
-              <div className="flex items-center space-x-2 border-l border-gray-300 pl-3">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        {/* Lab Filter & Toggles - Top Row for Admins only */}
+        {user?.role === "Admin" && availableLabs.length > 0 && (
+          <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="lab-filter"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Filter by Laboratory:
+                </label>
                 <select
                   id="lab-filter"
                   value={selectedLabId || ""}
                   onChange={(e) =>
                     setSelectedLabId(
-                      e.target.value ? Number(e.target.value) : null,
+                      e.target.value ? Number(e.target.value) : null
                     )
                   }
                   className="h-9 px-3 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -325,14 +422,133 @@ const InventoryPage = () => {
                   ))}
                 </select>
               </div>
-            )}
-          </div>
 
-          {/* RIGHT SIDE: Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+              {/* View Toggles - Always show for all users */}
+              <>
+                <button
+                  onClick={() => setShowUnassignedAssets(false)}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    !showUnassignedAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🖥️ Workstations ({filteredWorkstations.length})
+                </button>
+                <button
+                  onClick={() => setShowUnassignedAssets(true)}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    showUnassignedAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  📦 Other Assets ({filteredUnassignedAssets.length})
+                </button>
+              </>
+            </div>
+          </div>
+        )}
+
+        {/* View Toggles for Custodians - Separate row without lab filter */}
+        {user?.role === "Custodian" && (
+          <div className="mb-4 flex items-center justify-start">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowUnassignedAssets(false)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  !showUnassignedAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                🖥️ Workstations ({filteredWorkstations.length})
+              </button>
+              <button
+                onClick={() => setShowUnassignedAssets(true)}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  showUnassignedAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                📦 Other Assets ({filteredUnassignedAssets.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-4">
+            {/* Workstation Search - Moved to first position */}
+            {!showUnassignedAssets && (
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="workstation-search"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Search Workstation:
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="workstation-search"
+                    type="text"
+                    value={workstationSearch}
+                    onChange={(e) => {
+                      setWorkstationSearch(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                    placeholder="Search by name..."
+                    className="pl-10 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  {workstationSearch && (
+                    <button
+                      onClick={() => setWorkstationSearch("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Asset Search - Only show when viewing unassigned assets */}
+            {showUnassignedAssets && (
+              <div className="flex items-center space-x-2">
+                <label
+                  htmlFor="asset-search"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Search Assets:
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="asset-search"
+                    type="text"
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    placeholder="Search assets..."
+                    className="pl-10 pr-8 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  {assetSearch && (
+                    <button
+                      onClick={() => setAssetSearch("")}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons - Moved beside search */}
             {!showUnassignedAssets && (
               <button
-                className="h-9 px-3 border borde  r-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium transition-colors cursor-pointer"
+                className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Add Workstation
@@ -341,13 +557,13 @@ const InventoryPage = () => {
             {(user?.role === "Admin" || user?.role === "Custodian") && (
               <>
                 <button
-                  className="h-9 px-3 bg-[#1d4ed8] text-white text-sm rounded-md hover:bg-blue-800 flex items-center font-medium transition-colors cursor-pointer"
+                  className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowModal(true)}
                 >
                   <Plus className="w-4 h-4 mr-1.5" /> Add Asset
                 </button>
                 <button
-                  className="h-9 px-3 bg-[#16a34a] text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium transition-colors cursor-pointer"
+                  className="h-10 px-4 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                   onClick={() => setShowWorkstationReport(true)}
                 >
                   <FileText className="w-4 h-4 mr-1.5" /> Workstation Report
@@ -359,28 +575,70 @@ const InventoryPage = () => {
                     onClick={() => setShowUploadModal(true)}
                   >
                     {/* Simple upload icon, adjust as needed */}
-                    <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4M12 16V8M12 8l4 4M12 8l-4 4"/></svg>
+                    <svg
+                      className="w-4 h-4 mr-1.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v16h16V4M12 16V8M12 8l4 4M12 8l-4 4"
+                      />
+                    </svg>
                     Upload Data (XLSX)
                   </button>
                 )}
               </>
             )}
           </div>
-
         </div>
       </div>
 
       {/* Main Content Rendered via Components */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {!showUnassignedAssets ? (
-          <WorkstationTable
-            workstations={filteredWorkstations}
-            onView={handleViewWorkstation}
-            onEdit={handleEditWorkstation}
-            onDelete={handleDeleteWorkstation}
-            getStatusColor={getStatusColor}
-            pmcReports={pmcReports}
-          />
+          <>
+            <WorkstationTable
+              workstations={paginatedWorkstations}
+              onView={handleViewWorkstation}
+              onEdit={handleEditWorkstation}
+              onDelete={handleDeleteWorkstation}
+              getStatusColor={getStatusColor}
+              pmcReports={pmcReports}
+            />
+            
+            {/* Pagination Controls for Workstations */}
+            {totalPages > 1 && (
+              <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkstations.length)} of{" "}
+                  {filteredWorkstations.length} workstations
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <UnassignedAssetTable
             assets={filteredUnassignedAssets}

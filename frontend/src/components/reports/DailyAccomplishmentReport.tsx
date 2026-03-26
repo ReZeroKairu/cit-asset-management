@@ -16,49 +16,70 @@ interface Props {
   show: boolean;
   onClose: () => void;
   reportId?: number; // Optional: if editing existing report
-  mode?: 'single' | 'all'; // New: single report or all reports mode
+  mode?: "single" | "all"; // New: single report or all reports mode
   archiveMode?: boolean; // Add archive mode prop
-  pageContext?: 'daily-reports' | 'archives'; // Add page context
+  pageContext?: "daily-reports" | "archives"; // Add page context
 }
 
-const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, mode = 'single', archiveMode = false, pageContext = 'archives' }) => {
+const DailyAccomplishmentReport: React.FC<Props> = ({
+  show,
+  onClose,
+  reportId,
+  mode = "single",
+  archiveMode = false,
+  pageContext = "archives",
+}) => {
   const { user } = useAuth();
   const [workstations, setWorkstations] = useState<WorkstationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<any>(null);
   const [availableReports, setAvailableReports] = useState<any[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
-  const [generateMode, setGenerateMode] = useState<'single' | 'all'>('single');
+  const [generateMode, setGenerateMode] = useState<"single" | "all">("single");
   const [dateFilters, setDateFilters] = useState({
-    start_date: '',
-    end_date: ''
+    start_date: "",
+    end_date: "",
   });
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
 
   // Format date for display in modal
   const formatDisplayDateTime = (dateString: string | undefined) => {
-    if (!dateString) return '';
-    
+    if (!dateString) return "";
+
     try {
       const date = new Date(dateString);
       // Format as MM/DD/YYYY HH:MM AM/PM
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
       const year = date.getFullYear();
       const hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const formattedHours = String(hours % 12 || 12).padStart(2, '0');
-      
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const formattedHours = String(hours % 12 || 12).padStart(2, "0");
+
       return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
     } catch (error) {
       console.error("Date formatting error:", error);
-      return '';
+      return "";
     }
   };
 
   useEffect(() => {
     if (show) {
-      setGenerateMode(mode || 'single');
+      setGenerateMode(mode || "single");
       loadAvailableReports();
       if (reportId) {
         loadExistingReport(reportId);
@@ -69,94 +90,127 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
   // Debug: Log when availableReports changes
   useEffect(() => {
-    console.log('🔍 availableReports updated:', availableReports.length, availableReports);
+    console.log(
+      "🔍 availableReports updated:",
+      availableReports.length,
+      availableReports
+    );
   }, [availableReports]);
 
   // Filter reports by date and creator
   const getFilteredReports = () => {
     let filtered = availableReports;
-    
+
     // Apply date filters
     if (dateFilters.start_date || dateFilters.end_date) {
-      filtered = filtered.filter(report => {
+      filtered = filtered.filter((report) => {
         const reportDate = new Date(report.report_date || report.created_at);
-        const startDate = dateFilters.start_date ? new Date(dateFilters.start_date) : null;
-        const endDate = dateFilters.end_date ? new Date(dateFilters.end_date) : null;
+        const startDate = dateFilters.start_date
+          ? new Date(dateFilters.start_date + "T00:00:00")
+          : null;
+        const endDate = dateFilters.end_date
+          ? new Date(dateFilters.end_date + "T23:59:59")
+          : null;
 
         if (startDate && reportDate < startDate) return false;
         if (endDate && reportDate > endDate) return false;
-        
+
         return true;
       });
     }
-    
+
     // For custodians, only show reports they created (only in non-archive, non-daily-reports context)
-    if (!archiveMode && pageContext !== 'daily-reports' && user?.role !== 'Admin') {
-      filtered = filtered.filter(report => report.created_by === user?.id);
+    if (
+      !archiveMode &&
+      pageContext !== "daily-reports" &&
+      user?.role !== "Admin"
+    ) {
+      filtered = filtered.filter((report) => report.created_by === user?.id);
     }
-    
+
     return filtered;
   };
 
   const loadAvailableReports = async () => {
     try {
-      console.log('🔍 Loading available reports - archiveMode:', archiveMode, 'pageContext:', pageContext, 'user role:', user?.role);
+      console.log(
+        "🔍 Loading available reports - archiveMode:",
+        archiveMode,
+        "pageContext:",
+        pageContext,
+        "user role:",
+        user?.role
+      );
       let response;
-      
+
       // In archive mode, respect creator permissions and only show approved reports
       if (archiveMode) {
-        if (user?.role === 'Admin') {
-          console.log('🔍 Admin Archive: Fetching all approved reports');
+        if (user?.role === "Admin") {
+          console.log("🔍 Admin Archive: Fetching all approved reports");
           response = await api.get("/daily-reports?status=Approved");
         } else {
           // Custodians can only see their own approved reports in archive mode
-          console.log('🔍 Custodian Archive: Fetching own approved reports');
-          response = await api.get(`/daily-reports?created_by=${user?.id}&status=Approved`);
+          console.log("🔍 Custodian Archive: Fetching own approved reports");
+          response = await api.get(
+            `/daily-reports?created_by=${user?.id}&status=Approved`
+          );
         }
       } else {
         // Normal mode - check page context
-        if (pageContext === 'daily-reports') {
+        if (pageContext === "daily-reports") {
           // On Daily Reports page, show only pending reports
-          if (user?.role === 'Admin') {
-            console.log('🔍 Admin Daily Reports: Fetching all pending reports');
+          if (user?.role === "Admin") {
+            console.log("🔍 Admin Daily Reports: Fetching all pending reports");
             response = await api.get("/daily-reports?status=Pending");
           } else {
             // For custodians, only get pending reports from their assigned lab
-            console.log('🔍 Custodian Daily Reports: Fetching pending lab reports for lab_id:', user?.lab_id);
-            response = await api.get(`/daily-reports?status=Pending&lab_id=${user?.lab_id}`);
+            console.log(
+              "🔍 Custodian Daily Reports: Fetching pending lab reports for lab_id:",
+              user?.lab_id
+            );
+            response = await api.get(
+              `/daily-reports?status=Pending&lab_id=${user?.lab_id}`
+            );
           }
         } else {
           // Normal filtering by role
-          if (user?.role === 'Admin') {
-            console.log('🔍 Admin Normal: Fetching all reports');
+          if (user?.role === "Admin") {
+            console.log("🔍 Admin Normal: Fetching all reports");
             response = await api.get("/daily-reports");
           } else {
             // For custodians, only get reports from their assigned lab
-            console.log('🔍 Custodian Normal: Fetching lab reports for lab_id:', user?.lab_id);
+            console.log(
+              "🔍 Custodian Normal: Fetching lab reports for lab_id:",
+              user?.lab_id
+            );
             response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
           }
         }
       }
-      
-      console.log('🔍 API response:', response.data);
-      console.log('🔍 Response type:', typeof response.data);
-      console.log('🔍 Is array?', Array.isArray(response.data));
-      
+
+      console.log("🔍 API response:", response.data);
+      console.log("🔍 Response type:", typeof response.data);
+      console.log("🔍 Is array?", Array.isArray(response.data));
+
       // Check if response.data is an array before sorting
       let reportsData = response.data;
       if (!Array.isArray(reportsData)) {
         // If it's an object, try to extract array from common properties
-        reportsData = reportsData.data || reportsData.reports || reportsData.dailyReports || [];
+        reportsData =
+          reportsData.data ||
+          reportsData.reports ||
+          reportsData.dailyReports ||
+          [];
       }
-      
+
       // Sort reports by newest to oldest (using created_at or report_date)
       const sortedReports = reportsData.sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || a.report_date);
         const dateB = new Date(b.created_at || b.report_date);
         return dateB.getTime() - dateA.getTime(); // Newest first
       });
-      
-      console.log('🔍 Sorted reports:', sortedReports);
+
+      console.log("🔍 Sorted reports:", sortedReports);
       setAvailableReports(sortedReports);
     } catch (error) {
       console.error("Failed to load available reports:", error);
@@ -168,29 +222,35 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
       setLoading(true);
       const response = await api.get(`/daily-reports/${id}`);
       const report = response.data;
-      
+
       // Security check: Custodians can only access reports from their own lab
-      if (user?.role !== 'Admin' && report.lab_id !== user?.lab_id) {
-        throw new Error("Access denied: You can only access reports from your assigned laboratory");
+      if (user?.role !== "Admin" && report.lab_id !== user?.lab_id) {
+        throw new Error(
+          "Access denied: You can only access reports from your assigned laboratory"
+        );
       }
-      
+
       // Get lab info to find who assigned the custodian
       await api.get(`/laboratories/${report.lab_id}`);
-      
+
       // Process workstation data from the report
-      const processedWorkstations = report.workstation_items?.map((item: any) => ({
-        workstation_id: item.workstation_id,
-        workstation_name: item.workstation_name || 'Unknown Workstation',
-        status: item.status || 'Working',
-        remarks: item.remarks || ''
-      })) || [];
-      
+      const processedWorkstations =
+        report.workstation_items?.map((item: any) => ({
+          workstation_id: item.workstation_id,
+          workstation_name: item.workstation_name || "Unknown Workstation",
+          status: item.status || "Working",
+          remarks: item.remarks || "",
+        })) || [];
+
       setWorkstations(processedWorkstations);
-      
+
       setReportData({
         lab_name: report.laboratories?.lab_name || "Unknown Lab",
         lab_id: report.lab_id, // Add lab_id for template selection
-        custodian_name: report.users?.full_name?.toUpperCase() || user?.name?.toUpperCase() || "UNKNOWN",
+        custodian_name:
+          report.users?.full_name?.toUpperCase() ||
+          user?.name?.toUpperCase() ||
+          "UNKNOWN",
         noted_by: "DR. MARCO MARVIN L. RADO",
         general_remarks: report.general_remarks || "",
         workstations: processedWorkstations,
@@ -198,13 +258,15 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         report_id: report.report_id,
         created_at: report.created_at || report.report_date, // Add creation timestamp with fallback
         report_date: report.report_date, // Add report date
-        current_datetime: formatDisplayDateTime(report.created_at || report.report_date) // Add formatted display date
+        current_datetime: formatDisplayDateTime(
+          report.created_at || report.report_date
+        ), // Add formatted display date
       });
-      
+
       console.log("Report data set:", {
         created_at: report.created_at,
         report_date: report.report_date,
-        full_report: report
+        full_report: report,
       });
     } catch (error) {
       console.error("Failed to load report:", error);
@@ -214,7 +276,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   };
 
   const handleDownload = async () => {
-    if (generateMode === 'all') {
+    if (generateMode === "all") {
       await generateAllReports();
     } else {
       await generateSingleReport();
@@ -239,60 +301,73 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
     try {
       console.log("Original reportData:", reportData);
-      
+
       // Determine template based on lab_id using helper function
       const templateFile = getLabTemplate(reportData.lab_id);
-      console.log(`Using template: ${templateFile} for Lab ${reportData.lab_id}`);
-      
+      console.log(
+        `Using template: ${templateFile} for Lab ${reportData.lab_id}`
+      );
+
       // Map the report data to template format
       const templateData = mapReportDataToTemplate(reportData);
       console.log("Final templateData:", templateData);
-      
+
       await generateTemplateReport(
         templateFile,
         templateData,
-        `Daily_Accomplishment_Report_Lab${reportData.lab_id}_${reportData.report_id}_${new Date(reportData.report_date).toISOString().split("T")[0]}.docx`,
+        `Daily_Accomplishment_Report_Lab${reportData.lab_id}_${
+          reportData.report_id
+        }_${new Date(reportData.report_date).toISOString().split("T")[0]}.docx`
       );
     } catch (error) {
       console.error("Download failed:", error);
-      alert(`Failed to generate report. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to generate report. Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
   const generateAllReports = async () => {
-    if (availableReports.length === 0) {
-      alert("No reports available to generate.");
+    const reportsToGenerate = getFilteredReports();
+    if (reportsToGenerate.length === 0) {
+      alert("No reports available to generate with current filters.");
       return;
     }
 
     try {
       setLoading(true);
-      for (const report of availableReports) {
+      for (const report of reportsToGenerate) {
         // Get detailed report data including workstations and procedures
-        const detailedReportResponse = await api.get(`/daily-reports/${report.report_id}`);
+        const detailedReportResponse = await api.get(
+          `/daily-reports/${report.report_id}`
+        );
         const detailedReport = detailedReportResponse.data;
-        
+
         // Get lab info for the noted_by field
         await api.get(`/laboratories/${report.lab_id}`);
-        
+
         // Process workstation data
-        const processedWorkstations = detailedReport.workstation_items?.map((item: any) => ({
-          workstation_name: item.workstation_name || 'Unknown Workstation',
-          status: item.status || 'Working',
-          remarks: item.remarks || ''
-        })) || [];
-        
+        const processedWorkstations =
+          detailedReport.workstation_items?.map((item: any) => ({
+            workstation_name: item.workstation_name || "Unknown Workstation",
+            status: item.status || "Working",
+            remarks: item.remarks || "",
+          })) || [];
+
         // Map the report data to template format
         const templateData = mapReportDataToTemplate({
           lab_name: detailedReport.laboratories?.lab_name || "Unknown Lab",
-          custodian_name: detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
+          custodian_name:
+            detailedReport.users?.full_name?.toUpperCase() || "UNKNOWN",
           noted_by: "DR. MARCO MARVIN L. RADO",
           general_remarks: detailedReport.general_remarks || "",
           workstations: processedWorkstations,
           procedures: detailedReport.procedures || [], // Include procedures
           report_id: detailedReport.report_id,
           created_at: detailedReport.created_at || detailedReport.report_date, // Add creation timestamp with fallback
-          report_date: detailedReport.report_date // Add report date
+          report_date: detailedReport.report_date, // Add report date
         });
 
         // Determine template based on lab_id using helper function
@@ -301,13 +376,19 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
         await generateTemplateReport(
           templateFile,
           templateData,
-          `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${new Date(detailedReport.report_date).toISOString().split("T")[0]}.docx`,
+          `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${
+            detailedReport.report_id
+          }_${
+            new Date(detailedReport.report_date).toISOString().split("T")[0]
+          }.docx`
         );
       }
-      alert(`Successfully generated ${availableReports.length} reports!`);
+      alert(`Successfully generated ${reportsToGenerate.length} reports!`);
     } catch (error) {
       console.error("Bulk download failed:", error);
-      alert("Failed to generate some reports. Please check if the template exists.");
+      alert(
+        "Failed to generate some reports. Please check if the template exists."
+      );
     } finally {
       setLoading(false);
     }
@@ -316,12 +397,12 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
   return (
     <>
       {show && (
-        <div 
-          className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+        <div
+          className="fixed inset-0 backdrop-blur-md bg-black/20 overflow-y-auto h-full w-full z-50 flex items-center justify-center"
           onClick={onClose}
         >
-          <div 
-            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 shadow-lg rounded-md bg-white flex flex-col max-h-[90vh]"
+          <div
+            className="relative top-10 mx-auto p-0 w-11/12 md:w-4/5 lg:w-3/4 bg-white rounded-lg flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -332,11 +413,18 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  disabled={loading || (generateMode === 'single' && !reportData) || (generateMode === 'all' && availableReports.length === 0)}
+                  disabled={
+                    loading ||
+                    (generateMode === "single" && !reportData) ||
+                    (generateMode === "all" &&
+                      getFilteredReports().length === 0)
+                  }
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer"
                 >
                   <FileDown className="w-4 h-4" />
-                  {generateMode === 'all' ? `Download All (${availableReports.length})` : 'Download Word Doc'}
+                  {generateMode === "all"
+                    ? `Download All (${getFilteredReports().length})`
+                    : "Download Word Doc"}
                 </button>
                 <button
                   onClick={onClose}
@@ -358,9 +446,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     <input
                       type="radio"
                       value="single"
-                      checked={generateMode === 'single'}
+                      checked={generateMode === "single"}
                       onChange={() => {
-                        setGenerateMode('single');
+                        setGenerateMode("single");
                       }}
                       className="mr-2"
                     />
@@ -370,8 +458,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     <input
                       type="radio"
                       value="all"
-                      checked={generateMode === 'all'}
-                      onChange={() => setGenerateMode('all')}
+                      checked={generateMode === "all"}
+                      onChange={() => setGenerateMode("all")}
                       className="mr-2"
                     />
                     All Reports
@@ -381,7 +469,19 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
               {/* Date Filters */}
               <div className="mt-4 space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Filter by Date Range:</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Filter by Date Range:
+                  </h4>
+                  <button
+                    onClick={() =>
+                      setDateFilters({ start_date: "", end_date: "" })
+                    }
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -390,7 +490,12 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     <input
                       type="date"
                       value={dateFilters.start_date}
-                      onChange={(e) => setDateFilters(prev => ({ ...prev, start_date: e.target.value }))}
+                      onChange={(e) =>
+                        setDateFilters((prev) => ({
+                          ...prev,
+                          start_date: e.target.value,
+                        }))
+                      }
                       className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     />
                   </div>
@@ -401,7 +506,12 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     <input
                       type="date"
                       value={dateFilters.end_date}
-                      onChange={(e) => setDateFilters(prev => ({ ...prev, end_date: e.target.value }))}
+                      onChange={(e) =>
+                        setDateFilters((prev) => ({
+                          ...prev,
+                          end_date: e.target.value,
+                        }))
+                      }
                       className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                     />
                   </div>
@@ -409,15 +519,17 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
               </div>
 
               {/* Report Selection for Single Mode */}
-              {generateMode === 'single' && (
+              {generateMode === "single" && (
                 <div className="mt-4 flex items-center gap-4">
                   <label className="text-sm font-medium text-gray-700">
                     Select Report:
                   </label>
                   <select
-                    value={selectedReportId || ''}
+                    value={selectedReportId || ""}
                     onChange={(e) => {
-                      const reportId = e.target.value ? parseInt(e.target.value) : null;
+                      const reportId = e.target.value
+                        ? parseInt(e.target.value)
+                        : null;
                       setSelectedReportId(reportId);
                       if (reportId) {
                         loadExistingReport(reportId);
@@ -425,49 +537,65 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                     }}
                     className="border rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]"
                   >
-                    <option value="" disabled>Select a report to generate</option>
+                    <option value="" disabled>
+                      Select a report to generate
+                    </option>
                     {getFilteredReports().map((report) => (
                       <option key={report.report_id} value={report.report_id}>
-                        Report #{report.report_id} - {new Date(report.report_date).toLocaleDateString()} - {report.laboratories?.lab_name}
+                        Report #{report.report_id} -{" "}
+                        {new Date(report.report_date).toLocaleDateString()} -{" "}
+                        {report.laboratories?.lab_name}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
             </div>
-            
-            
+
             {/* Content */}
             <div className="p-6 overflow-y-auto flex-1">
               {loading ? (
                 <div className="text-center py-10">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                   <p className="mt-2 text-gray-500">
-                    {generateMode === 'all' ? 'Generating all reports...' : 'Loading report data...'}
+                    {generateMode === "all"
+                      ? "Generating all reports..."
+                      : "Loading report data..."}
                   </p>
                 </div>
-              ) : generateMode === 'all' ? (
+              ) : generateMode === "all" ? (
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-900 mb-2">All Reports Mode</h4>
+                    <h4 className="font-semibold text-blue-900 mb-2">
+                      All Reports Mode
+                    </h4>
                     <p className="text-blue-700">
-                      Ready to generate {getFilteredReports().length} Daily Accomplishment Reports.
-                      Each report will be downloaded as a separate Word document.
+                      Ready to generate {getFilteredReports().length} Daily
+                      Accomplishment Reports. Each report will be downloaded as
+                      a separate Word document.
                     </p>
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <h5 className="font-medium text-gray-900">Reports to be generated:</h5>
+                    <h5 className="font-medium text-gray-900">
+                      Reports to be generated:
+                    </h5>
                     {getFilteredReports().map((report) => (
-                      <div key={report.report_id} className="flex justify-between items-center border rounded p-3">
+                      <div
+                        key={report.report_id}
+                        className="flex justify-between items-center border rounded p-3"
+                      >
                         <div>
-                          <span className="font-medium">Report #{report.report_id}</span>
+                          <span className="font-medium">
+                            Report #{report.report_id}
+                          </span>
                           <span className="text-gray-500 ml-2">
                             {new Date(report.report_date).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="text-sm text-gray-600">
-                          {report.laboratories?.lab_name} - {report.users?.full_name}
+                          {report.laboratories?.lab_name} -{" "}
+                          {report.users?.full_name}
                         </div>
                       </div>
                     ))}
@@ -478,7 +606,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                   {/* Basic Information */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Laboratory</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Laboratory
+                      </label>
                       <input
                         type="text"
                         value={reportData.lab_name}
@@ -487,7 +617,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date and Time</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date and Time
+                      </label>
                       <input
                         type="text"
                         value={reportData.current_datetime}
@@ -496,7 +628,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Conducted by</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Conducted by
+                      </label>
                       <input
                         type="text"
                         value={reportData.custodian_name}
@@ -505,7 +639,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Noted by</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Noted by
+                      </label>
                       <input
                         type="text"
                         value={reportData.noted_by}
@@ -516,49 +652,75 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
                   </div>
 
                   {/* Procedures Section */}
-                  {reportData.procedures && reportData.procedures.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Procedures</h4>
-                      <div className="space-y-3">
-                        {reportData.procedures.map((procedure: any) => (
-                          <div key={procedure.procedure_id} className="border rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <h5 className="font-medium text-gray-900">{procedure.procedure_name}</h5>
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                procedure.overall_status === 'Completed' ? 'bg-green-100 text-green-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {procedure.overall_status}
-                              </span>
-                            </div>
-                            {procedure.overall_remarks && (
-                              <div className="mt-3 p-2 bg-blue-50 rounded">
-                                <span className="text-sm font-medium text-blue-900">Remarks: </span>
-                                <span className="text-sm text-blue-700">{procedure.overall_remarks}</span>
+                  {reportData.procedures &&
+                    reportData.procedures.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">
+                          Procedures
+                        </h4>
+                        <div className="space-y-3">
+                          {reportData.procedures.map((procedure: any) => (
+                            <div
+                              key={procedure.procedure_id}
+                              className="border rounded-lg p-4"
+                            >
+                              <div className="flex items-center justify-between">
+                                <h5 className="font-medium text-gray-900">
+                                  {procedure.procedure_name}
+                                </h5>
+                                <span
+                                  className={`px-2 py-1 text-xs rounded ${
+                                    procedure.overall_status === "Completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {procedure.overall_status}
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        ))}
+                              {procedure.overall_remarks && (
+                                <div className="mt-3 p-2 bg-blue-50 rounded">
+                                  <span className="text-sm font-medium text-blue-900">
+                                    Remarks:{" "}
+                                  </span>
+                                  <span className="text-sm text-blue-700">
+                                    {procedure.overall_remarks}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Workstations */}
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-3">Workstation Status</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Workstation Status
+                    </h4>
                     <div className="space-y-2">
                       {workstations.map((ws) => (
-                        <div key={ws.workstation_id} className="flex gap-3 items-center border rounded p-3 bg-gray-50">
-                          <span className="font-medium min-w-[120px]">{ws.workstation_name}</span>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            ws.status === 'Working' ? 'bg-green-100 text-green-800' :
-                            ws.status === 'Not Working' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                        <div
+                          key={ws.workstation_id}
+                          className="flex gap-3 items-center border rounded p-3 bg-gray-50"
+                        >
+                          <span className="font-medium min-w-[120px]">
+                            {ws.workstation_name}
+                          </span>
+                          <span
+                            className={`px-2 py-1 text-xs rounded ${
+                              ws.status === "Working"
+                                ? "bg-green-100 text-green-800"
+                                : ws.status === "Not Working"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
                             {ws.status}
                           </span>
                           <span className="flex-1 text-sm text-gray-600">
-                            {ws.remarks || 'No remarks'}
+                            {ws.remarks || "No remarks"}
                           </span>
                         </div>
                       ))}
@@ -567,7 +729,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
 
                   {/* General Remarks */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">General Remarks</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      General Remarks
+                    </label>
                     <textarea
                       value={reportData.general_remarks}
                       rows={4}
@@ -585,8 +749,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({ show, onClose, reportId, m
             </div>
 
             {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end">
-            </div>
+            <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end"></div>
           </div>
         </div>
       )}

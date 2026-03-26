@@ -39,6 +39,23 @@ const CreateUserModal: React.FC<Props> = ({ show, onClose }) => {
     }
   }, [show]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   // --- Filtering Logic ---
   // 1. Filter Departments based on Campus AND Office Type
   const filteredDepartments = departments.filter(

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '../ui/card';
+import { createPortal } from 'react-dom';
 
 interface WorkstationTimelineProps {
   workstation_name: string;
@@ -29,35 +30,46 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       
-      // Calculate available space in all directions
-      const spaceAbove = rect.top - 20;
-      const spaceBelow = viewportHeight - rect.bottom - 20;
-      const spaceLeft = rect.left - 20;
-      const spaceRight = viewportWidth - rect.right - 20;
-      
       // Calculate required dimensions with smart limits for long lists
       const overlayWidth = 300;
       const maxListHeight = Math.max(200, viewportHeight * 0.4); // Max 40% of viewport or 200px minimum
       const estimatedContentHeight = 120 + (assets.length * 35);
       const overlayHeight = Math.min(maxListHeight, estimatedContentHeight);
       
-      // For very long lists, prioritize horizontal positioning (better for scrolling)
-      const isLongList = assets.length > 8;
+      // Calculate available space and best position
+      const spaceAbove = rect.top - 20;
+      const spaceBelow = viewportHeight - rect.bottom - 20;
+      const spaceLeft = rect.left - 20;
+      const spaceRight = viewportWidth - rect.right - 20;
       
-      // Find best position with most space
-      const positions = [
-        { dir: 'bottom', space: spaceBelow, width: overlayWidth, height: overlayHeight, priority: isLongList ? 0.8 : 1 },
-        { dir: 'top', space: spaceAbove, width: overlayWidth, height: overlayHeight, priority: isLongList ? 0.8 : 1 },
-        { dir: 'right', space: spaceRight, width: overlayWidth, height: overlayHeight, priority: isLongList ? 1.2 : 0.9 },
-        { dir: 'left', space: spaceLeft, width: overlayWidth, height: overlayHeight, priority: isLongList ? 1.2 : 0.9 }
-      ];
+      // Determine best horizontal position
+      let horizontalPosition: 'left' | 'right' | 'center';
+      if (spaceRight >= overlayWidth) {
+        horizontalPosition = 'right'; // Show to the right
+      } else if (spaceLeft >= overlayWidth) {
+        horizontalPosition = 'left'; // Show to the left
+      } else {
+        horizontalPosition = 'center'; // Show centered
+      }
       
-      // Sort by available space and priority, pick the best fit
-      const bestPosition = positions
-        .filter(p => (p.dir === 'bottom' || p.dir === 'top') ? p.space >= Math.min(200, p.height) : p.space >= p.width)
-        .sort((a, b) => (b.space * b.priority) - (a.space * a.priority))[0]?.dir || 'bottom';
+      // Determine best vertical position
+      let verticalPosition: 'top' | 'bottom' | 'center';
+      if (spaceBelow >= overlayHeight) {
+        verticalPosition = 'bottom'; // Show below
+      } else if (spaceAbove >= overlayHeight) {
+        verticalPosition = 'top'; // Show above
+      } else {
+        verticalPosition = 'center'; // Show centered
+      }
       
-      setOverlayPosition(bestPosition as any);
+      // Combine positions
+      if (horizontalPosition === 'center' && verticalPosition === 'center') {
+        setOverlayPosition('bottom'); // Default fallback
+      } else if (horizontalPosition === 'center') {
+        setOverlayPosition(verticalPosition === 'top' ? 'top' : 'bottom');
+      } else {
+        setOverlayPosition(horizontalPosition);
+      }
     }
   }, [isHovered, assets.length]);
 
@@ -155,26 +167,50 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
         </div>
       </CardContent>
 
-      {/* Hover Overlay */}
-      {isHovered && (
+      {/* Hover Overlay - Rendered via portal to escape container clipping */}
+      {isHovered && cardRef.current && createPortal(
         <div 
-          className={`
-            bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 
-            overflow-y-auto
-            absolute
-            ${overlayPosition === 'top' ? 'bottom-full mb-2 left-0 right-0' : ''}
-            ${overlayPosition === 'bottom' ? 'top-full mt-2 left-0 right-0' : ''}
-            ${overlayPosition === 'left' ? 'right-full mr-2 top-0' : ''}
-            ${overlayPosition === 'right' ? 'left-full ml-2 top-0' : ''}
-          `}
+          className="
+            bg-white border border-gray-200 rounded-lg shadow-lg z-9999 p-3 
+            overflow-y-auto fixed
+          "
           style={{
-            maxHeight: overlayPosition === 'top' 
-              ? `${Math.min(350, cardRef.current?.getBoundingClientRect().top || 350 - 40)}px`
-              : overlayPosition === 'bottom'
-              ? `${Math.min(350, window.innerHeight - (cardRef.current?.getBoundingClientRect().bottom || window.innerHeight) - 40)}px`
-              : overlayPosition === 'left' || overlayPosition === 'right'
-              ? `${Math.min(350, window.innerHeight - 40)}px`
-              : '350px',
+            // Smart positioning to stay within viewport
+            top: (() => {
+              const rect = cardRef.current!.getBoundingClientRect();
+              const overlayHeight = Math.min(350, Math.max(200, window.innerHeight * 0.4));
+              
+              if (overlayPosition === 'top') {
+                return Math.max(10, rect.top - overlayHeight - 10);
+              } else if (overlayPosition === 'bottom') {
+                const bottomPos = rect.bottom + 10;
+                return bottomPos + overlayHeight > window.innerHeight 
+                  ? Math.max(10, window.innerHeight - overlayHeight - 10)
+                  : bottomPos;
+              } else {
+                // Center vertically for left/right positioning
+                const centerY = rect.top + (rect.height / 2) - (overlayHeight / 2);
+                return Math.max(10, Math.min(centerY, window.innerHeight - overlayHeight - 10));
+              }
+            })(),
+            left: (() => {
+              const rect = cardRef.current!.getBoundingClientRect();
+              const overlayWidth = overlayPosition === 'left' || overlayPosition === 'right' ? 280 : 300;
+              
+              if (overlayPosition === 'left') {
+                return Math.max(10, rect.left - overlayWidth - 10);
+              } else if (overlayPosition === 'right') {
+                const rightPos = rect.right + 10;
+                return rightPos + overlayWidth > window.innerWidth 
+                  ? Math.max(10, window.innerWidth - overlayWidth - 10)
+                  : rightPos;
+              } else {
+                // Center horizontally for top/bottom positioning
+                const centerX = rect.left + (rect.width / 2) - (overlayWidth / 2);
+                return Math.max(10, Math.min(centerX, window.innerWidth - overlayWidth - 10));
+              }
+            })(),
+            maxHeight: '350px',
             width: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : 'auto',
             minWidth: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : '260px',
             maxWidth: overlayPosition === 'left' || overlayPosition === 'right' ? '280px' : '320px'
@@ -285,7 +321,8 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </Card>
   );

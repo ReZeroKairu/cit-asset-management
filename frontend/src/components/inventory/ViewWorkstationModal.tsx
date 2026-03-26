@@ -1,7 +1,9 @@
 // frontend/src/components/inventory/ViewWorkstationModal.tsx
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Trash2, Edit } from "lucide-react";
 import api from "../../api/axios";
+import { createDisposal } from "../../api/disposals";
 import EditAssetModal from "./EditAssetModal";
 import AddAssetModal from "./AddAssetModal";
 
@@ -9,7 +11,7 @@ interface Props {
   show: boolean;
   workstation: any;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void; // Make optional since we're not using it
 }
 
 // Helper to determine status color
@@ -34,7 +36,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
   show,
   workstation,
   onClose,
-  onSuccess,
+  // onSuccess is optional and not used
 }) => {
   const [assets, setAssets] = useState<any[]>([]);
   const [editingAsset, setEditingAsset] = useState<any>(null);
@@ -47,6 +49,23 @@ const ViewWorkstationModal: React.FC<Props> = ({
       fetchWorkstationAssets();
     }
   }, [show, workstation]);
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
 
   const fetchWorkstationAssets = async () => {
     try {
@@ -69,17 +88,42 @@ const ViewWorkstationModal: React.FC<Props> = ({
   };
 
   const handleDeleteAsset = async (assetId: number) => {
-    if (!confirm("Are you sure you want to remove this asset?")) {
+    if (!confirm("Are you sure you want to transfer this asset to disposal? This will remove it from inventory and create a disposal record.")) {
       return;
     }
 
     try {
-      await api.delete(`/inventory/${assetId}`);
-      await fetchWorkstationAssets();
-      onSuccess();
+      // Get the asset details to create disposal record
+      const asset = assets.find(a => a.asset_id === assetId);
+      if (!asset) {
+        alert("Asset not found");
+        return;
+      }
+
+      // Create disposal record with default values
+      const disposalData = {
+        asset_id: assetId,
+        disposal_date: new Date().toISOString().split('T')[0], // Today's date
+        disposal_reason: "Asset transferred to disposal from inventory",
+        disposal_method: "Scrap" as const, // Default method
+        disposal_value: null,
+        approved_by: null,
+        disposed_by: null,
+        disposal_document: null,
+        disposal_remarks: "Transferred from inventory management"
+      };
+
+      // Create disposal record
+      await createDisposal(disposalData);
+      
+      // Remove the asset from local state
+      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
+      
+      alert("Asset successfully transferred to disposal records");
+      
     } catch (err: any) {
-      console.error("Failed to delete asset:", err);
-      alert(err.response?.data?.error || "Failed to delete asset");
+      console.error("Failed to transfer asset to disposal:", err);
+      alert(err.response?.data?.error || "Failed to transfer asset to disposal");
     }
   };
 
@@ -88,7 +132,9 @@ const ViewWorkstationModal: React.FC<Props> = ({
     setEditingAsset(null);
     setShowAddModal(false);
     fetchWorkstationAssets(); // Refresh the table immediately
-    onSuccess();
+    
+    // Don't call onSuccess() here as it closes the ViewWorkstationModal
+    // The parent data will be refreshed when user closes the modal
   };
 
   if (!show || !workstation) return null;
@@ -280,39 +326,15 @@ const ViewWorkstationModal: React.FC<Props> = ({
   className="text-blue-600 hover:text-blue-800 p-2 transition-colors cursor-pointer"
   title="Edit Asset Details"
 >
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-    />
-  </svg>
+  <Edit className="w-4 h-4" />
 </button>
 
 <button
   onClick={() => handleDeleteAsset(asset.asset_id)}
-  className="text-red-500 hover:text-red-600 p-2 transition-colors cursor-pointer"
-  title="Remove Asset"
+  className="text-red-400 hover:text-red-600 p-2 transition-colors cursor-pointer"
+  title="Dispose Asset"
 >
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-    />
-  </svg>
+  <Trash2 className="w-4 h-4" />
 </button>
                             </div>
                           </td>

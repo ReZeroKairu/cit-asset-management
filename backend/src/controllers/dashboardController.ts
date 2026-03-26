@@ -197,56 +197,14 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             where: { status: 'In_Progress' }
           }),
 
-      // Serviced workstations count - workstations with recent maintenance reports (last 30 days)
+      // Serviced workstations count - UNIQUE workstations with recent maintenance reports (last 30 days)
       userRole === "Custodian" && userId
         ? prisma.users.findUnique({
             where: { user_id: userId },
             select: { lab_id: true }
-          }).then(user => {
+          }).then(async user => {
             if (user?.lab_id) {
-              // Count workstations that have had maintenance reports in the last 30 days
-              const thirtyDaysAgo = new Date();
-              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-              
-              return prisma.pmc_reports.count({
-                where: {
-                  workstations: {
-                    lab_id: user.lab_id
-                  },
-                  created_at: {
-                    gte: thirtyDaysAgo
-                  }
-                }
-              });
-            }
-            return 0;
-          })
-        : (() => {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            
-            return prisma.pmc_reports.count({
-              where: {
-                created_at: {
-                  gte: thirtyDaysAgo
-                }
-              }
-            });
-          })(),
-
-      // Unserviced workstations count - workstations without recent maintenance reports
-      userRole === "Custodian" && userId
-        ? prisma.users.findUnique({
-            where: { user_id: userId },
-            select: { lab_id: true }
-          }).then(async (user) => {
-            if (user?.lab_id) {
-              // Get total workstations in lab
-              const totalWorkstations = await prisma.workstations.count({
-                where: { lab_id: user.lab_id }
-              });
-              
-              // Get workstations with recent maintenance (last 30 days)
+              // Count UNIQUE workstations that have had maintenance reports in the last 30 days
               const thirtyDaysAgo = new Date();
               thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
               
@@ -257,6 +215,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                   },
                   created_at: {
                     gte: thirtyDaysAgo
+                  },
+                  workstation_id: {
+                    not: undefined
                   }
                 },
                 select: {
@@ -265,22 +226,27 @@ export const getDashboardStats = async (req: Request, res: Response) => {
                 distinct: ['workstation_id']
               });
               
-              return Math.max(0, totalWorkstations - servicedWorkstations.length);
+              // Count unique workstation IDs
+              const uniqueWorkstationIds = new Set(
+                servicedWorkstations.map(report => report.workstation_id).filter(id => id !== null)
+              );
+              
+              return uniqueWorkstationIds.size;
             }
             return 0;
           })
         : (async () => {
-            // Get total workstations
-            const totalWorkstations = await prisma.workstations.count();
-            
-            // Get workstations with recent maintenance (last 30 days)
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             
+            // Count UNIQUE workstations with recent maintenance reports (last 30 days)
             const servicedWorkstations = await prisma.pmc_reports.findMany({
               where: {
                 created_at: {
                   gte: thirtyDaysAgo
+                },
+                workstation_id: {
+                  not: undefined
                 }
               },
               select: {
@@ -289,7 +255,80 @@ export const getDashboardStats = async (req: Request, res: Response) => {
               distinct: ['workstation_id']
             });
             
-            return Math.max(0, totalWorkstations - servicedWorkstations.length);
+            // Count unique workstation IDs
+            const uniqueWorkstationIds = new Set(
+              servicedWorkstations.map(report => report.workstation_id).filter(id => id !== null)
+            );
+            
+            return uniqueWorkstationIds.size;
+          })(),
+
+      // Unserviced workstations count - workstations without recent maintenance reports
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { lab_id: true }
+          }).then(async (user) => {
+            if (user?.lab_id) {
+              // Get total workstations in lab (same as inventory analytics)
+              const totalWorkstations = await prisma.workstations.count({
+                where: { lab_id: user.lab_id }
+              });
+              
+              // Get workstations with recent maintenance (last 30 days) - more accurate counting
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+              
+              const servicedWorkstationIds = new Set(
+                (await prisma.pmc_reports.findMany({
+                  where: {
+                    workstations: {
+                      lab_id: user.lab_id
+                    },
+                    created_at: {
+                      gte: thirtyDaysAgo
+                    },
+                    workstation_id: {
+                      not: undefined  // Exclude undefined workstation_ids
+                    }
+                  },
+                  select: {
+                    workstation_id: true
+                  },
+                  distinct: ['workstation_id']
+                })).map(report => report.workstation_id).filter(id => id !== null)
+              );
+              
+              return Math.max(0, totalWorkstations - servicedWorkstationIds.size);
+            }
+            return 0;
+          })
+        : (async () => {
+            // Get total workstations (same as inventory analytics)
+            const totalWorkstations = await prisma.workstations.count();
+            
+            // Get workstations with recent maintenance (last 30 days) - more accurate counting
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const servicedWorkstationIds = new Set(
+              (await prisma.pmc_reports.findMany({
+                where: {
+                  created_at: {
+                    gte: thirtyDaysAgo
+                  },
+                  workstation_id: {
+                    not: undefined  // Exclude undefined workstation_ids
+                  }
+                },
+                select: {
+                  workstation_id: true
+                },
+                distinct: ['workstation_id']
+              })).map(report => report.workstation_id).filter(id => id !== null)
+            );
+            
+            return Math.max(0, totalWorkstations - servicedWorkstationIds.size);
           })()
     ]);
 

@@ -1,6 +1,8 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../initDatabase';
+import { auditMiddleware } from '../middleware/audit';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -8,9 +10,10 @@ const router = express.Router();
 const oneTimeTokens: any[] = [];
 
 // Generate one-time QR code token
-router.post('/generate-token', async (req, res) => {
+router.post('/generate-token', authenticateToken, auditMiddleware("CREATE", "QR token"), async (req, res) => {
   try {
-    const { generatedBy, expiresInHours = 24 } = req.body;
+    const { expiresInHours = 24 } = req.body;
+    const user = (req as any).user; // Get authenticated user
     
     // Generate unique token
     const token = crypto.randomUUID();
@@ -21,7 +24,7 @@ router.post('/generate-token', async (req, res) => {
     const oneTimeLink = {
       id: oneTimeTokens.length + 1,
       token,
-      generatedBy,
+      generatedBy: user?.userId || 1, // Use authenticated user ID
       expiresAt: tokenExpiresAt,
       used: false,
     };
@@ -99,7 +102,7 @@ router.get('/validate/:token', async (req, res) => {
 });
 
 // Submit form using one-time token
-router.post('/submit/:token', async (req, res) => {
+router.post('/submit/:token', auditMiddleware("CREATE", "one-time form submission"), async (req, res) => {
   try {
     const { token } = req.params;
     const { formType, formData } = req.body;

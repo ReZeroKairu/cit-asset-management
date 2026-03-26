@@ -1,13 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { 
-  MessageSquare
-} from "lucide-react";
-import { 
-  getComplaints, 
-  type Complaint 
-} from "../api/complaints";
+import { MessageSquare } from "lucide-react";
+import { getComplaints, type Complaint } from "../api/complaints";
 import { useAuth } from "../context/AuthContext";
 import EnhancedComplaintDetailsModal from "../components/complaints/EnhancedComplaintDetailsModal";
 
@@ -19,7 +14,9 @@ const ArchiveComplaintsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(
+    null
+  );
 
   // Check if user is admin
   const isAdmin = user?.role === "Admin";
@@ -27,11 +24,16 @@ const ArchiveComplaintsPage = () => {
   // Status colors
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Open": return "bg-yellow-100 text-yellow-800";
-      case "In_Progress": return "bg-blue-100 text-blue-800";
-      case "Resolved": return "bg-green-100 text-green-800";
-      case "Denied": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "Open":
+        return "bg-yellow-100 text-yellow-800";
+      case "In_Progress":
+        return "bg-blue-100 text-blue-800";
+      case "Resolved":
+        return "bg-green-100 text-green-800";
+      case "Denied":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -43,18 +45,19 @@ const ArchiveComplaintsPage = () => {
     try {
       setLoading(true);
       const data = await getComplaints();
-      
+
       // Filter for archived complaints (Resolved, Denied)
-      let archivedComplaints = data.filter(c => 
-        c.status === "Resolved" || 
-        c.status === "Denied"
+      let archivedComplaints = data.filter(
+        (c) => c.status === "Resolved" || c.status === "Denied"
       );
-      
+
       // For custodians, only show complaints from their assigned lab
       if (!isAdmin && user?.lab_id) {
-        archivedComplaints = archivedComplaints.filter(c => c.lab_id === user.lab_id);
+        archivedComplaints = archivedComplaints.filter(
+          (c) => c.lab_id === user.lab_id
+        );
       }
-      
+
       setComplaints(archivedComplaints);
       setFilteredComplaints(archivedComplaints);
     } catch (err) {
@@ -70,18 +73,17 @@ const ArchiveComplaintsPage = () => {
     let filtered = complaints;
 
     if (startDate) {
-      filtered = filtered.filter(complaint => {
+      filtered = filtered.filter((complaint) => {
         const complaintDate = new Date(complaint.created_at);
-        const start = new Date(startDate);
+        const start = new Date(startDate + "T00:00:00");
         return complaintDate >= start;
       });
     }
 
     if (endDate) {
-      filtered = filtered.filter(complaint => {
+      filtered = filtered.filter((complaint) => {
         const complaintDate = new Date(complaint.created_at);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Include entire end date
+        const end = new Date(endDate + "T23:59:59");
         return complaintDate <= end;
       });
     }
@@ -109,7 +111,9 @@ const ArchiveComplaintsPage = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Archived Complaints</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Archived Complaints
+          </h1>
           <p className="text-gray-600 mt-1">Completed complaints</p>
         </div>
       </div>
@@ -136,7 +140,7 @@ const ArchiveComplaintsPage = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               End Date
@@ -148,7 +152,7 @@ const ArchiveComplaintsPage = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
-          
+
           <div className="flex items-end">
             <button
               onClick={clearFilters}
@@ -167,13 +171,14 @@ const ArchiveComplaintsPage = () => {
             <CardContent className="p-8 text-center">
               <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {complaints.length === 0 ? "No archived complaints found" : "No complaints match the selected filters"}
+                {complaints.length === 0
+                  ? "No archived complaints found"
+                  : "No complaints match the selected filters"}
               </h3>
               <p className="text-gray-500">
-                {complaints.length === 0 
-                  ? "No complaints have been archived yet" 
-                  : "Try adjusting your date filters"
-                }
+                {complaints.length === 0
+                  ? "No complaints have been archived yet"
+                  : "Try adjusting your date filters"}
               </p>
             </CardContent>
           </Card>
@@ -197,16 +202,19 @@ const ArchiveComplaintsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                    IP Address
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredComplaints.map((complaint) => (
-                  <tr 
-                    key={complaint.complaint_id} 
-                    className="hover:bg-blue-50 cursor-pointer transition-colors" 
+                  <tr
+                    key={complaint.complaint_id}
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
                     onClick={() => setSelectedComplaint(complaint)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -230,12 +238,14 @@ const ArchiveComplaintsPage = () => {
                       </div>
                       <div className="text-sm text-gray-500">
                         {complaint.user_type}
-                        {complaint.year_level && ` • Year ${complaint.year_level}`}
+                        {complaint.year_level &&
+                          ` • Year ${complaint.year_level}`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {complaint.laboratories?.lab_name || `Lab ${complaint.lab_id}`}
+                        {complaint.laboratories?.lab_name ||
+                          `Lab ${complaint.lab_id}`}
                       </div>
                       {complaint.workstations && (
                         <div className="text-sm text-gray-500">
@@ -244,15 +254,25 @@ const ArchiveComplaintsPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
-                        {complaint.status.replace('_', ' ')}
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          complaint.status
+                        )}`}
+                      >
+                        {complaint.status.replace("_", " ")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                       {/* No actions needed for archived complaints - rows are clickable */}
+                      <div className="text-xs text-gray-400">
+                        Click row for details
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {complaint.ip_address || "Unknown"}
                     </td>
                   </tr>
                 ))}
@@ -261,7 +281,7 @@ const ArchiveComplaintsPage = () => {
           </div>
         )}
       </div>
-      
+
       {/* Enhanced Details Modal */}
       <EnhancedComplaintDetailsModal
         complaint={selectedComplaint!}

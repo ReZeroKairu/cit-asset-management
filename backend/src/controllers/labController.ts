@@ -200,7 +200,6 @@ export const getLaboratoryById = async (req: Request, res: Response) => {
     // Note: this handler is used by multiple routes with different param names
     // (e.g. "/laboratories/:id" and "/laboratories/public/:labName/custodian").
     const id = req.params.id ?? (req.params as any).labName;
-    console.log('🔍 getLaboratoryById called with id:', id);
 
     if (!id) {
       return res.status(400).json({ error: "Laboratory identifier is required" });
@@ -208,7 +207,6 @@ export const getLaboratoryById = async (req: Request, res: Response) => {
     
     // First, try to parse as numeric ID
     const labId = parseInt(Array.isArray(id) ? id[0] : id);
-    console.log('🔍 Parsed labId:', labId, 'isNaN:', isNaN(labId));
 
     if (!isNaN(labId)) {
       // Search by numeric ID (most efficient)
@@ -259,11 +257,9 @@ export const getLaboratoryById = async (req: Request, res: Response) => {
       res.json(response);
     } else {
       // If not found by ID or ID is not numeric, search by lab name
-      console.log('🔍 Searching by lab_name:', id);
       
       // Decode URL-encoded lab name
       const decodedLabName = decodeURIComponent(id as string);
-      console.log('🔍 Decoded lab name:', decodedLabName);
       
       // Search by lab name
       const laboratory = await prisma.laboratories.findFirst({
@@ -285,9 +281,7 @@ export const getLaboratoryById = async (req: Request, res: Response) => {
           },
         },
       });
-      
-      console.log('🔍 Found lab by name:', laboratory?.lab_name || 'Not found');
-      
+
       if (!laboratory) {
         return res.status(404).json({ error: "Laboratory not found" });
       }

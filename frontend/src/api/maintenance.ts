@@ -37,6 +37,10 @@ export interface PMCReport {
       procedure_name: string;
     };
   }[];
+  workstations?: {
+    workstation_id: number;
+    workstation_name: string;
+  };
   service_logs?: ServiceLog[];
 }
 
@@ -103,7 +107,7 @@ export const getLabPMCReports = async (labId: number, quarter: string) => {
 // 2. GET SINGLE REPORT (By Workstation & Quarter)
 export const getPMCReport = async (
   workstationId: number,
-  quarter: string,
+  quarter: string
 ): Promise<PMCReport | null> => {
   try {
     const response = await api.get("/maintenance/pmc/detail", {
@@ -112,7 +116,7 @@ export const getPMCReport = async (
     return response.data;
   } catch (error: any) {
     if (error.response?.status === 404) {
-      console.log("📋 No PMC report found for workstation", workstationId, "quarter", quarter);
+      // Silent handling - no console log for missing reports
       return null;
     }
     throw error; // Re-throw other errors
@@ -121,7 +125,7 @@ export const getPMCReport = async (
 
 // 3. CREATE REPORT
 export const createPMCReport = async (
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): Promise<PMCReport> => {
   const response = await api.post("/maintenance/pmc", data);
   return response.data;
@@ -130,7 +134,7 @@ export const createPMCReport = async (
 // 4. GET SERVICE HISTORY
 export const getServiceHistory = async (
   workstationId: number,
-  quarter?: string,
+  quarter?: string
 ): Promise<ServiceLog[]> => {
   const params: Record<string, string | number> = {
     workstation_id: workstationId,
@@ -142,7 +146,7 @@ export const getServiceHistory = async (
 
 // 5. CREATE REPAIR LOG
 export const createRepairLog = async (
-  data: Record<string, unknown>,
+  data: Record<string, unknown>
 ): Promise<ServiceLog> => {
   const response = await api.post("/maintenance/pmc/repair", data);
   return response.data;
@@ -150,46 +154,56 @@ export const createRepairLog = async (
 
 // 6. GET MAINTENANCE ANALYTICS
 export const getMaintenanceAnalytics = async () => {
-  const response = await api.get('/maintenance/analytics');
+  const response = await api.get("/maintenance/analytics");
   return response.data;
 };
 
-// 7. GET MULTIPLE PMC REPORTS FOR WORKSTATIONS
+// 7. GET MULTIPLE PMC REPORTS FOR WORKSTATIONS (Batch endpoint)
 export const getWorkstationPMCReports = async (
   workstationIds: number[],
   quarter: string
 ): Promise<Record<number, PMCReport | null>> => {
-  const reports: Record<number, PMCReport | null> = {};
-  
-  // Fetch reports in parallel
-  const promises = workstationIds.map(async (workstationId) => {
-    try {
-      const report = await getPMCReport(workstationId, quarter);
-      return { workstationId, report };
-    } catch (error) {
-      console.error(`Failed to fetch PMC report for workstation ${workstationId}:`, error);
-      return { workstationId, report: null };
-    }
-  });
+  try {
+    // Use the new batch endpoint to reduce API calls
+    const response = await api.get("/maintenance/pmc/batch", {
+      params: { 
+        workstation_ids: workstationIds.join(','), 
+        quarter 
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    // Fallback to individual calls if batch fails
+    console.warn("Batch endpoint failed, falling back to individual calls:", error.message);
+    
+    const reports: Record<number, PMCReport | null> = {};
+    const promises = workstationIds.map(async (workstationId) => {
+      try {
+        const report = await getPMCReport(workstationId, quarter);
+        return { workstationId, report };
+      } catch (error) {
+        console.error(
+          `Failed to fetch PMC report for workstation ${workstationId}:`,
+          error
+        );
+        return { workstationId, report: null };
+      }
+    });
 
-  const results = await Promise.all(promises);
-  results.forEach(({ workstationId, report }) => {
-    reports[workstationId] = report;
-  });
+    const results = await Promise.all(promises);
+    results.forEach(({ workstationId, report }) => {
+      reports[workstationId] = report;
+    });
 
-  return reports;
+    return reports;
+  }
 };
 
 export interface MaintenanceAnalyticsData {
   totalWorkstations: number;
   completedReports: number;
-  uniqueWorkstationsWithMaintenance: number;
   completionRate: number;
   currentQuarter: string;
-  statusDistribution: Array<{
-    status: string;
-    count: number;
-  }>;
   labCompletionData: Array<{
     lab_name: string;
     completed_reports: number;
@@ -200,7 +214,11 @@ export interface MaintenanceAnalyticsData {
     lab_name: string;
     totalWorkstations: number;
     completedReports: number;
-    uniqueWorkstationsWithMaintenance: number;
+    completionRate: number;
+  }>;
+  historicalData?: Array<{
+    quarter: string;
+    completedReports: number;
     completionRate: number;
   }>;
 }

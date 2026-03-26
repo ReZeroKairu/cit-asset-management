@@ -2,11 +2,11 @@
 import axios from "axios";
 
 const getApiBaseUrl = () => {
-  const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001';
-  }
-  return `http://${hostname}:3001`;
+  // Use network IP when accessing from network, localhost for local development
+  const isNetworkAccess = window.location.hostname.includes('172.72.102.4');
+  return isNetworkAccess 
+    ? "http://172.72.102.4:3001" 
+    : "http://localhost:3001";
 };
 
 const api = axios.create({
@@ -36,15 +36,24 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.error("401 ERROR CAUGHT! Token might be invalid or rejected by backend.");
+      // Token expired or invalid, logout user
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-      // 🛑 TEMPORARILY COMMENT OUT THE LOGOUT LOGIC FOR DEBUGGING
-      // localStorage.removeItem("token");
-      // localStorage.removeItem("user");
-      // const currentPath = window.location.pathname;
-      // if (currentPath !== '/login') {
-      //   window.location.href = "/login";
-      // }
+      // Only redirect to login if not already on login page AND not on public pages
+      const currentPath = window.location.pathname;
+      const publicPages = [
+        "/login",
+        "/public-forms",
+        "/public-complaints",
+        "/complaints",
+        "/one-time",
+        "/public-landing",
+      ];
+
+      if (!publicPages.includes(currentPath)) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

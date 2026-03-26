@@ -13,7 +13,9 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
 
     // Allow both admins and custodians to access inventory analytics
     if (userRole !== "Admin" && userRole !== "Custodian") {
-      return res.status(403).json({ error: "Access denied. Admin or Custodian only." });
+      return res
+        .status(403)
+        .json({ error: "Access denied. Admin or Custodian only." });
     }
 
     // Get user's lab information if they're a custodian
@@ -21,131 +23,162 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     if (userRole === "Custodian" && userLabId) {
       userLab = await prisma.laboratories.findUnique({
         where: { lab_id: userLabId },
-        select: { lab_id: true, lab_name: true }
+        select: { lab_id: true, lab_name: true },
       });
     }
 
     // Get all asset statuses
     const assetStatuses = await prisma.asset_statuses.findMany({
-      orderBy: { status_name: 'asc' }
+      orderBy: { status_name: "asc" },
     });
 
     // Build where clause for status distribution
     const statusWhereClause: any = {
       status_id: {
-        not: null
-      }
+        not: null,
+      },
     };
 
     // If custodian, filter by their assigned lab
-    if (userRole === "Custodian" && userLabId) {
-      statusWhereClause.inventory_assets = {
-        some: {
-          lab_id: userLabId
-        }
-      };
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        statusWhereClause.inventory_assets = {
+          some: {
+            lab_id: userLabId,
+          },
+        };
+      } else {
+        // Unassigned custodians should see nothing
+        statusWhereClause.inventory_assets = {
+          some: {
+            lab_id: -1, // Impossible lab_id that will return no results
+          },
+        };
+      }
     }
 
     // Get status distribution (filtered for custodians)
-    let statusDistribution;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, get assets from their lab and group by status
-      const labAssets = await prisma.inventory_assets.findMany({
-        where: {
-          lab_id: userLabId,
-          asset_details: {
-            status_id: {
-              not: null
-            }
-          }
-        },
-        select: {
-          asset_details: {
-            select: {
-              status_id: true
-            }
-          }
-        }
-      });
+    let statusDistribution: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, get assets from their lab and group by status
+        const labAssets = await prisma.inventory_assets.findMany({
+          where: {
+            lab_id: userLabId,
+            asset_details: {
+              status_id: {
+                not: null,
+              },
+            },
+          },
+          select: {
+            asset_details: {
+              select: {
+                status_id: true,
+              },
+            },
+          },
+        });
 
-      // Group by status_id and count
-      const statusCounts = labAssets.reduce((acc: any, asset) => {
-        const statusId = asset.asset_details?.status_id;
-        if (statusId) {
-          acc[statusId] = (acc[statusId] || 0) + 1;
-        }
-        return acc;
-      }, {});
+        // Group by status_id and count
+        const statusCounts = labAssets.reduce((acc: any, asset) => {
+          const statusId = asset.asset_details?.status_id;
+          if (statusId) {
+            acc[statusId] = (acc[statusId] || 0) + 1;
+          }
+          return acc;
+        }, {});
 
-      // Convert to groupBy format
-      statusDistribution = Object.entries(statusCounts).map(([status_id, count]) => ({
-        status_id: parseInt(status_id),
-        _count: { asset_id: count as number }
-      }));
+        // Convert to groupBy format
+        statusDistribution = Object.entries(statusCounts).map(
+          ([status_id, count]) => ({
+            status_id: parseInt(status_id),
+            _count: { asset_id: count as number },
+          })
+        );
+      } else {
+        // Unassigned custodians should see nothing
+        statusDistribution = [];
+      }
     } else {
       // For admins, use the original groupBy query
       statusDistribution = await prisma.asset_details.groupBy({
-        by: ['status_id'],
+        by: ["status_id"],
         _count: {
-          asset_id: true
+          asset_id: true,
         },
-        where: statusWhereClause
+        where: statusWhereClause,
       });
     }
 
     // Calculate total assets for percentage calculation
-    const totalAssets = statusDistribution.reduce((sum, status) => sum + status._count.asset_id, 0);
+    const totalAssets = statusDistribution.reduce(
+      (sum: number, status: any) => sum + status._count.asset_id,
+      0
+    );
 
     // Format status distribution with names and percentages
-    const formattedStatusDistribution = statusDistribution.map(status => {
-      const statusInfo = assetStatuses.find(s => s.status_id === status.status_id);
-      return {
-        status_name: statusInfo?.status_name || 'Unknown',
-        count: status._count.asset_id,
-        percentage: totalAssets > 0 ? Math.round((status._count.asset_id / totalAssets) * 100) : 0
-      };
-    });
+    const formattedStatusDistribution = statusDistribution.map(
+      (status: any) => {
+        const statusInfo = assetStatuses.find(
+          (s) => s.status_id === status.status_id
+        );
+        return {
+          status_name: statusInfo?.status_name || "Unknown",
+          count: status._count.asset_id,
+          percentage:
+            totalAssets > 0
+              ? Math.round((status._count.asset_id / totalAssets) * 100)
+              : 0,
+        };
+      }
+    );
 
     // Get assets by laboratory with status breakdown
-    let labStatusData;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, only get their assigned lab
-      labStatusData = await prisma.laboratories.findMany({
-        where: {
-          lab_id: userLabId
-        },
-        select: {
-          lab_id: true,
-          lab_name: true,
-          inventory_assets: {
-            select: {
-              asset_details: {
-                select: {
-                  status_id: true
-                }
-              }
-            },
-            where: {
-              asset_details: {
-                status_id: {
-                  not: null
-                }
-              }
-            }
+    let labStatusData: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, only get their assigned lab
+        labStatusData = await prisma.laboratories.findMany({
+          where: {
+            lab_id: userLabId,
           },
-          workstations: {
-            select: {
-              workstation_name: true,
-              status_id: true,
-              asset_statuses: {
-                select: {
-                  status_name: true
-                }
-              }
-            }
-          }
-        }
-      });
+          select: {
+            lab_id: true,
+            lab_name: true,
+            inventory_assets: {
+              select: {
+                asset_details: {
+                  select: {
+                    status_id: true,
+                  },
+                },
+              },
+              where: {
+                asset_details: {
+                  status_id: {
+                    not: null,
+                  },
+                },
+              },
+            },
+            workstations: {
+              select: {
+                workstation_name: true,
+                status_id: true,
+                asset_statuses: {
+                  select: {
+                    status_name: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      } else {
+        // Unassigned custodians should see nothing
+        labStatusData = [];
+      }
     } else {
       // For admins, get all labs
       labStatusData = await prisma.laboratories.findMany({
@@ -156,10 +189,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             select: {
               asset_details: {
                 select: {
-                  status_id: true
-                }
-              }
-            }
+                  status_id: true,
+                },
+              },
+            },
           },
           workstations: {
             select: {
@@ -167,84 +200,95 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
               status_id: true,
               asset_statuses: {
                 select: {
-                  status_name: true
-                }
-              }
-            }
-          }
-        }
+                  status_name: true,
+                },
+              },
+            },
+          },
+        },
       });
     }
 
     // Process lab status data
-    const processedLabData = labStatusData.map(lab => {
-      const statusCounts: Record<string, number> = {};
-      let totalAssets = 0;
-      let totalWorkstations = 0;
-      let functionalWorkstations = 0;
-      let servicedWorkstations = 0;
+    const processedLabData = labStatusData
+      .map((lab: any) => {
+        const statusCounts: Record<string, number> = {};
+        let totalAssets = 0;
+        let totalWorkstations = 0;
+        let functionalWorkstations = 0;
+        let servicedWorkstations = 0;
 
-      // Count assets by status for this lab
-      lab.inventory_assets.forEach(asset => {
-        if (asset.asset_details?.status_id) {
-          const statusId = asset.asset_details.status_id;
-          const statusName = assetStatuses.find(s => s.status_id === statusId)?.status_name || 'Unknown';
-          statusCounts[statusName] = (statusCounts[statusName] || 0) + 1;
-          totalAssets++;
-        }
-      });
-
-      // Count workstations by status for this lab
-      lab.workstations?.forEach((workstation: any) => {
-        if (workstation.status_id) {
-          const statusId = workstation.status_id;
-          const statusName = assetStatuses.find(s => s.status_id === statusId)?.status_name || 'Unknown';
-          
-          if (statusName === 'Functional') {
-            functionalWorkstations++;
-          } else if (statusName !== 'Unknown') {
-            servicedWorkstations++;
+        // Count assets by status for this lab
+        lab.inventory_assets.forEach((asset: any) => {
+          if (asset.asset_details?.status_id) {
+            const statusId = asset.asset_details.status_id;
+            const statusName =
+              assetStatuses.find((s: any) => s.status_id === statusId)
+                ?.status_name || "Unknown";
+            statusCounts[statusName] = (statusCounts[statusName] || 0) + 1;
+            totalAssets++;
           }
-          
-          totalWorkstations++;
-        }
-      });
+        });
 
-      // Create standardized data structure
-      const labData: any = {
-        lab_id: lab.lab_id,
-        lab_name: lab.lab_name,
-        total: totalAssets,
-        Functional: statusCounts['Functional'] || 0,
-        "For Replacement": statusCounts['For Replacement'] || 0,
-        "For Repair": statusCounts['For Repair'] || 0,
-        Lost: statusCounts['Lost'] || 0,
-        totalWorkstations: totalWorkstations,
-        functionalWorkstations: functionalWorkstations,
-        servicedWorkstations: servicedWorkstations
-      };
+        // Count workstations by status for this lab
+        lab.workstations?.forEach((workstation: any) => {
+          if (workstation.status_id) {
+            const statusId = workstation.status_id;
+            const statusName =
+              assetStatuses.find((s: any) => s.status_id === statusId)
+                ?.status_name || "Unknown";
 
-      return labData;
-    }).filter(lab => lab.total > 0); // Only include labs with assets
+            if (statusName === "Functional") {
+              functionalWorkstations++;
+            } else if (statusName !== "Unknown") {
+              servicedWorkstations++;
+            }
+
+            totalWorkstations++;
+          }
+        });
+
+        // Create standardized data structure
+        const labData: any = {
+          lab_id: lab.lab_id,
+          lab_name: lab.lab_name,
+          total: totalAssets,
+          Functional: statusCounts["Functional"] || 0,
+          "For Replacement": statusCounts["For Replacement"] || 0,
+          "For Repair": statusCounts["For Repair"] || 0,
+          Lost: statusCounts["Lost"] || 0,
+          totalWorkstations: totalWorkstations,
+          functionalWorkstations: functionalWorkstations,
+          servicedWorkstations: servicedWorkstations,
+        };
+
+        return labData;
+      })
+      .filter((lab: any) => lab.total > 0); // Only include labs with assets
 
     // Get all workstations to ensure complete coverage
-    let allWorkstations;
-    if (userRole === "Custodian" && userLabId) {
-      // For custodians, get workstations from their assigned lab
-      allWorkstations = await prisma.workstations.findMany({
-        where: {
-          lab_id: userLabId
-        },
-        select: {
-          workstation_name: true,
-          lab_id: true,
-          asset_statuses: {
-            select: {
-              status_name: true
-            }
-          }
-        }
-      });
+    let allWorkstations: any;
+    if (userRole === "Custodian") {
+      if (userLabId) {
+        // For custodians, get workstations from their assigned lab
+        allWorkstations = await prisma.workstations.findMany({
+          where: {
+            lab_id: userLabId,
+          },
+          select: {
+            workstation_name: true,
+            lab_id: true,
+            asset_statuses: {
+              select: {
+                status_name: true,
+              },
+            },
+          },
+        });
+      } else {
+        // Unassigned custodians should see nothing
+        allWorkstations = [];
+      }
     } else {
       // For admins, get all workstations
       allWorkstations = await prisma.workstations.findMany({
@@ -253,15 +297,15 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           lab_id: true,
           laboratories: {
             select: {
-              lab_name: true
-            }
+              lab_name: true,
+            },
           },
           asset_statuses: {
             select: {
-              status_name: true
-            }
-          }
-        }
+              status_name: true,
+            },
+          },
+        },
       });
     }
 
@@ -274,12 +318,12 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           lab_id: userLabId,
           asset_details: {
             date_of_purchase: {
-              not: null
+              not: null,
             },
             status_id: {
-              not: null
-            }
-          }
+              not: null,
+            },
+          },
         },
         select: {
           asset_id: true,
@@ -288,35 +332,35 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             select: {
               date_of_purchase: true,
               description: true,
-              property_tag_no: true
-            }
+              property_tag_no: true,
+            },
           },
           units: {
             select: {
-              unit_name: true
-            }
+              unit_name: true,
+            },
           },
           workstations: {
             select: {
               workstation_name: true,
               asset_statuses: {
                 select: {
-                  status_name: true
-                }
-              }
-            }
+                  status_name: true,
+                },
+              },
+            },
           },
           laboratories: {
             select: {
-              lab_name: true
-            }
-          }
+              lab_name: true,
+            },
+          },
         },
         orderBy: {
           asset_details: {
-            date_of_purchase: 'desc'
-          }
-        }
+            date_of_purchase: "desc",
+          },
+        },
       });
     } else {
       // For admins, get all assets with simplified query
@@ -324,12 +368,12 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         where: {
           asset_details: {
             date_of_purchase: {
-              not: null
+              not: null,
             },
             status_id: {
-              not: null
-            }
-          }
+              not: null,
+            },
+          },
         },
         select: {
           asset_id: true,
@@ -338,93 +382,111 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             select: {
               date_of_purchase: true,
               description: true,
-              property_tag_no: true
-            }
+              property_tag_no: true,
+            },
           },
           units: {
             select: {
-              unit_name: true
-            }
+              unit_name: true,
+            },
           },
           workstations: {
             select: {
               workstation_name: true,
               asset_statuses: {
                 select: {
-                  status_name: true
-                }
-              }
-            }
+                  status_name: true,
+                },
+              },
+            },
           },
           laboratories: {
             select: {
-              lab_name: true
-            }
-          }
+              lab_name: true,
+            },
+          },
         },
         orderBy: {
           asset_details: {
-            date_of_purchase: 'desc'
-          }
-        }
+            date_of_purchase: "desc",
+          },
+        },
       });
     }
 
     // Process timeline data to include all workstations
     const timelineData = [];
-    
+
     // First, add all assets to timeline data
-    const assetTimelineData = assetsWithPurchaseDates.map(asset => ({
+    const assetTimelineData = assetsWithPurchaseDates.map((asset) => ({
       asset_id: asset.asset_id,
       lab_id: asset.lab_id,
-      asset_name: asset.asset_details?.description || asset.units?.unit_name || `Asset #${asset.asset_id}`,
-      unit_name: asset.units?.unit_name || '',
-      workstation_name: asset.workstations?.workstation_name || 'Not Assigned',
-      lab_name: asset.laboratories?.lab_name || 'Not Assigned',
-      purchase_date: asset.asset_details?.date_of_purchase?.toISOString() || '',
+      asset_name:
+        asset.asset_details?.description ||
+        asset.units?.unit_name ||
+        `Asset #${asset.asset_id}`,
+      unit_name: asset.units?.unit_name || "",
+      workstation_name: asset.workstations?.workstation_name || "Not Assigned",
+      lab_name: asset.laboratories?.lab_name || "Not Assigned",
+      purchase_date: asset.asset_details?.date_of_purchase?.toISOString() || "",
       current_age_years: asset.asset_details?.date_of_purchase
-        ? Math.max(0, Math.floor((new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25)))
+        ? Math.max(
+            0,
+            Math.floor(
+              (new Date().getTime() -
+                new Date(asset.asset_details.date_of_purchase).getTime()) /
+                (1000 * 60 * 60 * 24 * 365.25)
+            )
+          )
         : 0,
       timeline_position: asset.asset_details?.date_of_purchase
         ? (() => {
-            const age = (new Date().getTime() - new Date(asset.asset_details.date_of_purchase).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+            const age =
+              (new Date().getTime() -
+                new Date(asset.asset_details.date_of_purchase).getTime()) /
+              (1000 * 60 * 60 * 24 * 365.25);
             let position;
-            
+
             // Exact year counting based on completed years
-            if (age < 1) position = 0;      // Y1: 0-1 years old
-            else if (age < 1.5) position = 1;  // Y1: exactly 1 year old
-            else if (age < 2.5) position = 2;  // Y2: exactly 2 years old
-            else if (age < 3.5) position = 3;  // Y3: exactly 3 years old
-            else if (age < 4.5) position = 4;  // Y4: exactly 4 years old
-            else position = 5;               // Y5: 5+ years old
-            
+            if (age < 1) position = 0; // Y1: 0-1 years old
+            else if (age < 1.5) position = 1; // Y1: exactly 1 year old
+            else if (age < 2.5) position = 2; // Y2: exactly 2 years old
+            else if (age < 3.5) position = 3; // Y3: exactly 3 years old
+            else if (age < 4.5) position = 4; // Y4: exactly 4 years old
+            else position = 5; // Y5: 5+ years old
+
             return position;
           })()
         : 0,
-      workstation_status: asset.workstations?.asset_statuses?.status_name || 'Unknown'
+      workstation_status:
+        asset.workstations?.asset_statuses?.status_name || "Unknown",
     }));
-    
+
     timelineData.push(...assetTimelineData);
-    
+
     // Then, add workstations without assets as placeholder entries
     const workstationNamesWithAssets = new Set(
-      assetTimelineData.map(asset => asset.workstation_name).filter(name => name && name !== 'Not Assigned')
+      assetTimelineData
+        .map((asset) => asset.workstation_name)
+        .filter((name) => name && name !== "Not Assigned")
     );
-    
+
     // Create placeholder entries for workstations without assets
-    allWorkstations.forEach(workstation => {
+    allWorkstations.forEach((workstation: any) => {
       if (!workstationNamesWithAssets.has(workstation.workstation_name)) {
         timelineData.push({
           asset_id: 0, // Use 0 as placeholder ID for workstations without assets
           lab_id: workstation.lab_id,
-          asset_name: 'No Assets',
-          unit_name: '',
+          asset_name: "No Assets",
+          unit_name: "",
           workstation_name: workstation.workstation_name,
-          lab_name: (workstation as any).laboratories?.lab_name || 'Not Assigned',
+          lab_name:
+            (workstation as any).laboratories?.lab_name || "Not Assigned",
           purchase_date: new Date().toISOString(), // Current date as placeholder
           current_age_years: 0,
           timeline_position: 0,
-          workstation_status: workstation.asset_statuses?.status_name || 'Unknown'
+          workstation_status:
+            workstation.asset_statuses?.status_name || "Unknown",
         });
       }
     });
@@ -432,17 +494,27 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     // Calculate summary statistics
     const summary = {
       totalAssets: totalAssets,
-      functionalAssets: formattedStatusDistribution.find(s => s.status_name === 'Functional')?.count || 0,
-      needsAttention: (formattedStatusDistribution.find(s => s.status_name === 'For Replacement')?.count || 0) +
-                       (formattedStatusDistribution.find(s => s.status_name === 'For Repair')?.count || 0),
-      criticalAssets: formattedStatusDistribution.find(s => s.status_name === 'Lost')?.count || 0
+      functionalAssets:
+        formattedStatusDistribution.find(
+          (s: any) => s.status_name === "Functional"
+        )?.count || 0,
+      needsAttention:
+        (formattedStatusDistribution.find(
+          (s: any) => s.status_name === "For Replacement"
+        )?.count || 0) +
+        (formattedStatusDistribution.find(
+          (s: any) => s.status_name === "For Repair"
+        )?.count || 0),
+      criticalAssets:
+        formattedStatusDistribution.find((s: any) => s.status_name === "Lost")
+          ?.count || 0,
     };
 
     const analyticsData = {
       statusDistribution: formattedStatusDistribution,
       labStatusData: processedLabData,
       summary,
-      timelineData
+      timelineData,
     };
 
     res.json(analyticsData);

@@ -43,6 +43,23 @@ const AddWorkstationModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     }
   }, [show]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   // 2. VISUAL SYNC: Update the dropdown visually if possible
   useEffect(() => {
     if (show && user?.role === "Custodian" && user.lab_id) {

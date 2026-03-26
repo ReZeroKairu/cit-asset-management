@@ -11,7 +11,14 @@ import DailyReportViewModal from "./DailyReportViewModal";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
-import { Archive, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
+import {
+  Archive,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Download,
+  Edit,
+} from "lucide-react";
 import api from "../../api/axios";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
@@ -174,7 +181,11 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
       const reportDate = detailedReport.report_date
         ? new Date(detailedReport.report_date)
         : new Date();
-      const fileName = `Daily_Accomplishment_Report_Lab${detailedReport.lab_id}_${detailedReport.report_id}_${reportDate.toISOString().split("T")[0]}.docx`;
+      const fileName = `Daily_Accomplishment_Report_Lab${
+        detailedReport.lab_id
+      }_${detailedReport.report_id}_${
+        reportDate.toISOString().split("T")[0]
+      }.docx`;
 
       console.log("Using template:", templateFile);
       console.log("File name:", fileName);
@@ -186,7 +197,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     } catch (error) {
       console.error("Failed to generate report:", error);
       setError(
-        `Failed to generate report. Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to generate report. Error: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
     }
   };
@@ -245,7 +258,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     // Start date filter
     if (filters.start_date) {
       const reportDate = new Date(report.report_date);
-      const startDate = new Date(filters.start_date);
+      const startDate = new Date(filters.start_date + "T00:00:00");
       if (reportDate < startDate) {
         matchesFilter = false;
       }
@@ -254,7 +267,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     // End date filter
     if (filters.end_date) {
       const reportDate = new Date(report.report_date);
-      const endDate = new Date(filters.end_date);
+      const endDate = new Date(filters.end_date + "T23:59:59");
       if (reportDate > endDate) {
         matchesFilter = false;
       }
@@ -303,7 +316,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 p-6">
+    <div className="space-y-6">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -311,15 +324,15 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
               {viewMode === "my"
                 ? "My Daily Reports"
                 : adminMode
-                  ? "Archived Reports"
-                  : "All Daily Reports"}
+                ? "Archived Reports"
+                : "All Daily Reports"}
             </h1>
             <p className="mt-2 text-gray-600">
               {viewMode === "my"
                 ? "View and manage your daily reports"
                 : adminMode
-                  ? "View approved and archived daily reports"
-                  : "View all daily reports"}
+                ? "View approved and archived daily reports"
+                : "View all daily reports"}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -385,20 +398,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
         </div>
       </div>
 
-      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {viewMode === "my" ? "My Daily Reports" : "All Daily Reports"}
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {filters.start_date || filters.end_date
-                ? "Filtered results"
-                : "Showing all pending reports"}
-            </p>
-          </div>
-        </div>
-
+      <div className="bg-white shadow-lg rounded-lg">
         {filteredReports.length === 0 ? (
           <div className="text-center py-12">
             <svg
@@ -424,8 +424,8 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div>
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -443,15 +443,19 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                      archiveMode ? "w-20" : "w-48"
+                    }`}
+                  >
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredReports.map((report) => (
-                  <tr 
-                    key={report.report_id} 
+                  <tr
+                    key={report.report_id}
                     className="hover:bg-blue-50 cursor-pointer transition-colors"
                     onClick={() => handleView(report)}
                   >
@@ -485,7 +489,9 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(report.status || "Pending")}`}
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          report.status || "Pending"
+                        )}`}
                       >
                         {report.status || "Pending"}
                       </span>
@@ -494,35 +500,42 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                       {formatDateTime(report.created_at || report.report_date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        {viewMode === "my" && report.status === "Pending" && (
-                          <button
-                            onClick={() => handleEdit(report)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center px-2 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                            title="Edit Report"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
+                      <div
+                        className={`${
+                          archiveMode
+                            ? "flex justify-center"
+                            : "flex items-center gap-2"
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Edit button for custodians with Pending status */}
+                        {!archiveMode && (
+                          <div className="w-8 h-8 flex items-center justify-center">
+                            {viewMode === "my" &&
+                              report.status === "Pending" && (
+                                <Button
+                                  size="sm"
+                                  className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8"
+                                  onClick={() => handleEdit(report)}
+                                  title="Edit Report"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              )}
+                          </div>
                         )}
-                        <button
-                          onClick={() => handleGenerateReport(report)}
-                          className="p-2 h-8 w-8 cursor-pointer hover:bg-green-50 rounded-md text-green-600 hover:text-green-700 transition-colors"
-                          title="Generate Report"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+
+                        {/* Download button */}
+                        <div className="w-8 h-8 flex items-center justify-center">
+                          <Button
+                            size="sm"
+                            className="p-2 h-8 w-8 cursor-pointer hover:bg-green-100 rounded-md text-green-600 hover:text-green-700 transition-colors"
+                            onClick={() => handleGenerateReport(report)}
+                            title="Generate Report"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </td>
                   </tr>

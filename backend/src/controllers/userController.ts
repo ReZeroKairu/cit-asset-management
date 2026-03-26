@@ -44,7 +44,8 @@ export const getUserProfile = async (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       lab_id: user.lab_id,
-        laboratory: user.laboratories,
+      lab_name: user.laboratories?.lab_name || null,
+      laboratory: user.laboratories,
       created_at: user.created_at
     };
 
@@ -224,6 +225,7 @@ export const assignUserToLab = async (req: Request, res: Response) => {
       ...updatedUser,
       assigned_lab: updatedUser.laboratories,
       has_lab: !!updatedUser.laboratories,
+
     };
 
     res.json(transformedUser);
@@ -287,6 +289,7 @@ export const updateUser = async (req: Request, res: Response) => {
       ...updatedUser,
       assigned_lab: updatedUser.laboratories,
       has_lab: !!updatedUser.laboratories,
+
     };
 
     res.json(transformedUser);

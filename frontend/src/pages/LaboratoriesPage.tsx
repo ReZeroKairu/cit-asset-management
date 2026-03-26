@@ -100,7 +100,7 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Laboratories Management</h1>
@@ -203,7 +203,7 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
                               size="sm"
                               variant="ghost"
                               onClick={() => handleEdit(lab)}
-                              className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
+                              className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8 rounded-md"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -211,7 +211,7 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDelete(lab.lab_id)}
-                              className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer p-2 h-8 w-8 rounded-md"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>

@@ -5,10 +5,7 @@ import {
   createDailyReport,
   updateDailyReport,
 } from "../../api/dailyReports";
-import {
-  getAllProcedures,
-  saveReportProcedures,
-} from "../../api/procedures";
+import { getAllProcedures, saveReportProcedures } from "../../api/procedures";
 import { getLabWorkstationsForReport } from "../../api/workstationReports";
 import api from "../../api/axios";
 import type { DailyReport } from "../../api/dailyReports";
@@ -104,7 +101,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
 
       // ✅ FILTER: Only keep DAR category procedures
       const darProcedures = allProcedures.filter(
-        (proc: any) => proc.category === "DAR",
+        (proc: any) => proc.category === "DAR"
       );
 
       try {
@@ -115,7 +112,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
         // Merge filtered DAR procedures with their saved status
         const mergedProcedures = darProcedures.map((proc: Procedure) => {
           const savedProc = savedProcedures.find(
-            (sp: any) => sp.procedure_id === proc.procedure_id,
+            (sp: any) => sp.procedure_id === proc.procedure_id
           );
           const status = savedProc ? savedProc.overall_status : "Pending";
           return {
@@ -204,13 +201,13 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
               status: ws.status || "Working",
               remarks: ws.remarks || null,
             })),
-          },
+          }
         );
       }
 
       // Save procedures data
       const checkedProcedures = procedures.filter(
-        (proc) => proc.overall_status === "Completed",
+        (proc) => proc.overall_status === "Completed"
       );
 
       if (checkedProcedures.length > 0) {
@@ -246,180 +243,19 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
       </div>
 
       <div className="bg-white rounded-lg">
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Report Information */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Report Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Laboratory *
-              </label>
-              {assignedLab ? (
-                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-900">
-                        {assignedLab.lab_name}
-                      </span>
-                      {assignedLab.location && (
-                        <span className="text-gray-500 text-sm ml-2">
-                          ({assignedLab.location})
-                        </span>
-                      )}
-                      <span className="text-gray-400 text-xs ml-2">
-                        (Your Assigned Lab)
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={loadAssignedLab}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                      title="Refresh assignment"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="px-3 py-2 bg-red-50 border border-red-300 rounded-md">
-                  <div className="flex items-center justify-between">
-                    <div className="text-red-700">
-                      <span className="font-medium">
-                        No laboratory assigned
-                      </span>
-                      <span className="text-sm ml-2">
-                        Please contact an administrator to be assigned to a
-                        laboratory before creating reports.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={loadAssignedLab}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                      title="Check again"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Report Date *
-              </label>
-              <input
-                type="date"
-                value={formData.report_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, report_date: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
           </div>
-          </CardContent>
-        </Card>
+        )}
 
-        {/* Procedures Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Report Information */}
+          <Card>
+            <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Procedures
-              </CardTitle>
-              {procedures.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allCompleted = procedures.every(
-                      (proc) => proc.overall_status === "Completed",
-                    );
-                    const updatedProcedures = procedures.map((proc) => ({
-                      ...proc,
-                      overall_status: allCompleted ? "Pending" : "Completed",
-                    }));
-                    setProcedures(updatedProcedures);
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  {procedures.every((proc) => proc.overall_status === "Completed")
-                    ? "Deselect All"
-                    : "Select All"}
-                </button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-          <div className="space-y-4">
-            {/* Custom Procedure Dropdown */}
-            <div className="relative" id="procedure-dropdown">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
-                  setProcedureSearch(""); // Clear search when opening
-                }}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-left flex items-center justify-between hover:border-green-300 transition-colors"
-              >
-                <span className={`text-sm ${procedures.filter(
-                  (proc) => proc.overall_status === "Completed",
-                ).length > 0
-                  ? "text-gray-900"
-                  : "text-gray-500"}`}>
-                  {procedures.filter(
-                    (proc) => proc.overall_status === "Completed",
-                  ).length > 0
-                    ? `${procedures.filter((proc) => proc.overall_status === "Completed").length} procedures selected`
-                    : "Select procedures..."}
-                </span>
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isProcedureDropdownOpen ? 'rotate-180' : ''}`}
+                  className="w-5 h-5 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -428,172 +264,550 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-              </button>
-
-              {isProcedureDropdownOpen && (
-                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
-                  {/* Search Input */}
-                  <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
-                    <div className="relative">
-                      <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        value={procedureSearch}
-                        onChange={(e) => setProcedureSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder="Search procedures..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
-                      />
+                Report Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Laboratory *
+                  </label>
+                  {assignedLab ? (
+                    <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium text-gray-900">
+                            {assignedLab.lab_name}
+                          </span>
+                          {assignedLab.location && (
+                            <span className="text-gray-500 text-sm ml-2">
+                              ({assignedLab.location})
+                            </span>
+                          )}
+                          <span className="text-gray-400 text-xs ml-2">
+                            (Your Assigned Lab)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={loadAssignedLab}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          title="Refresh assignment"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Scrollable List */}
-                  <div className="max-h-48 overflow-y-auto">
+                  ) : (
+                    <div className="px-3 py-2 bg-red-50 border border-red-300 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div className="text-red-700">
+                          <span className="font-medium">
+                            No laboratory assigned
+                          </span>
+                          <span className="text-sm ml-2">
+                            Please contact an administrator to be assigned to a
+                            laboratory before creating reports.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={loadAssignedLab}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                          title="Check again"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Report Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.report_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, report_date: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Procedures Section */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Procedures
+                </CardTitle>
+                {procedures.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allCompleted = procedures.every(
+                        (proc) => proc.overall_status === "Completed"
+                      );
+                      const updatedProcedures = procedures.map((proc) => ({
+                        ...proc,
+                        overall_status: allCompleted ? "Pending" : "Completed",
+                      }));
+                      setProcedures(updatedProcedures);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {procedures.every(
+                      (proc) => proc.overall_status === "Completed"
+                    )
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Custom Procedure Dropdown */}
+                <div className="relative" id="procedure-dropdown">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
+                      setProcedureSearch(""); // Clear search when opening
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
+                  >
+                    <span
+                      className={`text-sm ${
+                        procedures.filter(
+                          (proc) => proc.overall_status === "Completed"
+                        ).length > 0
+                          ? "text-black"
+                          : "text-black"
+                      }`}
+                    >
+                      {procedures.filter(
+                        (proc) => proc.overall_status === "Completed"
+                      ).length > 0
+                        ? `${
+                            procedures.filter(
+                              (proc) => proc.overall_status === "Completed"
+                            ).length
+                          } procedures selected`
+                        : "Select procedures..."}
+                    </span>
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                        isProcedureDropdownOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {isProcedureDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
+                      {/* Search Input */}
+                      <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+                        <div className="relative">
+                          <svg
+                            className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                          </svg>
+                          <input
+                            type="text"
+                            value={procedureSearch}
+                            onChange={(e) => setProcedureSearch(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="Search procedures..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Scrollable List */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {procedures
+                          .filter((proc) => proc.overall_status !== "Completed")
+                          .filter((proc) =>
+                            proc.procedure_name
+                              .toLowerCase()
+                              .includes(procedureSearch.toLowerCase())
+                          )
+                          .map((procedure) => (
+                            <button
+                              key={procedure.procedure_id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updatedProcedures = procedures.map(
+                                  (proc) =>
+                                    proc.procedure_id === procedure.procedure_id
+                                      ? { ...proc, overall_status: "Completed" }
+                                      : proc
+                                );
+                                setProcedures(updatedProcedures);
+                                setProcedureSearch(""); // Clear search after selection
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
+                            >
+                              <span className="text-sm text-black">
+                                {procedure.procedure_name}
+                              </span>
+                            </button>
+                          ))}
+                        {procedures
+                          .filter((proc) => proc.overall_status !== "Completed")
+                          .filter((proc) =>
+                            proc.procedure_name
+                              .toLowerCase()
+                              .includes(procedureSearch.toLowerCase())
+                          ).length === 0 && (
+                          <div className="px-4 py-3 text-gray-500 text-sm text-center">
+                            {procedureSearch
+                              ? "No procedures found"
+                              : "All procedures selected"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Procedures */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Selected Procedures:
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
                     {procedures
-                      .filter((proc) => proc.overall_status !== "Completed")
-                      .filter((proc) => 
-                        proc.procedure_name.toLowerCase().includes(procedureSearch.toLowerCase())
-                      )
+                      .filter((proc) => proc.overall_status === "Completed")
                       .map((procedure) => (
-                        <button
+                        <div
                           key={procedure.procedure_id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const updatedProcedures = procedures.map((proc) =>
-                              proc.procedure_id === procedure.procedure_id
-                                ? { ...proc, overall_status: "Completed" }
-                                : proc,
-                            );
-                            setProcedures(updatedProcedures);
-                            setProcedureSearch(""); // Clear search after selection
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
+                          className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full"
                         >
-                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                          <span className="text-sm text-gray-700">{procedure.procedure_name}</span>
-                        </button>
+                          <span className="text-sm font-medium text-green-800">
+                            {procedure.procedure_name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedProcedures = procedures.map((proc) =>
+                                proc.procedure_id === procedure.procedure_id
+                                  ? { ...proc, overall_status: "Pending" }
+                                  : proc
+                              );
+                              setProcedures(updatedProcedures);
+                            }}
+                            className="text-green-600 hover:text-green-800 font-bold text-lg leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
                       ))}
-                    {procedures
-                      .filter((proc) => proc.overall_status !== "Completed")
-                      .filter((proc) => 
-                        proc.procedure_name.toLowerCase().includes(procedureSearch.toLowerCase())
-                      ).length === 0 && (
-                      <div className="px-4 py-3 text-gray-500 text-sm text-center">
-                        {procedureSearch ? "No procedures found" : "All procedures selected"}
-                      </div>
+                    {procedures.filter(
+                      (proc) => proc.overall_status === "Completed"
+                    ).length === 0 && (
+                      <p className="text-sm text-gray-500 italic">
+                        No procedures selected
+                      </p>
                     )}
                   </div>
                 </div>
+              </div>
+              {procedures.length === 0 && (
+                <p className="text-gray-500 text-sm">
+                  No procedures available for this laboratory
+                </p>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Selected Procedures */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700">
-                Selected Procedures:
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {procedures
-                  .filter((proc) => proc.overall_status === "Completed")
-                  .map((procedure) => (
-                    <div
-                      key={procedure.procedure_id}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 border border-green-300 rounded-full"
-                    >
-                      <span className="text-sm font-medium text-green-800">
-                        {procedure.procedure_name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedProcedures = procedures.map((proc) =>
-                            proc.procedure_id === procedure.procedure_id
-                              ? { ...proc, overall_status: "Pending" }
-                              : proc,
-                          );
-                          setProcedures(updatedProcedures);
-                        }}
-                        className="text-green-600 hover:text-green-800 font-bold text-lg leading-none"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                {procedures.filter(
-                  (proc) => proc.overall_status === "Completed",
-                ).length === 0 && (
-                  <p className="text-sm text-gray-500 italic">
-                    No procedures selected
-                  </p>
+          {/* Workstations Section */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <svg
+                    className="w-5 h-5 text-purple-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Workstations
+                </CardTitle>
+                {workstations.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allChecked = workstations.every((ws) => ws.checked);
+                      const updatedWorkstations = workstations.map((ws) => ({
+                        ...ws,
+                        checked: !allChecked,
+                      }));
+                      setWorkstations(updatedWorkstations);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {workstations.every((ws) => ws.checked)
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
                 )}
               </div>
-            </div>
-          </div>
-          {procedures.length === 0 && (
-            <p className="text-gray-500 text-sm">
-              No procedures available for this laboratory
-            </p>
-          )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Custom Workstation Dropdown */}
+                <div className="relative" id="workstation-dropdown">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(!isDropdownOpen);
+                      setWorkstationSearch(""); // Clear search when opening
+                    }}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
+                  >
+                    <span
+                      className={`text-sm ${
+                        workstations.filter((ws) => ws.checked).length > 0
+                          ? "text-black"
+                          : "text-black"
+                      }`}
+                    >
+                      {workstations.filter((ws) => ws.checked).length > 0
+                        ? `${
+                            workstations.filter((ws) => ws.checked).length
+                          } workstations selected`
+                        : "Select workstations..."}
+                    </span>
+                    <svg
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                        isDropdownOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
 
-        {/* Workstations Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Workstations
-              </CardTitle>
-              {workstations.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const allChecked = workstations.every((ws) => ws.checked);
-                    const updatedWorkstations = workstations.map((ws) => ({
-                      ...ws,
-                      checked: !allChecked,
-                    }));
-                    setWorkstations(updatedWorkstations);
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  {workstations.every((ws) => ws.checked)
-                    ? "Deselect All"
-                    : "Select All"}
-                </button>
+                  {isDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
+                      {/* Search Input */}
+                      <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+                        <div className="relative">
+                          <svg
+                            className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                          </svg>
+                          <input
+                            type="text"
+                            value={workstationSearch}
+                            onChange={(e) =>
+                              setWorkstationSearch(e.target.value)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="Search workstations..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Scrollable List */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {workstations
+                          .filter((ws) => !ws.checked)
+                          .filter((ws) =>
+                            ws.workstation_name
+                              .toLowerCase()
+                              .includes(workstationSearch.toLowerCase())
+                          )
+                          .map((workstation) => (
+                            <button
+                              key={workstation.workstation_id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updatedWorkstations = workstations.map(
+                                  (ws) =>
+                                    ws.workstation_id ===
+                                    workstation.workstation_id
+                                      ? { ...ws, checked: true }
+                                      : ws
+                                );
+                                setWorkstations(updatedWorkstations);
+                                setWorkstationSearch(""); // Clear search after selection
+                              }}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
+                            >
+                              <span className="text-sm text-black">
+                                {workstation.workstation_name}
+                              </span>
+                            </button>
+                          ))}
+                        {workstations
+                          .filter((ws) => !ws.checked)
+                          .filter((ws) =>
+                            ws.workstation_name
+                              .toLowerCase()
+                              .includes(workstationSearch.toLowerCase())
+                          ).length === 0 && (
+                          <div className="px-4 py-3 text-gray-500 text-sm text-center">
+                            {workstationSearch
+                              ? "No workstations found"
+                              : "All workstations selected"}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Workstations */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Selected Workstations:
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {workstations
+                      .filter((ws) => ws.checked)
+                      .map((workstation) => (
+                        <div
+                          key={workstation.workstation_id}
+                          className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 rounded-full"
+                        >
+                          <span className="text-sm font-medium text-blue-800">
+                            {workstation.workstation_name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedWorkstations = workstations.map(
+                                (ws) =>
+                                  ws.workstation_id ===
+                                  workstation.workstation_id
+                                    ? { ...ws, checked: false }
+                                    : ws
+                              );
+                              setWorkstations(updatedWorkstations);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    {workstations.filter((ws) => ws.checked).length === 0 && (
+                      <p className="text-sm text-gray-500 italic">
+                        No workstations selected
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {workstations.length === 0 && (
+                <p className="text-gray-500 text-sm">
+                  No workstations available for this laboratory
+                </p>
               )}
-            </div>
-          </CardHeader>
-          <CardContent>
-          <div className="space-y-4">
-            {/* Custom Workstation Dropdown */}
-            <div className="relative" id="workstation-dropdown">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDropdownOpen(!isDropdownOpen);
-                  setWorkstationSearch(""); // Clear search when opening
-                }}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-left flex items-center justify-between hover:border-purple-300 transition-colors"
-              >
-                <span className={`text-sm ${workstations.filter((ws) => ws.checked).length > 0
-                  ? "text-gray-900"
-                  : "text-gray-500"}`}>
-                  {workstations.filter((ws) => ws.checked).length > 0
-                    ? `${workstations.filter((ws) => ws.checked).length} workstations selected`
-                    : "Select workstations..."}
-                </span>
+            </CardContent>
+          </Card>
+
+          {/* Remarks Section */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                  className="w-5 h-5 text-orange-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -602,164 +816,53 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-              </button>
-
-              {isDropdownOpen && (
-                <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
-                  {/* Search Input */}
-                  <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
-                    <div className="relative">
-                      <svg className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        value={workstationSearch}
-                        onChange={(e) => setWorkstationSearch(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        placeholder="Search workstations..."
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Scrollable List */}
-                  <div className="max-h-48 overflow-y-auto">
-                    {workstations
-                      .filter((ws) => !ws.checked)
-                      .filter((ws) => 
-                        ws.workstation_name.toLowerCase().includes(workstationSearch.toLowerCase())
-                      )
-                      .map((workstation) => (
-                        <button
-                          key={workstation.workstation_id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const updatedWorkstations = workstations.map((ws) =>
-                              ws.workstation_id === workstation.workstation_id
-                                ? { ...ws, checked: true }
-                                : ws,
-                            );
-                            setWorkstations(updatedWorkstations);
-                            setWorkstationSearch(""); // Clear search after selection
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150 flex items-center gap-3"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                          <span className="text-sm text-gray-700">{workstation.workstation_name}</span>
-                        </button>
-                      ))}
-                    {workstations
-                      .filter((ws) => !ws.checked)
-                      .filter((ws) => 
-                        ws.workstation_name.toLowerCase().includes(workstationSearch.toLowerCase())
-                      ).length === 0 && (
-                      <div className="px-4 py-3 text-gray-500 text-sm text-center">
-                        {workstationSearch ? "No workstations found" : "All workstations selected"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Selected Workstations */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700">
-                Selected Workstations:
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {workstations
-                  .filter((ws) => ws.checked)
-                  .map((workstation) => (
-                    <div
-                      key={workstation.workstation_id}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 border border-blue-300 rounded-full"
-                    >
-                      <span className="text-sm font-medium text-blue-800">
-                        {workstation.workstation_name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedWorkstations = workstations.map((ws) =>
-                            ws.workstation_id === workstation.workstation_id
-                              ? { ...ws, checked: false }
-                              : ws,
-                          );
-                          setWorkstations(updatedWorkstations);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                {workstations.filter((ws) => ws.checked).length === 0 && (
-                  <p className="text-sm text-gray-500 italic">
-                    No workstations selected
-                  </p>
-                )}
+                Remarks
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <textarea
+                  value={formData.general_remarks}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      general_remarks: e.target.value,
+                    })
+                  }
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your remarks..."
+                  required
+                />
               </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-4 pt-6 border-t">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !assignedLab}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 cursor-pointer"
+            >
+              {loading
+                ? "Saving..."
+                : report
+                ? "Update Report"
+                : "Create Report"}
+            </button>
           </div>
-          {workstations.length === 0 && (
-            <p className="text-gray-500 text-sm">
-              No workstations available for this laboratory
-            </p>
-          )}
-          </CardContent>
-        </Card>
-
-        {/* Remarks Section */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Remarks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-          <div>
-            <textarea
-              value={formData.general_remarks}
-              onChange={(e) =>
-                setFormData({ ...formData, general_remarks: e.target.value })
-              }
-              rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your remarks..."
-              required
-            />
-          </div>
-          </CardContent>
-        </Card>
-
-
-        {/* Form Actions */}
-        <div className="flex justify-end space-x-4 pt-6 border-t">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading || !assignedLab}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "Saving..." : report ? "Update Report" : "Create Report"}
-          </button>
-        </div>
-      </form>
+        </form>
       </div>
     </div>
   );

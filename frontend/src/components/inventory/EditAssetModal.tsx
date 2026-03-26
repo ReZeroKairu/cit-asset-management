@@ -72,6 +72,23 @@ const EditAssetModal: React.FC<Props> = ({
     }
   }, [show, asset]);
 
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
+
   const loadDropdowns = async () => {
     try {
       const [labsRes, unitsRes, wsRes] = await Promise.all([

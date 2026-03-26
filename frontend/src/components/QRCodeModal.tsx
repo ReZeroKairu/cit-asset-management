@@ -20,11 +20,9 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
 
   // Detect the appropriate base URL
   const getBaseUrl = () => {
-    if (baseUrl) return baseUrl;
-    
-    // If we're on localhost, use the local IP for LAN access
+    // If we're on localhost, use local IP for LAN access
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://192.168.111.21:5173'; // Use local IP for LAN access
+      return 'http://172.72.100.117:5173'; // Use local IP for LAN access
     }
     
     return window.location.origin;
@@ -39,6 +37,23 @@ const QRCodeModal = ({ show, onClose, baseUrl }: QRCodeModalProps) => {
       setQrCodeUrl('');
     }
   }, [show]);
+
+  // Add ESC key support
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && show) {
+        onClose();
+      }
+    };
+
+    if (show) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [show, onClose]);
 
   const generateQRCode = async () => {
     const fullUrl = `${editableBaseUrl}/${customPath}`;

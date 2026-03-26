@@ -9,8 +9,10 @@ import {
   getLabSchedules,
   upsertSchedules,
   deleteLabSchedules,
+  getWorkstationPMCReportsBatch,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
+import { auditMiddleware } from "../middleware/audit";
 
 const router = Router();
 
@@ -27,9 +29,13 @@ router.get("/pmc", getLabPMCReports);
 // GET /api/maintenance/pmc/detail?workstation_id=5&quarter=1st
 router.get("/pmc/detail", getPMCReportDetail);
 
+// 2.5. Get multiple PMC reports for workstations (Batch)
+// GET /api/maintenance/pmc/batch?workstation_ids=1,2,3&quarter=1st
+router.get("/pmc/batch", getWorkstationPMCReportsBatch);
+
 // 3. Create a new PMC Report
 // POST /api/maintenance/pmc
-router.post("/pmc", createPMCReport);
+router.post("/pmc", auditMiddleware("CREATE", "PMC report"), createPMCReport);
 
 // 4. Get service history for a workstation
 // GET /api/maintenance/pmc/history?workstation_id=5&quarter=1st

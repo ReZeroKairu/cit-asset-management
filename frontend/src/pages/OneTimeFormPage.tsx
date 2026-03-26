@@ -18,17 +18,16 @@ const OneTimeFormPage = () => {
   // Smart API URL detection
   const getApiBaseUrl = () => {
     const hostname = window.location.hostname;
-    console.log('Current hostname:', hostname);
+    console.log('OneTimeForm hostname:', hostname);
     
-    // Always use network IP for API calls when accessing from network
-    const getApiBaseUrl = () => {
-      const hostname = window.location.hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:3001';
-      }
-      // Use dynamic hostname for network access
-      return `http://${hostname}:3001`;
-    };
+    // For localhost access, use localhost API
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    // For network access, use same IP as frontend
+    if (hostname === '172.72.100.117') {
+      return 'http://172.72.100.117:3001';
+    }
     // Fallback to current origin with port 3001
     return `${window.location.protocol}//${hostname}:3001`;
   };

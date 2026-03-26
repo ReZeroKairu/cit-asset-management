@@ -49,6 +49,7 @@ model complaints {
   created_at           DateTime          @default(now()) @db.Timestamp(0)
   updated_at           DateTime          @db.Timestamp(0)
   accepted_at          DateTime?         @db.Timestamp(0)
+  ip_address           String?           @db.VarChar(45)
   inventory_assets     inventory_assets? @relation(fields: [asset_id], references: [asset_id])
   users                users?            @relation(fields: [custodian_user_id], references: [user_id])
   laboratories         laboratories      @relation(fields: [lab_id], references: [lab_id])
@@ -131,6 +132,7 @@ model equipment_borrows {
   status               equipment_borrows_status @default(Pending)
   created_at           DateTime                 @default(now()) @db.Timestamp(0)
   user_type            String?                  @db.VarChar(20)
+  ip_address           String?                  @db.VarChar(45)
   users                users?                   @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -250,7 +252,6 @@ model pmc_reports {
   workstations              workstations            @relation(fields: [workstation_id], references: [workstation_id])
   service_logs              service_logs[]
 
-  @@unique([workstation_id, quarter])
   @@index([lab_id])
   @@index([user_id])
   @@index([workstation_id])
@@ -312,6 +313,7 @@ model lab_requests {
   status               lab_requests_status @default(Pending)
   created_at           DateTime            @default(now()) @db.Timestamp(0)
   user_type            String?             @db.VarChar(20)
+  ip_address           String?             @db.VarChar(45)
   users                users?              @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -382,6 +384,7 @@ model software_installations {
   feedback_date        DateTime?                     @db.Date
   status               software_installations_status @default(Pending)
   created_at           DateTime                      @default(now()) @db.Timestamp(0)
+  ip_address           String?                       @db.VarChar(45)
   users                users?                        @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -405,6 +408,7 @@ model users {
   role                   users_role?              @default(Custodian)
   created_at             DateTime?                @default(now()) @db.Timestamp(0)
   lab_id                 Int?
+  audit_logs             audit_logs[]
   complaints             complaints[]
   daily_reports          daily_reports[]
   equipment_borrows      equipment_borrows[]
@@ -415,8 +419,23 @@ model users {
   service_logs           service_logs[]
   software_installations software_installations[]
   laboratories           laboratories?            @relation(fields: [lab_id], references: [lab_id])
+  approved_disposals     asset_disposals[]        @relation("DisposalApprover")
+  processed_disposals    asset_disposals[]        @relation("DisposalProcessor")
 
   @@index([lab_id], map: "users_lab_id_fkey")
+}
+
+model audit_logs {
+  id          Int      @id @default(autoincrement())
+  user_id     Int?
+  action      String   @db.VarChar(50)
+  description String?  @db.Text
+  created_at  DateTime @default(now())
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?  @db.Text
+  users       users?   @relation(fields: [user_id], references: [user_id])
+
+  @@index([user_id])
 }
 
 model workstations {
@@ -436,6 +455,26 @@ model workstations {
   @@unique([workstation_name, lab_id])
   @@index([lab_id])
   @@index([status_id])
+}
+
+model cit_lab_logs {
+  log_id               Int      @id @default(autoincrement())
+  date                 DateTime @db.Date
+  usage_type           String   @db.VarChar(20)
+  faculty_student_name String   @db.VarChar(100)
+  year_level           String?  @db.VarChar(20)
+  laboratory           String   @db.VarChar(20)
+  printing_pages       String?  @db.VarChar(50)
+  ws_number            String?  @db.VarChar(50)
+  purpose              String   @db.Text
+  monitored_by         String?  @db.VarChar(100)
+  user_type            String?  @db.VarChar(20)
+  ip_address           String?  @db.VarChar(45)
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+
+  @@index([created_at])
+  @@index([laboratory])
+  @@index([date])
 }
 
 enum users_role {
@@ -461,6 +500,35 @@ enum software_installations_status {
   Custodian_Approved
   Denied
   Completed
+}
+
+model asset_disposals {
+  disposal_id        Int      @id @default(autoincrement())
+  asset_id          Int      @unique
+  workstation_id    Int?
+  workstation_name  String?   @db.Text
+  lab_id            Int?
+  lab_name          String?   @db.Text
+  disposal_date      DateTime  @db.Date
+  disposal_reason    String?   @db.Text
+  disposal_method    String?   @db.VarChar(50)
+  disposal_value     Float?
+  approved_by        Int?
+  disposed_by        Int?
+  disposal_document  String?   @db.Text
+  disposal_remarks  String?   @db.Text
+  property_tag_no    String?   @db.VarChar(50)
+  asset_description  String?   @db.Text
+  serial_number      String?   @db.VarChar(50)
+  date_of_purchase   DateTime? @db.Date
+  quantity          Int?      @default(1)
+  created_at        DateTime  @default(now()) @db.Timestamp(0)
+  
+  // Relations
+  approved_by_user    users?    @relation("DisposalApprover", fields: [approved_by], references: [user_id])
+  disposed_by_user    users?    @relation("DisposalProcessor", fields: [disposed_by], references: [user_id])
+  
+  @@map("asset_disposals")
 }
 
 enum equipment_borrows_status {

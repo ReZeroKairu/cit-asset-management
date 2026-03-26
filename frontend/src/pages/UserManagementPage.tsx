@@ -45,7 +45,7 @@ interface UserManagementPageProps {
 
 const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData, setCreateUserData }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'assignments' | 'create'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'create'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,17 +64,12 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
       setLoading(true);
       setError(null);
       
-      if (activeTab === 'users') {
-        const res = await api.get("/users/assignments");
-        setUsers(res.data);
-      } else if (activeTab === 'assignments') {
-        const [usersData, labsData] = await Promise.all([
-          getAllUsersWithAssignments(),
-          getLaboratories()
-        ]);
-        setUsers(usersData);
-        setLaboratories(labsData);
-      }
+      const [usersData, labsData] = await Promise.all([
+        getAllUsersWithAssignments(),
+        getLaboratories()
+      ]);
+      setUsers(usersData);
+      setLaboratories(labsData);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError("Failed to fetch data");
@@ -195,7 +190,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
@@ -214,16 +209,6 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
             }`}
           >
             Users
-          </button>
-          <button
-            onClick={() => setActiveTab('assignments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'assignments'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Assign Custodian
           </button>
           <button
             onClick={() => setActiveTab('create')}
@@ -269,17 +254,15 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created Date
                     </th>
-                    {user?.role === 'Admin' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    )}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={user?.role === 'Admin' ? 6 : 5} className="px-6 py-4 text-center">
+                      <td colSpan={5} className="px-6 py-4 text-center">
                         <div className="flex justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
                         </div>
@@ -287,7 +270,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={user?.role === 'Admin' ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                         No users found.
                       </td>
                     </tr>
@@ -319,147 +302,10 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {userItem.assigned_lab ? (
-                            <div>
-                              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                {userItem.assigned_lab.lab_name}
-                              </span>
-                              {userItem.assigned_lab.location && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {userItem.assigned_lab.location}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                              Unassigned
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(userItem.created_at).toLocaleDateString()}
-                        </td>
-                        {user?.role === 'Admin' && (
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditUser(userItem)}
-                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteUser(userItem)}
-                                className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'assignments' && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {/* Card Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">User Laboratory Assignments</h3>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Current Assignment
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center">
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      No users found.
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => {
-                    const assignment = getAssignmentStatus(user);
-                    return (
-                      <tr key={user.user_id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.full_name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            user.role === 'Admin' 
-                              ? 'bg-red-100 text-red-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {assignment.status === 'assigned' ? (
-                            <div>
-                              <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                {assignment.labName}
-                              </span>
-                              {assignment.location && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {assignment.location}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
-                              Not Assigned
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
                           <select
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            value={user.lab_id || ''}
-                            onChange={(e) => handleAssignmentChange(user.user_id, e.target.value ? parseInt(e.target.value) : null)}
+                            value={userItem.lab_id || ''}
+                            onChange={(e) => handleAssignmentChange(userItem.user_id, e.target.value ? parseInt(e.target.value) : null)}
                           >
                             <option value="">Select Laboratory</option>
                             <option value="">-- Remove Assignment --</option>
@@ -470,15 +316,39 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                             ))}
                           </select>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(userItem.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditUser(userItem)}
+                              className="text-blue-600 hover:bg-gray-200 hover:text-blue-700 cursor-pointer p-2 h-8 w-8 rounded-md"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteUser(userItem)}
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer p-2 h-8 w-8 rounded-md"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
 
       {activeTab === 'create' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

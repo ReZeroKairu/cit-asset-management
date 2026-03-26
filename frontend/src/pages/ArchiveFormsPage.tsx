@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, Clock, CheckCircle, XCircle, Download } from "lucide-react";
+import { FileText, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -9,6 +9,12 @@ import {
   getSoftwareInstallations,
 } from "../api/forms";
 import { generateFormDocument } from "../utils/formTemplateMapping";
+import { getFormStatusColor } from "../utils/statusUtils";
+import {
+  formatUserType,
+  formatUsageType,
+  formatLaboratory,
+} from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
 
 const ArchiveFormsPage = () => {
@@ -31,35 +37,23 @@ const ArchiveFormsPage = () => {
   const fetchArchivedForms = async () => {
     try {
       setLoading(true);
-      const [labRequestsRes, equipmentBorrowsRes, softwareInstallationsRes] = await Promise.all([
-        getLabRequests(),
-        getEquipmentBorrows(),
-        getSoftwareInstallations(),
-      ]);
+      const [labRequestsRes, equipmentBorrowsRes, softwareInstallationsRes] =
+        await Promise.all([
+          getLabRequests(),
+          getEquipmentBorrows(),
+          getSoftwareInstallations(),
+        ]);
 
       // Extract data from API responses
-      const labRequests = Array.isArray(labRequestsRes) ? labRequestsRes : labRequestsRes?.data || [];
-      const equipmentBorrows = Array.isArray(equipmentBorrowsRes) ? equipmentBorrowsRes : equipmentBorrowsRes?.data || [];
-      const softwareInstallations = Array.isArray(softwareInstallationsRes) ? softwareInstallationsRes : softwareInstallationsRes?.data || [];
-
-      // Combine all forms
-      const allForms: any[] = [
-        ...labRequests.map((req: any) => ({
-          ...req,
-          form_type: "lab-request",
-          form_id: req.request_id,
-        })),
-        ...equipmentBorrows.map((req: any) => ({
-          ...req,
-          form_type: "equipment-borrow",
-          form_id: req.borrow_id,
-        })),
-        ...softwareInstallations.map((req: any) => ({
-          ...req,
-          form_type: "software-install",
-          form_id: req.software_id,
-        })),
-      ];
+      const labRequests = Array.isArray(labRequestsRes)
+        ? labRequestsRes
+        : labRequestsRes?.data || [];
+      const equipmentBorrows = Array.isArray(equipmentBorrowsRes)
+        ? equipmentBorrowsRes
+        : equipmentBorrowsRes?.data || [];
+      const softwareInstallations = Array.isArray(softwareInstallationsRes)
+        ? softwareInstallationsRes
+        : softwareInstallationsRes?.data || [];
 
       // Transform to FormSubmission structure (same as FormsManagementPage)
       const transformedForms: any[] = [
@@ -91,7 +85,7 @@ const ArchiveFormsPage = () => {
           id: install.software_id || `soft-${Math.random()}`,
           type: "software-install" as const,
           date: install.date,
-          name: install.faculty_student_name,
+          name: install.faculty_name || install.faculty_student_name,
           status: install.status,
           laboratory: install.laboratory,
           purpose: install.purpose,
@@ -101,47 +95,67 @@ const ArchiveFormsPage = () => {
         })),
       ];
 
-      // Filter for archived/completed forms only
-      const archivedForms = transformedForms.filter(form => 
-        form.status === "Approved" || 
-        form.status === "Rejected" || 
-        form.status === "Completed" ||
-        form.status === "Denied" ||
-        form.status === "Returned" ||
-        form.status === "Lost"
-      );
+      // Filter for archived/completed forms only - role-based filtering
+      let archivedForms = transformedForms.filter((form) => {
+        if (user?.role === "Admin") {
+          // Admin sees Admin_Approved and Completed statuses
+          return (
+            form.status === "Admin_Approved" || form.status === "Completed"
+          );
+        } else if (user?.role === "Custodian") {
+          // Custodian sees only Completed, Lost, Denied, and Returned statuses
+          return (
+            form.status === "Completed" ||
+            form.status === "Lost" ||
+            form.status === "Denied" ||
+            form.status === "Returned"
+          );
+        } else {
+          // Default fallback - show only truly archived statuses
+          return (
+            form.status === "Completed" ||
+            form.status === "Lost" ||
+            form.status === "Denied" ||
+            form.status === "Returned"
+          );
+        }
+      });
 
       // Apply role-based filtering for custodians
       let filteredArchivedForms = archivedForms;
       if (user?.role === "Custodian") {
-        filteredArchivedForms = archivedForms.filter(form => {
+        filteredArchivedForms = archivedForms.filter((form) => {
           // Show forms created by this custodian or forms from their assigned lab
-          return form.userId === user.id || 
-                 (form.laboratory && user.lab_id && 
-                  form.laboratory.toLowerCase().includes(`lab${user.lab_id}`));
+          return (
+            form.userId === user.id ||
+            (form.laboratory &&
+              user.lab_id &&
+              form.laboratory.toLowerCase().includes(`lab${user.lab_id}`))
+          );
         });
       }
 
       // Filter by tab
       let filteredForms = filteredArchivedForms;
       if (activeTab !== "all") {
-        filteredForms = filteredArchivedForms.filter(form => form.type === activeTab);
+        filteredForms = filteredArchivedForms.filter(
+          (form) => form.type === activeTab
+        );
       }
 
       // Apply date filtering
       if (dateFilter.start_date) {
-        filteredForms = filteredForms.filter(form => {
+        filteredForms = filteredForms.filter((form) => {
           const formDate = new Date(form.createdAt);
-          const startDate = new Date(dateFilter.start_date);
+          const startDate = new Date(dateFilter.start_date + "T00:00:00");
           return formDate >= startDate;
         });
       }
 
       if (dateFilter.end_date) {
-        filteredForms = filteredForms.filter(form => {
+        filteredForms = filteredForms.filter((form) => {
           const formDate = new Date(form.createdAt);
-          const endDate = new Date(dateFilter.end_date);
-          endDate.setHours(23, 59, 59, 999); // Include entire end date
+          const endDate = new Date(dateFilter.end_date + "T23:59:59");
           return formDate <= endDate;
         });
       }
@@ -155,45 +169,8 @@ const ArchiveFormsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Custodian_Approved":
-        return "bg-blue-100 text-blue-800";
-      case "Approved":
-        return "bg-green-100 text-green-800";
-      case "Rejected":
-      case "Denied":
-        return "bg-red-100 text-red-800";
-      case "Completed":
-        return "bg-green-100 text-green-800";
-      case "Returned":
-        return "bg-blue-100 text-blue-800";
-      case "Lost":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return <Clock className="w-4 h-4" />;
-      case "Approved":
-      case "Completed":
-        return null; // Remove icon for Completed status
-      case "Rejected":
-      case "Denied":
-        return <XCircle className="w-4 h-4" />;
-      case "Returned":
-        return null;
-      case "Lost":
-        return null;
-      default:
-        return null;
-    }
+  const getStatusIcon = () => {
+    return null;
   };
 
   const handleViewForm = (form: any) => {
@@ -225,7 +202,9 @@ const ArchiveFormsPage = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Archived Forms</h1>
-        <p className="text-gray-600 mt-1">Completed and processed form submissions</p>
+        <p className="text-gray-600 mt-1">
+          Completed and processed form submissions
+        </p>
       </div>
 
       {/* Alerts */}
@@ -292,11 +271,16 @@ const ArchiveFormsPage = () => {
             <input
               type="date"
               value={dateFilter.start_date}
-              onChange={(e) => setDateFilter(prev => ({ ...prev, start_date: e.target.value }))}
+              onChange={(e) =>
+                setDateFilter((prev) => ({
+                  ...prev,
+                  start_date: e.target.value,
+                }))
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               End Date
@@ -304,11 +288,13 @@ const ArchiveFormsPage = () => {
             <input
               type="date"
               value={dateFilter.end_date}
-              onChange={(e) => setDateFilter(prev => ({ ...prev, end_date: e.target.value }))}
+              onChange={(e) =>
+                setDateFilter((prev) => ({ ...prev, end_date: e.target.value }))
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
-          
+
           <div className="flex items-end">
             <button
               onClick={() => setDateFilter({ start_date: "", end_date: "" })}
@@ -326,10 +312,10 @@ const ArchiveFormsPage = () => {
           <Card>
             <CardContent className="p-8 text-center">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No archived forms found</h3>
-              <p className="text-gray-500">
-                No forms have been archived yet
-              </p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No archived forms found
+              </h3>
+              <p className="text-gray-500">No forms have been archived yet</p>
             </CardContent>
           </Card>
         ) : (
@@ -337,10 +323,10 @@ const ArchiveFormsPage = () => {
             <table className="w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                     Form Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
                     User Details
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
@@ -349,55 +335,110 @@ const ArchiveFormsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                     Submitted
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {forms.map((form) => (
-                  <tr 
-                    key={`${form.type}-${form.id}`} 
-                    className="hover:bg-blue-50 cursor-pointer transition-colors" 
+                  <tr
+                    key={`${form.type}-${form.id}`}
+                    className="hover:bg-blue-50 cursor-pointer transition-colors"
                     onClick={() => handleViewForm(form)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {form.type === "lab-request" && `Lab Request`}
                         {form.type === "equipment-borrow" && `Equipment Borrow`}
-                        {form.type === "software-install" && `Software Installation`}
+                        {form.type === "software-install" &&
+                          `Software Installation`}
                       </div>
                       {form.details?.purpose && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                        <div className="text-sm text-gray-500 mt-1 truncate max-w-sm">
                           {form.details.purpose}
                         </div>
                       )}
+                      {form.type === "software-install" &&
+                        form.details?.software_list && (
+                          <div className="text-sm text-gray-500 mt-1 truncate max-w-sm">
+                            {form.details.software_list}
+                          </div>
+                        )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {form.name}
+                        {form.name ||
+                          (form.type === "equipment-borrow" &&
+                            form.details?.faculty_student_name) ||
+                          (form.type === "software-install" &&
+                            form.details?.faculty_name) ||
+                          form.details?.faculty_student_name ||
+                          "Unknown"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {form.type === 'lab-request' && (
+                        {form.type === "lab-request" && (
                           <>
                             {form.details?.user_type && (
-                              <span className="capitalize">{form.details.user_type.replace('-', ' ')}</span>
+                              <span className="capitalize">
+                                {formatUserType(form.details.user_type)}
+                              </span>
                             )}
                             {form.details?.usage_type && (
-                              <span> • {form.details.usage_type.replace('-', ' ')}</span>
+                              <span>
+                                {" "}
+                                • {formatUsageType(form.details.usage_type)}
+                              </span>
+                            )}
+                            {form.laboratory && (
+                              <span>
+                                {" "}
+                                • {formatLaboratory(form.laboratory)}
+                              </span>
                             )}
                           </>
                         )}
-                        {form.type !== 'lab-request' && form.laboratory && (
-                          <span>{form.laboratory}</span>
+                        {form.type === "software-install" && (
+                          <>
+                            {form.details?.user_type && (
+                              <span className="capitalize">
+                                {formatUserType(form.details.user_type)}
+                              </span>
+                            )}
+                            {form.laboratory && (
+                              <span>
+                                {" "}
+                                • {formatLaboratory(form.laboratory)}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        {form.type === "equipment-borrow" && (
+                          <>
+                            {form.details?.user_type && (
+                              <span className="capitalize">
+                                {formatUserType(form.details.user_type)}
+                              </span>
+                            )}
+                            {form.laboratory && (
+                              <span>
+                                {" "}
+                                • {formatLaboratory(form.laboratory)}
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(form.status)}`}>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getFormStatusColor(
+                          form.status
+                        )}`}
+                      >
                         <span className="flex items-center gap-1">
-                          {getStatusIcon(form.status)}
-                          {form.status.replace('_', ' ')}
+                          {getStatusIcon()}
+                          {form.status.replace("_", " ")}
                         </span>
                       </span>
                     </td>
@@ -405,10 +446,13 @@ const ArchiveFormsPage = () => {
                       {new Date(form.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => handleDownloadForm(form)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors cursor-pointer"
+                          className="p-2 text-green-600 hover:bg-green-100 rounded-md transition-colors cursor-pointer"
                           title="Download Form"
                         >
                           <Download className="w-4 h-4" />
