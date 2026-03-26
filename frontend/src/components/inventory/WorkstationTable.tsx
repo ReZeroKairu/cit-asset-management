@@ -7,7 +7,7 @@ interface Props {
   workstations: any[];
   onView: (workstation: any) => void;
   onEdit: (workstation: any) => void;
-  onDelete: (id: number) => void;
+  onDispose: (workstationId: number) => void; // Dispose functionality replaces delete
   getStatusColor: (status?: string) => string;
   pmcReports?: Record<number, any>;
 }
@@ -16,7 +16,7 @@ const WorkstationTable: React.FC<Props> = ({
   workstations,
   onView,
   onEdit,
-  onDelete,
+  onDispose,
   getStatusColor,
   pmcReports = {},
 }) => {
@@ -33,6 +33,8 @@ const WorkstationTable: React.FC<Props> = ({
         return "bg-red-100 text-red-800";
       case "For Upgrade":
         return "bg-blue-100 text-blue-800";
+      case "Disposed":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -186,16 +188,7 @@ const WorkstationTable: React.FC<Props> = ({
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button
-                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-100 rounded transition-colors cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Stops row click from triggering
-                      onDelete(workstation.workstation_id);
-                    }}
-                    title="Delete Workstation"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  
                 </td>
               </tr>
             ))

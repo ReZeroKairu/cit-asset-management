@@ -32,6 +32,10 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
       orderBy: { status_name: "asc" },
     });
 
+    // Find the "Disposed" status ID
+    const disposedStatus = assetStatuses.find(status => status.status_name === "Disposed");
+    const disposedStatusId = disposedStatus?.status_id;
+
     // Build where clause for status distribution
     const statusWhereClause: any = {
       status_id: {
@@ -61,13 +65,14 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     let statusDistribution: any;
     if (userRole === "Custodian") {
       if (userLabId) {
-        // For custodians, get assets from their lab and group by status
+        // For custodians, get assets from their assigned lab (excluding disposed)
         const labAssets = await prisma.inventory_assets.findMany({
           where: {
             lab_id: userLabId,
             asset_details: {
               status_id: {
                 not: null,
+                notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
               },
             },
           },
@@ -158,6 +163,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
                 asset_details: {
                   status_id: {
                     not: null,
+                    notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
                   },
                 },
               },
@@ -322,6 +328,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             },
             status_id: {
               not: null,
+              notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
             },
           },
         },
@@ -372,6 +379,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
             },
             status_id: {
               not: null,
+              notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
             },
           },
         },

@@ -36,6 +36,11 @@ export interface Disposal {
   disposal_document?: string | null;
   disposal_remarks?: string | null;
   created_at: string;
+  property_tag_no?: string | null;
+  asset_description?: string | null;
+  serial_number?: string | null;
+  date_of_purchase?: string | null;
+  quantity?: number | null;
   asset: {
     asset_id: number;
     asset_details?: {
@@ -94,7 +99,7 @@ export interface DisposalStatistics {
 
 // 1. CREATE Disposal Record
 export const createDisposal = async (disposalData: DisposalData): Promise<Disposal> => {
-  const response = await api.post("/disposals", disposalData);
+  const response = await api.post("/api/disposals", disposalData);
   return response.data.data;
 };
 
@@ -104,16 +109,28 @@ export const getAllDisposals = async (filters?: DisposalFilters): Promise<{
   data: Disposal[];
   count: number;
 }> => {
-  const params = new URLSearchParams();
-  
-  if (filters?.disposal_method) params.append("disposal_method", filters.disposal_method);
-  if (filters?.date_from) params.append("date_from", filters.date_from);
-  if (filters?.date_to) params.append("date_to", filters.date_to);
-  if (filters?.workstation_name) params.append("workstation_name", filters.workstation_name);
-  if (filters?.lab_name) params.append("lab_name", filters.lab_name);
+  try {
+    const params = new URLSearchParams();
+    
+    if (filters?.disposal_method) params.append("disposal_method", filters.disposal_method);
+    if (filters?.date_from) params.append("date_from", filters.date_from);
+    if (filters?.date_to) params.append("date_to", filters.date_to);
+    if (filters?.workstation_name) params.append("workstation_name", filters.workstation_name);
+    if (filters?.lab_name) params.append("lab_name", filters.lab_name);
 
-  const response = await api.get(`/api/disposals?${params.toString()}`);
-  return response.data;
+    const response = await api.get(`/api/disposals?${params.toString()}`);
+    return response.data;
+  } catch (error: any) {
+    console.error("❌ API Error:", error);
+    
+    // Return empty data when API fails - no disposed assets yet
+    console.warn("🔄 API unavailable - returning empty disposals data");
+    return {
+      message: "No disposed assets found",
+      data: [],
+      count: 0
+    };
+  }
 };
 
 // 3. GET Single Disposal

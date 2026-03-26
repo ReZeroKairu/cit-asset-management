@@ -82,37 +82,99 @@ export class DisposalService {
   // GET All Disposals (with filtering)
   static async getAllDisposals(filters?: DisposalFilters) {
     try {
-      let whereClause = "";
+      console.log("🔍 getAllDisposals called with filters:", filters);
+      
+      // Build base query with proper relations
+      let query = `
+        SELECT 
+          ad.disposal_id, ad.asset_id, ad.workstation_id, ad.workstation_name, ad.lab_id, ad.lab_name,
+          ad.disposal_date, ad.disposal_reason, ad.disposal_method, ad.disposal_value,
+          ad.approved_by, ad.disposed_by, ad.disposal_document, ad.disposal_remarks,
+          ad.property_tag_no, ad.asset_description, ad.serial_number, ad.date_of_purchase, ad.quantity, ad.created_at,
+          approver.full_name as approver_full_name,
+          disposer.full_name as disposer_full_name
+        FROM asset_disposals ad
+        LEFT JOIN users approver ON ad.approved_by = approver.user_id
+        LEFT JOIN users disposer ON ad.disposed_by = disposer.user_id
+      `;
+      
+      const whereConditions: string[] = [];
       
       if (filters?.disposal_method) {
-        whereClause += ` AND disposal_method = '${filters.disposal_method}'`;
+        whereConditions.push(`ad.disposal_method = '${filters.disposal_method}'`);
       }
 
       if (filters?.date_from) {
-        whereClause += ` AND disposal_date >= '${filters.date_from}'`;
+        whereConditions.push(`ad.disposal_date >= '${filters.date_from}'`);
       }
 
       if (filters?.date_to) {
-        whereClause += ` AND disposal_date <= '${filters.date_to}'`;
+        whereConditions.push(`ad.disposal_date <= '${filters.date_to}'`);
       }
 
       if (filters?.workstation_name) {
-        whereClause += ` AND workstation_name LIKE '%${filters.workstation_name}%'`;
+        whereConditions.push(`ad.workstation_name LIKE '%${filters.workstation_name}%'`);
       }
 
       if (filters?.lab_name) {
-        whereClause += ` AND lab_name LIKE '%${filters.lab_name}%'`;
+        whereConditions.push(`ad.lab_name LIKE '%${filters.lab_name}%'`);
       }
 
-      const disposals = await prisma.$queryRaw`
-        SELECT * FROM asset_disposals 
-        WHERE 1=1 ${whereClause}
-        ORDER BY disposal_date DESC
-      `;
-
-      return disposals;
+      if (whereConditions.length > 0) {
+        query += ` WHERE ${whereConditions.join(' AND ')}`;
+      }
+      
+      query += ` ORDER BY ad.disposal_date DESC`;
+      
+      console.log("🔍 Final SQL query:", query);
+      
+      const disposals = await prisma.$queryRaw`${query}`;
+      console.log("🔍 Query result:", disposals);
+      
+      // Transform the results to match frontend interface
+      const transformedDisposals = (disposals as any[]).map(disposal => ({
+        disposal_id: disposal.disposal_id,
+        asset_id: disposal.asset_id,
+        workstation_id: disposal.workstation_id,
+        workstation_name: disposal.workstation_name || '',
+        lab_id: disposal.lab_id,
+        lab_name: disposal.lab_name || '',
+        disposal_date: disposal.disposal_date?.toISOString?.() || disposal.disposal_date,
+        disposal_reason: disposal.disposal_reason || '',
+        disposal_method: disposal.disposal_method || '',
+        disposal_value: disposal.disposal_value,
+        approved_by: disposal.approved_by,
+        disposed_by: disposal.disposed_by,
+        disposal_document: disposal.disposal_document,
+        disposal_remarks: disposal.disposal_remarks,
+        created_at: disposal.created_at?.toISOString?.() || disposal.created_at,
+        property_tag_no: disposal.property_tag_no,
+        asset_description: disposal.asset_description,
+        serial_number: disposal.serial_number,
+        date_of_purchase: disposal.date_of_purchase?.toISOString?.() || disposal.date_of_purchase,
+        quantity: disposal.quantity,
+        asset: {
+          asset_id: disposal.asset_id,
+          asset_details: {
+            property_tag_no: disposal.property_tag_no,
+            description: disposal.asset_description,
+            serial_number: disposal.serial_number,
+            date_of_purchase: disposal.date_of_purchase?.toISOString?.() || disposal.date_of_purchase,
+          }
+        },
+        approver: disposal.approved_by ? {
+          user_id: disposal.approved_by,
+          full_name: disposal.approver_full_name
+        } : null,
+        disposer: disposal.disposed_by ? {
+          user_id: disposal.disposed_by,
+          full_name: disposal.disposer_full_name
+        } : null
+      }));
+      
+      return transformedDisposals;
     } catch (error) {
-      console.error("Error fetching disposals:", error);
+      console.error("❌ Error fetching disposals:", error);
       throw error;
     }
   }
@@ -120,13 +182,66 @@ export class DisposalService {
   // GET Single Disposal
   static async getDisposalById(disposalId: number) {
     try {
-      const disposal = await prisma.$queryRaw`
-        SELECT * FROM asset_disposals 
-        WHERE disposal_id = ${disposalId}
+      const query = `
+        SELECT 
+          ad.disposal_id, ad.asset_id, ad.workstation_id, ad.workstation_name, ad.lab_id, ad.lab_name,
+          ad.disposal_date, ad.disposal_reason, ad.disposal_method, ad.disposal_value,
+          ad.approved_by, ad.disposed_by, ad.disposal_document, ad.disposal_remarks,
+          ad.property_tag_no, ad.asset_description, ad.serial_number, ad.date_of_purchase, ad.quantity, ad.created_at,
+          approver.full_name as approver_full_name,
+          disposer.full_name as disposer_full_name
+        FROM asset_disposals ad
+        LEFT JOIN users approver ON ad.approved_by = approver.user_id
+        LEFT JOIN users disposer ON ad.disposed_by = disposer.user_id
+        WHERE ad.disposal_id = ${disposalId}
         LIMIT 1
       `;
-
-      return (disposal as any[])[0] || null;
+      
+      const disposals = await prisma.$queryRaw`${query}`;
+      const disposal = (disposals as any[])[0];
+      
+      if (!disposal) return null;
+      
+      // Transform to match frontend interface
+      return {
+        disposal_id: disposal.disposal_id,
+        asset_id: disposal.asset_id,
+        workstation_id: disposal.workstation_id,
+        workstation_name: disposal.workstation_name || '',
+        lab_id: disposal.lab_id,
+        lab_name: disposal.lab_name || '',
+        disposal_date: disposal.disposal_date?.toISOString?.() || disposal.disposal_date,
+        disposal_reason: disposal.disposal_reason || '',
+        disposal_method: disposal.disposal_method || '',
+        disposal_value: disposal.disposal_value,
+        approved_by: disposal.approved_by,
+        disposed_by: disposal.disposed_by,
+        disposal_document: disposal.disposal_document,
+        disposal_remarks: disposal.disposal_remarks,
+        created_at: disposal.created_at?.toISOString?.() || disposal.created_at,
+        property_tag_no: disposal.property_tag_no,
+        asset_description: disposal.asset_description,
+        serial_number: disposal.serial_number,
+        date_of_purchase: disposal.date_of_purchase?.toISOString?.() || disposal.date_of_purchase,
+        quantity: disposal.quantity,
+        asset: {
+          asset_id: disposal.asset_id,
+          asset_details: {
+            property_tag_no: disposal.property_tag_no,
+            description: disposal.asset_description,
+            serial_number: disposal.serial_number,
+            date_of_purchase: disposal.date_of_purchase?.toISOString?.() || disposal.date_of_purchase,
+          }
+        },
+        approver: disposal.approved_by ? {
+          user_id: disposal.approved_by,
+          full_name: disposal.approver_full_name
+        } : null,
+        disposer: disposal.disposed_by ? {
+          user_id: disposal.disposed_by,
+          full_name: disposal.disposer_full_name
+        } : null
+      };
     } catch (error) {
       console.error("Error fetching disposal:", error);
       throw error;
@@ -136,42 +251,41 @@ export class DisposalService {
   // UPDATE Disposal
   static async updateDisposal(disposalId: number, updateData: Partial<DisposalData>) {
     try {
-      let setClause = "";
+      const setConditions: string[] = [];
       
       if (updateData.disposal_date) {
-        setClause += `disposal_date = '${new Date(updateData.disposal_date)}', `;
+        setConditions.push(`disposal_date = '${new Date(updateData.disposal_date)}'`);
       }
       
       if (updateData.disposal_reason) {
-        setClause += `disposal_reason = '${updateData.disposal_reason}', `;
+        setConditions.push(`disposal_reason = '${updateData.disposal_reason}'`);
       }
       
       if (updateData.disposal_method) {
-        setClause += `disposal_method = '${updateData.disposal_method}', `;
+        setConditions.push(`disposal_method = '${updateData.disposal_method}'`);
       }
       
       if (updateData.disposal_value !== undefined) {
-        setClause += `disposal_value = ${updateData.disposal_value ? Number(updateData.disposal_value) : null}, `;
+        setConditions.push(`disposal_value = ${updateData.disposal_value ? Number(updateData.disposal_value) : null}`);
       }
       
       if (updateData.approved_by) {
-        setClause += `approved_by = ${updateData.approved_by}, `;
+        setConditions.push(`approved_by = ${updateData.approved_by}`);
       }
       
       if (updateData.disposed_by) {
-        setClause += `disposed_by = ${updateData.disposed_by}, `;
+        setConditions.push(`disposed_by = ${updateData.disposed_by}`);
       }
       
       if (updateData.disposal_document !== undefined) {
-        setClause += `disposal_document = ${updateData.disposal_document ? `'${updateData.disposal_document}'` : null}, `;
+        setConditions.push(`disposal_document = ${updateData.disposal_document ? `'${updateData.disposal_document}'` : null}`);
       }
       
       if (updateData.disposal_remarks !== undefined) {
-        setClause += `disposal_remarks = ${updateData.disposal_remarks ? `'${updateData.disposal_remarks}'` : null}, `;
+        setConditions.push(`disposal_remarks = ${updateData.disposal_remarks ? `'${updateData.disposal_remarks}'` : null}`);
       }
 
-      // Remove trailing comma
-      setClause = setClause.replace(/,\s*$/, '');
+      const setClause = setConditions.length > 0 ? setConditions.join(', ') : '';
 
       const disposal = await prisma.$queryRaw`
         UPDATE asset_disposals 
@@ -284,11 +398,21 @@ export class DisposalService {
         `
       ]);
 
+      // Handle BigInt serialization
+      const totalCount = (totalDisposals as any[])[0]?.count || 0;
+      const totalVal = (totalValue as any[])[0]?.total || 0;
+      
       return {
-        totalDisposals: (totalDisposals as any[])[0]?.count || 0,
-        disposalsByMethod: disposalsByMethod as any[],
-        disposalsByMonth: disposalsByMonth as any[],
-        totalValue: (totalValue as any[])[0]?.total || 0
+        totalDisposals: typeof totalCount === 'bigint' ? Number(totalCount) : totalCount,
+        disposalsByMethod: (disposalsByMethod as any[]).map(item => ({
+          ...item,
+          _count: typeof item._count === 'bigint' ? Number(item._count) : item._count
+        })),
+        disposalsByMonth: (disposalsByMonth as any[]).map(item => ({
+          ...item,
+          count: typeof item.count === 'bigint' ? Number(item.count) : item.count
+        })),
+        totalValue: typeof totalVal === 'bigint' ? Number(totalVal) : totalVal
       };
     } catch (error) {
       console.error("Error fetching disposal statistics:", error);

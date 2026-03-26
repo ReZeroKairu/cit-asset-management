@@ -22,6 +22,9 @@ export interface Asset {
   laboratories?: {
     lab_name: string;
   };
+  workstations?: {
+    workstation_name: string;
+  };
   units?: {
     unit_name: string;
   };
@@ -34,11 +37,13 @@ export interface Asset {
 export const getInventory = async (params?: {
   workstation_id?: number;
   lab_id?: number;
+  status_id?: number;
 }) => {
   const queryParams = new URLSearchParams();
   if (params?.workstation_id)
     queryParams.append("workstation_id", params.workstation_id.toString());
   if (params?.lab_id) queryParams.append("lab_id", params.lab_id.toString());
+  if (params?.status_id) queryParams.append("status_id", params.status_id.toString());
 
   const response = await api.get(`/inventory?${queryParams}`);
   return response.data;

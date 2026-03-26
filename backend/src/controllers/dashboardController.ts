@@ -10,6 +10,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const userRole = req.user?.role;
 
+    // Get asset statuses to find disposed status ID
+    const assetStatuses = await prisma.asset_statuses.findMany({
+      orderBy: { status_name: "asc" },
+    });
+    const disposedStatus = assetStatuses.find(status => status.status_name === "Disposed");
+    const disposedStatusId = disposedStatus?.status_id;
+
     // Get basic counts
     const [
       totalAssets,
@@ -23,7 +30,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       servicedWorkstations,
       unservicedWorkstations
     ] = await Promise.all([
-      // Total assets count - filtered by user role
+      // Total assets count - filtered by user role (excluding disposed)
       userRole === "Custodian" && userId
         ? prisma.users.findUnique({
             where: { user_id: userId },
@@ -31,12 +38,29 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           }).then(user => {
             if (user?.lab_id) {
               return prisma.inventory_assets.count({
-                where: { lab_id: user.lab_id }
+                where: { 
+                  lab_id: user.lab_id,
+                  asset_details: {
+                    status_id: {
+                      not: null,
+                      notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
+                    },
+                  },
+                }
               });
             }
             return 0;
           })
-        : prisma.inventory_assets.count(),
+        : prisma.inventory_assets.count({
+            where: {
+              asset_details: {
+                status_id: {
+                  not: null,
+                  notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
+                },
+              },
+            }
+          }),
       
       // Total laboratories count - only for admins
       userRole === "Admin" ? prisma.laboratories.count() : 0,
@@ -386,7 +410,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       });
     }
 
-    // Get assets by laboratory - filtered by user role
+    // Get assets by laboratory - filtered by user role (excluding disposed)
     let assetsByLab: { lab_id: number | null; _count: { asset_id: number } }[] | null = null;
     if (userRole === "Custodian" && userId) {
       // For custodians, only get assets from their assigned lab
@@ -402,14 +426,20 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             asset_id: true
           },
           where: {
-            lab_id: user.lab_id
+            lab_id: user.lab_id,
+            asset_details: {
+              status_id: {
+                not: null,
+                notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
+              },
+            },
           }
         });
       } else {
         assetsByLab = [];
       }
     } else {
-      // For admins, get all assets by lab
+      // For admins, get all assets by lab (excluding disposed)
       assetsByLab = await prisma.inventory_assets.groupBy({
         by: ['lab_id'],
         _count: {
@@ -418,7 +448,13 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         where: {
           lab_id: {
             not: null
-          }
+          },
+          asset_details: {
+            status_id: {
+              not: null,
+              notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
+            },
+          },
         }
       });
     }

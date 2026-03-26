@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import { DisposalService } from "../services/disposalService";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 interface DisposalFilters {
   disposal_method?: string;
@@ -23,6 +26,28 @@ export const createDisposal = async (req: Request, res: Response) => {
 // 2. GET All Disposals (with filtering)
 export const getAllDisposals = async (req: Request, res: Response) => {
   try {
+    console.log("🔍 getAllDisposals controller called");
+    
+    // First test: Check if we can connect to database at all
+    try {
+      const testQuery = `SELECT 1 as test`;
+      await prisma.$queryRaw`${testQuery}`;
+      console.log("✅ Database connection test passed");
+    } catch (dbError) {
+      console.error("❌ Database connection failed:", dbError);
+      return res.status(500).json({ error: "Database connection failed" });
+    }
+
+    // Second test: Check if asset_disposals table exists
+    try {
+      const tableCheck = `SHOW TABLES LIKE 'asset_disposals'`;
+      const tableResult = await prisma.$queryRaw`${tableCheck}`;
+      console.log("✅ Table check result:", tableResult);
+    } catch (tableError) {
+      console.error("❌ Table check failed:", tableError);
+      return res.status(500).json({ error: "Asset disposals table not found" });
+    }
+
     const filters: DisposalFilters = {
       disposal_method: req.query.disposal_method as string,
       date_from: req.query.date_from as string,
@@ -31,9 +56,17 @@ export const getAllDisposals = async (req: Request, res: Response) => {
       lab_name: req.query.lab_name as string,
     };
     
+    console.log("🔍 Calling DisposalService.getAllDisposals with filters:", filters);
     const disposals = await DisposalService.getAllDisposals(filters);
-    res.json(disposals);
+    console.log("✅ Disposals retrieved successfully:", disposals);
+    
+    res.json({
+      message: "Disposals retrieved successfully",
+      data: disposals,
+      count: Array.isArray(disposals) ? disposals.length : 0
+    });
   } catch (error: any) {
+    console.error("❌ Controller error:", error);
     res.status(500).json({ error: error.message });
   }
 };

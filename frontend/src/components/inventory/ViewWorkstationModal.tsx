@@ -1,7 +1,9 @@
 // frontend/src/components/inventory/ViewWorkstationModal.tsx
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Trash2, Edit, CheckSquare, Square } from "lucide-react";
 import api from "../../api/axios";
+import { updateAsset, getAssetStatuses } from "../../api/inventory";
 import EditAssetModal from "./EditAssetModal";
 import AddAssetModal from "./AddAssetModal";
 
@@ -41,6 +43,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedAssets, setSelectedAssets] = useState<number[]>([]);
 
   useEffect(() => {
     if (show && workstation) {
@@ -86,22 +89,42 @@ const ViewWorkstationModal: React.FC<Props> = ({
   };
 
   const handleDeleteAsset = async (assetId: number) => {
-    if (!confirm("Are you sure you want to remove this asset?")) {
+    if (!confirm("Are you sure you want to mark this asset as disposed? This will change its status to 'Disposed'.")) {
       return;
     }
 
     try {
-      await api.delete(`/inventory/${assetId}`);
+      // Get asset statuses to find the "Disposed" status ID
+      const statuses = await getAssetStatuses();
+      const disposedStatus = statuses.find((status: any) => status.status_name === "Disposed");
       
-      // Remove the deleted asset from local state instead of calling onSuccess
+      if (!disposedStatus) {
+        alert("Disposed status not found in system");
+        return;
+      }
+
+      // Update asset status to "Disposed"
+      await updateAsset(assetId, {
+        status_id: disposedStatus.status_id
+      });
+      
+      // Remove the asset from local state (since it's now disposed)
       setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
       
-      // Don't call onSuccess() here as it closes the modal
-      // The parent data will be refreshed when user closes the modal
+      alert("Asset status changed to Disposed");
       
     } catch (err: any) {
-      console.error("Failed to delete asset:", err);
-      alert(err.response?.data?.error || "Failed to delete asset");
+      console.error("Failed to update asset status:", err);
+      
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again and try.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
+      
+      alert(err.response?.data?.error || "Failed to update asset status");
     }
   };
 
@@ -113,6 +136,70 @@ const ViewWorkstationModal: React.FC<Props> = ({
     
     // Don't call onSuccess() here as it closes the ViewWorkstationModal
     // The parent data will be refreshed when user closes the modal
+  };
+
+  const handleAssetSelection = (assetId: number) => {
+    setSelectedAssets(prev => 
+      prev.includes(assetId) 
+        ? prev.filter(id => id !== assetId)
+        : [...prev, assetId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedAssets.length === assets.length) {
+      setSelectedAssets([]);
+    } else {
+      setSelectedAssets(assets.map(asset => asset.asset_id));
+    }
+  };
+
+  const handleBulkDispose = async () => {
+    if (selectedAssets.length === 0) {
+      alert("Please select at least one asset to dispose");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to mark ${selectedAssets.length} asset(s) as disposed?`)) {
+      return;
+    }
+
+    try {
+      // Get asset statuses to find "Disposed" status ID
+      const statuses = await getAssetStatuses();
+      const disposedStatus = statuses.find((status: any) => status.status_name === "Disposed");
+      
+      if (!disposedStatus) {
+        alert("Disposed status not found in system");
+        return;
+      }
+
+      // Update all selected assets to "Disposed" status
+      await Promise.all(
+        selectedAssets.map(assetId => 
+          updateAsset(assetId, { status_id: disposedStatus.status_id })
+        )
+      );
+      
+      // Remove disposed assets from local state
+      setAssets(prev => prev.filter(asset => !selectedAssets.includes(asset.asset_id)));
+      setSelectedAssets([]);
+      
+      alert(`${selectedAssets.length} asset(s) successfully marked as disposed`);
+      
+    } catch (err: any) {
+      console.error("Failed to update asset status:", err);
+      
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again and try.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
+      
+      alert(err.response?.data?.error || "Failed to update asset status");
+    }
   };
 
   if (!show || !workstation) return null;
@@ -202,32 +289,43 @@ const ViewWorkstationModal: React.FC<Props> = ({
                 <h4 className="text-lg font-semibold text-gray-900">
                   Assigned Assets
                 </h4>
-                <button
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm cursor-pointer"
-                  onClick={() => setShowAddModal(true)}
-                >
-                  <svg
-                    className="w-4 h-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div className="flex space-x-2">
+                  {selectedAssets.length > 0 && (
+                    <button
+                      className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center shadow-sm cursor-pointer"
+                      onClick={handleBulkDispose}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Dispose Selected ({selectedAssets.length})
+                    </button>
+                  )}
+                  <button
+                    className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm cursor-pointer"
+                    onClick={() => setShowAddModal(true)}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Add Asset
-                </button>
+                    <svg
+                      className="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Add Asset
+                  </button>
+                </div>
               </div>
 
               {loading ? (
                 <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-              ) : assets.length === 0 ? (
+              ) : assets.filter(asset => asset.asset_details?.asset_statuses?.status_name !== "Disposed").length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                   <p className="text-gray-500">
                     No assets assigned to this workstation.
@@ -238,6 +336,19 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <button
+                            onClick={handleSelectAll}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            title={selectedAssets.length === assets.length ? "Deselect All" : "Select All"}
+                          >
+                            {selectedAssets.length === assets.length ? (
+                              <CheckSquare className="w-4 h-4" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                           Property Tag
                         </th>
@@ -262,11 +373,30 @@ const ViewWorkstationModal: React.FC<Props> = ({
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {assets.map((asset) => (
+                      {assets
+                        .filter(
+                          (asset) =>
+                            asset.asset_details?.asset_statuses?.status_name !==
+                            "Disposed"
+                        )
+                        .map((asset) => (
                         <tr
                           key={asset.asset_id}
                           className="hover:bg-gray-50 transition-colors"
                         >
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <button
+                              onClick={() => handleAssetSelection(asset.asset_id)}
+                              className="text-gray-400 hover:text-gray-600 transition-colors"
+                              title={selectedAssets.includes(asset.asset_id) ? "Deselect" : "Select"}
+                            >
+                              {selectedAssets.includes(asset.asset_id) ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                            </button>
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                             {asset.asset_details?.property_tag_no || asset.units?.unit_name || "-"}
                           </td>
@@ -304,39 +434,15 @@ const ViewWorkstationModal: React.FC<Props> = ({
   className="text-blue-600 hover:text-blue-800 p-2 transition-colors cursor-pointer"
   title="Edit Asset Details"
 >
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-    />
-  </svg>
+  <Edit className="w-4 h-4" />
 </button>
 
 <button
   onClick={() => handleDeleteAsset(asset.asset_id)}
-  className="text-red-500 hover:text-red-600 p-2 transition-colors cursor-pointer"
-  title="Remove Asset"
+  className="text-red-400 hover:text-red-600 p-2 transition-colors cursor-pointer"
+  title="Dispose Asset"
 >
-  <svg
-    className="w-4 h-4"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-    />
-  </svg>
+  <Trash2 className="w-4 h-4" />
 </button>
                             </div>
                           </td>

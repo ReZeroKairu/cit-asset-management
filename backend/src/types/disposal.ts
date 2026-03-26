@@ -25,7 +25,7 @@ export interface DisposalWithDetails {
   workstation_name: string;
   lab_id?: number | null;
   lab_name?: string | null;
-  disposal_date: Date;
+  disposal_date: string;
   disposal_reason: string;
   disposal_method: string;
   disposal_value?: number | null;
@@ -33,14 +33,19 @@ export interface DisposalWithDetails {
   disposed_by?: number | null;
   disposal_document?: string | null;
   disposal_remarks?: string | null;
-  created_at: Date;
+  created_at: string;
+  property_tag_no?: string | null;
+  asset_description?: string | null;
+  serial_number?: string | null;
+  date_of_purchase?: string | null;
+  quantity?: number | null;
   asset: {
     asset_id: number;
     asset_details?: {
       property_tag_no?: string | null;
       description?: string | null;
       serial_number?: string | null;
-      date_of_purchase?: Date | null;
+      date_of_purchase?: string | null;
     } | null;
   } | null;
   approver?: {

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { config } from '../config';
 
 const prisma = new PrismaClient();
 
@@ -43,7 +44,7 @@ export const auditMiddleware = (action: string, entityType: string) => {
             const token = req.headers.authorization?.replace('Bearer ', '');
             if (token) {
               try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+                const decoded = jwt.verify(token, config.jwtSecret) as any;
                 userId = decoded.userId;
               } catch (jwtError) {
                 console.log('❌ JWT decode failed:', jwtError);

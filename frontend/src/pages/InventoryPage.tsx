@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/axios";
 import { getLaboratories } from "../api/laboratories";
-import { getInventory, deleteAsset } from "../api/inventory";
+import { getInventory, deleteAsset, getWorkstationAssets, updateAsset } from "../api/inventory";
 import { getAllWorkstations } from "../api/workstations";
 import { getWorkstationPMCReports } from "../api/maintenance";
 import { getCurrentQuarter } from "../utils/quarterLogic";
@@ -224,20 +223,42 @@ const InventoryPage = () => {
     setShowEditWSModal(true);
   };
 
-  const handleDeleteWorkstation = async (workstationId: number) => {
+  const handleDisposeWorkstationAssets = async (workstationId: number) => {
     if (
       !confirm(
-        "Are you sure you want to delete this workstation? This will also remove all asset assignments."
+        "Are you sure you want to dispose all assets in this workstation? This will change their status to 'Disposed' and cannot be undone."
       )
     )
       return;
+    
     try {
-      await api.delete(`/workstations/${workstationId}`);
+      // Get all assets for this workstation
+      const assets = await getWorkstationAssets(workstationId);
+      
+      if (assets.length === 0) {
+        alert("No assets found in this workstation to dispose.");
+        return;
+      }
+      
+      // Update each asset's status to 'Disposed' (status_id = 6)
+      const updatePromises = assets.map(async (asset: any) => {
+        await updateAsset(asset.asset_id, {
+          asset_details: {
+            status_id: 6 // 'Disposed' status
+          }
+        });
+      });
+      
+      await Promise.all(updatePromises);
+      
+      // Refresh data to show updated status
       await fetchWorkstations();
       await fetchInventory();
+      
+      console.log(`Successfully disposed ${assets.length} assets from workstation ${workstationId}`);
     } catch (err: any) {
-      console.error("Failed to delete workstation:", err);
-      alert(err.response?.data?.error || "Failed to delete workstation");
+      console.error("Failed to dispose workstation assets:", err);
+      alert(err.response?.data?.error || "Failed to dispose workstation assets");
     }
   };
 
@@ -358,6 +379,8 @@ const InventoryPage = () => {
         return "bg-red-100 text-red-800";
       case "For Upgrade":
         return "bg-blue-100 text-blue-800";
+      case "Disposed":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -605,7 +628,7 @@ const InventoryPage = () => {
               workstations={paginatedWorkstations}
               onView={handleViewWorkstation}
               onEdit={handleEditWorkstation}
-              onDelete={handleDeleteWorkstation}
+              onDispose={handleDisposeWorkstationAssets}
               getStatusColor={getStatusColor}
               pmcReports={pmcReports}
             />

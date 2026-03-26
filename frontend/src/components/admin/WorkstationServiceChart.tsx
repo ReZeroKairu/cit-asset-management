@@ -239,12 +239,16 @@ const WorkstationServiceChart = () => {
 
   // Process data for custodian's lab only
   const workstationServiceData = useMemo(() => {
-    if (!data?.timelineData || !user?.lab_id) return [];
+    if (!data?.timelineData) return [];
 
-    // Filter assets for custodian's lab
-    const labAssets = data.timelineData.filter(asset => asset.lab_id === user.lab_id);
+    // The backend should already be filtered for custodians, but let's ensure
+    // If userLabId exists, filter by it. Otherwise, use all data (for admins)
+    const labAssets = userLabId 
+      ? data.timelineData.filter(asset => asset.lab_id === userLabId)
+      : data.timelineData;
     
-    // Group assets by workstation and determine workstation service status
+    // Group ALL timeline entries (including placeholders) by workstation
+    // This ensures workstations without assets are still tracked for service
     const workstationMap = new Map<string, { assets: any[] }>();
     
     labAssets.forEach(asset => {
@@ -262,8 +266,11 @@ const WorkstationServiceChart = () => {
     const workstationData: WorkstationServiceData[] = Array.from(workstationMap.entries())
       .map(([workstationName, workstationData]) => {
         const assets = workstationData.assets;
-        const wellMaintainedAssets = assets.filter(asset => asset.timeline_position <= 2).length;
-        const totalAssets = assets.length;
+        
+        // Filter out placeholders for asset counting, but keep all for workstation tracking
+        const realAssets = assets.filter(asset => asset.asset_id !== 0);
+        const wellMaintainedAssets = realAssets.filter(asset => asset.timeline_position <= 2).length;
+        const totalAssets = realAssets.length; // Only count real assets
         
         // Check if there's actual PMC service data for this workstation in the current quarter
         const hasServiceRecords = pmcReports.some(report => {
@@ -294,11 +301,16 @@ const WorkstationServiceChart = () => {
           wellMaintainedAssetCount: wellMaintainedAssets
         };
       })
-      .filter(item => item.total > 0 && item.workstation_name !== 'Not Assigned') // Only show actual workstations, not unassigned assets
+      .filter(item => item.total > 0) // Include all entries for asset counting
       .sort((a, b) => b.serviceRate - a.serviceRate); // Sort by service rate (serviced first)
 
     return workstationData;
-  }, [data, user?.lab_id, pmcReports]);
+  }, [data, userLabId, pmcReports]);
+
+  // Create separate data for workstation counting (exclude "Not Assigned")
+  const actualWorkstations = useMemo(() => {
+    return workstationServiceData.filter(ws => ws.workstation_name !== 'Not Assigned');
+  }, [workstationServiceData]);
 
   // Create summary data for the chart
   const chartData = useMemo(() => {
@@ -309,24 +321,24 @@ const WorkstationServiceChart = () => {
       ];
     }
 
-    const servicedCount = workstationServiceData.filter(ws => ws.serviced === 1).length;
-    const pendingCount = workstationServiceData.filter(ws => ws.unserviced === 1).length;
+    const servicedCount = actualWorkstations.filter(ws => ws.serviced === 1).length;
+    const pendingCount = actualWorkstations.filter(ws => ws.unserviced === 1).length;
     
     return [
       {
         category: 'Serviced Workstations',
         count: servicedCount,
-        percentage: (servicedCount / workstationServiceData.length) * 100,
+        percentage: actualWorkstations.length > 0 ? (servicedCount / actualWorkstations.length) * 100 : 0,
         fill: '#10b981'
       },
       {
         category: 'Pending Service Workstations', 
         count: pendingCount,
-        percentage: (pendingCount / workstationServiceData.length) * 100,
+        percentage: actualWorkstations.length > 0 ? (pendingCount / actualWorkstations.length) * 100 : 0,
         fill: '#ef4444'
       }
     ];
-  }, [workstationServiceData]);
+  }, [actualWorkstations]);
 
   // Summary statistics
   const summaryStats = useMemo(() => {
@@ -340,18 +352,23 @@ const WorkstationServiceChart = () => {
       };
     }
 
-    const servicedWorkstations = workstationServiceData.filter(ws => ws.serviced === 1).length;
-    const unservicedWorkstations = workstationServiceData.filter(ws => ws.unserviced === 1).length;
-    const totalAssets = workstationServiceData.reduce((sum, ws) => sum + (ws.assetCount || 0), 0);
+    const servicedWorkstations = actualWorkstations.filter(ws => ws.serviced === 1).length;
+    const unservicedWorkstations = actualWorkstations.filter(ws => ws.unserviced === 1).length;
+    
+    // Use lab data total for accurate asset count (includes assets without purchase dates)
+    // Fall back to timeline calculation if lab data is not available
+    const labTotalAssets = data?.labStatusData?.[0]?.total || 0;
+    const timelineTotalAssets = workstationServiceData.reduce((sum, ws) => sum + (ws.assetCount || 0), 0);
+    const totalAssets = labTotalAssets > 0 ? labTotalAssets : timelineTotalAssets;
 
     return {
-      totalWorkstations: workstationServiceData.length,
+      totalWorkstations: actualWorkstations.length,
       totalAssets: totalAssets,
       totalServiced: servicedWorkstations,
       totalUnserviced: unservicedWorkstations,
-      averageServiceRate: workstationServiceData.length > 0 ? (servicedWorkstations / workstationServiceData.length) * 100 : 0
+      averageServiceRate: actualWorkstations.length > 0 ? (servicedWorkstations / actualWorkstations.length) * 100 : 0
     };
-  }, [workstationServiceData]);
+  }, [workstationServiceData, actualWorkstations]);
 
   if (loading) {
     return (

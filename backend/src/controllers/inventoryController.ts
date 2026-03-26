@@ -50,6 +50,7 @@ export const getInventory = async (req: Request, res: Response) => {
         laboratories: true,
         units: true,
         users: true,
+        workstations: true, // Include workstation relationship
       },
       orderBy: {
         date_added: "desc",
