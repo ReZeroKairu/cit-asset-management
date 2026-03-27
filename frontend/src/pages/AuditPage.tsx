@@ -23,7 +23,6 @@ interface AuditLog {
   user_lab_name: string;
   user_lab_location: string;
   action_category: string;
-  priority_level: string;
   searchable_text: string;
   ip_address_display: string;
 }

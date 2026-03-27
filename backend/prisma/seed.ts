@@ -38,10 +38,11 @@ async function main() {
 
     assetStatuses: [
       { status_id: 1, status_name: "Functional" },
-      { status_id: 2, status_name: "For Repair" },
+      { status_id: 2, status_name: "For Disposal" },
       { status_id: 3, status_name: "For Upgrade" },
       { status_id: 4, status_name: "For Replacement" },
       { status_id: 5, status_name: "Lost" },
+      { status_id: 6, status_name: "Disposed" },
     ],
 
     laboratories: [
@@ -332,6 +333,17 @@ async function main() {
       create: user,
     });
     console.log(`👤 User Upserted: ${user.full_name} (${user.email})`);
+  }
+
+  // 5. Asset Statuses
+  console.log(" Seeding asset statuses...");
+  for (const status of seedData.assetStatuses) {
+    await prisma.asset_statuses.upsert({
+      where: { status_id: status.status_id },
+      update: status,
+      create: status,
+    });
+    console.log(` Asset Status: ${status.status_name}`);
   }
 
   // 10. Workstations

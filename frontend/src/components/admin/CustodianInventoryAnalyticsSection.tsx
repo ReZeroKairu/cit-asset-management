@@ -14,7 +14,7 @@ import { Search } from "lucide-react";
 const COLORS = {
   Functional: "#10b981",
   "For Replacement": "#f59e0b",
-  "For Repair": "#3b82f6",
+  "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
   Lost: "#ef4444",
 };
@@ -432,9 +432,9 @@ const CustodianInventoryAnalyticsSection = () => {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-blue-600">Repair:</span>
-                    <span className="font-medium text-blue-600">
-                      {filteredData.labStatusData[0]["For Repair"]}
+                    <span className="text-red-600">Disposal:</span>
+                    <span className="font-medium text-red-600">
+                      {filteredData.labStatusData[0]["For Disposal"]}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -21,7 +21,6 @@ import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
 import complaintsRoutes from "./routes/complaintsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import auditRoutes from "./routes/auditRoutesSimple";
-import disposalRoutes from "./routes/disposalRoutes";
 import { auditMiddleware } from "./middleware/audit";
 
 const app = express();
@@ -113,7 +112,6 @@ app.use("/api/one-time-forms", publicFormsLimiter, oneTimeFormsRoutes); // handl
 app.use("/public-complaints", publicFormsLimiter, complaintsRoutes); // handles public complaint submissions (no auth)
 app.use("/complaints", complaintsRoutes); // handles complaint management (auth required)
 app.use("/analytics", analyticsRoutes); // handles analytics endpoints (admin only)
-app.use("/api/disposals", disposalRoutes);
 app.use("/audit", auditRoutes); // handles audit logs (admin only)
 
 // Simple audit test route - bypass all complexity

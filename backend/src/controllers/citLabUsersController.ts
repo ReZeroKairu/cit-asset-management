@@ -219,7 +219,6 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
         ip_address_display,
         usage_category,
         user_category,
-        priority_level,
         day_of_week,
         month_name,
         time_of_day
@@ -554,9 +553,9 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
         usage_type_display,
         purpose,
         formatted_created_timestamp,
-        priority_level,
         time_of_day
-      FROM recent_cit_lab_users_logs_view 
+      FROM cit_lab_users_logs_view
+      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
       ORDER BY created_at DESC
       LIMIT ?
     `;

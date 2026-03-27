@@ -354,8 +354,12 @@ export const deleteAsset = async (req: Request, res: Response) => {
 // 5. UPDATE ASSET
 export const updateAsset = async (req: Request, res: Response) => {
   try {
+    console.log('🔍🔍🔍 BACKEND: updateAsset called!');
     const { id } = req.params;
     const assetId = Number(id);
+
+    console.log('🔍🔍🔍 BACKEND: Asset ID:', assetId);
+    console.log('🔍🔍🔍 BACKEND: Request body:', req.body);
 
     const {
       description,
@@ -368,7 +372,11 @@ export const updateAsset = async (req: Request, res: Response) => {
       date_of_purchase,
       asset_remarks,
       status_id,
+      disposed_by,
     } = req.body;
+
+    console.log('🔍🔍🔍 BACKEND: Extracted status_id:', status_id);
+    console.log('🔍🔍🔍 BACKEND: Extracted disposed_by:', disposed_by);
 
     // ✅ FIX: We build an update object dynamically.
     // It only includes fields that were actually sent by the frontend.
@@ -396,32 +404,97 @@ export const updateAsset = async (req: Request, res: Response) => {
       detailsData.asset_remarks = asset_remarks || null;
     if (status_id !== undefined)
       detailsData.status_id = status_id ? Number(status_id) : undefined;
+    if (disposed_by !== undefined)
+      detailsData.disposed_by = disposed_by || null;
 
-    const updatedAsset = await prisma.inventory_assets.update({
-      where: { asset_id: assetId },
-      data: {
-        ...updateData,
-        // Only update details if there is details data to update
-        ...(Object.keys(detailsData).length > 0 && {
-          asset_details: {
-            update: detailsData,
-          },
-        }),
-      },
-      include: {
-        asset_details: {
-          include: { asset_statuses: true },
-        },
-        laboratories: true,
-        units: true,
-        users: true,
-        workstations: true,
-      },
+    // Check if status is being changed to "Disposed" and set date_disposed
+    if (status_id !== undefined) {
+      console.log('🔍 Backend: Checking status change for disposal, status_id:', status_id);
+      
+      // Get the disposed status ID
+      const disposedStatus = await prisma.asset_statuses.findUnique({
+        where: { status_name: "Disposed" }
+      });
+      
+      console.log('🔍 Backend: Disposed status from DB:', disposedStatus);
+      
+      if (disposedStatus && Number(status_id) === disposedStatus.status_id) {
+        console.log('🔍 Backend: Setting date_disposed to current date');
+        detailsData.date_disposed = new Date();
+      } else {
+        console.log('🔍 Backend: Status does not match "Disposed", not setting date_disposed');
+      }
+    }
+
+    console.log('🔍 Backend: Final detailsData to update:', detailsData);
+
+    // Check if asset_details exists for this asset
+    const existingAssetDetails = await prisma.asset_details.findUnique({
+      where: { asset_id: assetId }
     });
+    
+    console.log('🔍 Backend: Existing asset_details:', existingAssetDetails);
+
+    let updatedAsset;
+    if (!existingAssetDetails && Object.keys(detailsData).length > 0) {
+      console.log('🔍 Backend: Creating new asset_details record');
+      // Create asset_details if it doesn't exist
+      updatedAsset = await prisma.inventory_assets.update({
+        where: { asset_id: assetId },
+        data: {
+          ...updateData,
+          asset_details: {
+            create: {
+              ...detailsData,
+              asset_id: assetId
+            }
+          }
+        },
+        include: {
+          asset_details: {
+            include: { asset_statuses: true },
+          },
+          laboratories: true,
+          units: true,
+          users: true,
+          workstations: true,
+        },
+      });
+    } else {
+      console.log('🔍 Backend: Updating existing asset_details record');
+      // Update existing asset_details
+      updatedAsset = await prisma.inventory_assets.update({
+        where: { asset_id: assetId },
+        data: {
+          ...updateData,
+          ...(Object.keys(detailsData).length > 0 && {
+            asset_details: {
+              update: detailsData,
+            },
+          }),
+        },
+        include: {
+          asset_details: {
+            include: { asset_statuses: true },
+          },
+          laboratories: true,
+          units: true,
+          users: true,
+          workstations: true,
+        },
+      });
+    }
+
+    console.log('🔍 Backend: Asset updated successfully');
+    console.log('🔍 Backend: New status:', updatedAsset.asset_details?.asset_statuses?.status_name);
+    console.log('🔍 Backend: New disposed_by:', (updatedAsset.asset_details as any)?.disposed_by);
+    console.log('🔍 Backend: New date_disposed:', (updatedAsset.asset_details as any)?.date_disposed);
 
     res.json(updatedAsset);
   } catch (error) {
-    res.status(500).json({ error: "Failed to create asset" });
+    console.error('🔍 Backend: ERROR in updateAsset:', error);
+    console.error('🔍 Backend: Error details:', JSON.stringify(error, null, 2));
+    res.status(500).json({ error: "Failed to update asset", details: error instanceof Error ? error.message : String(error) });
   }
 };
 

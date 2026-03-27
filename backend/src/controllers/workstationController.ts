@@ -355,7 +355,7 @@ export const getWorkstationsByLab = async (req: Request, res: Response) => {
         lab_id: Number(labId),
       },
       include: {
-        asset_statuses: true, // ✅ Fetches "Functional", "For Repair", etc.
+        asset_statuses: true, // ✅ Fetches "Functional", "For Disposal", etc.
         inventory_assets: true,
       },
       orderBy: {

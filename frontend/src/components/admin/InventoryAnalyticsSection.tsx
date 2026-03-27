@@ -28,7 +28,7 @@ import {
 const COLORS = {
   Functional: "#10b981",
   "For Replacement": "#f59e0b",
-  "For Repair": "#3b82f6",
+  "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
   Lost: "#ef4444",
 };
@@ -38,7 +38,7 @@ const MAINTENANCE_COLORS = {
   Working: "#10b981",
   Operational: "#10b981",
   "Needs Repair": "#f59e0b",
-  "For Repair": "#3b82f6",
+  "For Disposal": "#3b82f6",
   "Under Repair": "#3b82f6",
   Critical: "#ef4444",
   Urgent: "#ef4444",
@@ -232,7 +232,7 @@ const InventoryAnalyticsSection = () => {
                 {[
                   "Functional",
                   "For Replacement",
-                  "For Repair",
+                  "For Disposal",
                   "For Upgrade",
                   "Lost",
                 ].map((statusName) => {
@@ -248,8 +248,8 @@ const InventoryAnalyticsSection = () => {
                             ? "text-green-600"
                             : statusName === "For Replacement"
                             ? "text-yellow-600"
-                            : statusName === "For Repair"
-                            ? "text-blue-600"
+                            : statusName === "For Disposal"
+                            ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
                             : statusName === "Lost"
@@ -259,8 +259,8 @@ const InventoryAnalyticsSection = () => {
                       >
                         {statusName === "For Replacement"
                           ? "Replace"
-                          : statusName === "For Repair"
-                          ? "Repair"
+                          : statusName === "For Disposal"
+                          ? "Disposal"
                           : statusName === "For Upgrade"
                           ? "Upgrade"
                           : statusName}
@@ -272,8 +272,8 @@ const InventoryAnalyticsSection = () => {
                             ? "text-green-600"
                             : statusName === "For Replacement"
                             ? "text-yellow-600"
-                            : statusName === "For Repair"
-                            ? "text-blue-600"
+                            : statusName === "For Disposal"
+                            ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
                             : statusName === "Lost"
@@ -322,16 +322,16 @@ const InventoryAnalyticsSection = () => {
                         <div className="text-gray-500">Replace</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-medium text-blue-600">
-                          {lab["For Repair"] || 0}
-                        </div>
-                        <div className="text-gray-500">Repair</div>
-                      </div>
-                      <div className="text-center">
                         <div className="font-medium text-purple-600">
                           {lab["For Upgrade"] || 0}
                         </div>
                         <div className="text-gray-500">Upgrade</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-red-600">
+                          {lab["For Disposal"] || 0}
+                        </div>
+                        <div className="text-gray-500">Disposal</div>
                       </div>
                       <div className="text-center">
                         <div className="font-medium text-red-600">

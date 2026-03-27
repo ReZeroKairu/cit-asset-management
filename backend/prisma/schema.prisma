@@ -15,6 +15,8 @@ model asset_details {
   description      String?          @db.Text
   serial_number    String?          @db.VarChar(100)
   date_of_purchase DateTime?        @db.Date
+  date_disposed    DateTime?        @db.Date
+  disposed_by      String?          @db.VarChar(100)
   asset_remarks    String?          @db.Text
   status_id        Int?             @default(1)
   inventory_assets inventory_assets @relation(fields: [asset_id], references: [asset_id])
@@ -419,8 +421,6 @@ model users {
   service_logs           service_logs[]
   software_installations software_installations[]
   laboratories           laboratories?            @relation(fields: [lab_id], references: [lab_id])
-  approved_disposals     asset_disposals[]        @relation("DisposalApprover")
-  processed_disposals    asset_disposals[]        @relation("DisposalProcessor")
 
   @@index([lab_id], map: "users_lab_id_fkey")
 }
@@ -500,35 +500,6 @@ enum software_installations_status {
   Custodian_Approved
   Denied
   Completed
-}
-
-model asset_disposals {
-  disposal_id        Int      @id @default(autoincrement())
-  asset_id          Int      @unique
-  workstation_id    Int?
-  workstation_name  String?   @db.Text
-  lab_id            Int?
-  lab_name          String?   @db.Text
-  disposal_date      DateTime  @db.Date
-  disposal_reason    String?   @db.Text
-  disposal_method    String?   @db.VarChar(50)
-  disposal_value     Float?
-  approved_by        Int?
-  disposed_by        Int?
-  disposal_document  String?   @db.Text
-  disposal_remarks  String?   @db.Text
-  property_tag_no    String?   @db.VarChar(50)
-  asset_description  String?   @db.Text
-  serial_number      String?   @db.VarChar(50)
-  date_of_purchase   DateTime? @db.Date
-  quantity          Int?      @default(1)
-  created_at        DateTime  @default(now()) @db.Timestamp(0)
-  
-  // Relations
-  approved_by_user    users?    @relation("DisposalApprover", fields: [approved_by], references: [user_id])
-  disposed_by_user    users?    @relation("DisposalProcessor", fields: [disposed_by], references: [user_id])
-  
-  @@map("asset_disposals")
 }
 
 enum equipment_borrows_status {

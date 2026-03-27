@@ -28,7 +28,7 @@ export async function generateQPMCReportFromDb({
     ) ? "☑" : "☐";
   const mapStatus = (status: string) => ({
     func: ["Functional", "Working", "Operational"].includes(status) ? "✓" : "",
-    rep: status === "For Repair" ? "✓" : "",
+    rep: status === "For Disposal" ? "✓" : "",
     upg: status === "For Upgrade" ? "✓" : "",
     repl: status === "For Replacement" ? "✓" : "",
   });

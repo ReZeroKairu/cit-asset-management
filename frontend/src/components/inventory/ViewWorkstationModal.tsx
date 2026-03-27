@@ -19,7 +19,7 @@ const getStatusColor = (statusName?: string) => {
   switch (statusName) {
     case "Functional":
       return "bg-green-100 text-green-800";
-    case "For Repair":
+    case "For Disposal":
       return "bg-yellow-100 text-yellow-800";
     case "For Replacement":
       return "bg-red-100 text-red-800";
@@ -89,29 +89,29 @@ const ViewWorkstationModal: React.FC<Props> = ({
   };
 
   const handleDeleteAsset = async (assetId: number) => {
-    if (!confirm("Are you sure you want to mark this asset as disposed? This will change its status to 'Disposed'.")) {
+    if (!confirm("Are you sure you want to mark this asset for disposal? This will change its status to 'For Disposal'.")) {
       return;
     }
 
     try {
-      // Get asset statuses to find the "Disposed" status ID
+      // Get asset statuses to find the "For Disposal" status ID
       const statuses = await getAssetStatuses();
-      const disposedStatus = statuses.find((status: any) => status.status_name === "Disposed");
+      const forDisposalStatus = statuses.find((status: any) => status.status_name === "For Disposal");
       
-      if (!disposedStatus) {
-        alert("Disposed status not found in system");
+      if (!forDisposalStatus) {
+        alert("For Disposal status not found in system");
         return;
       }
 
-      // Update asset status to "Disposed"
+      // Update asset status to "For Disposal"
       await updateAsset(assetId, {
-        status_id: disposedStatus.status_id
+        status_id: forDisposalStatus.status_id
       });
       
-      // Remove the asset from local state (since it's now disposed)
-      setAssets(prev => prev.filter(asset => asset.asset_id !== assetId));
+      // Refresh the assets list to show updated status
+      fetchWorkstationAssets();
       
-      alert("Asset status changed to Disposed");
+      alert("Asset status changed to For Disposal");
       
     } catch (err: any) {
       console.error("Failed to update asset status:", err);
@@ -147,45 +147,78 @@ const ViewWorkstationModal: React.FC<Props> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedAssets.length === assets.length) {
-      setSelectedAssets([]);
+    // Only work with assets that can be marked for disposal (exclude disposed, for disposal, and for replacement)
+    const eligibleAssets = assets.filter(
+      (asset) => {
+        const statusName = asset.asset_details?.asset_statuses?.status_name;
+        return statusName !== "Disposed" && 
+               statusName !== "For Disposal" && 
+               statusName !== "For Replacement";
+      }
+    );
+    
+    // Check if all eligible assets are selected
+    const allEligibleSelected = eligibleAssets.every((asset: any) => 
+      selectedAssets.includes(asset.asset_id)
+    );
+    
+    if (allEligibleSelected) {
+      // Deselect all eligible assets
+      setSelectedAssets(prev => 
+        prev.filter(id => !eligibleAssets.some((asset: any) => asset.asset_id === id))
+      );
     } else {
-      setSelectedAssets(assets.map(asset => asset.asset_id));
+      // Select all eligible assets
+      const eligibleAssetIds = eligibleAssets.map((asset: any) => asset.asset_id);
+      setSelectedAssets(prev => [...new Set([...prev, ...eligibleAssetIds])]);
     }
   };
 
   const handleBulkDispose = async () => {
-    if (selectedAssets.length === 0) {
-      alert("Please select at least one asset to dispose");
+    // Only work with assets that can be marked for disposal (exclude disposed, for disposal, and for replacement)
+    const eligibleAssets = assets.filter(
+      (asset) => {
+        const statusName = asset.asset_details?.asset_statuses?.status_name;
+        return statusName !== "Disposed" && 
+               statusName !== "For Disposal" && 
+               statusName !== "For Replacement";
+      }
+    );
+    const eligibleSelectedAssets = selectedAssets.filter(assetId => 
+      eligibleAssets.some((asset: any) => asset.asset_id === assetId)
+    );
+    
+    if (eligibleSelectedAssets.length === 0) {
+      alert("Please select at least one asset to mark for disposal");
       return;
     }
 
-    if (!confirm(`Are you sure you want to mark ${selectedAssets.length} asset(s) as disposed?`)) {
+    if (!confirm(`Are you sure you want to mark ${eligibleSelectedAssets.length} asset(s) for disposal?`)) {
       return;
     }
 
     try {
-      // Get asset statuses to find "Disposed" status ID
+      // Get asset statuses to find "For Disposal" status ID
       const statuses = await getAssetStatuses();
-      const disposedStatus = statuses.find((status: any) => status.status_name === "Disposed");
+      const forDisposalStatus = statuses.find((status: any) => status.status_name === "For Disposal");
       
-      if (!disposedStatus) {
-        alert("Disposed status not found in system");
+      if (!forDisposalStatus) {
+        alert("For Disposal status not found in system");
         return;
       }
 
-      // Update all selected assets to "Disposed" status
+      // Only update eligible selected assets
       await Promise.all(
-        selectedAssets.map(assetId => 
-          updateAsset(assetId, { status_id: disposedStatus.status_id })
+        eligibleSelectedAssets.map(assetId => 
+          updateAsset(assetId, { status_id: forDisposalStatus.status_id })
         )
       );
       
-      // Remove disposed assets from local state
-      setAssets(prev => prev.filter(asset => !selectedAssets.includes(asset.asset_id)));
+      // Refresh the assets list to show updated status
+      fetchWorkstationAssets();
       setSelectedAssets([]);
       
-      alert(`${selectedAssets.length} asset(s) successfully marked as disposed`);
+      alert(`${eligibleSelectedAssets.length} asset(s) successfully marked for disposal`);
       
     } catch (err: any) {
       console.error("Failed to update asset status:", err);
@@ -277,7 +310,12 @@ const ViewWorkstationModal: React.FC<Props> = ({
                     Total Assets
                   </h4>
                   <p className="text-gray-900 font-medium">
-                    {assets.length} items
+                    {assets.filter(asset => {
+                      const statusName = asset.asset_details?.asset_statuses?.status_name;
+                      return statusName !== "Disposed" && 
+                             statusName !== "For Disposal" && 
+                             statusName !== "For Replacement";
+                    }).length} items
                   </p>
                 </div>
               </div>
@@ -290,15 +328,29 @@ const ViewWorkstationModal: React.FC<Props> = ({
                   Assigned Assets
                 </h4>
                 <div className="flex space-x-2">
-                  {selectedAssets.length > 0 && (
-                    <button
-                      className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center shadow-sm cursor-pointer"
-                      onClick={handleBulkDispose}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Dispose Selected ({selectedAssets.length})
-                    </button>
-                  )}
+                  {(() => {
+                    const eligibleAssets = assets.filter(
+                      (asset) => {
+                        const statusName = asset.asset_details?.asset_statuses?.status_name;
+                        return statusName !== "Disposed" && 
+                               statusName !== "For Disposal" && 
+                               statusName !== "For Replacement";
+                      }
+                    );
+                    const eligibleSelectedCount = selectedAssets.filter(assetId => 
+                      eligibleAssets.some((asset: any) => asset.asset_id === assetId)
+                    ).length;
+                    
+                    return eligibleSelectedCount > 0 && (
+                      <button
+                        className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center shadow-sm cursor-pointer"
+                        onClick={handleBulkDispose}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Mark for Disposal ({eligibleSelectedCount})
+                      </button>
+                    );
+                  })()}
                   <button
                     className="px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center shadow-sm cursor-pointer"
                     onClick={() => setShowAddModal(true)}
@@ -325,7 +377,12 @@ const ViewWorkstationModal: React.FC<Props> = ({
                 <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
-              ) : assets.filter(asset => asset.asset_details?.asset_statuses?.status_name !== "Disposed").length === 0 ? (
+              ) : assets.filter(asset => {
+                    const statusName = asset.asset_details?.asset_statuses?.status_name;
+                    return statusName !== "Disposed" && 
+                           statusName !== "For Disposal" && 
+                           statusName !== "For Replacement";
+                  }).length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                   <p className="text-gray-500">
                     No assets assigned to this workstation.
@@ -340,13 +397,39 @@ const ViewWorkstationModal: React.FC<Props> = ({
                           <button
                             onClick={handleSelectAll}
                             className="text-gray-400 hover:text-gray-600 transition-colors"
-                            title={selectedAssets.length === assets.length ? "Deselect All" : "Select All"}
+                            title={(() => {
+                            const eligibleAssets = assets.filter(
+                              (asset) => {
+                                const statusName = asset.asset_details?.asset_statuses?.status_name;
+                                return statusName !== "Disposed" && 
+                                       statusName !== "For Disposal" && 
+                                       statusName !== "For Replacement";
+                              }
+                            );
+                            const allEligibleSelected = eligibleAssets.every((asset: any) => 
+                              selectedAssets.includes(asset.asset_id)
+                            );
+                            return allEligibleSelected ? "Deselect All Eligible" : "Select All Eligible";
+                          })()}
                           >
-                            {selectedAssets.length === assets.length ? (
+                            {(() => {
+                            const eligibleAssets = assets.filter(
+                              (asset) => {
+                                const statusName = asset.asset_details?.asset_statuses?.status_name;
+                                return statusName !== "Disposed" && 
+                                       statusName !== "For Disposal" && 
+                                       statusName !== "For Replacement";
+                              }
+                            );
+                            const allEligibleSelected = eligibleAssets.every((asset: any) => 
+                              selectedAssets.includes(asset.asset_id)
+                            );
+                            return allEligibleSelected ? (
                               <CheckSquare className="w-4 h-4" />
                             ) : (
                               <Square className="w-4 h-4" />
-                            )}
+                            );
+                          })()}
                           </button>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -375,9 +458,12 @@ const ViewWorkstationModal: React.FC<Props> = ({
                     <tbody className="bg-white divide-y divide-gray-200">
                       {assets
                         .filter(
-                          (asset) =>
-                            asset.asset_details?.asset_statuses?.status_name !==
-                            "Disposed"
+                          (asset) => {
+                            const statusName = asset.asset_details?.asset_statuses?.status_name;
+                            return statusName !== "Disposed" && 
+                                   statusName !== "For Disposal" && 
+                                   statusName !== "For Replacement";
+                          }
                         )
                         .map((asset) => (
                         <tr
@@ -440,7 +526,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
 <button
   onClick={() => handleDeleteAsset(asset.asset_id)}
   className="text-red-400 hover:text-red-600 p-2 transition-colors cursor-pointer"
-  title="Dispose Asset"
+  title="Mark for Disposal"
 >
   <Trash2 className="w-4 h-4" />
 </button>

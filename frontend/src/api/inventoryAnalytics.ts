@@ -11,7 +11,7 @@ export interface InventoryAnalyticsData {
     lab_name: string;
     Functional: number;
     "For Replacement": number;
-    "For Repair": number;
+    "For Disposal": number;
     "For Upgrade": number;
     Lost: number;
     total: number;

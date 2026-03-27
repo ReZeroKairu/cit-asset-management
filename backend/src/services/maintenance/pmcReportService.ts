@@ -235,11 +235,11 @@ export class PMCReportService {
         // Determine workstation status based on individual asset statuses
         const assetStatuses = asset_actions.map((action: any) => action.status_after);
         
-        // Priority order: Lost > For Replacement > For Repair > For Upgrade > Functional
+        // Priority order: Lost > For Replacement > For Disposal > For Upgrade > Functional
         const statusPriority: Record<string, number> = {
           'Lost': 4,
           'For Replacement': 3,
-          'For Repair': 2,
+          'For Disposal': 2,
           'For Upgrade': 1,
           'Functional': 0
         };

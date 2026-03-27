@@ -14,6 +14,12 @@ import { auditMiddleware } from "../middleware/audit";
 const router = Router();
 const prisma = new PrismaClient();
 
+// Add a simple test endpoint to verify backend is working
+router.get("/test", (req, res) => {
+  console.log('🔍🔍🔍 BACKEND: Test endpoint called!');
+  res.json({ message: "Backend is working!", timestamp: new Date().toISOString() });
+});
+
 // Protected routes require authentication
 router.get("/", authenticateToken, getInventory);
 

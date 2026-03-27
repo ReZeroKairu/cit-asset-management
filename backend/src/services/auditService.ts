@@ -83,7 +83,7 @@ export class AuditService {
             id, user_id, action, description, created_at,
             log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
             user_name, user_email, user_role, user_lab_name, user_lab_location,
-            user_type, action_category, priority_level, searchable_text,
+            user_type, action_category, searchable_text,
             ip_address_display
           FROM audit_logs_view 
           WHERE ${whereClause}
@@ -142,16 +142,16 @@ export class AuditService {
 
   static async getAuditLogsByUser(userId: number, limit: number = 50) {
     try {
-      // Use the user_audit_logs_view which includes ranking
+      // Use filtered query on audit_logs_view with ranking
       const logs = await prisma.$queryRawUnsafe(`
         SELECT 
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text,
+          user_type, action_category, searchable_text,
           ip_address_display,
-          CAST(user_action_rank AS SIGNED INTEGER) as user_action_rank
-        FROM user_audit_logs_view 
+          ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) as user_action_rank
+        FROM audit_logs_view 
         WHERE user_id = ?
         ORDER BY created_at DESC 
         LIMIT ?
@@ -172,9 +172,10 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text,
+          user_type, action_category, searchable_text,
           ip_address_display
-        FROM system_audit_logs_view 
+        FROM audit_logs_view 
+        WHERE user_type = 'System'
         ORDER BY created_at DESC 
         LIMIT ?
       `, limit) as any[];
@@ -186,7 +187,7 @@ export class AuditService {
     }
   }
 
-  // New method to get high priority audit logs
+  // New method to get high priority audit logs (filtered by action type)
   static async getHighPriorityAuditLogs(limit: number = 50) {
     try {
       const logs = await prisma.$queryRawUnsafe(`
@@ -194,9 +195,10 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text,
+          user_type, action_category, searchable_text,
           ip_address_display
-        FROM high_priority_audit_logs_view 
+        FROM audit_logs_view 
+        WHERE action IN ('DELETE', 'LOGIN', 'GENERATE')
         ORDER BY created_at DESC 
         LIMIT ?
       `, limit) as any[];
@@ -216,12 +218,13 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, priority_level, searchable_text,
+          user_type, action_category, searchable_text,
           ip_address_display
-        FROM recent_audit_logs_view 
+        FROM audit_logs_view 
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC 
         LIMIT ?
-      `, limit) as any[];
+      `, days, limit) as any[];
 
       return logs;
     } catch (error) {

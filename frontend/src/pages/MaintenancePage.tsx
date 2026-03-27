@@ -227,8 +227,8 @@ const MaintenancePage = () => {
       case "Working":
       case "Operational":
         return "bg-green-100 text-green-800";
-      case "For Repair":
-        return "bg-amber-100 text-amber-800";
+      case "For Disposal":
+        return "bg-red-100 text-red-800";
       case "For Replacement":
         return "bg-red-100 text-red-800";
       case "For Upgrade":

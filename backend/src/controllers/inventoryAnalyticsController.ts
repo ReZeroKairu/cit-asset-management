@@ -36,10 +36,11 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
     const disposedStatus = assetStatuses.find(status => status.status_name === "Disposed");
     const disposedStatusId = disposedStatus?.status_id;
 
-    // Build where clause for status distribution
+    // Build where clause for status distribution (exclude only disposed assets, keep for disposal)
     const statusWhereClause: any = {
       status_id: {
         not: null,
+        notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude only disposed assets
       },
     };
 
@@ -261,7 +262,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           total: totalAssets,
           Functional: statusCounts["Functional"] || 0,
           "For Replacement": statusCounts["For Replacement"] || 0,
-          "For Repair": statusCounts["For Repair"] || 0,
+          "For Disposal": statusCounts["For Disposal"] || 0,
           Lost: statusCounts["Lost"] || 0,
           totalWorkstations: totalWorkstations,
           functionalWorkstations: functionalWorkstations,
@@ -511,7 +512,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
           (s: any) => s.status_name === "For Replacement"
         )?.count || 0) +
         (formattedStatusDistribution.find(
-          (s: any) => s.status_name === "For Repair"
+          (s: any) => s.status_name === "For Disposal"
         )?.count || 0),
       criticalAssets:
         formattedStatusDistribution.find((s: any) => s.status_name === "Lost")

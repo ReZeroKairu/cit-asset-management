@@ -4,7 +4,7 @@
 export const STATUS_PRIORITY: Record<string, number> = {
   Lost: 4,
   "For Replacement": 3,
-  "For Repair": 2,
+  "For Disposal": 2,
   "For Upgrade": 1,
   Functional: 0,
   Working: 0,

@@ -72,11 +72,25 @@ export class AnalyticsService {
     return ["1st", "2nd", "3rd", "4th"];
   }
 
+  // Helper function to get quarter dates from schedule
+  static async getQuarterDates(labId: number, quarter: string) {
+    const currentFiscalYear = "2025-2026";
+    
+    try {
+      const schedules = await ScheduleService.getLabSchedules(labId, currentFiscalYear);
+      return schedules[quarter];
+    } catch (error) {
+      console.error("Failed to get quarter dates:", error);
+      return null;
+    }
+  }
+
   // GET Preventive Maintenance Analytics for Dashboard
   static async getMaintenanceAnalytics(userId?: number, userRole?: string) {
     let whereClause = {};
     let currentQuarter = "1st"; // default
     let allQuarters = ["1st", "2nd", "3rd", "4th"]; // default
+    let currentLabId: number | undefined;
     
     // For custodians, only get analytics from their assigned lab and get their quarter
     if (userRole === "Custodian" && userId) {
@@ -87,6 +101,7 @@ export class AnalyticsService {
       
       if (user?.lab_id) {
         whereClause = { lab_id: user.lab_id };
+        currentLabId = user.lab_id;
         currentQuarter = await this.getCurrentQuarterBasedOnSchedules(user.lab_id);
         allQuarters = await this.getAllQuarters(user.lab_id);
       }
@@ -97,6 +112,8 @@ export class AnalyticsService {
       });
       
       if (firstLab) {
+        whereClause = {}; // Admins see all labs
+        currentLabId = firstLab.lab_id;
         currentQuarter = await this.getCurrentQuarterBasedOnSchedules(firstLab.lab_id);
         allQuarters = await this.getAllQuarters(firstLab.lab_id);
       }
@@ -115,22 +132,26 @@ export class AnalyticsService {
       }
     });
     
-    // Get historical data for previous quarters
+    // Get historical data for previous completed quarters only
     const historicalData = [];
     for (const quarter of allQuarters) {
       if (quarter !== currentQuarter) {
-        const quarterReports = await prisma.pmc_reports.count({
-          where: {
-            ...whereClause,
-            quarter: quarter
-          }
-        });
+        // Only include quarters that have actually passed
+        const quarterInfo = currentLabId ? await this.getQuarterDates(currentLabId, quarter) : null;
+        if (quarterInfo && new Date(quarterInfo.end) < new Date()) {
+          const quarterReports = await prisma.pmc_reports.count({
+            where: {
+              ...whereClause,
+              quarter: quarter
+            }
+          });
         
-        historicalData.push({
-          quarter,
-          completedReports: quarterReports,
-          completionRate: totalWorkstations > 0 ? (quarterReports / totalWorkstations) * 100 : 0
-        });
+          historicalData.push({
+            quarter,
+            completedReports: quarterReports,
+            completionRate: totalWorkstations > 0 ? (quarterReports / totalWorkstations) * 100 : 0
+          });
+        }
       }
     }
     
