@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit, Trash2 } from "lucide-react"; // Removed the Eye icon
+import { Edit, Trash2 } from "lucide-react";
 import { calculateWorstStatus } from "../../utils/statusUtils";
 import { getWorkstationAssets } from "../../api/inventory";
 
@@ -7,7 +7,8 @@ interface Props {
   workstations: any[];
   onView: (workstation: any) => void;
   onEdit: (workstation: any) => void;
-  onDispose: (workstationId: number) => void; // Dispose functionality replaces delete
+  onDispose?: (workstation: any) => void; // Made optional since not used in main inventory view
+  onBulkDispose?: (workstationIds: number[]) => void; // New prop for bulk disposal
   getStatusColor: (status?: string) => string;
   pmcReports?: Record<number, any>;
 }
@@ -17,6 +18,7 @@ const WorkstationTable: React.FC<Props> = ({
   onView,
   onEdit,
   onDispose,
+  onBulkDispose,
   getStatusColor,
   pmcReports = {},
 }) => {
@@ -27,7 +29,7 @@ const WorkstationTable: React.FC<Props> = ({
       case "Working":
       case "Operational":
         return "bg-green-100 text-green-800";
-      case "For Repair":
+      case "For Disposal":
         return "bg-yellow-100 text-yellow-800";
       case "For Replacement":
         return "bg-red-100 text-red-800";
@@ -44,6 +46,8 @@ const WorkstationTable: React.FC<Props> = ({
   const [workstationAssets, setWorkstationAssets] = useState<
     Record<number, any[]>
   >({});
+  const [selectedWorkstations, setSelectedWorkstations] = useState<Set<number>>(new Set());
+  const [selectedAssetsCount, setSelectedAssetsCount] = useState<number>(0);
 
   // Load assets for each workstation
   useEffect(() => {
@@ -81,6 +85,22 @@ const WorkstationTable: React.FC<Props> = ({
     }
   }, [workstations]);
 
+  // Calculate total assets in selected workstations (excluding disposed/for disposal/for replacement)
+  useEffect(() => {
+    let totalCount = 0;
+    selectedWorkstations.forEach(workstationId => {
+      const assets = workstationAssets[workstationId] || [];
+      const activeAssets = assets.filter(asset => {
+        const statusName = asset.status || asset.details?.current_status?.status_name || "Functional";
+        return statusName !== "For Disposal" && 
+               statusName !== "Disposed" && 
+               statusName !== "For Replacement";
+      });
+      totalCount += activeAssets.length;
+    });
+    setSelectedAssetsCount(totalCount);
+  }, [selectedWorkstations, workstationAssets]);
+
   // Calculate actual status for each workstation
   const getCalculatedStatus = (workstation: any) => {
     const assets = workstationAssets[workstation.workstation_id] || [];
@@ -110,9 +130,39 @@ const WorkstationTable: React.FC<Props> = ({
   };
   return (
     <div className="overflow-x-auto">
+      {selectedWorkstations.size > 0 && (
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              {selectedAssetsCount} asset{selectedAssetsCount !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => onBulkDispose?.(Array.from(selectedWorkstations))}
+              className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center shadow-sm cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Mark for Disposal
+            </button>
+          </div>
+        </div>
+      )}
       <table className="w-full">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <input
+                type="checkbox"
+                checked={selectedWorkstations.size === workstations.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedWorkstations(new Set(workstations.map(ws => ws.workstation_id)));
+                  } else {
+                    setSelectedWorkstations(new Set());
+                  }
+                }}
+                className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Workstation Name
             </th>
@@ -136,7 +186,7 @@ const WorkstationTable: React.FC<Props> = ({
         <tbody className="bg-white divide-y divide-gray-200">
           {workstations.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+              <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                 No workstations found.
               </td>
             </tr>
@@ -149,7 +199,24 @@ const WorkstationTable: React.FC<Props> = ({
                 className="hover:bg-blue-50 cursor-pointer transition-colors group"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {/* Text turns darker blue when the row is hovered */}
+                  <input
+                    type="checkbox"
+                    checked={selectedWorkstations.has(workstation.workstation_id)}
+                    onChange={(e) => {
+                      e.stopPropagation(); // Prevent row click
+                      const newSelected = new Set(selectedWorkstations);
+                      if (e.target.checked) {
+                        newSelected.add(workstation.workstation_id);
+                      } else {
+                        newSelected.delete(workstation.workstation_id);
+                      }
+                      setSelectedWorkstations(newSelected);
+                    }}
+                    className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {/* Text turns darker blue when row is hovered */}
                   <span className="font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
                     {workstation.workstation_name}
                   </span>
