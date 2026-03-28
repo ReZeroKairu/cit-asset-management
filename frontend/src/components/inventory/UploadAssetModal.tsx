@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
 import { batchCreateAssets } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
+import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 
 interface Props {
   show: boolean;
@@ -27,6 +28,7 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   // Only Custodian is allowed
   if (!show || user?.role !== "Custodian") return null;
@@ -35,6 +37,40 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     setErrors([]);
     const file = event.target.files?.[0];
     if (!file) return;
+    processFile(file);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(false);
+    
+    const file = event.dataTransfer.files?.[0];
+    if (!file) return;
+    
+    // Check file type
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+      setErrors(['Please upload a valid Excel file (.xlsx or .xls)']);
+      return;
+    }
+    
+    processFile(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragActive(false);
+  };
+
+  const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = evt.target?.result;
@@ -108,41 +144,42 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
           // Handle Excel serial numbers (Excel stores dates as days since 1900-01-01)
           if (typeof dateValue === 'number' && dateValue > 1000) {
-            // Excel serial number to JavaScript Date
-            // Excel's epoch starts at 1900-01-01, but Excel incorrectly treats 1900 as a leap year
-            // So we need to subtract 1 day for dates after 1900-02-28
             const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
             processedDate = excelDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-            console.log(`Excel serial ${dateValue} converted to ${processedDate}`);
           }
           // Handle string dates
           else if (typeof dateValue === 'string') {
             const parsedDate = new Date(dateValue);
             if (!isNaN(parsedDate.getTime())) {
               processedDate = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-              console.log(`String date "${dateValue}" converted to ${processedDate}`);
             }
           }
           // Handle JavaScript Date objects
           else if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
             processedDate = dateValue.toISOString().split('T')[0]; // YYYY-MM-DD format
-            console.log(`Date object converted to ${processedDate}`);
           }
-          else {
-            console.log(`Unrecognized date format:`, dateValue, typeof dateValue);
+        }
+
+        // ✅ Bulletproof workstation_id parsing
+        let processedWorkstationId = null;
+        if (row.workstation_id !== undefined && row.workstation_id !== null) {
+          const wsString = String(row.workstation_id).trim();
+          // Only assign if it's not empty, not "N/A", and is a valid number
+          if (wsString !== "" && wsString.toLowerCase() !== "n/a" && !isNaN(Number(wsString))) {
+            processedWorkstationId = Number(wsString);
           }
         }
 
         return {
-          property_tag_no: row.property_tag_no?.trim() || null,
-          quantity: Number(row.quantity),
-          description: row.description?.trim() || null,
-          serial_number: row.serial_number?.trim() || null,
+          property_tag_no: row.property_tag_no ? String(row.property_tag_no).trim() : null,
+          quantity: row.quantity ? Number(row.quantity) : 1, // Fallback to 1
+          description: row.description ? String(row.description).trim() : null,
+          serial_number: row.serial_number ? String(row.serial_number).trim() : null,
           date_of_purchase: processedDate,
           unit_id: Number(row.unit_id),
           device_type: Number(row.device_type),
           lab_id: Number(row.lab_id),
-          workstation_id: row.workstation_id ? Number(row.workstation_id) : null,
+          workstation_id: processedWorkstationId,
         };
       });
 
@@ -165,70 +202,197 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   return createPortal(
     <>
       <div
-        className="fixed inset-0 bg-black/40 z-9999"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-9999 transition-opacity duration-200"
         onClick={onClose}
       ></div>
-      <div className="fixed inset-0 z-10000 flex items-center justify-center">
-        <div className="bg-white p-6 rounded-lg shadow-xl w-[500px]">
-          <h3 className="text-lg font-semibold mb-4">Upload Assets (XLSX)</h3>
-          <div>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              className="mb-2"
-            />
-            <div className="text-xs text-gray-500 mb-3">
-              <p>
-                <b>Required columns:</b>{" "}
-                {REQUIRED_FIELDS.join(", ")}
-              </p>
-              <p>
-                Example: property_tag_no, quantity, description, serial_number,
-                date_of_purchase, unit_id, device_type, lab_id, workstation_id
-              </p>
+      <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform transition-all duration-200 scale-100">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Upload className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Upload Assets</h3>
+                <p className="text-sm text-gray-500">Import multiple assets from Excel file</p>
+              </div>
             </div>
-          </div>
-          {errors.length > 0 && (
-            <div className="bg-red-100 text-red-700 p-2 rounded mb-2">
-              {errors.map((e, i) => (
-                <div key={i}>{e}</div>
-              ))}
-            </div>
-          )}
-          {parsedData.length > 0 && (
-            <div className="my-2 max-h-56 overflow-y-auto border rounded">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr>
-                    {Object.keys(parsedData[0]).map((key) => (
-                      <th key={key} className="px-2 py-1">{key}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedData.map((row, idx) => (
-                    <tr key={idx}>
-                      {Object.entries(row).map(([key, val], i) => (
-                        <td key={i} className="px-2 py-1">{formatDisplayValue(val, key)}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div className="flex justify-end gap-2 mt-2">
             <button
               onClick={onClose}
-              className="px-3 py-1 border rounded text-gray-700"
-              disabled={submitting}
-            >Cancel</button>
-            <button
-              disabled={submitting || parsedData.length === 0}
-              onClick={handleSubmit}
-              className={`px-4 py-1 bg-blue-600 text-white rounded ${submitting || parsedData.length === 0 ? "bg-gray-400" : ""}`}
-            >{submitting ? "Uploading..." : "Upload"}</button>
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* Upload Area */}
+            <div className="mb-6">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive
+                    ? "border-blue-400 bg-blue-50"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 font-medium mb-2">
+                  {dragActive ? "Drop your file here" : "Drag and drop your Excel file here"}
+                </p>
+                <p className="text-gray-500 text-sm mb-4">or</p>
+                <label className="inline-block">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <span className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer inline-flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Browse Files
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Requirements */}
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-blue-900 mb-2">Required Columns</h4>
+                  <p className="text-sm text-blue-700 mb-3">
+                    Your Excel file must contain the following columns:
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {REQUIRED_FIELDS.map((field) => (
+                  <div key={field} className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <code className="text-xs bg-white px-2 py-1.5 rounded border border-blue-200 font-mono flex-1 min-w-0">
+                      {field}
+                    </code>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 p-2 bg-white rounded border border-blue-200">
+                <p className="text-xs text-blue-600">
+                  <strong>Example:</strong> property_tag_no, quantity, description, serial_number, date_of_purchase, unit_id, device_type, lab_id
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Error Display */}
+          {errors.length > 0 && (
+            <div className="mx-6 mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-red-900 mb-1">Upload Error</h4>
+                  {errors.map((error, i) => (
+                    <p key={i} className="text-sm text-red-700">
+                      {error}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Data Preview */}
+          {parsedData.length > 0 && (
+            <div className="mx-6 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900">
+                  Data Preview ({parsedData.length} {parsedData.length === 1 ? 'row' : 'rows'})
+                </h4>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-green-600 font-medium">
+                    ✓ File parsed successfully
+                  </div>
+                  <button
+                    onClick={() => setParsedData([])}
+                    className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Clear Table
+                  </button>
+                </div>
+              </div>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        {Object.keys(parsedData[0]).map((key) => (
+                          <th key={key} className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-200">
+                            {key}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {parsedData.slice(0, 10).map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          {Object.entries(row).map(([key, val], i) => (
+                            <td key={i} className="px-3 py-2 text-gray-900 border-b border-gray-100">
+                              {formatDisplayValue(val, key)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {parsedData.length > 10 && (
+                  <div className="p-3 bg-gray-50 border-t border-gray-200 text-center text-sm text-gray-600">
+                    Showing first 10 rows of {parsedData.length} total rows
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Footer */}
+          <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+            <div className="text-sm text-gray-600">
+              {parsedData.length > 0 && (
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  Ready to upload {parsedData.length} assets
+                </span>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                disabled={submitting}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={submitting || parsedData.length === 0}
+                onClick={handleSubmit}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Upload Assets
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
