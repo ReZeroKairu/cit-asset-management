@@ -110,16 +110,16 @@ export class ServiceLogService {
           });
 
           if (oldAsset?.asset_details) {
-            // Find "Lost" status for replaced assets
-            const lostStatus = await tx.asset_statuses.findFirst({
-              where: { status_name: "Lost" },
+            // Find "For Disposal" status for replaced assets
+            const forDisposalStatus = await tx.asset_statuses.findFirst({
+              where: { status_name: "For Disposal" },
             });
 
-            if (lostStatus) {
+            if (forDisposalStatus) {
               await tx.asset_details.update({
                 where: { detail_id: oldAsset.asset_details.detail_id },
                 data: {
-                  status_id: lostStatus.status_id,
+                  status_id: forDisposalStatus.status_id,
                   asset_remarks: `Replaced on ${new Date(service_date).toLocaleDateString()}. ${action.remarks || ""}`,
                 },
               });
