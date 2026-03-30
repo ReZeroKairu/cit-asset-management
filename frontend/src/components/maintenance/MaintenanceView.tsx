@@ -15,7 +15,6 @@ import {
   History,
   ChevronDown,
   ChevronUp,
-  Download,
 } from "lucide-react";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
@@ -147,13 +146,13 @@ const MaintenanceView: React.FC<Props> = ({
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
           (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-        )
+        ) && asset.status !== 'Disposed'
     );
 
     // 4. Start building the list with Peripherals first
@@ -245,13 +244,13 @@ const MaintenanceView: React.FC<Props> = ({
   const systemAssets = assets.filter((asset) =>
     SYSTEM_UNIT_TYPES.some(
       (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-    )
+    ) && asset.status !== 'Disposed'
   );
   const peripheralAssets = assets.filter(
     (asset) =>
       !SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
   );
 
   // Use shared utility to calculate System Unit (Overall) status

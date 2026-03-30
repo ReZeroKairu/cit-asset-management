@@ -99,10 +99,11 @@ const QuarterlyReportsView: React.FC<Props> = ({
         selectedQuarter
       );
       const assetData = await getWorkstationAssets(report.workstation_id);
+      const filteredAssetData = assetData.filter((asset: any) => asset.status !== 'Disposed');
       // Use the same shared function:
       await generateQPMCReportFromDb({
         pmcReport: detailedReport,
-        assets: assetData,
+        assets: filteredAssetData,
         lab: labName,
         workstation: getWorkstationName(report.workstation_id),
         user,
@@ -170,13 +171,13 @@ const QuarterlyReportsView: React.FC<Props> = ({
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
           (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-        )
+        ) && asset.status !== 'Disposed'
     );
 
     // Build components list with Peripherals first
