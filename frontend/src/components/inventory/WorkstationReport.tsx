@@ -1,6 +1,7 @@
 //frontend/src/components/inventory/WorkstationReport.tsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import api from "../../api/axios";
 import WorkstationReportModal from "./WorkstationReportModal";
 import WorkstationReportContent from "./WorkstationReportContent";
 
@@ -39,14 +40,8 @@ const WorkstationReport: React.FC<Props> = ({ show, onClose }) => {
 
   const fetchLabs = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/laboratories`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await response.json();
-      setLabs(data);
+      const response = await api.get("/laboratories");
+      setLabs(response.data);
     } catch (error) {
       console.error("Failed to fetch labs:", error);
     }

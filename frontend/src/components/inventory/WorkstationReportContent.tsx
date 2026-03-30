@@ -11,6 +11,14 @@ interface WorkstationAsset {
   quantity: number | null;
   unit_name: string | null;
   remarks: string | null;
+  status: string | null;
+  asset_details?: {
+    asset_details?: {
+      asset_statuses?: {
+        status_name: string;
+      };
+    };
+  };
 }
 
 interface Workstation {
@@ -65,16 +73,37 @@ const WorkstationReportContent: React.FC<Props> = ({
         lab_name: ws.laboratories?.lab_name || null,
         location: ws.laboratories?.location || null,
         lab_id: ws.lab_id,
-        assets: (ws.inventory_assets || []).map((asset: any) => ({
-          asset_id: asset.asset_id,
-          property_tag_no:
-            asset.asset_details?.property_tag_no || asset.property_tag_no,
-          serial_number: asset.asset_details?.serial_number || asset.serial_number,
-          description: asset.asset_details?.description || asset.description,
-          quantity: asset.asset_details?.quantity || asset.quantity,
-          unit_name: asset.units?.unit_name,
-          remarks: asset.asset_details?.asset_remarks || "",
-        })),
+        assets: (ws.inventory_assets || [])
+          .filter((asset: any) => {
+            const statusName = asset.asset_details?.asset_statuses?.status_name || 
+                              asset.asset_details?.status_id === 6 ? "Disposed" :
+                              asset.asset_details?.status_id === 2 ? "For Disposal" :
+                              asset.asset_details?.status_id === 3 ? "For Upgrade" :
+                              asset.asset_details?.status_id === 4 ? "For Replacement" :
+                              asset.asset_details?.status_id === 5 ? "Lost" :
+                              asset.asset_details?.status_id === 1 ? "Functional" :
+                              "Available";
+            return statusName !== "Disposed";
+          })
+          .map((asset: any) => ({
+            asset_id: asset.asset_id,
+            property_tag_no:
+              asset.asset_details?.property_tag_no || asset.property_tag_no,
+            serial_number: asset.asset_details?.serial_number || asset.serial_number,
+            description: asset.asset_details?.description || asset.description,
+            quantity: asset.asset_details?.quantity || asset.quantity,
+            unit_name: asset.units?.unit_name,
+            remarks: asset.asset_details?.asset_remarks || "",
+            status: asset.asset_details?.asset_statuses?.status_name || 
+                     asset.asset_details?.status_id === 6 ? "Disposed" :
+                     asset.asset_details?.status_id === 2 ? "For Disposal" :
+                     asset.asset_details?.status_id === 3 ? "For Upgrade" :
+                     asset.asset_details?.status_id === 4 ? "For Replacement" :
+                     asset.asset_details?.status_id === 5 ? "Lost" :
+                     asset.asset_details?.status_id === 1 ? "Functional" :
+                     "Available",
+            asset_details: asset.asset_details,
+          })),
       }));
 
       data.sort((a, b) =>
@@ -165,6 +194,9 @@ const WorkstationReportContent: React.FC<Props> = ({
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[20%]">
                       Remarks
                     </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[15%]">
+                      Status
+                    </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[5%]">
                       Qty
                     </th>
@@ -193,6 +225,9 @@ const WorkstationReportContent: React.FC<Props> = ({
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-500 truncate">
                         {asset.remarks || "-"}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900 truncate">
+                        {asset.status || "Available"}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">
                         {asset.quantity || 1}

@@ -16,6 +16,7 @@ interface WorkstationAsset {
   quantity: number | null;
   unit_name: string | null;
   remarks: string | null;
+  status: string | null;
 }
 
 interface Workstation {
@@ -119,6 +120,7 @@ const WorkstationReportModal: React.FC<Props> = ({
         serial_number: asset.serial_number || "N/A",
         description: `${asset.unit_name || "Device"} - ${asset.description || ""}`,
         remarks: asset.remarks || "",
+        status: asset.status || "Available",
       })),
     }));
 
