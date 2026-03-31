@@ -513,21 +513,23 @@ export const LabRequestForm = () => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="timeIn">Time In</Label>
+              <Label htmlFor="timeIn">Time In *</Label>
               <Input
                 id="timeIn"
                 type="time"
                 value={formData.timeIn}
                 onChange={(e) => handleInputChange("timeIn", e.target.value)}
+                required
               />
             </div>
             <div>
-              <Label htmlFor="timeOut">Time Out</Label>
+              <Label htmlFor="timeOut">Time Out *</Label>
               <Input
                 id="timeOut"
                 type="time"
                 value={formData.timeOut}
                 onChange={(e) => handleInputChange("timeOut", e.target.value)}
+                required
               />
             </div>
             <div></div>

@@ -187,6 +187,7 @@ export const PublicLabRequestForm = ({
       const newData = {
         ...prev,
         laboratory: labValue,
+        ws_number: "", // Clear workstation selection when lab changes
       };
 
       // Fetch workstations for this lab
@@ -316,19 +317,6 @@ export const PublicLabRequestForm = ({
         ...prev,
         [field]: processedValue,
       };
-
-      // Fetch workstations when laboratory is selected
-      if (field === "laboratory") {
-        // Clear workstation selection when lab changes
-        newData.ws_number = "";
-
-        // Fetch workstations for this lab
-        if (value && value !== "e-forum") {
-          fetchWorkstations(value);
-        } else {
-          setWorkstations([]);
-        }
-      }
 
       return newData;
     });
@@ -614,12 +602,17 @@ export const PublicLabRequestForm = ({
           />
         </div>
 
-        {/* Time Out will be filled by Custodian after approval */}
-        <input
-          type="hidden"
-          value={formData.time_out}
-          onChange={(e) => handleInputChange("time_out", e.target.value)}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="time_out">Time Out *</Label>
+          <Input
+            id="time_out"
+            type="time"
+            value={formData.time_out}
+            onChange={(e) => handleInputChange("time_out", e.target.value)}
+            disabled={disabled}
+            required
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
