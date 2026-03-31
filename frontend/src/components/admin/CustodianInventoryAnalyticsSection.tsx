@@ -349,13 +349,7 @@ const CustodianInventoryAnalyticsSection = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={(entry) => {
-                        const dataItem =
-                          filteredData.statusDistribution[entry.index];
-                        return `${dataItem.status_name}: ${
-                          entry.percent ? (entry.percent * 100).toFixed(1) : "0.0"
-                        }%`;
-                      }}
+                      label={false}
                       outerRadius={70}
                       fill="#8884d8"
                       dataKey="count"
@@ -370,7 +364,23 @@ const CustodianInventoryAnalyticsSection = () => {
                         />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const entry = payload[0].payload;
+                          const total = filteredData.statusDistribution.reduce((sum: number, item: any) => sum + item.count, 0);
+                          const percentage = ((entry.count / total) * 100).toFixed(1);
+                          return (
+                            <div className="bg-white p-2 border border-gray-200 rounded shadow-lg">
+                              <p className="font-medium">{entry.status_name}</p>
+                              <p className="text-sm">Count: {entry.count}</p>
+                              <p className="text-sm">Percentage: {percentage}%</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">

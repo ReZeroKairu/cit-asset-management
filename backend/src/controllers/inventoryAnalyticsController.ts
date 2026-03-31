@@ -187,7 +187,7 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
         labStatusData = [];
       }
     } else {
-      // For admins, get all labs
+      // For admins, get all labs with status filtering
       labStatusData = await prisma.laboratories.findMany({
         select: {
           lab_id: true,
@@ -197,6 +197,14 @@ export const getInventoryAnalytics = async (req: Request, res: Response) => {
               asset_details: {
                 select: {
                   status_id: true,
+                },
+              },
+            },
+            where: {
+              asset_details: {
+                status_id: {
+                  not: null,
+                  notIn: disposedStatusId ? [disposedStatusId] : undefined, // Exclude disposed assets
                 },
               },
             },
