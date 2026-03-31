@@ -432,25 +432,25 @@ const ViewWorkstationModal: React.FC<Props> = ({
                           })()}
                           </button>
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-24">
                           Property Tag
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-32">
                           Unit Name
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-36">
                           Serial Number
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                           Description
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-28">
                           Status
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                           Remarks
                         </th>
-                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-32">
                           Actions
                         </th>
                       </tr>
@@ -483,22 +483,22 @@ const ViewWorkstationModal: React.FC<Props> = ({
                               )}
                             </button>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600 w-24">
                             {asset.asset_details?.property_tag_no || asset.units?.unit_name || "-"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 w-32">
                             {asset.units?.unit_name || "-"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 font-mono w-36">
                             {asset.asset_details?.serial_number || "-"}
                           </td>
                           <td
-                            className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate"
+                            className="px-4 py-4 text-sm text-gray-500 max-w-xs truncate"
                             title={asset.asset_details?.description}
                           >
                             {asset.asset_details?.description || "-"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 whitespace-nowrap w-28">
                             <span
                               className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(asset.asset_details?.asset_statuses?.status_name)}`}
                             >
@@ -507,12 +507,12 @@ const ViewWorkstationModal: React.FC<Props> = ({
                             </span>
                           </td>
                           <td
-                            className="px-6 py-4 text-sm text-gray-500 max-w-[150px] truncate"
+                            className="px-4 py-4 text-sm text-gray-500 max-w-[150px] truncate"
                             title={asset.asset_details?.asset_remarks}
                           >
                             {asset.asset_details?.asset_remarks || "-"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                          <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium w-32">
                             <div className="flex justify-center space-x-2">
                             
                           <button
