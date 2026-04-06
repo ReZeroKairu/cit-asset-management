@@ -192,3 +192,14 @@ export const getAssetStatuses = async () => {
   const response = await api.get("/inventory/statuses");
   return response.data;
 };
+
+// ✅ NEW: Resolve workstation name to ID based on lab_id
+export const resolveWorkstationName = async (labId: number, workstationName: string) => {
+  try {
+    const response = await api.get(`/inventory/resolve-workstation?lab_id=${labId}&workstation_name=${encodeURIComponent(workstationName)}`);
+    return response.data.workstation_id;
+  } catch (error) {
+    console.error('Failed to resolve workstation name:', error);
+    throw new Error(`Workstation "${workstationName}" not found in Lab ${labId}`);
+  }
+};

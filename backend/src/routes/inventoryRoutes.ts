@@ -216,4 +216,37 @@ router.get("/device-types", async (req: Request, res: Response) => {
   }
 });
 
+// ✅ NEW: Resolve workstation name to ID based on lab_id
+router.get("/resolve-workstation", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { lab_id, workstation_name } = req.query;
+    
+    if (!lab_id || !workstation_name) {
+      return res.status(400).json({ error: "lab_id and workstation_name are required" });
+    }
+    
+    // Find workstation by name and lab_id
+    const workstation = await prisma.workstations.findFirst({
+      where: {
+        workstation_name: String(workstation_name).trim(),
+        lab_id: Number(lab_id)
+      },
+      select: {
+        workstation_id: true
+      }
+    });
+    
+    if (!workstation) {
+      return res.status(404).json({ 
+        error: `Workstation "${workstation_name}" not found in Lab ${lab_id}` 
+      });
+    }
+    
+    res.json({ workstation_id: workstation.workstation_id });
+  } catch (error) {
+    console.error("Error resolving workstation:", error);
+    res.status(500).json({ error: "Failed to resolve workstation" });
+  }
+});
+
 export default router;

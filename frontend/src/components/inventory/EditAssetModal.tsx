@@ -249,6 +249,25 @@ const EditAssetModal: React.FC<Props> = ({
                 />
               </div>
 
+              {/* Unit */}
+              <div>
+                <label className="block text-sm font-medium">Unit</label>
+                <select
+                  className="w-full border p-2 rounded"
+                  value={formData.unit_id}
+                  onChange={(e) =>
+                    setFormData({ ...formData, unit_id: e.target.value })
+                  }
+                >
+                  <option value="">None</option>
+                  {units.map((unit) => (
+                    <option key={unit.unit_id} value={unit.unit_id}>
+                      {unit.unit_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Location (Lab) - LOCKED for Custodians */}
               <div>
                 <label className="block text-sm font-medium">Laboratory</label>

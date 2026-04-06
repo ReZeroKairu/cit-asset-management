@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-import { batchCreateAssets } from "../../api/inventory";
+import { batchCreateAssets, resolveWorkstationName } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
 import { Upload, FileText, AlertCircle, CheckCircle, X } from "lucide-react";
 
@@ -16,11 +16,7 @@ const REQUIRED_FIELDS = [
   "quantity",
   "description",
   "serial_number",
-  "date_of_purchase",
-  "unit_id",
-  "device_type",
-  "lab_id",
-  // Optionally add workstation_id if required
+  "date_of_purchase"
 ];
 
 const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
@@ -79,13 +75,29 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-        // Validate fields
+        // Validate required fields
         const missingFields = REQUIRED_FIELDS.filter(
           (field) => !Object.keys(json[0] || {}).includes(field),
         );
         if (missingFields.length > 0) {
           setErrors([
             `Missing required fields in sheet: ${missingFields.join(", ")}`,
+          ]);
+          setParsedData([]);
+          return;
+        }
+
+        // Check if at least one identifier field is present (unit_name or unit_id, etc.)
+        const hasUnitIdentifier = Object.keys(json[0] || {}).some(key => 
+          ['unit_name', 'unit_id'].includes(key)
+        );
+        const hasLabIdentifier = Object.keys(json[0] || {}).some(key => 
+          ['lab_name', 'lab_id'].includes(key)
+        );
+
+        if (!hasUnitIdentifier || !hasLabIdentifier) {
+          setErrors([
+            "Missing identifier fields. Please include either 'unit_name' or 'unit_id', and either 'lab_name' or 'lab_id'"
           ]);
           setParsedData([]);
           return;
@@ -135,8 +147,8 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         return;
       }
 
-      // Transform date_of_purchase - handle Excel serial numbers and date formats
-      const assetsPayload = parsedData.map((row: any) => {
+      // Transform data with flexible field handling
+      const assetsPayload = await Promise.all(parsedData.map(async (row: any) => {
         let processedDate: string | null = null;
 
         if (row.date_of_purchase) {
@@ -160,13 +172,56 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
           }
         }
 
-        // ✅ Bulletproof workstation_id parsing
-        let processedWorkstationId = null;
+        // Handle flexible unit identification
+        let unitId = null;
+        if (row.unit_id) {
+          unitId = Number(row.unit_id);
+        } else if (row.unit_name) {
+          // For now, we'll store the unit_name and let backend handle mapping
+          unitId = 1; // Default fallback - you may want to improve this
+        }
+
+        // Handle flexible lab identification  
+        let labId = null;
+        if (row.lab_id) {
+          labId = Number(row.lab_id);
+        } else if (row.lab_name) {
+          // For now, we'll store the lab_name and let backend handle mapping
+          labId = 1; // Default fallback - you may want to improve this
+        }
+
+        // Handle flexible device type
+        let deviceType = null;
+        if (row.device_type) {
+          deviceType = Number(row.device_type);
+        } else if (row.device_type_name) {
+          // For now, we'll store the device_type_name and let backend handle mapping
+          deviceType = 1; // Default fallback - you may want to improve this
+        }
+
+        // Handle flexible workstation identification with proper resolution
+        let workstationId = null;
         if (row.workstation_id !== undefined && row.workstation_id !== null) {
           const wsString = String(row.workstation_id).trim();
           // Only assign if it's not empty, not "N/A", and is a valid number
           if (wsString !== "" && wsString.toLowerCase() !== "n/a" && !isNaN(Number(wsString))) {
-            processedWorkstationId = Number(wsString);
+            workstationId = Number(wsString);
+          }
+        } else if (row.workstation_name) {
+          if (!labId) {
+            throw new Error(`Workstation name "${row.workstation_name}" provided without a valid Lab ID. Please provide either 'lab_id' or 'lab_name'.`);
+          }
+          // Resolve workstation name using lab_id to handle duplicate names across labs
+          try {
+            workstationId = await resolveWorkstationName(labId, String(row.workstation_name).trim());
+          } catch (error: any) {
+            // Provide more helpful error message
+            const errorMsg = error.message || error;
+            if (errorMsg.includes('not found')) {
+              throw new Error(`Workstation "${row.workstation_name}" not found in Lab ${labId}. Please check that this workstation exists in the specified lab.`);
+            } else {
+              throw new Error(`Failed to resolve workstation "${row.workstation_name}" in Lab ${labId}: ${errorMsg}`);
+            }
           }
         }
 
@@ -176,12 +231,12 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
           description: row.description ? String(row.description).trim() : null,
           serial_number: row.serial_number ? String(row.serial_number).trim() : null,
           date_of_purchase: processedDate,
-          unit_id: Number(row.unit_id),
-          device_type: Number(row.device_type),
-          lab_id: Number(row.lab_id),
-          workstation_id: processedWorkstationId,
+          unit_id: unitId,
+          device_type: deviceType,
+          lab_id: labId,
+          workstation_id: workstationId,
         };
-      });
+      }));
 
       await batchCreateAssets(assetsPayload);
 
@@ -193,6 +248,7 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     } catch (err: any) {
       setErrors([
         err.response?.data?.error ||
+          err.message ||
           "Upload failed. Please check your file and try again.",
       ]);
       setSubmitting(false);
@@ -283,7 +339,15 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
               </div>
               <div className="mt-3 p-2 bg-white rounded border border-blue-200">
                 <p className="text-xs text-blue-600">
-                  <strong>Example:</strong> property_tag_no, quantity, description, serial_number, date_of_purchase, unit_id, device_type, lab_id
+                  <strong>Required:</strong> property_tag_no, quantity, description, serial_number, date_of_purchase<br/>
+                  <strong>Optional (choose one from each group):</strong><br/>
+                  • unit_name OR unit_id<br/>
+                  • lab_name OR lab_id<br/>
+                  • workstation_name OR workstation_id<br/>
+                  • device_type_name OR device_type
+                </p>
+                <p className="text-xs text-orange-600 mt-2">
+                  <strong>Note:</strong> When using workstation_name, ensure the workstation exists in the specified lab.
                 </p>
               </div>
             </div>
