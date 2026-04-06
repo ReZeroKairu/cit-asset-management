@@ -17,7 +17,6 @@ import dashboardRoutes from "./routes/dashboardRoutes";
 import maintenanceRoutes from "./routes/maintenanceRoutes";
 import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
-import oneTimeFormsRoutes from "./routes/oneTimeFormsFinal";
 import complaintsRoutes from "./routes/complaintsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
 import auditRoutes from "./routes/auditRoutesSimple";
@@ -108,7 +107,6 @@ app.use("/daily-reports", reportRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/forms", formsRoutes); // handles forms submissions
 app.use("/public-forms", publicFormsLimiter, publicFormsRoutes); // handles public form submissions (no auth)
-app.use("/api/one-time-forms", publicFormsLimiter, oneTimeFormsRoutes); // handles one-time QR form tokens
 app.use("/public-complaints", publicFormsLimiter, complaintsRoutes); // handles public complaint submissions (no auth)
 app.use("/complaints", complaintsRoutes); // handles complaint management (auth required)
 app.use("/analytics", analyticsRoutes); // handles analytics endpoints (admin only)

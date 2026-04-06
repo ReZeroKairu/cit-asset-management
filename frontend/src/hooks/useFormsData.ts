@@ -4,7 +4,6 @@ import {
   getLabRequests,
   getEquipmentBorrows,
   getSoftwareInstallations,
-  getOneTimeFormSubmissionsNoAuth,
 } from "../api/forms";
 import { type FormSubmission } from "../types/forms";
 
@@ -45,29 +44,24 @@ export const useFormsData = () => {
         labRequestsRes,
         equipmentBorrowsRes,
         softwareInstallationsRes,
-        oneTimeSubmissionsRes,
       ] = await Promise.all([
         getLabRequests({}),
         getEquipmentBorrows({}),
         getSoftwareInstallations({}),
-        getOneTimeFormSubmissionsNoAuth(),
       ]);
 
       const labRequests = Array.isArray(labRequestsRes) ? labRequestsRes : labRequestsRes?.data || [];
       const equipmentBorrows = Array.isArray(equipmentBorrowsRes) ? equipmentBorrowsRes : equipmentBorrowsRes?.data || [];
       const softwareInstallations = Array.isArray(softwareInstallationsRes) ? softwareInstallationsRes : softwareInstallationsRes?.data || [];
-      const oneTimeSubmissions = Array.isArray(oneTimeSubmissionsRes) ? oneTimeSubmissionsRes : [];
 
       const labRequestsData = transformFormData(labRequests, "lab-request");
       const equipmentBorrowsData = transformFormData(equipmentBorrows, "equipment-borrow");
       const softwareInstallationsData = transformFormData(softwareInstallations, "software-install");
-      const oneTimeSubmissionsData = transformFormData(oneTimeSubmissions, "one-time");
 
       const allForms: FormSubmission[] = [
         ...labRequestsData,
         ...equipmentBorrowsData,
         ...softwareInstallationsData,
-        ...oneTimeSubmissionsData,
       ];
 
       const userForms = (() => {
@@ -83,9 +77,7 @@ export const useFormsData = () => {
           return allForms
             .filter(
               (form) =>
-                form.userId === user?.id ||
-                (form.details?.submittedVia === "one-time-token" &&
-                  form.details?.userId === user?.id)
+                form.userId === user?.id
             )
             .filter(
               (form) =>

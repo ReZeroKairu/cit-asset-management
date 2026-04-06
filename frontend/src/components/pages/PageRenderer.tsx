@@ -10,7 +10,6 @@ import UserManagementPage from "../../pages/UserManagementPage";
 import FormsPage from "../../pages/FormsPage";
 import PublicFormsPage from "../../pages/PublicFormsPage";
 import PublicLandingPage from "../../pages/PublicLandingPage";
-import OneTimeFormPage from "../../pages/OneTimeFormPage";
 import ComplaintsPage from "../../pages/ComplaintsPage";
 import ComplaintsManagementPage from "../../pages/ComplaintsManagementPage";
 import CITLabUsersPage from "../../pages/CITLabUsersPage";
@@ -84,9 +83,7 @@ const PageRenderer = ({
       return <MaintenancePage />;
     case "forms":
       return <FormsPage />;
-    case "one-time-form":
-      return <OneTimeFormPage />;
-    case "public-forms":
+        case "public-forms":
       return <PublicFormsPage />;
     case "public-complaints":
       return <ComplaintsPage />;

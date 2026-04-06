@@ -1,7 +1,6 @@
 import type { PageType } from "../hooks/useAppRouting";
 
 export const PUBLIC_PAGES: PageType[] = [
-  "one-time-form",
   "public-forms", 
   "public-complaints",
   "cit-lab-users",
@@ -25,13 +24,13 @@ export const getNavigationTitle = (page: PageType): string => {
     forms: "Forms",
     "public-forms": "Public Forms",
     "public-landing": "Welcome",
-    "one-time-form": "Form",
     complaints: "Complaints",
     "complaints-management": "Complaints Management",
     login: "Login",
     maintenance: "Maintenance",
     "public-complaints": "Submit Complaint",
-    "cit-lab-users": "CIT Lab Users"
+    "cit-lab-users": "CIT Lab Users",
+    disposals: "Disposals"
   };
 
   return titles[page] || "Unknown Page";

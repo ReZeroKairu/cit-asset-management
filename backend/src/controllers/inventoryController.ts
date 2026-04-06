@@ -239,12 +239,7 @@ export const batchCreateAssets = async (req: Request, res: Response) => {
           });
           results.push(newAsset);
         } catch (error: any) {
-          // Handle duplicate property_tag_no error
-          if (error.code === 'P2002' && error.meta?.target === 'property_tag_no') {
-            // Continue with other assets, don't fail the entire transaction
-            continue;
-          }
-          // For other errors, re-throw
+          // For any errors, re-throw since we no longer handle duplicate property_tag_no
           throw error;
         }
       }
@@ -402,29 +397,10 @@ export const updateAsset = async (req: Request, res: Response) => {
         : null;
     if (asset_remarks !== undefined)
       detailsData.asset_remarks = asset_remarks || null;
-    if (status_id !== undefined)
+    if (status_id !== undefined && status_id !== null)
       detailsData.status_id = status_id ? Number(status_id) : undefined;
     if (disposed_by !== undefined)
       detailsData.disposed_by = disposed_by || null;
-
-    // Check if status is being changed to "Disposed" and set date_disposed
-    if (status_id !== undefined) {
-      console.log('🔍 Backend: Checking status change for disposal, status_id:', status_id);
-      
-      // Get the disposed status ID
-      const disposedStatus = await prisma.asset_statuses.findUnique({
-        where: { status_name: "Disposed" }
-      });
-      
-      console.log('🔍 Backend: Disposed status from DB:', disposedStatus);
-      
-      if (disposedStatus && Number(status_id) === disposedStatus.status_id) {
-        console.log('🔍 Backend: Setting date_disposed to current date');
-        detailsData.date_disposed = new Date();
-      } else {
-        console.log('🔍 Backend: Status does not match "Disposed", not setting date_disposed');
-      }
-    }
 
     console.log('🔍 Backend: Final detailsData to update:', detailsData);
 
@@ -435,8 +411,30 @@ export const updateAsset = async (req: Request, res: Response) => {
     
     console.log('🔍 Backend: Existing asset_details:', existingAssetDetails);
 
+    // Separate status_id from other details for proper handling
+    const { status_id: statusIdField, ...otherDetails } = detailsData;
+
+    // Check if status is being changed to "Disposed" and set date_disposed
+    if (statusIdField !== undefined && statusIdField !== null) {
+      console.log('🔍 Backend: Checking status change for disposal, statusIdField:', statusIdField);
+      
+      // Get the disposed status ID
+      const disposedStatus = await prisma.asset_statuses.findUnique({
+        where: { status_name: "Disposed" }
+      });
+      
+      console.log('🔍 Backend: Disposed status from DB:', disposedStatus);
+      
+      if (disposedStatus && Number(statusIdField) === disposedStatus.status_id) {
+        console.log('🔍 Backend: Setting date_disposed to current date');
+        otherDetails.date_disposed = new Date();
+      } else {
+        console.log('🔍 Backend: Status does not match "Disposed", not setting date_disposed');
+      }
+    }
+
     let updatedAsset;
-    if (!existingAssetDetails && Object.keys(detailsData).length > 0) {
+    if (!existingAssetDetails && Object.keys(otherDetails).length > 0) {
       console.log('🔍 Backend: Creating new asset_details record');
       // Create asset_details if it doesn't exist
       updatedAsset = await prisma.inventory_assets.update({
@@ -445,8 +443,8 @@ export const updateAsset = async (req: Request, res: Response) => {
           ...updateData,
           asset_details: {
             create: {
-              ...detailsData,
-              asset_id: assetId
+              ...otherDetails,
+              ...(statusIdField !== undefined && { status_id: Number(statusIdField) })
             }
           }
         },
@@ -467,9 +465,12 @@ export const updateAsset = async (req: Request, res: Response) => {
         where: { asset_id: assetId },
         data: {
           ...updateData,
-          ...(Object.keys(detailsData).length > 0 && {
+          ...(Object.keys(otherDetails).length > 0 && {
             asset_details: {
-              update: detailsData,
+              update: {
+                ...otherDetails,
+                ...(statusIdField !== undefined && { status_id: Number(statusIdField) })
+              },
             },
           }),
         },

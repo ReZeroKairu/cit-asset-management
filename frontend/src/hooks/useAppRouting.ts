@@ -13,7 +13,6 @@ export type PageType =
   | "forms"
   | "public-forms"
   | "public-landing"
-  | "one-time-form"
   | "complaints"
   | "complaints-management"
   | "login"
@@ -30,8 +29,6 @@ const getInitialPage = (): PageType => {
   if (path === "/public-complaints") return "public-complaints";
   if (path === "/cit-lab-users") return "cit-lab-users";
   if (path === "/disposals") return "disposals";
-  if (path === "/one-time" || path.startsWith("/one-time"))
-    return "one-time-form";
 
   const storedUser = localStorage.getItem("user");
   const isLoggedIn = storedUser && storedUser !== "null";
@@ -67,8 +64,6 @@ export const useAppRouting = () => {
         setCurrentPage("cit-lab-users");
       } else if (path === "/disposals") {
         setCurrentPage("disposals");
-      } else if (path === "/one-time" || path.startsWith("/one-time")) {
-        setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
         setCurrentPage("public-landing");
       } else if (!user) {
@@ -96,8 +91,6 @@ export const useAppRouting = () => {
       window.history.pushState(null, "", "/disposals");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
-    } else if (page === "one-time-form") {
-      window.history.pushState(null, "", "/one-time");
     } else {
       window.history.pushState(null, "", "/");
     }

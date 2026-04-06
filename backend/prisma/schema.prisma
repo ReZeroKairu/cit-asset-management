@@ -10,7 +10,7 @@ datasource db {
 model asset_details {
   detail_id        Int              @id @default(autoincrement())
   asset_id         Int              @unique
-  property_tag_no  String?          @unique(map: "property_tag_no") @db.VarChar(50)
+  property_tag_no  String?          @db.VarChar(50)
   quantity         Int?             @default(1)
   description      String?          @db.Text
   serial_number    String?          @db.VarChar(100)
@@ -204,18 +204,6 @@ model office_types {
   departments departments[]
 }
 
-model one_time_links {
-  id           Int      @id @default(autoincrement())
-  token        String   @unique @db.VarChar(255)
-  form_type    String?  @db.VarChar(50)
-  generated_by Int?
-  created_at   DateTime @default(now()) @db.Timestamp(0)
-  expires_at   DateTime @db.Timestamp(0)
-  used         Boolean  @default(false)
-  users        users?   @relation(fields: [generated_by], references: [user_id])
-
-  @@index([generated_by], map: "one_time_links_generated_by_fkey")
-}
 
 model pmc_report_procedures {
   id           Int         @id @default(autoincrement())
@@ -416,7 +404,6 @@ model users {
   equipment_borrows      equipment_borrows[]
   inventory_assets       inventory_assets[]
   lab_requests           lab_requests[]
-  one_time_links         one_time_links[]
   pmc_reports            pmc_reports[]
   service_logs           service_logs[]
   software_installations software_installations[]

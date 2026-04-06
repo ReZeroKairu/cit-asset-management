@@ -143,13 +143,13 @@ const EditAssetModal: React.FC<Props> = ({
       // The backend expects specific fields to update the relations
       await api.put(`/inventory/${asset.asset_id}`, {
         ...formData,
-        // Ensure IDs are sent as numbers or null
+        // Ensure IDs are sent as numbers or null, but don't send empty strings
         lab_id: formData.lab_id ? Number(formData.lab_id) : null,
         unit_id: formData.unit_id ? Number(formData.unit_id) : null,
         workstation_id: formData.workstation_id
           ? Number(formData.workstation_id)
           : null,
-        status_id: formData.status_id ? Number(formData.status_id) : undefined,
+        status_id: formData.status_id ? Number(formData.status_id) : null,
       });
       onSuccess();
       onClose();

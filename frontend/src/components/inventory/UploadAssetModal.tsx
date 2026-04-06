@@ -12,12 +12,38 @@ interface Props {
 }
 
 const REQUIRED_FIELDS = [
-  "property_tag_no",
   "quantity",
   "description",
-  "serial_number",
-  "date_of_purchase"
+  "lab_id",
+  "date_of_purchase",
+  "unit_name"
 ];
+
+// Device type normalization
+const normalizeDeviceType = (deviceType: string): string => {
+  if (!deviceType) return '';
+  
+  const normalized = deviceType.toString().toLowerCase().trim();
+  
+  const deviceTypeMap: Record<string, string> = {
+    'monitor': 'Monitor', 'mon': 'Monitor', 'Monitor': 'Monitor',
+    'keyboard': 'Keyboard', 'keyboards': 'Keyboard', 'Keyboard': 'Keyboard',
+    'mouse': 'Mouse', 'mice': 'Mouse', 'Mouse': 'Mouse',
+    'ssd': 'SSD', 'solid state drive': 'SSD', 'SSD': 'SSD',
+    'hdd': 'HDD', 'hard disk drive': 'HDD', 'hard drive': 'HDD', 'hard disk': 'HDD', 'HDD': 'HDD',
+    'ram': 'RAM', 'memory': 'RAM', 'Memory': 'RAM', 'RAM': 'RAM',
+    'psu': 'PSU', 'power supply': 'PSU', 'Power Supply': 'PSU', 'power supply unit': 'PSU', 'PSU': 'PSU',
+    'avr': 'AVR', 'voltage regulator': 'AVR', 'AVR': 'AVR',
+    'cpu': 'CPU', 'processor': 'CPU', 'Processor': 'CPU', 'CPU': 'CPU',
+    'gpu': 'GPU', 'graphics card': 'GPU', 'video card': 'GPU', 'GPU': 'GPU',
+    'motherboard': 'Motherboard', 'Motherboard': 'Motherboard',
+    'router': 'Router', 'Router': 'Router',
+    'switch': 'Switch', 'Switch': 'Switch',
+    'printer': 'Printer', 'Printer': 'Printer'
+  };
+  
+  return deviceTypeMap[normalized] || deviceType;
+};
 
 const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   const { user } = useAuth();
@@ -25,6 +51,10 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  
+  // NEW STATE VARIABLES FOR SUCCESS SCREEN
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedCount, setUploadedCount] = useState(0);
 
   // Only Custodian is allowed
   if (!show || user?.role !== "Custodian") return null;
@@ -44,7 +74,6 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     const file = event.dataTransfer.files?.[0];
     if (!file) return;
     
-    // Check file type
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
       setErrors(['Please upload a valid Excel file (.xlsx or .xls)']);
@@ -75,29 +104,13 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-        // Validate required fields
+        
         const missingFields = REQUIRED_FIELDS.filter(
           (field) => !Object.keys(json[0] || {}).includes(field),
         );
         if (missingFields.length > 0) {
           setErrors([
             `Missing required fields in sheet: ${missingFields.join(", ")}`,
-          ]);
-          setParsedData([]);
-          return;
-        }
-
-        // Check if at least one identifier field is present (unit_name or unit_id, etc.)
-        const hasUnitIdentifier = Object.keys(json[0] || {}).some(key => 
-          ['unit_name', 'unit_id'].includes(key)
-        );
-        const hasLabIdentifier = Object.keys(json[0] || {}).some(key => 
-          ['lab_name', 'lab_id'].includes(key)
-        );
-
-        if (!hasUnitIdentifier || !hasLabIdentifier) {
-          setErrors([
-            "Missing identifier fields. Please include either 'unit_name' or 'unit_id', and either 'lab_name' or 'lab_id'"
           ]);
           setParsedData([]);
           return;
@@ -111,28 +124,22 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     reader.readAsBinaryString(file);
   };
 
-  // Helper function to format Excel dates for display
   const formatDisplayValue = (val: any, key: string): string => {
-    // Handle date_of_purchase column specifically
     if (key === 'date_of_purchase' && val) {
-      // Handle Excel serial numbers
       if (typeof val === 'number' && val > 1000) {
         const excelDate = new Date((val - 25569) * 86400 * 1000);
         return excelDate.toLocaleDateString();
       }
-      // Handle string dates
       if (typeof val === 'string') {
         const parsedDate = new Date(val);
         if (!isNaN(parsedDate.getTime())) {
           return parsedDate.toLocaleDateString();
         }
       }
-      // Handle Date objects
       if (val instanceof Date && !isNaN(val.getTime())) {
         return val.toLocaleDateString();
       }
     }
-    // For all other values, just convert to string
     return String(val);
   };
 
@@ -140,85 +147,100 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
     setSubmitting(true);
     setErrors([]);
     try {
-      // Basic validation again (optional)
       if (parsedData.length === 0) {
         setErrors(["No valid asset data found."]);
         setSubmitting(false);
         return;
       }
 
-      // Transform data with flexible field handling
       const assetsPayload = await Promise.all(parsedData.map(async (row: any) => {
         let processedDate: string | null = null;
 
         if (row.date_of_purchase) {
           const dateValue = row.date_of_purchase;
-
-          // Handle Excel serial numbers (Excel stores dates as days since 1900-01-01)
           if (typeof dateValue === 'number' && dateValue > 1000) {
             const excelDate = new Date((dateValue - 25569) * 86400 * 1000);
-            processedDate = excelDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-          }
-          // Handle string dates
-          else if (typeof dateValue === 'string') {
+            processedDate = excelDate.toISOString().split('T')[0];
+          } else if (typeof dateValue === 'string') {
             const parsedDate = new Date(dateValue);
             if (!isNaN(parsedDate.getTime())) {
-              processedDate = parsedDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+              processedDate = parsedDate.toISOString().split('T')[0];
             }
-          }
-          // Handle JavaScript Date objects
-          else if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-            processedDate = dateValue.toISOString().split('T')[0]; // YYYY-MM-DD format
+          } else if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+            processedDate = dateValue.toISOString().split('T')[0];
           }
         }
 
-        // Handle flexible unit identification
         let unitId = null;
         if (row.unit_id) {
           unitId = Number(row.unit_id);
         } else if (row.unit_name) {
-          // For now, we'll store the unit_name and let backend handle mapping
-          unitId = 1; // Default fallback - you may want to improve this
+          const unitNameNormalized = String(row.unit_name).toLowerCase().trim();
+          const unitMap: Record<string, number> = {
+            'monitor': 1, 'mon': 1, 'usb ports': 2, 'keyboard': 3, 'keyboards': 3,
+            'mouse': 4, 'mice': 4, 'ssd': 5, 'solid state drive': 5, 'psu': 6,
+            'power supply': 6, 'power supply unit': 6, 'ram': 7, 'memory': 7,
+            'cpu': 8, 'processor': 8, 'hdd': 9, 'hard disk': 9, 'hard drive': 9,
+            'hard disk drive': 9, 'system case': 10, 'case': 10, 'cpu fan': 11,
+            'motherboard': 12, 'system fan': 13, 'gpu': 14, 'graphics card': 14,
+            'video card': 15, 'router': 16, 'switch': 17, 'printer': 18,
+            'air conditioner': 19, 'avr': 20, 'voltage regulator': 20, 'cctv camera': 21
+          };
+          unitId = unitMap[unitNameNormalized] || 1; 
         }
 
-        // Handle flexible lab identification  
         let labId = null;
         if (row.lab_id) {
           labId = Number(row.lab_id);
         } else if (row.lab_name) {
-          // For now, we'll store the lab_name and let backend handle mapping
-          labId = 1; // Default fallback - you may want to improve this
+          labId = 1; 
         }
 
-        // Handle flexible device type
         let deviceType = null;
         if (row.device_type) {
           deviceType = Number(row.device_type);
         } else if (row.device_type_name) {
-          // For now, we'll store the device_type_name and let backend handle mapping
-          deviceType = 1; // Default fallback - you may want to improve this
+          const normalizedDeviceType = normalizeDeviceType(row.device_type_name);
+          const deviceTypeNameMap: Record<string, number> = {
+            'monitor': 1, 'keyboard': 1, 'mouse': 1, 'ssd': 1, 'psu': 1, 'ram': 1,
+            'cpu': 1, 'hdd': 1, 'motherboard': 1, 'gpu': 1, 'avr': 1, 'router': 2,
+            'switch': 2, 'printer': 3, 'air conditioner': 3, 'cctv camera': 3,
+            'Monitor': 1, 'Keyboard': 1, 'Mouse': 1, 'SSD': 1, 'PSU': 1, 'RAM': 1,
+            'CPU': 1, 'HDD': 1, 'Motherboard': 1, 'GPU': 1, 'AVR': 1, 'Router': 2,
+            'Switch': 2, 'Printer': 3, 'Air conditioner': 3, 'CCTV camera': 3
+          };
+          deviceType = deviceTypeNameMap[normalizedDeviceType.toLowerCase()] || null;
+        } else if (row.unit_name) {
+          const unitNameNormalized = String(row.unit_name).toLowerCase().trim();
+          const deviceTypeMap: Record<string, number> = {
+            'monitor': 1, 'mon': 1, 'usb ports': 1, 'keyboard': 1, 'keyboards': 1,
+            'mouse': 1, 'mice': 1, 'ssd': 1, 'solid state drive': 1, 'psu': 1,
+            'power supply': 1, 'power supply unit': 1, 'ram': 1, 'memory': 1,
+            'cpu': 1, 'processor': 1, 'hdd': 1, 'hard disk': 1, 'hard drive': 1,
+            'hard disk drive': 1, 'system case': 1, 'case': 1, 'cpu fan': 1,
+            'motherboard': 1, 'system fan': 1, 'gpu': 1, 'graphics card': 1,
+            'video card': 1, 'router': 2, 'switch': 2, 'printer': 3,
+            'air conditioner': 3, 'avr': 1, 'voltage regulator': 1, 'cctv camera': 3
+          };
+          deviceType = deviceTypeMap[unitNameNormalized] || null;
         }
 
-        // Handle flexible workstation identification with proper resolution
         let workstationId = null;
         if (row.workstation_id !== undefined && row.workstation_id !== null) {
           const wsString = String(row.workstation_id).trim();
-          // Only assign if it's not empty, not "N/A", and is a valid number
           if (wsString !== "" && wsString.toLowerCase() !== "n/a" && !isNaN(Number(wsString))) {
             workstationId = Number(wsString);
           }
         } else if (row.workstation_name) {
           if (!labId) {
-            throw new Error(`Workstation name "${row.workstation_name}" provided without a valid Lab ID. Please provide either 'lab_id' or 'lab_name'.`);
+            throw new Error(`Workstation name "${row.workstation_name}" provided without a valid Lab ID.`);
           }
-          // Resolve workstation name using lab_id to handle duplicate names across labs
           try {
             workstationId = await resolveWorkstationName(labId, String(row.workstation_name).trim());
           } catch (error: any) {
-            // Provide more helpful error message
             const errorMsg = error.message || error;
             if (errorMsg.includes('not found')) {
-              throw new Error(`Workstation "${row.workstation_name}" not found in Lab ${labId}. Please check that this workstation exists in the specified lab.`);
+              throw new Error(`Workstation "${row.workstation_name}" not found in Lab ${labId}.`);
             } else {
               throw new Error(`Failed to resolve workstation "${row.workstation_name}" in Lab ${labId}: ${errorMsg}`);
             }
@@ -227,34 +249,69 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
 
         return {
           property_tag_no: row.property_tag_no ? String(row.property_tag_no).trim() : null,
-          quantity: row.quantity ? Number(row.quantity) : 1, // Fallback to 1
-          description: row.description ? String(row.description).trim() : null,
+          quantity: Number(row.quantity),
+          description: row.description ? String(row.description).trim() : "-",
           serial_number: row.serial_number ? String(row.serial_number).trim() : null,
           date_of_purchase: processedDate,
           unit_id: unitId,
-          device_type: deviceType,
           lab_id: labId,
           workstation_id: workstationId,
+          device_type: deviceType,
+          status_id: 1, 
         };
       }));
 
       await batchCreateAssets(assetsPayload);
+      
+      // TRIGGER SUCCESS SCREEN
+      setUploadedCount(assetsPayload.length);
+      setUploadSuccess(true);
 
-      alert(`Uploaded ${assetsPayload.length} assets!`);
-      setSubmitting(false);
-      setParsedData([]);
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      setErrors([
-        err.response?.data?.error ||
-          err.message ||
-          "Upload failed. Please check your file and try again.",
-      ]);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      setErrors([error.message || "Failed to upload assets. Please try again."]);
+    } finally {
       setSubmitting(false);
     }
   };
 
+  const handleCloseSuccess = () => {
+    // Reset state so it's fresh if opened again
+    setUploadSuccess(false);
+    setUploadedCount(0);
+    setParsedData([]);
+    onSuccess();
+    onClose();
+  };
+
+  // IF SUCCESSFUL, RENDER THE SUCCESS SCREEN INSTEAD OF THE UPLOAD SCREEN
+  if (uploadSuccess) {
+    return createPortal(
+      <>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-9999 transition-opacity duration-200" onClick={handleCloseSuccess}></div>
+        <div className="fixed inset-0 z-10000 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-8 text-center transform transition-all duration-200 scale-100">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-6">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Upload Successful!</h3>
+            <p className="text-gray-600 mb-8">
+              You have successfully imported <span className="font-bold text-gray-900">{uploadedCount}</span> asset{uploadedCount !== 1 ? 's' : ''} to the database.
+            </p>
+            <button
+              onClick={handleCloseSuccess}
+              className="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </>,
+      document.body
+    );
+  }
+
+  // STANDARD UPLOAD SCREEN
   return createPortal(
     <>
       <div
@@ -339,19 +396,19 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
               </div>
               <div className="mt-3 p-2 bg-white rounded border border-blue-200">
                 <p className="text-xs text-blue-600">
-                  <strong>Required:</strong> property_tag_no, quantity, description, serial_number, date_of_purchase<br/>
+                  <strong>Required:</strong> quantity, description, lab_id, date_of_purchase, unit_name<br/>
+                  <strong>Optional:</strong> property_tag_no, serial_number<br/>
                   <strong>Optional (choose one from each group):</strong><br/>
-                  • unit_name OR unit_id<br/>
-                  • lab_name OR lab_id<br/>
                   • workstation_name OR workstation_id<br/>
                   • device_type_name OR device_type
                 </p>
                 <p className="text-xs text-orange-600 mt-2">
-                  <strong>Note:</strong> When using workstation_name, ensure the workstation exists in the specified lab.
+                  <strong>Note:</strong> When using workstation_name, ensure the workstation exists in the specified lab. Missing optional fields will be set to "-".
                 </p>
               </div>
             </div>
           </div>
+          
           {/* Error Display */}
           {errors.length > 0 && (
             <div className="mx-6 mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -368,6 +425,7 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
               </div>
             </div>
           )}
+          
           {/* Data Preview */}
           {parsedData.length > 0 && (
             <div className="mx-6 mb-6">
@@ -421,6 +479,7 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
               </div>
             </div>
           )}
+          
           {/* Footer */}
           <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
             <div className="text-sm text-gray-600">

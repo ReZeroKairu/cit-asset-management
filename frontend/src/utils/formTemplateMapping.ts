@@ -174,7 +174,6 @@ export const FORM_TEMPLATES = {
   'equipment-borrow': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment.docx',
   'equipment-borrow-faculty': '/LDCU-Forms-CIT-033-Laboratory Borrowing of Equipment Faculty.docx',
   'software-install': '/LDCU-Forms-CIT-035-Laboratory Software Installation Request.docx',
-  'one-time-submission': '/LDCU-Forms-CIT-034-Laboratory and E-Forum Usage Request.docx', // Default to lab request
 };
 
 // Map form data to template variables
@@ -514,12 +513,6 @@ export const mapFormDataToTemplate = (formData: any) => {
       
       return mappedData;
 
-    case 'one-time-submission':
-      return {
-        ...baseData,
-        form_type: formData.details?.formType || 'Laboratory Request',
-        additional_info: formData.details?.additional_info || '',
-      };
 
     default:
       return baseData;

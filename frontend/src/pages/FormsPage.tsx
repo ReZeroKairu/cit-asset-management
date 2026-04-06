@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { useAuth, type users_role } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
-import QRCodeModal from "../components/QRCodeModal";
 import { StatusFilter } from "../components/forms/StatusFilter";
 import { FormList } from "../components/forms/FormList";
 import { LabRequestForm } from "../components/forms/LabRequestForm";
@@ -10,7 +9,6 @@ import { SoftwareInstallForm } from "../components/forms/SoftwareInstallForm";
 import { FileText } from "lucide-react";
 import { FormActions } from "../components/forms/FormActions";
 import { generateFormDocument } from "../utils/formTemplateMapping";
-import QRCodeGenerator from "../components/QRCodeGenerator";
 import { useFormsData } from "../hooks/useFormsData";
 import { useFormStatus } from "../hooks/useFormStatus";
 import { useFormFiltering } from "../hooks/useFormFiltering";
@@ -265,7 +263,7 @@ const TAB_ITEMS = [
   { id: "software-install", label: "Software Install" },
 ] as const;
 
-type TabId = (typeof TAB_ITEMS)[number]["id"] | "qr-code";
+type TabId = (typeof TAB_ITEMS)[number]["id"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -289,7 +287,6 @@ const FormsPage = () => {
   const [selectedForm, setSelectedForm] = useState<FormSubmission | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("submitted");
-  const [showQRModal, setShowQRModal] = useState(false);
 
   const handleViewDetails = useCallback((form: FormSubmission) => {
     setSelectedForm(form);
@@ -415,9 +412,6 @@ const FormsPage = () => {
           </div>
         )}
 
-        {activeTab === "qr-code" && user?.role === "Custodian" && (
-          <QRCodeGenerator />
-        )}
 
         {selectedForm && (
           <FormDetailsModal
@@ -479,13 +473,6 @@ const FormsPage = () => {
         />
       )}
 
-      {user?.role === "Custodian" && (
-        <QRCodeModal
-          show={showQRModal}
-          onClose={() => setShowQRModal(false)}
-          baseUrl={window.location.origin}
-        />
-      )}
     </div>
   );
 };
