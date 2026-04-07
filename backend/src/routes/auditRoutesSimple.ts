@@ -21,6 +21,10 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
     
+    // Get current user info for role-based filtering
+    const currentUserRole = req.user?.role;
+    const currentUserId = req.user?.userId;
+    
     // console.log('🔍 Extracted parameters:', { 
       // action: action || 'none', 
       // search: search || 'none', 
@@ -29,6 +33,8 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       // userRole: userRole || 'none',
       // startDate: startDate ? startDate.toISOString() : 'none',
       // endDate: endDate ? endDate.toISOString() : 'none',
+      // currentUserRole,
+      // currentUserId,
       // page, 
       // limit 
     // });
@@ -36,7 +42,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     try {
       // console.log('🔍 Using optimized audit service with view tables...');
       
-      // Use the enhanced AuditService with view tables
+      // Use the enhanced AuditService with view tables and role-based filtering
       const result = await AuditService.getAuditLogs({
         page,
         limit,
@@ -46,7 +52,9 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         actionCategory,
         userRole,
         startDate,
-        endDate
+        endDate,
+        currentUserRole, // Pass current user's role
+        currentUserId    // Pass current user's ID
       });
       
       // console.log('📊 AuditService result:', { 
@@ -111,7 +119,11 @@ router.get('/user/:userId', authenticateToken, requireRole(['Admin', 'Custodian'
     const userId = parseInt(Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId);
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     
-    const logs = await AuditService.getAuditLogsByUser(userId, limit);
+    // Get current user info for role-based filtering
+    const currentUserRole = req.user?.role;
+    const currentUserId = req.user?.userId;
+    
+    const logs = await AuditService.getAuditLogsByUser(userId, limit, currentUserRole, currentUserId);
     
     res.json({ logs });
   } catch (error) {

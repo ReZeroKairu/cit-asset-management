@@ -270,8 +270,8 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         <CustodianInventoryAnalyticsSection />
       ) : null}
 
-      {/* Audit Section - Admin Only */}
-      {isAdmin && (
+      {/* Audit Section - Admin and Custodian */}
+      {(isAdmin || userRole === "Custodian") && (
         <AuditSection />
       )}
     </div>

@@ -33,27 +33,6 @@ const COLORS = {
   Lost: "#ef4444",
 };
 
-const MAINTENANCE_COLORS = {
-  Functional: "#10b981",
-  Working: "#10b981",
-  Operational: "#10b981",
-  "Needs Repair": "#f59e0b",
-  "For Disposal": "#3b82f6",
-  "Under Repair": "#3b82f6",
-  Critical: "#ef4444",
-  Urgent: "#ef4444",
-  "Under Maintenance": "#8b5cf6",
-  Maintenance: "#8b5cf6",
-  "Not Functional": "#ef4444",
-  Down: "#ef4444",
-  Offline: "#ef4444",
-  Issue: "#f59e0b",
-  Problem: "#f59e0b",
-  "For Replacement": "#f59e0b",
-  "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
-};
-
 const InventoryAnalyticsSection = () => {
   const [data, setData] = useState<InventoryAnalyticsData | null>(null);
   const [complaintsData, setComplaintsData] =
@@ -62,6 +41,11 @@ const InventoryAnalyticsSection = () => {
     useState<MaintenanceAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Date filter states for complaints analytics
+  const currentYear = new Date().getFullYear();
+  const [complaintsStartDate, setComplaintsStartDate] = useState(`${currentYear}-01-01`);
+  const [complaintsEndDate, setComplaintsEndDate] = useState(`${currentYear}-12-31`);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,11 +74,6 @@ const InventoryAnalyticsSection = () => {
         console.log("Transformed data:", transformedData);
         setData(transformedData);
 
-        // Fetch complaints analytics
-        const complaintsAnalyticsData = await getComplaintsAnalytics();
-        console.log("Complaints Analytics Response:", complaintsAnalyticsData);
-        setComplaintsData(complaintsAnalyticsData);
-
         // Fetch maintenance analytics
         const maintenanceAnalyticsData = await getMaintenanceAnalytics();
         console.log(
@@ -116,6 +95,24 @@ const InventoryAnalyticsSection = () => {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchComplaintsAnalytics = async () => {
+      try {
+        // Fetch complaints analytics with date filters
+        const complaintsAnalyticsData = await getComplaintsAnalytics(
+          complaintsStartDate || undefined,
+          complaintsEndDate || undefined
+        );
+        console.log("Complaints Analytics Response:", complaintsAnalyticsData);
+        setComplaintsData(complaintsAnalyticsData);
+      } catch (err) {
+        console.error("Failed to fetch complaints analytics:", err);
+      }
+    };
+
+    fetchComplaintsAnalytics();
+  }, [complaintsStartDate, complaintsEndDate]);
 
   if (loading) {
     return (
@@ -455,6 +452,45 @@ const InventoryAnalyticsSection = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
+              {/* Date Filters */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={complaintsStartDate}
+                      onChange={(e) => setComplaintsStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={complaintsEndDate}
+                      onChange={(e) => setComplaintsEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setComplaintsStartDate(`${currentYear}-01-01`);
+                        setComplaintsEndDate(`${currentYear}-12-31`);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
               <div className="mb-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
                   {complaintsData.totalComplaints}

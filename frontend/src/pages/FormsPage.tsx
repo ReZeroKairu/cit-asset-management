@@ -318,9 +318,6 @@ const FormsPage = () => {
   if (user?.role !== ("Admin" as users_role)) {
     const tabs = [
       ...TAB_ITEMS,
-      ...(user?.role === "Custodian"
-        ? [{ id: "qr-code" as const, label: "QR Code" }]
-        : []),
     ];
 
     return (

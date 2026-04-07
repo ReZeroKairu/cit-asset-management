@@ -282,8 +282,13 @@ export const updateComplaintRemarks = async (
 };
 
 // Get complaints analytics for dashboard
-export const getComplaintsAnalytics = async () => {
-  const response = await api.get("/complaints/analytics");
+export const getComplaintsAnalytics = async (startDate?: string, endDate?: string) => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  
+  const url = params.toString() ? `/complaints/analytics?${params}` : '/complaints/analytics';
+  const response = await api.get(url);
   return response.data;
 };
 

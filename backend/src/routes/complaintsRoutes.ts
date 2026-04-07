@@ -419,8 +419,9 @@ router.get("/analytics", authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId;
     const userRole = req.user?.role;
+    const { startDate, endDate } = req.query;
 
-    let whereClause = {};
+    let whereClause: any = {};
 
     // For custodians, only get analytics from their assigned lab
     if (userRole === "Custodian") {
@@ -439,6 +440,19 @@ router.get("/analytics", authenticateToken, async (req, res) => {
       } else {
         // No userId - should not happen with authentication middleware
         whereClause = { lab_id: -1 };
+      }
+    }
+
+    // Add date filtering if provided
+    if (startDate || endDate) {
+      if (!whereClause.created_at) {
+        whereClause.created_at = {};
+      }
+      if (startDate) {
+        whereClause.created_at.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        whereClause.created_at.lte = new Date(endDate as string);
       }
     }
 

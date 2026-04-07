@@ -40,14 +40,23 @@ export class AuditService {
     search?: string;
     actionCategory?: string;
     userRole?: string;
+    currentUserRole?: string;
+    currentUserId?: number;
   }) {
     try {
-      const { page = 1, limit = 50, userId, action, entityType, startDate, endDate, search, actionCategory, userRole } = filters;
+      const { page = 1, limit = 50, userId, action, entityType, startDate, endDate, search, actionCategory, userRole, currentUserRole, currentUserId } = filters;
       
       // console.log('🔍 AuditService.getAuditLogs called with filters:', filters);
       
       // Build where clause using the view for better performance
       const where: any = {};
+      
+      // Role-based filtering: Custodians can only see their own logs
+      if (currentUserRole === 'Custodian' && currentUserId) {
+        where.user_id = currentUserId;
+      }
+      
+      // Additional filters (Admin can see all, or apply specific filters)
       if (userId) where.user_id = userId;
       if (action) where.action = action;
       if (entityType) where.entityType = entityType;
@@ -140,8 +149,13 @@ export class AuditService {
     return conditions.join(' AND ');
   }
 
-  static async getAuditLogsByUser(userId: number, limit: number = 50) {
+  static async getAuditLogsByUser(userId: number, limit: number = 50, currentUserRole?: string, currentUserId?: number) {
     try {
+      // Role-based check: Custodians can only see their own logs
+      if (currentUserRole === 'Custodian' && userId !== currentUserId) {
+        return []; // Return empty if custodian tries to access other user's logs
+      }
+      
       // Use filtered query on audit_logs_view with ranking
       const logs = await prisma.$queryRawUnsafe(`
         SELECT 
