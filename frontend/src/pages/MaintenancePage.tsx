@@ -57,6 +57,7 @@ const MaintenancePage = () => {
 
   // Schedule state
   const [openQuarters, setOpenQuarters] = useState<string[]>([]);
+  const [schedulesLoaded, setSchedulesLoaded] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showViewScheduleModal, setShowViewScheduleModal] = useState(false);
   const [showScheduleDropdown, setShowScheduleDropdown] = useState(false);
@@ -116,11 +117,13 @@ const MaintenancePage = () => {
             // 3. Set the UI to the correct quarter
             setSelectedQuarter(activeQuarter);
           } else {
-            setOpenQuarters(["1st"]);
+            setOpenQuarters([]); // Keep empty when no schedules exist
           }
         } catch (error) {
           console.error("Failed to load existing schedules:", error);
-          setOpenQuarters(["1st"]);
+          setOpenQuarters([]); // Keep empty on error
+        } finally {
+          setSchedulesLoaded(true); // Mark as loaded regardless of outcome
         }
       }
     };
@@ -454,6 +457,32 @@ const MaintenancePage = () => {
 
               {/* Main Table Content */}
               <div className="bg-white shadow-sm rounded-xl rounded-tl-none overflow-hidden border border-gray-100 relative z-0">
+                {/* Schedule Check Overlay */}
+                {schedulesLoaded && openQuarters.length === 0 ? (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
+                    <div className="text-center p-8">
+                      <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                        Set a schedule first
+                      </h3>
+                      <p className="text-gray-500 mb-6 max-w-md">
+                        You need to set quarter schedules before you can service workstations. 
+                        Click "View Schedules" to get started.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setShowScheduleDropdown(false);
+                          setShowViewScheduleModal(true);
+                        }}
+                        className="px-6 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer mx-auto"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Set Schedule
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="p-5 border-b border-gray-100 bg-white flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3">
