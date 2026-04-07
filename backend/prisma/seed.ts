@@ -69,27 +69,45 @@ async function main() {
       },
     ],
     workstations: [
-      // Lab 1 - Workstations 1-40
+      // Lab 1 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
         workstation_id: i + 1,
         workstation_name: String(i + 1),
         lab_id: 1,
         status_id: 1,
       })),
-      // Lab 2 - Workstations 1-40
+      {
+        workstation_id: 41,
+        workstation_name: "Server",
+        lab_id: 1,
+        status_id: 1,
+      },
+      // Lab 2 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
-        workstation_id: 41 + i,
+        workstation_id: 42 + i,
         workstation_name: String(i + 1),
         lab_id: 2,
         status_id: 1,
       })),
-      // Lab 3 - Workstations 1-40
+      {
+        workstation_id: 82,
+        workstation_name: "Server",
+        lab_id: 2,
+        status_id: 1,
+      },
+      // Lab 3 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
-        workstation_id: 81 + i,
+        workstation_id: 83 + i,
         workstation_name: String(i + 1),
         lab_id: 3,
         status_id: 1,
       })),
+      {
+        workstation_id: 123,
+        workstation_name: "Server",
+        lab_id: 3,
+        status_id: 1,
+      }
     ],
     campuses: [{ campus_id: 1, campus_name: "Main Campus" }],
     officeTypes: [

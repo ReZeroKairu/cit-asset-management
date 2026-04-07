@@ -52,7 +52,6 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   
-  // NEW STATE VARIABLES FOR SUCCESS SCREEN
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
 
@@ -153,7 +152,47 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         return;
       }
 
-      const assetsPayload = await Promise.all(parsedData.map(async (row: any) => {
+      // --- NEW LOGIC: Synchronously deduplicate tags and serials before uploading ---
+      const seenTags = new Map<string, number>();
+      const seenSerials = new Map<string, number>();
+
+      const preProcessedData = parsedData.map(row => {
+        let propTag = row.property_tag_no ? String(row.property_tag_no).trim() : null;
+        let serialNum = row.serial_number ? String(row.serial_number).trim() : null;
+
+        // Auto-increment duplicate property tags
+        if (propTag) {
+          const lowerTag = propTag.toLowerCase();
+          if (seenTags.has(lowerTag)) {
+            const count = seenTags.get(lowerTag)! + 1;
+            seenTags.set(lowerTag, count);
+            propTag = `${propTag}-${count}`; // Example: TAG123 becomes TAG123-2
+          } else {
+            seenTags.set(lowerTag, 1);
+          }
+        }
+
+        // Auto-increment duplicate serial numbers
+        if (serialNum) {
+          const lowerSerial = serialNum.toLowerCase();
+          if (seenSerials.has(lowerSerial)) {
+            const count = seenSerials.get(lowerSerial)! + 1;
+            seenSerials.set(lowerSerial, count);
+            serialNum = `${serialNum}-${count}`; // Example: SNMOBO becomes SNMOBO-2
+          } else {
+            seenSerials.set(lowerSerial, 1);
+          }
+        }
+
+        return {
+          ...row,
+          property_tag_no: propTag,
+          serial_number: serialNum
+        };
+      });
+
+      // --- Map through the deduplicated data for async operations ---
+      const assetsPayload = await Promise.all(preProcessedData.map(async (row: any) => {
         let processedDate: string | null = null;
 
         if (row.date_of_purchase) {
@@ -181,10 +220,9 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
             'mouse': 4, 'mice': 4, 'ssd': 5, 'solid state drive': 5, 'psu': 6,
             'power supply': 6, 'power supply unit': 6, 'ram': 7, 'memory': 7,
             'cpu': 8, 'processor': 8, 'hdd': 9, 'hard disk': 9, 'hard drive': 9,
-            'hard disk drive': 9, 'system case': 10, 'case': 10, 'cpu fan': 11,
-            'motherboard': 12, 'system fan': 13, 'gpu': 14, 'graphics card': 14,
-            'video card': 15, 'router': 16, 'switch': 17, 'printer': 18,
-            'air conditioner': 19, 'avr': 20, 'voltage regulator': 20, 'cctv camera': 21
+            'hard disk drive': 9, 'case': 10, 'motherboard': 11, 'video card': 12,
+            'router': 13, 'switch': 14, 'printer': 15, 'air conditioner': 16,
+            'avr': 17, 'voltage regulator': 17, 'cctv camera': 18
           };
           unitId = unitMap[unitNameNormalized] || 1; 
         }
@@ -248,10 +286,10 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
         }
 
         return {
-          property_tag_no: row.property_tag_no ? String(row.property_tag_no).trim() : null,
+          property_tag_no: row.property_tag_no,
           quantity: Number(row.quantity),
           description: row.description ? String(row.description).trim() : "-",
-          serial_number: row.serial_number ? String(row.serial_number).trim() : null,
+          serial_number: row.serial_number,
           date_of_purchase: processedDate,
           unit_id: unitId,
           lab_id: labId,
@@ -276,7 +314,6 @@ const UploadAssetModal: React.FC<Props> = ({ show, onClose, onSuccess }) => {
   };
 
   const handleCloseSuccess = () => {
-    // Reset state so it's fresh if opened again
     setUploadSuccess(false);
     setUploadedCount(0);
     setParsedData([]);
