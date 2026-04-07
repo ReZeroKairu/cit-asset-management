@@ -60,10 +60,36 @@ async function main() {
         dept_id: 1,
         in_charge_id: null,
       },
+      {
+        lab_id: 3,
+        lab_name: "CISCO-Lab 3",
+        location: "WAC 2nd Floor",
+        dept_id: 1,
+        in_charge_id: null,
+      },
     ],
     workstations: [
-      { workstation_id: 1, workstation_name: "WS-01", lab_id: 1, status_id: 1 },
-      { workstation_id: 2, workstation_name: "WS-02", lab_id: 1, status_id: 1 },
+      // Lab 1 - Workstations 1-40
+      ...Array.from({ length: 40 }, (_, i) => ({
+        workstation_id: i + 1,
+        workstation_name: String(i + 1),
+        lab_id: 1,
+        status_id: 1,
+      })),
+      // Lab 2 - Workstations 1-40
+      ...Array.from({ length: 40 }, (_, i) => ({
+        workstation_id: 41 + i,
+        workstation_name: String(i + 1),
+        lab_id: 2,
+        status_id: 1,
+      })),
+      // Lab 3 - Workstations 1-40
+      ...Array.from({ length: 40 }, (_, i) => ({
+        workstation_id: 81 + i,
+        workstation_name: String(i + 1),
+        lab_id: 3,
+        status_id: 1,
+      })),
     ],
     campuses: [{ campus_id: 1, campus_name: "Main Campus" }],
     officeTypes: [
@@ -196,16 +222,16 @@ async function main() {
         asset_id: 1,
         lab_id: 1,
         workstation_id: 1,
-        unit_id: 2,
-        added_by_user_id: 2,
+        unit_id: 1, // Monitor
+        added_by_user_id: 3,
         date_added: new Date("2024-01-10"),
       },
       {
         asset_id: 2,
         lab_id: 1,
         workstation_id: 2,
-        unit_id: 1,
-        added_by_user_id: 2,
+        unit_id: 3, // Keyboard
+        added_by_user_id: 3,
         date_added: new Date("2024-01-10"),
       },
     ],
@@ -238,7 +264,7 @@ async function main() {
     dailyReports: [
       {
         report_id: 1,
-        user_id: 2,
+        user_id: 3,
         lab_id: 1,
         report_date: new Date("2024-01-15"),
         general_remarks: "All systems functional, 15 students served",
@@ -246,7 +272,7 @@ async function main() {
       },
       {
         report_id: 2,
-        user_id: 3,
+        user_id: 4,
         lab_id: 2,
         report_date: new Date("2024-01-16"),
         general_remarks: "Minor network issue resolved, 8 students served",
@@ -322,8 +348,19 @@ async function main() {
     });
   }
 
-  // ✅ 4. Users (Phase 1: Create without Lab Assignment)
-  // We strip the lab_id here to prevent the "Foreign Key Constraint" error
+  // 4. Laboratories
+  console.log(" Seeding laboratories...");
+  for (const item of seedData.laboratories) {
+    await prisma.laboratories.upsert({
+      where: { lab_id: item.lab_id },
+      update: item,
+      create: item,
+    });
+    console.log(` Laboratory: ${item.lab_name}`);
+  }
+
+  // 5. Users (Phase 1: Create with Lab Assignment)
+  // Laboratories are now created before users, so lab_id can be included
   for (const user of seedData.users) {
     await prisma.users.upsert({
       where: { user_id: user.user_id },
@@ -344,7 +381,28 @@ async function main() {
     console.log(` Asset Status: ${status.status_name}`);
   }
 
-  // 10. Workstations
+  // 12. Device Types
+  console.log(" Seeding device types...");
+  for (const item of seedData.deviceTypes) {
+    await prisma.device_types.upsert({
+      where: { device_type_id: item.device_type_id },
+      update: item,
+      create: item,
+    });
+  }
+
+  // 13. Units
+  console.log(" Seeding units...");
+  for (const item of seedData.units) {
+    await prisma.units.upsert({
+      where: { unit_id: item.unit_id },
+      update: item,
+      create: item,
+    });
+    console.log(` Unit: ${item.unit_name}`);
+  }
+
+  // 14. Workstations
   console.log(" Seeding workstations...");
   for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
@@ -352,17 +410,6 @@ async function main() {
       update: ws,
       create: ws,
     });
-  }
-
-  // 11. Procedures
-  console.log(" Seeding procedures...");
-  for (const proc of seedData.procedures) {
-    await prisma.procedures.upsert({
-      where: { procedure_id: proc.procedure_id },
-      update: proc,
-      create: proc,
-    });
-    console.log(` Procedure: ${proc.procedure_name}`);
   }
 
   // 15. Inventory Assets
