@@ -298,7 +298,7 @@ export const FormList: React.FC<FormListProps> = ({
                       {showIconSlots && (
                         <>
                           {/* Slot 1 — Edit */}
-                          <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                          <div className="w-7 h-7 shrink-0 flex items-center justify-center">
                             {showEdit ? (
                               <Button
                                 size="sm"
@@ -310,12 +310,12 @@ export const FormList: React.FC<FormListProps> = ({
                                 <Edit className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
-                              <span className="w-7 h-7 flex-shrink-0" />
+                              <span className="w-7 h-7 shrink-0" />
                             )}
                           </div>
 
                           {/* Slot 2 — Download */}
-                          <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                          <div className="w-7 h-7 shrink-0 flex items-center justify-center">
                             {showDownload ? (
                               <Button
                                 size="sm"
@@ -327,12 +327,12 @@ export const FormList: React.FC<FormListProps> = ({
                                 <Download className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
-                              <span className="w-7 h-7 flex-shrink-0" />
+                              <span className="w-7 h-7 shrink-0" />
                             )}
                           </div>
 
                           {/* Divider — only when icon slots are present */}
-                          <span className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
+                          <span className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
                         </>
                       )}
 

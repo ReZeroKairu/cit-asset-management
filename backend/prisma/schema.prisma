@@ -396,6 +396,8 @@ model workstations {
 model cit_lab_logs {
   log_id               Int      @id @default(autoincrement())
   date                 DateTime @db.Date
+  time_in              String   @db.VarChar(5)  // HH:MM format
+  time_out             String?  @db.VarChar(5)  // HH:MM format, optional
   usage_type           String   @db.VarChar(20)
   faculty_student_name String   @db.VarChar(100)
   year_level           String?  @db.VarChar(20)
@@ -411,6 +413,7 @@ model cit_lab_logs {
   @@index([created_at])
   @@index([laboratory])
   @@index([date])
+  @@index([time_in])
 }
 
 enum users_role {

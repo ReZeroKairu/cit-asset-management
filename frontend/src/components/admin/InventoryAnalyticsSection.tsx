@@ -30,7 +30,6 @@ const COLORS = {
   "For Replacement": "#f59e0b",
   "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
 };
 
 const InventoryAnalyticsSection = () => {
@@ -54,20 +53,8 @@ const InventoryAnalyticsSection = () => {
         const analyticsData = await getInventoryAnalytics();
         console.log("API Response:", analyticsData);
 
-        // Transform the data to get Lost value from API
         const transformedData: InventoryAnalyticsData = {
           ...analyticsData,
-          labStatusData: analyticsData.labStatusData.map((lab) => {
-            console.log("Lab data:", lab);
-            console.log("All lab properties:", Object.keys(lab));
-            // Get Lost value from lab data (provided by backend per-lab calculation)
-            const lostValue = lab.Lost || 0;
-            console.log("Lost value for lab", lab.lab_name, ":", lostValue);
-            return {
-              ...lab,
-              Lost: lostValue, // Use Lost count for this specific lab
-            };
-          }),
           statusDistribution: analyticsData.statusDistribution,
         };
 
@@ -242,7 +229,6 @@ const InventoryAnalyticsSection = () => {
                   "For Replacement",
                   "For Disposal",
                   "For Upgrade",
-                  "Lost",
                 ].map((statusName) => {
                   const status = data.statusDistribution.find(
                     (s) => s.status_name === statusName
@@ -260,8 +246,6 @@ const InventoryAnalyticsSection = () => {
                             ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
-                            : statusName === "Lost"
-                            ? "text-red-600"
                             : "text-gray-600"
                         }
                       >
@@ -284,8 +268,6 @@ const InventoryAnalyticsSection = () => {
                             ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
-                            : statusName === "Lost"
-                            ? "text-red-600"
                             : "text-gray-600"
                         }`}
                       >
@@ -316,7 +298,7 @@ const InventoryAnalyticsSection = () => {
                         {lab.total} assets
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-2 text-xs">
+                    <div className="grid grid-cols-4 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-medium text-green-600">
                           {lab.Functional || 0}
@@ -340,12 +322,6 @@ const InventoryAnalyticsSection = () => {
                           {lab["For Disposal"] || 0}
                         </div>
                         <div className="text-gray-500">Disposal</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-medium text-red-600">
-                          {lab.Lost || 0}
-                        </div>
-                        <div className="text-gray-500">Lost</div>
                       </div>
                     </div>
                   </div>

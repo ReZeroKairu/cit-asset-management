@@ -17,6 +17,8 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     
     const {
       date,
+      time_in,
+      time_out,
       usage_type,
       faculty_student_name,
       user_type,
@@ -35,6 +37,8 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     
     console.log('🔍 Validating CIT Lab Users data:');
     console.log('  - date:', date);
+    console.log('  - time_in:', time_in);
+    console.log('  - time_out:', time_out);
     console.log('  - usage_type:', usage_type);
     console.log('  - faculty_student_name:', faculty_student_name);
     console.log('  - user_type:', user_type);
@@ -48,6 +52,10 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     if (!date) {
       validationErrors.push('Date is required');
       console.log('❌ Date validation failed');
+    }
+    if (!time_in) {
+      validationErrors.push('Time in is required');
+      console.log('❌ Time in validation failed');
     }
     if (!usage_type) {
       validationErrors.push('Usage type is required');
@@ -94,6 +102,8 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     const citLabLog = await prisma.cit_lab_logs.create({
       data: {
         date: new Date(date),
+        time_in,
+        time_out: time_out || null,
         usage_type,
         faculty_student_name,
         user_type: user_type,
@@ -397,7 +407,12 @@ export const getLabWorkstations = async (req: Request, res: Response) => {
 
     const workstations = await prisma.workstations.findMany({
       where: {
-        lab_id: parseInt(lab_id)
+        lab_id: parseInt(lab_id),
+        workstation_name: {
+          not: {
+            contains: 'Server'
+          }
+        }
       },
       select: {
         workstation_id: true,
@@ -408,6 +423,24 @@ export const getLabWorkstations = async (req: Request, res: Response) => {
       orderBy: {
         workstation_name: 'asc'
       }
+    });
+
+    // Apply natural sorting to ensure proper numerical order (WS-PC1, WS-PC2, WS-PC10)
+    workstations.sort((a, b) => {
+      const extractNumber = (name: string) => {
+        const match = name.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      };
+      
+      const numA = extractNumber(a.workstation_name);
+      const numB = extractNumber(b.workstation_name);
+      
+      if (numA !== numB) {
+        return numA - numB;
+      }
+      
+      // Fallback to alphabetical if numbers are the same
+      return a.workstation_name.localeCompare(b.workstation_name);
     });
 
     res.status(200).json({

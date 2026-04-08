@@ -14,6 +14,12 @@ interface FormData {
   software_list?: string;
   details?: {
     software_list?: string;
+    faculty_student_name?: string;
+    faculty_name?: string;
+    user_type?: string;
+    usage_type?: string;
+    purpose?: string;
+    [key: string]: unknown;
   };
   request_id?: string | number;
   software_id?: string | number;

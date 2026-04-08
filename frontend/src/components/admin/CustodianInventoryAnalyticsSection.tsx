@@ -16,7 +16,6 @@ const COLORS = {
   "For Replacement": "#f59e0b",
   "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
 };
 
 const CustodianInventoryAnalyticsSection = () => {
@@ -37,20 +36,8 @@ const CustodianInventoryAnalyticsSection = () => {
         const analyticsData = await getInventoryAnalytics();
         console.log("API Response:", analyticsData);
 
-        // Transform the data to get Lost value from API
         const transformedData: InventoryAnalyticsData = {
           ...analyticsData,
-          labStatusData: analyticsData.labStatusData.map((lab) => {
-            console.log("Lab data:", lab);
-            console.log("All lab properties:", Object.keys(lab));
-            // Get Lost value from lab data (provided by backend per-lab calculation)
-            const lostValue = lab.Lost || 0;
-            console.log("Lost value for lab", lab.lab_name, ":", lostValue);
-            return {
-              ...lab,
-              Lost: lostValue, // Use Lost count for this specific lab
-            };
-          }),
           statusDistribution: analyticsData.statusDistribution,
         };
 
@@ -451,12 +438,6 @@ const CustodianInventoryAnalyticsSection = () => {
                     <span className="text-purple-600">Upgrade:</span>
                     <span className="font-medium text-purple-600">
                       {filteredData.labStatusData[0]["For Upgrade"] || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-red-600">Lost:</span>
-                    <span className="font-medium text-red-600">
-                      {filteredData.labStatusData[0].Lost || 0}
                     </span>
                   </div>
                 </div>

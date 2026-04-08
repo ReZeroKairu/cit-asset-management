@@ -71,10 +71,8 @@ export const SoftwareInstallForm = () => {
       // Fetch assigned lab name
       const fetchAssignedLab = async () => {
         try {
-          const response = await api.get(
-            `/api/one-time-forms/users/${user.id}/assigned-lab`
-          );
-          const labName = response.data.labName || "";
+          const response = await api.get("/users/assigned-lab");
+          const labName = response.data.assigned_lab?.lab_name || "";
           setAssignedLab(labName);
 
           // Set custodian name in all caps

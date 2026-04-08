@@ -135,10 +135,30 @@ router.get("/public-laboratories/:labId/workstations", async (req, res) => {
     const workstations = await prisma.workstations.findMany({
       where: {
         lab_id: parseInt(labId),
-      },
-      orderBy: {
-        workstation_name: "asc",
-      },
+        workstation_name: {
+          not: {
+            contains: 'Server'
+          }
+        }
+      }
+    });
+
+    // Apply natural sorting to ensure proper numerical order (WS-PC1, WS-PC2, WS-PC10)
+    workstations.sort((a, b) => {
+      const extractNumber = (name: string) => {
+        const match = name.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      };
+      
+      const numA = extractNumber(a.workstation_name);
+      const numB = extractNumber(b.workstation_name);
+      
+      if (numA !== numB) {
+        return numA - numB;
+      }
+      
+      // Fallback to alphabetical if numbers are the same
+      return a.workstation_name.localeCompare(b.workstation_name);
     });
 
     res.json(workstations);
@@ -270,14 +290,34 @@ router.get(
       const workstations = await prisma.workstations.findMany({
         where: {
           lab_id: parseInt(labId as string),
+          workstation_name: {
+            not: {
+              contains: 'Server'
+            }
+          }
         },
         include: {
           laboratories: true,
           asset_statuses: true,
         },
-        orderBy: {
-          workstation_name: "asc",
-        },
+      });
+
+      // Apply natural sorting to ensure proper numerical order (WS-PC1, WS-PC2, WS-PC10)
+      workstations.sort((a, b) => {
+        const extractNumber = (name: string) => {
+          const match = name.match(/(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const numA = extractNumber(a.workstation_name);
+        const numB = extractNumber(b.workstation_name);
+        
+        if (numA !== numB) {
+          return numA - numB;
+        }
+        
+        // Fallback to alphabetical if numbers are the same
+        return a.workstation_name.localeCompare(b.workstation_name);
       });
 
       res.json(workstations);

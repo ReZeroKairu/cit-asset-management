@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { SearchableSelect } from "../ui/searchable-select";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Loader2, AlertCircle, Monitor, X } from "lucide-react";
 import {
@@ -365,32 +366,32 @@ Please wait for the current complaint to be resolved before submitting a new one
             </div>
           </div>
 
-          {/* Year Level - Only for Students */}
-          {formData.user_type === "Student" && (
-            <div>
-              <Label htmlFor="year_level">Year Level *</Label>
-              <Select
-                value={formData.year_level}
-                onValueChange={(value) =>
-                  handleInputChange("year_level", value)
-                }
-                disabled={disabled}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select year level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearLevels.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Year Level - Only for Students */}
+            {formData.user_type === "Student" && (
+              <div>
+                <Label htmlFor="year_level">Year Level *</Label>
+                <Select
+                  value={formData.year_level}
+                  onValueChange={(value) =>
+                    handleInputChange("year_level", value)
+                  }
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select year level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearLevels.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="lab_id">Laboratory *</Label>
               <Select
@@ -425,41 +426,29 @@ Please wait for the current complaint to be resolved before submitting a new one
 
             <div>
               <Label htmlFor="workstation_id">Workstation</Label>
-              <Select
+              <SearchableSelect
                 value={
                   formData.workstation_id
                     ? formData.workstation_id.toString()
                     : "none"
                 }
                 onValueChange={handleWorkstationChange}
+                placeholder={
+                  !formData.lab_id
+                    ? "Select laboratory first"
+                    : loadingWorkstations
+                    ? "Loading workstations..."
+                    : "Select workstation (optional)"
+                }
                 disabled={disabled || loadingWorkstations || !formData.lab_id}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      !formData.lab_id
-                        ? "Select laboratory first"
-                        : loadingWorkstations
-                        ? "Loading workstations..."
-                        : "Select workstation (optional)"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No specific workstation</SelectItem>
-                  {workstations.map((workstation) => (
-                    <SelectItem
-                      key={workstation.workstation_id}
-                      value={workstation.workstation_id.toString()}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Monitor className="w-4 h-4" />
-                        {workstation.workstation_name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: "none", label: "No specific workstation" },
+                  ...workstations.map((workstation) => ({
+                    value: workstation.workstation_id.toString(),
+                    label: workstation.workstation_name,
+                  })),
+                ]}
+              />
             </div>
           </div>
 
