@@ -397,12 +397,14 @@ export const updateAsset = async (req: Request, res: Response) => {
         : null;
     if (asset_remarks !== undefined)
       detailsData.asset_remarks = asset_remarks || null;
-    if (status_id !== undefined && status_id !== null)
+    if (status_id !== undefined && status_id !== null) {
+      console.log('Backend: Setting status_id in detailsData:', status_id, 'Number:', Number(status_id));
       detailsData.status_id = status_id ? Number(status_id) : undefined;
+    }
     if (disposed_by !== undefined)
       detailsData.disposed_by = disposed_by || null;
 
-    console.log('🔍 Backend: Final detailsData to update:', detailsData);
+    console.log('Backend: Final detailsData to update:', detailsData);
 
     // Check if asset_details exists for this asset
     const existingAssetDetails = await prisma.asset_details.findUnique({
@@ -465,14 +467,14 @@ export const updateAsset = async (req: Request, res: Response) => {
         where: { asset_id: assetId },
         data: {
           ...updateData,
-          ...(Object.keys(otherDetails).length > 0 && {
+          ...(Object.keys(otherDetails).length > 0 || statusIdField !== undefined ? {
             asset_details: {
               update: {
                 ...otherDetails,
                 ...(statusIdField !== undefined && { status_id: Number(statusIdField) })
               },
             },
-          }),
+          } : {}),
         },
         include: {
           asset_details: {

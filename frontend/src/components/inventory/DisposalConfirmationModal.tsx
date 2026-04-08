@@ -130,7 +130,7 @@ const DisposalConfirmationModal: React.FC<Props> = ({
                     type="text"
                     value={disposedBy}
                     onChange={handleInputChange}
-                    placeholder="e.g., John Smith"
+                    placeholder="Disposal Personnel"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                     autoFocus

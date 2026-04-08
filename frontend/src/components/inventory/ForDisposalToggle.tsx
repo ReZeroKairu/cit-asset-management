@@ -168,12 +168,12 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
         return;
       }
       
-      // Update each asset's status to 'Disposed' (status_id = 6) and set disposed_by
+      // Update each asset's status to 'Disposed' (status_id = 5) and set disposed_by
       const updatePromises = allSelectedAssets.map(async (asset: DisposalAsset) => {
         try {
-          console.log(`🔍 Updating asset ${asset.asset_id} with status_id: 6, disposed_by: ${disposedBy}`);
+          console.log(`Updating asset ${asset.asset_id} with status_id: 5, disposed_by: ${disposedBy}`);
           const updateData = {
-            status_id: 6, // 'Disposed' status
+            status_id: 5, // 'Disposed' status
             disposed_by: disposedBy
           };
           console.log('🔍 Sending update data:', updateData);
