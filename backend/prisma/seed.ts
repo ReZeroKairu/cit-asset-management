@@ -2,8 +2,6 @@
 import {
   PrismaClient,
   users_role,
-  lab_requests_status,
-  equipment_borrows_status,
   software_installations_status,
   daily_reports_status,
   complaints_status,
@@ -16,7 +14,6 @@ async function main() {
   console.log("🔄 Starting database seeding for users...");
 
   const seedData = {
-    // 1. USERS: Only 1 Admin and 2 Custodians
     users: [
       {
         user_id: 4,
@@ -31,7 +28,7 @@ async function main() {
         full_name: "Jane Custodian",
         email: "custodian2@cit.edu",
         role: users_role.Custodian,
-        lab_id: 2, // We will handle this carefully
+        lab_id: 2,
         password_hash: await bcrypt.hash("password123", 10),
       },
     ],
@@ -41,8 +38,7 @@ async function main() {
       { status_id: 2, status_name: "For Disposal" },
       { status_id: 3, status_name: "For Upgrade" },
       { status_id: 4, status_name: "For Replacement" },
-      { status_id: 5, status_name: "Lost" },
-      { status_id: 6, status_name: "Disposed" },
+      { status_id: 5, status_name: "Disposed" },
     ],
 
     laboratories: [
@@ -69,7 +65,6 @@ async function main() {
       },
     ],
     workstations: [
-      // Lab 1 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
         workstation_id: i + 1,
         workstation_name: String(i + 1),
@@ -82,7 +77,6 @@ async function main() {
         lab_id: 1,
         status_id: 1,
       },
-      // Lab 2 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
         workstation_id: 42 + i,
         workstation_name: String(i + 1),
@@ -95,7 +89,6 @@ async function main() {
         lab_id: 2,
         status_id: 1,
       },
-      // Lab 3 - Workstations 1-40 + Server
       ...Array.from({ length: 40 }, (_, i) => ({
         workstation_id: 83 + i,
         workstation_name: String(i + 1),
@@ -150,7 +143,6 @@ async function main() {
       { unit_id: 18, unit_name: "CCTV Camera", device_type_id: 3 },
     ],
     procedures: [
-      // ✅ DAR (Daily Activity Report) Procedures
       {
         procedure_id: 1,
         procedure_name: "User Management",
@@ -194,7 +186,6 @@ async function main() {
         is_active: true,
       },
 
-      // ✅ QPMC (Quarterly Preventive Maintenance Check) Procedures
       {
         procedure_id: 8,
         procedure_name: "Hardware Maintenance",
@@ -232,116 +223,11 @@ async function main() {
         is_active: true,
       },
     ],
-
-    // Example Data for Tables
-
-    inventoryAssets: [
-      {
-        asset_id: 1,
-        lab_id: 1,
-        workstation_id: 1,
-        unit_id: 1, // Monitor
-        added_by_user_id: 3,
-        date_added: new Date("2024-01-10"),
-      },
-      {
-        asset_id: 2,
-        lab_id: 1,
-        workstation_id: 2,
-        unit_id: 3, // Keyboard
-        added_by_user_id: 3,
-        date_added: new Date("2024-01-10"),
-      },
-    ],
-
-    assetDetails: [
-      {
-        detail_id: 1,
-        asset_id: 1,
-        property_tag_no: "CIT-PC-001",
-        quantity: 1,
-        description: "Dell OptiPlex 7090 System Unit",
-        serial_number: "DL70902024001",
-        date_of_purchase: new Date("2024-01-05"),
-        asset_remarks: "Core i5, 8GB RAM, 256GB SSD",
-        status_id: 1,
-      },
-      {
-        detail_id: 2,
-        asset_id: 2,
-        property_tag_no: "CIT-MON-001",
-        quantity: 1,
-        description: "Dell 24-inch LED Monitor",
-        serial_number: "DLM2402024001",
-        date_of_purchase: new Date("2024-01-05"),
-        asset_remarks: "1920x1080 resolution, HDMI/VGA",
-        status_id: 1,
-      },
-    ],
-
-    dailyReports: [
-      {
-        report_id: 1,
-        user_id: 3,
-        lab_id: 1,
-        report_date: new Date("2024-01-15"),
-        general_remarks: "All systems functional, 15 students served",
-        status: daily_reports_status.Approved,
-      },
-      {
-        report_id: 2,
-        user_id: 4,
-        lab_id: 2,
-        report_date: new Date("2024-01-16"),
-        general_remarks: "Minor network issue resolved, 8 students served",
-        status: daily_reports_status.Pending,
-      },
-    ],
-
-    complaints: [
-      {
-        complaint_id: 1,
-        lab_id: 1,
-        workstation_id: 1,
-        faculty_student_name: "Juan Dela Cruz",
-        user_type: "Student",
-        year_level: "3rd Year",
-        issue_description: "Mouse not working properly",
-        status: complaints_status.Resolved,
-        monitored_by: "John Custodian",
-        approved_by: "Admin",
-        custodian_user_id: 2,
-        remarks: "Replaced with new mouse",
-        resolved_at: new Date("2024-01-15"),
-        created_at: new Date("2024-01-15"),
-        updated_at: new Date("2024-01-15"),
-        accepted_at: new Date("2024-01-15"),
-      },
-      {
-        complaint_id: 2,
-        lab_id: 2,
-        workstation_id: 2,
-        faculty_student_name: "Maria Santos",
-        user_type: "Faculty",
-        year_level: null,
-        issue_description: "Application crashes frequently",
-        status: complaints_status.Open,
-        monitored_by: "Jane Custodian",
-        approved_by: null,
-        custodian_user_id: 3,
-        remarks: "Investigating software compatibility",
-        resolved_at: null,
-        created_at: new Date("2024-01-16"),
-        updated_at: new Date("2024-01-16"),
-        accepted_at: null,
-      },
-    ],
   };
 
-  // Seed data in order to respect foreign key constraints
   console.log("📝 Seeding reference data...");
 
-  // 1. Campuses
+  // Campuses
   for (const item of seedData.campuses) {
     await prisma.campuses.upsert({
       where: { campus_id: item.campus_id },
@@ -349,7 +235,7 @@ async function main() {
       create: item,
     });
   }
-  // 2. Office Types
+  // Office Types
   for (const item of seedData.officeTypes) {
     await prisma.office_types.upsert({
       where: { type_id: item.type_id },
@@ -357,7 +243,7 @@ async function main() {
       create: item,
     });
   }
-  // 3. Departments
+  // Departments
   for (const item of seedData.departments) {
     await prisma.departments.upsert({
       where: { dept_id: item.dept_id },
@@ -366,7 +252,7 @@ async function main() {
     });
   }
 
-  // 4. Laboratories
+  // Laboratories
   console.log(" Seeding laboratories...");
   for (const item of seedData.laboratories) {
     await prisma.laboratories.upsert({
@@ -377,8 +263,7 @@ async function main() {
     console.log(` Laboratory: ${item.lab_name}`);
   }
 
-  // 5. Users (Phase 1: Create with Lab Assignment)
-  // Laboratories are now created before users, so lab_id can be included
+  // Users
   for (const user of seedData.users) {
     await prisma.users.upsert({
       where: { user_id: user.user_id },
@@ -388,7 +273,7 @@ async function main() {
     console.log(`👤 User Upserted: ${user.full_name} (${user.email})`);
   }
 
-  // 5. Asset Statuses
+  // Asset Statuses
   console.log(" Seeding asset statuses...");
   for (const status of seedData.assetStatuses) {
     await prisma.asset_statuses.upsert({
@@ -399,7 +284,7 @@ async function main() {
     console.log(` Asset Status: ${status.status_name}`);
   }
 
-  // 12. Device Types
+  // Device Types
   console.log(" Seeding device types...");
   for (const item of seedData.deviceTypes) {
     await prisma.device_types.upsert({
@@ -409,7 +294,7 @@ async function main() {
     });
   }
 
-  // 13. Units
+  // Units
   console.log(" Seeding units...");
   for (const item of seedData.units) {
     await prisma.units.upsert({
@@ -420,7 +305,7 @@ async function main() {
     console.log(` Unit: ${item.unit_name}`);
   }
 
-  // 14. Workstations
+  // Workstations
   console.log(" Seeding workstations...");
   for (const ws of seedData.workstations) {
     await prisma.workstations.upsert({
@@ -430,60 +315,15 @@ async function main() {
     });
   }
 
-  // 15. Inventory Assets
-  console.log(" Seeding inventory assets...");
-  for (const asset of seedData.inventoryAssets) {
-    await prisma.inventory_assets.upsert({
-      where: { asset_id: asset.asset_id },
-      update: asset,
-      create: asset,
+  // Procedures
+  console.log(" Seeding procedures...");
+  for (const procedure of seedData.procedures) {
+    await prisma.procedures.upsert({
+      where: { procedure_id: procedure.procedure_id },
+      update: procedure,
+      create: procedure,
     });
-    console.log(` Inventory Asset: ${asset.asset_id}`);
   }
-
-  // 16. Asset Details
-  console.log(" Seeding asset details...");
-  for (const detail of seedData.assetDetails) {
-    await prisma.asset_details.upsert({
-      where: { detail_id: detail.detail_id },
-      update: detail,
-      create: detail,
-    });
-    console.log(` Asset Detail: ${detail.property_tag_no}`);
-  }
-
-  // 17. Daily Reports
-  console.log(" Seeding daily reports...");
-  for (const report of seedData.dailyReports) {
-    await prisma.daily_reports.upsert({
-      where: { report_id: report.report_id },
-      update: report,
-      create: report,
-    });
-    console.log(
-      ` Daily Report: ${report.report_date.toISOString().split("T")[0]}`
-    );
-  }
-
-  // 18. Complaints - Commented out due to schema mismatch
-  console.log("⏭️ Skipping complaints seeding due to schema mismatch...");
-  /*
-  console.log(" Seeding complaints...");
-  for (const complaint of seedData.complaints) {
-    await prisma.complaints.upsert({
-      where: { complaint_id: complaint.complaint_id },
-      update: complaint,
-      create: complaint,
-    });
-    console.log(` Complaint: ${complaint.issue_description}`);
-  }
-  */
-
-  // 19. Inventory Assets - Skip for now due to workstation dependency
-  console.log("⏭️ Skipping inventory assets seeding for now...");
-
-  // 12. Asset Details - Skip for now due to dependency issues
-  console.log("⏭️ Skipping asset details seeding for now...");
 
   console.log("🎉 Database seeding completed!");
 }

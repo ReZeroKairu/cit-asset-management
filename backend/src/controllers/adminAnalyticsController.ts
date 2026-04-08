@@ -76,33 +76,17 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
         },
       }),
 
-      // Forms by Type
+      // Forms by Type (Software Installations only)
       prisma.$transaction(async (tx) => {
-        const labRequests = await tx.lab_requests.count();
-        const equipmentBorrows = await tx.equipment_borrows.count();
         const softwareInstallations = await tx.software_installations.count();
 
         return [
-          { type: "Lab Requests", count: labRequests },
-          { type: "Equipment Borrows", count: equipmentBorrows },
           { type: "Software Installations", count: softwareInstallations },
         ];
       }),
 
-      // Forms by Status
+      // Forms by Status (Software Installations only)
       prisma.$transaction(async (tx) => {
-        const [labPending, labApproved, labDenied] = await Promise.all([
-          tx.lab_requests.count({ where: { status: "Pending" } }),
-          tx.lab_requests.count({ where: { status: "Admin_Approved" } }),
-          tx.lab_requests.count({ where: { status: "Denied" } }),
-        ]);
-
-        const [equipPending, equipApproved, equipDenied] = await Promise.all([
-          tx.equipment_borrows.count({ where: { status: "Pending" } }),
-          tx.equipment_borrows.count({ where: { status: "Admin_Approved" } }),
-          tx.equipment_borrows.count({ where: { status: "Denied" } }),
-        ]);
-
         const [softPending, softApproved, softDenied] = await Promise.all([
           tx.software_installations.count({ where: { status: "Pending" } }),
           tx.software_installations.count({
@@ -112,36 +96,14 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
         ]);
 
         return [
-          { type: "Lab Requests - Pending", count: labPending },
-          { type: "Lab Requests - Approved", count: labApproved },
-          { type: "Lab Requests - Denied", count: labDenied },
-          { type: "Equipment - Pending", count: equipPending },
-          { type: "Equipment - Approved", count: equipApproved },
-          { type: "Equipment - Denied", count: equipDenied },
           { type: "Software - Pending", count: softPending },
           { type: "Software - Approved", count: softApproved },
           { type: "Software - Denied", count: softDenied },
         ];
       }),
 
-      // Forms by Day (last 30 days)
+      // Forms by Day (last 30 days, Software Installations only)
       prisma.$transaction(async (tx) => {
-        const labRequestsByDay = await tx.lab_requests.groupBy({
-          by: ["created_at"],
-          _count: { request_id: true },
-          where: {
-            created_at: { gte: thirtyDaysAgo },
-          },
-        });
-
-        const equipmentByDay = await tx.equipment_borrows.groupBy({
-          by: ["created_at"],
-          _count: { borrow_id: true },
-          where: {
-            created_at: { gte: thirtyDaysAgo },
-          },
-        });
-
         const softwareByDay = await tx.software_installations.groupBy({
           by: ["created_at"],
           _count: { software_list: true },
@@ -150,7 +112,7 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
           },
         });
 
-        return { labRequestsByDay, equipmentByDay, softwareByDay };
+        return { softwareByDay };
       }),
 
       // Complaints by Status
@@ -281,7 +243,7 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       forms: {
         byType: formsByType,
         byStatus: formsByStatus.map((f) => ({ name: f.type, value: f.count })),
-        byDay: formsByDay,
+        byDay: { softwareByDay: formsByDay.softwareByDay },
       },
       complaints: {
         byStatus: complaintsByStatus.map((c) => ({

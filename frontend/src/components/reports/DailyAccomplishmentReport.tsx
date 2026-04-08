@@ -88,14 +88,6 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
     }
   }, [show, reportId, mode]);
 
-  // Debug: Log when availableReports changes
-  useEffect(() => {
-    console.log(
-      "🔍 availableReports updated:",
-      availableReports.length,
-      availableReports
-    );
-  }, [availableReports]);
 
   // Filter reports by date and creator
   const getFilteredReports = () => {
@@ -133,24 +125,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
 
   const loadAvailableReports = async () => {
     try {
-      console.log(
-        "🔍 Loading available reports - archiveMode:",
-        archiveMode,
-        "pageContext:",
-        pageContext,
-        "user role:",
-        user?.role
-      );
       let response;
 
       // In archive mode, respect creator permissions and only show approved reports
       if (archiveMode) {
         if (user?.role === "Admin") {
-          console.log("🔍 Admin Archive: Fetching all approved reports");
           response = await api.get("/daily-reports?status=Approved");
         } else {
           // Custodians can only see their own approved reports in archive mode
-          console.log("🔍 Custodian Archive: Fetching own approved reports");
           response = await api.get(
             `/daily-reports?created_by=${user?.id}&status=Approved`
           );
@@ -160,14 +142,9 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         if (pageContext === "daily-reports") {
           // On Daily Reports page, show only pending reports
           if (user?.role === "Admin") {
-            console.log("🔍 Admin Daily Reports: Fetching all pending reports");
             response = await api.get("/daily-reports?status=Pending");
           } else {
             // For custodians, only get pending reports from their assigned lab
-            console.log(
-              "🔍 Custodian Daily Reports: Fetching pending lab reports for lab_id:",
-              user?.lab_id
-            );
             response = await api.get(
               `/daily-reports?status=Pending&lab_id=${user?.lab_id}`
             );
@@ -175,22 +152,13 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         } else {
           // Normal filtering by role
           if (user?.role === "Admin") {
-            console.log("🔍 Admin Normal: Fetching all reports");
             response = await api.get("/daily-reports");
           } else {
             // For custodians, only get reports from their assigned lab
-            console.log(
-              "🔍 Custodian Normal: Fetching lab reports for lab_id:",
-              user?.lab_id
-            );
             response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
           }
         }
       }
-
-      console.log("🔍 API response:", response.data);
-      console.log("🔍 Response type:", typeof response.data);
-      console.log("🔍 Is array?", Array.isArray(response.data));
 
       // Check if response.data is an array before sorting
       let reportsData = response.data;
@@ -210,7 +178,6 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         return dateB.getTime() - dateA.getTime(); // Newest first
       });
 
-      console.log("🔍 Sorted reports:", sortedReports);
       setAvailableReports(sortedReports);
     } catch (error) {
       console.error("Failed to load available reports:", error);
@@ -263,12 +230,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         ), // Add formatted display date
       });
 
-      console.log("Report data set:", {
-        created_at: report.created_at,
-        report_date: report.report_date,
-        full_report: report,
-      });
-    } catch (error) {
+          } catch (error) {
       console.error("Failed to load report:", error);
     } finally {
       setLoading(false);
@@ -300,17 +262,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
     if (!reportData) return;
 
     try {
-      console.log("Original reportData:", reportData);
-
       // Determine template based on lab_id using helper function
       const templateFile = getLabTemplate(reportData.lab_id);
-      console.log(
-        `Using template: ${templateFile} for Lab ${reportData.lab_id}`
-      );
 
       // Map the report data to template format
       const templateData = mapReportDataToTemplate(reportData);
-      console.log("Final templateData:", templateData);
 
       await generateTemplateReport(
         templateFile,

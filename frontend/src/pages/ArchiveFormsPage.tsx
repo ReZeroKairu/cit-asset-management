@@ -4,15 +4,12 @@ import { FileText, Download } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
-  getLabRequests,
-  getEquipmentBorrows,
   getSoftwareInstallations,
 } from "../api/forms";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import { getFormStatusColor } from "../utils/statusUtils";
 import {
   formatUserType,
-  formatUsageType,
   formatLaboratory,
 } from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
@@ -22,7 +19,7 @@ const ArchiveFormsPage = () => {
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("software-install");
   const [dateFilter, setDateFilter] = useState({
     start_date: "",
     end_date: "",
@@ -37,58 +34,26 @@ const ArchiveFormsPage = () => {
   const fetchArchivedForms = async () => {
     try {
       setLoading(true);
-      const [labRequestsRes, equipmentBorrowsRes, softwareInstallationsRes] =
+      const [softwareInstallationsRes] =
         await Promise.all([
-          getLabRequests(),
-          getEquipmentBorrows(),
           getSoftwareInstallations(),
         ]);
 
       // Extract data from API responses
-      const labRequests = Array.isArray(labRequestsRes)
-        ? labRequestsRes
-        : labRequestsRes?.data || [];
-      const equipmentBorrows = Array.isArray(equipmentBorrowsRes)
-        ? equipmentBorrowsRes
-        : equipmentBorrowsRes?.data || [];
       const softwareInstallations = Array.isArray(softwareInstallationsRes)
         ? softwareInstallationsRes
         : softwareInstallationsRes?.data || [];
 
       // Transform to FormSubmission structure (same as FormsManagementPage)
       const transformedForms: any[] = [
-        ...labRequests.map((req: any) => ({
-          id: req.request_id || `lab-${Math.random()}`,
-          type: "lab-request" as const,
-          date: req.date,
-          name: req.faculty_student_name,
-          status: req.status,
-          laboratory: req.laboratory,
-          purpose: req.purpose,
-          createdAt: req.created_at,
-          details: req,
-          userId: req.user_id || req.users?.id,
-        })),
-        ...equipmentBorrows.map((borrow: any) => ({
-          id: borrow.borrow_id || `equip-${Math.random()}`,
-          type: "equipment-borrow" as const,
-          date: borrow.date,
-          name: borrow.faculty_student_name,
-          status: borrow.status,
-          laboratory: borrow.laboratory,
-          purpose: borrow.purpose,
-          createdAt: borrow.created_at,
-          details: borrow,
-          userId: borrow.user_id || borrow.users?.id,
-        })),
         ...softwareInstallations.map((install: any) => ({
-          id: install.software_id || `soft-${Math.random()}`,
+          id: install.id || `soft-${Math.random()}`,
           type: "software-install" as const,
           date: install.date,
-          name: install.faculty_name || install.faculty_student_name,
+          name: install.faculty_name,
           status: install.status,
           laboratory: install.laboratory,
-          purpose: install.purpose,
+          purpose: install.software_list,
           createdAt: install.created_at,
           details: install,
           userId: install.user_id || install.users?.id,
@@ -103,20 +68,16 @@ const ArchiveFormsPage = () => {
             form.status === "Admin_Approved" || form.status === "Completed"
           );
         } else if (user?.role === "Custodian") {
-          // Custodian sees only Completed, Lost, Denied, and Returned statuses
+          // Custodian sees only Completed and Denied statuses
           return (
             form.status === "Completed" ||
-            form.status === "Lost" ||
-            form.status === "Denied" ||
-            form.status === "Returned"
+            form.status === "Denied"
           );
         } else {
           // Default fallback - show only truly archived statuses
           return (
             form.status === "Completed" ||
-            form.status === "Lost" ||
-            form.status === "Denied" ||
-            form.status === "Returned"
+            form.status === "Denied"
           );
         }
       });
@@ -135,15 +96,8 @@ const ArchiveFormsPage = () => {
         });
       }
 
-      // Filter by tab
-      let filteredForms = filteredArchivedForms;
-      if (activeTab !== "all") {
-        filteredForms = filteredArchivedForms.filter(
-          (form) => form.type === activeTab
-        );
-      }
-
       // Apply date filtering
+      let filteredForms = filteredArchivedForms;
       if (dateFilter.start_date) {
         filteredForms = filteredForms.filter((form) => {
           const formDate = new Date(form.createdAt);
@@ -217,36 +171,6 @@ const ArchiveFormsPage = () => {
       {/* Form Type Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "all"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("all")}
-          >
-            All Forms
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "lab-request"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("lab-request")}
-          >
-            Lab Requests
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "equipment-borrow"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("equipment-borrow")}
-          >
-            Equipment Borrows
-          </button>
           <button
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
               activeTab === "software-install"
@@ -349,10 +273,7 @@ const ArchiveFormsPage = () => {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {form.type === "lab-request" && `Lab Request`}
-                        {form.type === "equipment-borrow" && `Equipment Borrow`}
-                        {form.type === "software-install" &&
-                          `Software Installation`}
+                        Software Installation
                       </div>
                       {form.details?.purpose && (
                         <div className="text-sm text-gray-500 mt-1 truncate max-w-sm">
@@ -369,64 +290,21 @@ const ArchiveFormsPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {form.name ||
-                          (form.type === "equipment-borrow" &&
-                            form.details?.faculty_student_name) ||
-                          (form.type === "software-install" &&
-                            form.details?.faculty_name) ||
-                          form.details?.faculty_student_name ||
+                          form.details?.faculty_name ||
                           "Unknown"}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {form.type === "lab-request" && (
-                          <>
-                            {form.details?.user_type && (
-                              <span className="capitalize">
-                                {formatUserType(form.details.user_type)}
-                              </span>
-                            )}
-                            {form.details?.usage_type && (
-                              <span>
-                                {" "}
-                                • {formatUsageType(form.details.usage_type)}
-                              </span>
-                            )}
-                            {form.laboratory && (
-                              <span>
-                                {" "}
-                                • {formatLaboratory(form.laboratory)}
-                              </span>
-                            )}
-                          </>
+                        {form.details?.user_type && (
+                          <span className="capitalize">
+                            {formatUserType(form.details.user_type)}
+                          </span>
                         )}
-                        {form.type === "software-install" && (
-                          <>
-                            {form.details?.user_type && (
-                              <span className="capitalize">
-                                {formatUserType(form.details.user_type)}
-                              </span>
-                            )}
-                            {form.laboratory && (
-                              <span>
-                                {" "}
-                                • {formatLaboratory(form.laboratory)}
-                              </span>
-                            )}
-                          </>
-                        )}
-                        {form.type === "equipment-borrow" && (
-                          <>
-                            {form.details?.user_type && (
-                              <span className="capitalize">
-                                {formatUserType(form.details.user_type)}
-                              </span>
-                            )}
-                            {form.laboratory && (
-                              <span>
-                                {" "}
-                                • {formatLaboratory(form.laboratory)}
-                              </span>
-                            )}
-                          </>
+                        {form.laboratory && (
+                          <span>
+                            {" "}
+                            {form.details?.user_type ? " \u2022 " : ""}
+                            {formatLaboratory(form.laboratory)}
+                          </span>
                         )}
                       </div>
                     </td>

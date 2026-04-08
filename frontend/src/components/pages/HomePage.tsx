@@ -225,16 +225,18 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
           onClick={() => handleNavigate(isAdmin ? "admin-reports" : "reports")}
         />
 
-        <DashboardCard
-          title={isAdmin ? "Forms for Approval" : "Active Forms"}
-          value={stats.totalForms}
-          subtitle="Click to view forms →"
-          icon={ClipboardList}
-          iconBgColor="bg-indigo-100"
-          iconColor="text-indigo-600"
-          subtitleColor="text-indigo-600"
-          onClick={() => handleNavigate("forms")}
-        />
+        {userRole !== "Admin" && (
+          <DashboardCard
+            title="Active Forms"
+            value={stats.totalForms}
+            subtitle="Click to view forms →"
+            icon={ClipboardList}
+            iconBgColor="bg-indigo-100"
+            iconColor="text-indigo-600"
+            subtitleColor="text-indigo-600"
+            onClick={() => handleNavigate("forms")}
+          />
+        )}
 
         {isAdmin && (
           <DashboardCard

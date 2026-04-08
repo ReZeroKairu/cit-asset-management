@@ -1,7 +1,5 @@
 import { useCallback } from "react";
 import {
-  updateLabRequestStatus as apiUpdateLabRequestStatus,
-  updateEquipmentBorrowStatus as apiUpdateEquipmentBorrowStatus,
   updateSoftwareInstallationStatus as apiUpdateSoftwareInstallationStatus,
 } from "../api/forms";
 
@@ -12,18 +10,11 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
         console.log(`🔄 Updating status for ${formType} ID ${formId} to ${newStatus}`);
 
         switch (formType) {
-          case "lab-request":
-            await apiUpdateLabRequestStatus(formId, newStatus);
-            break;
-          case "equipment-borrow":
-            await apiUpdateEquipmentBorrowStatus(formId, newStatus);
-            break;
           case "software-install":
             await apiUpdateSoftwareInstallationStatus(formId, newStatus);
             break;
           default:
-            console.error("Unknown form type:", formType);
-            return;
+            throw new Error(`Unsupported form type: ${formType}`);
         }
 
         console.log(`✅ Successfully updated status to ${newStatus}`);
@@ -65,11 +56,8 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
         }
 
         switch (formType) {
-          case "lab-request":
-            return apiUpdateLabRequestStatus(formId, "Admin_Approved");
-          case "equipment-borrow":
-          case "equipment":
-            return apiUpdateEquipmentBorrowStatus(formId, "Admin_Approved");
+          case "software-install":
+            return apiUpdateSoftwareInstallationStatus(formId, "Admin_Approved");
           default:
             console.error("Unknown form type:", formType);
             return Promise.resolve();

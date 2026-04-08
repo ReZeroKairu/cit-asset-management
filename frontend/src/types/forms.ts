@@ -1,6 +1,6 @@
 export interface FormSubmission {
   id: number;
-  type: 'lab-request' | 'equipment-borrow' | 'software-install';
+  type: 'software-install';
   date: string;
   name: string;
   status: string;
@@ -8,7 +8,14 @@ export interface FormSubmission {
   purpose: string;
   createdAt: string;
   userId?: number;
-  details: any;
+  details: {
+    faculty_student_name?: string;
+    faculty_name?: string;
+    user_type?: string;
+    usage_type?: string;
+    purpose?: string;
+    [key: string]: unknown;
+  };
   // Form-specific ID fields
   request_id?: number;
   borrow_id?: number;

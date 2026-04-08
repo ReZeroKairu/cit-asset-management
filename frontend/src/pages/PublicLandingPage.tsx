@@ -30,8 +30,7 @@ const PublicLandingPage = () => {
                     Submit Forms
                   </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Submit requests for laboratory usage, equipment borrowing,
-                    and software installation without login.
+                    Submit requests for software installation without login.
                   </p>
                 </div>
               </div>

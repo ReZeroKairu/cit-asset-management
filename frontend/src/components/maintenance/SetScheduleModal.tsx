@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { X, Calendar, Clock, Plus } from "lucide-react";
 // ✅ Combined imports into a single, safe relative path
 import {
@@ -34,23 +34,6 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     "3rd": { start: "", end: "", servicingWeeks: [] },
     "4th": { start: "", end: "", servicingWeeks: [] },
   });
-
-  // Load existing schedules when modal opens
-  useEffect(() => {
-    if (labId) {
-      // TODO: Replace with actual API call to load existing schedules
-      // For now, the form starts empty and users can create new schedules
-    }
-  }, [labId]);
-
-  const handleCreateNewSchedule = () => {
-    setSchedules({
-      "1st": { start: "", end: "", servicingWeeks: [] },
-      "2nd": { start: "", end: "", servicingWeeks: [] },
-      "3rd": { start: "", end: "", servicingWeeks: [] },
-      "4th": { start: "", end: "", servicingWeeks: [] },
-    });
-  };
 
   const handleDateChange = (
     quarter: string,

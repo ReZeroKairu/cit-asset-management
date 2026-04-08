@@ -82,6 +82,10 @@ const PageRenderer = ({
     case "maintenance":
       return <MaintenancePage />;
     case "forms":
+      // Only non-admin users can access forms page
+      if (user?.role === "Admin") {
+        return <HomePage onNavigate={onNavigate} />;
+      }
       return <FormsPage />;
         case "public-forms":
       return <PublicFormsPage />;

@@ -15,30 +15,24 @@ import {
   CheckCircle,
   XCircle,
   Download,
-  Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { generateFormDocument } from "../utils/formTemplateMapping";
 import {
-  getLabRequests,
-  getEquipmentBorrows,
   getSoftwareInstallations,
-  updateLabRequestStatus,
-  updateEquipmentBorrowStatus,
   updateSoftwareInstallationStatus,
 } from "../api/forms";
 
 interface FormSubmission {
   id: number;
-  type: "lab-request" | "equipment-borrow" | "software-install";
+  type: "software-install";
   date: string;
   name: string;
   status:
     | "Pending"
     | "Approved"
     | "Denied"
-    | "Returned"
     | "Completed"
     | "Admin_Approved";
   laboratory: string;
@@ -47,8 +41,6 @@ interface FormSubmission {
   userId?: number;
   details: any;
   // Form-specific ID fields
-  request_id?: number;
-  borrow_id?: number;
   software_id?: number;
 }
 
@@ -57,7 +49,7 @@ export const FormsManagementPage = () => {
   const [forms, setForms] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("software-install");
   const [dateFilter, setDateFilter] = useState<{
     start_date: string;
     end_date: string;
@@ -72,186 +64,19 @@ export const FormsManagementPage = () => {
   const fetchForms = async () => {
     try {
       setLoading(true);
-      const [labRequestsRes, equipmentBorrowsRes, softwareInstallationsRes] =
+      const [softwareInstallationsRes] =
         await Promise.all([
-          getLabRequests(dateFilter),
-          getEquipmentBorrows(dateFilter),
           getSoftwareInstallations(dateFilter),
         ]);
 
       // Extract data from API responses
-      const labRequests = labRequestsRes.data || labRequestsRes;
-      const equipmentBorrows = equipmentBorrowsRes.data || equipmentBorrowsRes;
       const softwareInstallations =
         softwareInstallationsRes.data || softwareInstallationsRes;
 
-      // Filter for archive: show different statuses based on user role and ownership
-      const isAdmin = user?.role === "Admin";
-      const currentUserId = user?.id;
-
-      // For testing, assume user ID is 2 if not available
-      const testUserId = currentUserId || 2;
-
-      console.log("🔍 Archive API responses:", {
-        labRequests,
-        equipmentBorrows,
-        softwareInstallations,
-        labRequestsType: typeof labRequests,
-        isArray: Array.isArray(labRequests),
-        currentUserId,
-        testUserId,
-        userRole: user?.role,
-        user: user,
-        userExists: !!user,
-        userIdType: typeof user?.id,
-      });
-
-      // Debug: Check first few items to understand the data structure
-      if (labRequests && labRequests.length > 0) {
-        console.log("🔍 Sample lab request:", labRequests[0]);
-      }
-      if (equipmentBorrows && equipmentBorrows.length > 0) {
-        console.log("🔍 Sample equipment borrow:", equipmentBorrows[0]);
-      }
-
-      const archivedLabRequests = Array.isArray(labRequests)
-        ? labRequests.filter((req: any) => {
-            const statusMatch = isAdmin
-              ? req.status === "Admin_Approved" ||
-                req.status === "Completed" ||
-                req.status === "Denied"
-              : req.status === "Completed" || req.status === "Denied";
-
-            // Temporarily show all forms to debug data structure
-            const ownershipMatch =
-              isAdmin ||
-              req.user_id === testUserId ||
-              req.users?.id === testUserId ||
-              (req.submittedVia === "one-time-token" &&
-                req.userId === testUserId);
-
-            console.log("🔍 Lab request filtering:", {
-              requestId: req.request_id,
-              status: req.status,
-              user_id: req.user_id,
-              usersId: req.users?.id,
-              submittedVia: req.submittedVia,
-              reqUserId: req.userId,
-              currentUserId,
-              testUserId,
-              currentUserIdType: typeof currentUserId,
-              user_idType: typeof req.user_id,
-              statusMatch,
-              ownershipMatch,
-              isAdmin,
-              user_id_equals_testUserId: req.user_id == testUserId,
-              user_id_strict_equals_testUserId: req.user_id === testUserId,
-              usersId_equals_testUserId: req.users?.id == testUserId,
-              usersId_strict_equals_testUserId: req.users?.id === testUserId,
-            });
-
-            return statusMatch && ownershipMatch;
-          })
-        : [];
-
-      const archivedEquipmentBorrows = Array.isArray(equipmentBorrows)
-        ? equipmentBorrows.filter((borrow: any) => {
-            const statusMatch = isAdmin
-              ? borrow.status === "Admin_Approved" ||
-                borrow.status === "Returned" ||
-                borrow.status === "Denied"
-              : borrow.status === "Returned" || borrow.status === "Denied";
-
-            // Temporarily show all forms to debug data structure
-            const ownershipMatch =
-              isAdmin ||
-              borrow.user_id === testUserId ||
-              borrow.users?.id === testUserId ||
-              (borrow.submittedVia === "one-time-token" &&
-                borrow.userId === testUserId);
-
-            console.log("🔍 Equipment borrow filtering:", {
-              borrowId: borrow.borrow_id,
-              status: borrow.status,
-              user_id: borrow.user_id,
-              usersId: borrow.users?.id,
-              submittedVia: borrow.submittedVia,
-              borrowUserId: borrow.userId,
-              currentUserId,
-              testUserId,
-              statusMatch,
-              ownershipMatch,
-              isAdmin,
-              user_id_equals_testUserId: borrow.user_id == testUserId,
-              user_id_strict_equals_testUserId: borrow.user_id === testUserId,
-              usersId_equals_testUserId: borrow.users?.id == testUserId,
-              usersId_strict_equals_testUserId: borrow.users?.id === testUserId,
-            });
-
-            return statusMatch && ownershipMatch;
-          })
-        : [];
-
-      const archivedSoftwareInstallations = Array.isArray(softwareInstallations)
-        ? softwareInstallations.filter((install: any) => {
-            const statusMatch = isAdmin
-              ? install.status === "Completed" || install.status === "Denied" // Removed Admin_Approved since custodians handle directly
-              : install.status === "Completed" || install.status === "Denied";
-
-            // Temporarily show all forms to debug data structure
-            const ownershipMatch =
-              isAdmin ||
-              install.user_id === testUserId ||
-              install.users?.id === testUserId ||
-              (install.submittedVia === "one-time-token" &&
-                install.userId === testUserId);
-
-            console.log("🔍 Software installation filtering:", {
-              installId: install.id,
-              status: install.status,
-              user_id: install.user_id,
-              usersId: install.users?.id,
-              submittedVia: install.submittedVia,
-              installUserId: install.userId,
-              currentUserId,
-              statusMatch,
-              ownershipMatch,
-              isAdmin,
-            });
-
-            return statusMatch && ownershipMatch;
-          })
-        : [];
-
-      const allForms: FormSubmission[] = [
-        ...archivedLabRequests.map((req: any) => ({
-          id: req.request_id || `lab-${Math.random()}`,
-          type: "lab-request" as const,
-          date: req.date,
-          name: req.faculty_student_name,
-          status: req.status,
-          laboratory: req.laboratory,
-          purpose: req.purpose,
-          createdAt: req.created_at,
-          details: req,
-          request_id: req.request_id,
-          userId: req.user_id || req.users?.id,
-        })),
-        ...archivedEquipmentBorrows.map((borrow: any) => ({
-          id: borrow.borrow_id || `equip-${Math.random()}`,
-          type: "equipment-borrow" as const,
-          date: borrow.date,
-          name: borrow.faculty_student_name,
-          status: borrow.status,
-          laboratory: borrow.laboratory,
-          purpose: borrow.purpose,
-          createdAt: borrow.created_at,
-          details: borrow,
-          borrow_id: borrow.borrow_id,
-          userId: borrow.user_id || borrow.users?.id,
-        })),
-        ...archivedSoftwareInstallations.map((install: any) => ({
-          id: install.installation_id || `soft-${Math.random()}`,
+      // Transform to FormSubmission structure
+      const transformedForms: FormSubmission[] = [
+        ...softwareInstallations.map((install: any) => ({
+          id: install.id || `soft-${Math.random()}`,
           type: "software-install" as const,
           date: install.date,
           name: install.faculty_name,
@@ -260,14 +85,30 @@ export const FormsManagementPage = () => {
           purpose: install.software_list,
           createdAt: install.created_at,
           details: install,
-          software_id: install.installation_id,
           userId: install.user_id || install.users?.id,
+          software_id: install.id,
         })),
       ];
 
+      // Filter forms based on user role and status
+      const filteredForms = transformedForms.filter((form) => {
+        const isAdmin = user?.role === "Admin";
+        const currentUserId = user?.id;
+        
+        // Status filtering
+        const statusMatch = isAdmin
+          ? form.status === "Admin_Approved" || form.status === "Completed" || form.status === "Denied"
+          : form.status === "Completed" || form.status === "Denied";
+        
+        // Ownership filtering
+        const ownershipMatch = isAdmin || form.userId === currentUserId;
+        
+        return statusMatch && ownershipMatch;
+      });
+
       // Sort by creation date (newest first)
       setForms(
-        allForms.sort(
+        filteredForms.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
@@ -295,15 +136,12 @@ export const FormsManagementPage = () => {
     try {
       let response;
       switch (formType) {
-        case "lab-request":
-          response = await updateLabRequestStatus(formId, newStatus);
-          break;
-        case "equipment-borrow":
-          response = await updateEquipmentBorrowStatus(formId, newStatus);
-          break;
         case "software-install":
           response = await updateSoftwareInstallationStatus(formId, newStatus);
           break;
+        default:
+          console.error("Unsupported form type:", formType);
+          return;
       }
 
       if (response.success) {
@@ -323,9 +161,7 @@ export const FormsManagementPage = () => {
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case "Denied":
         return <XCircle className="w-4 h-4 text-red-500" />;
-      case "Returned":
-        return <CheckCircle className="w-4 h-4 text-blue-500" />;
-      case "Completed":
+            case "Completed":
         return null; // Remove icon for Completed status
       default:
         return <Clock className="w-4 h-4 text-gray-500" />;
@@ -342,9 +178,7 @@ export const FormsManagementPage = () => {
         return "bg-green-100 text-green-800";
       case "Denied":
         return "bg-red-100 text-red-800";
-      case "Returned":
-        return "bg-green-100 text-green-800";
-      case "Completed":
+            case "Completed":
         return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -353,10 +187,6 @@ export const FormsManagementPage = () => {
 
   const getFormTypeLabel = (type: string) => {
     switch (type) {
-      case "lab-request":
-        return "Lab Request";
-      case "equipment-borrow":
-        return "Equipment Borrow";
       case "software-install":
         return "Software Installation";
       default:
@@ -399,36 +229,6 @@ export const FormsManagementPage = () => {
         <nav className="-mb-px flex space-x-8">
           <button
             className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "all"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("all")}
-          >
-            All Forms
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "lab-request"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("lab-request")}
-          >
-            Lab Requests
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "equipment-borrow"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-            onClick={() => setActiveTab("equipment-borrow")}
-          >
-            Equipment Borrows
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm ${
               activeTab === "software-install"
                 ? "border-blue-500 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -455,8 +255,7 @@ export const FormsManagementPage = () => {
               <SelectItem value="Admin_Approved">Admin Approved</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
               <SelectItem value="Denied">Denied</SelectItem>
-              <SelectItem value="Returned">Returned</SelectItem>
-            </SelectContent>
+                          </SelectContent>
           </Select>
         </div>
 
@@ -536,37 +335,6 @@ export const FormsManagementPage = () => {
                       </Badge>
                     </div>
 
-                    {/* Add Usage Type and User Type for lab requests like ArchivePage */}
-                    {form.type === 'lab-request' && (
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium text-gray-500">User:</span>
-                          <span className="capitalize">
-                            {form.details?.user_type || form.details?.userType || 'N/A'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-medium text-gray-500">Usage:</span>
-                          <span className="capitalize">
-                            {form.details?.usage_type?.replace('-', ' ') || 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-2 text-sm text-gray-600">
-                      <span className="flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          {form.name}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {new Date(form.date).toLocaleDateString()}
-                        </span>
-                      </span>
-                    </div>
-
                     {/* Purpose field moved below name and date */}
                     {form.details?.purpose && (
                       <div className="mt-2 text-sm text-gray-600">
@@ -604,19 +372,6 @@ export const FormsManagementPage = () => {
                         </Button>
                       </>
                     )}
-
-                    {form.type === "equipment-borrow" &&
-                      form.status === "Approved" && (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateStatus(form.id, form.type, "Returned")
-                          }
-                          className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                        >
-                          Mark Returned
-                        </Button>
-                      )}
 
                     {/* Generate Form Document Button */}
                     <Button

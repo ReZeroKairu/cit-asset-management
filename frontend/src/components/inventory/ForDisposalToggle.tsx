@@ -306,29 +306,13 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
     try {
       const allAssets = await getInventory(); // Direct response, not response.data
       
-      console.log('🔍 DEBUG: All assets:', allAssets);
-      console.log('🔍 DEBUG: Total assets count:', allAssets.length);
-      
-      // Debug: Check assets with status details
-      const assetsWithStatus = allAssets.filter((asset: Asset) => 
-        asset.asset_details?.asset_statuses?.status_name
-      );
-      console.log('🔍 DEBUG: Assets with status:', assetsWithStatus.length);
-      
-      // Debug: Check specific status values
-      const statusNames = allAssets.map((asset: Asset) => 
-        asset.asset_details?.asset_statuses?.status_name
-      ).filter(Boolean);
-      console.log('🔍 DEBUG: All status names found:', [...new Set(statusNames)]);
+      // Filter assets with "For Repair" or "For Disposal" status
       
       // Filter assets with "For Repair" or "For Disposal" status
       const filteredAssets = allAssets
         .filter((asset: Asset) => {
           const statusName = asset.asset_details?.asset_statuses?.status_name; // Fixed: asset_statuses not status
           const matches = statusName === 'For Repair' || statusName === 'For Disposal';
-          if (matches) {
-            console.log('✅ Found disposal asset:', asset.asset_id, statusName, asset);
-          }
           return matches;
         })
         .map((asset: Asset) => ({
@@ -336,8 +320,6 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
           daysUntilDisposal: calculateDaysUntilDisposal(asset)
         }));
 
-      console.log('🔍 DEBUG: Filtered disposal assets:', filteredAssets.length);
-      console.log('🔍 DEBUG: Filtered assets:', filteredAssets);
 
       setDisposalAssets(filteredAssets);
     } catch (error) {

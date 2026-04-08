@@ -258,22 +258,7 @@ export const FormList: React.FC<FormListProps> = ({
                       className="text-xs text-gray-400 mt-0.5 truncate"
                       style={{ maxWidth: "200px" }}
                     >
-                      {form.type === "lab-request" && (
-                        <>
-                          {form.details?.user_type && (
-                            <span className="capitalize">
-                              {form.details.user_type.replace("-", " ")}
-                            </span>
-                          )}
-                          {form.details?.usage_type && (
-                            <span>
-                              {" "}
-                              &bull; {form.details.usage_type.replace("-", " ")}
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {form.type !== "lab-request" && form.laboratory && (
+                      {form.laboratory && (
                         <span>{form.laboratory}</span>
                       )}
                     </p>

@@ -423,60 +423,10 @@ LEFT JOIN laboratories l ON c.lab_id = l.lab_id
 LEFT JOIN workstations ws ON c.workstation_id = ws.workstation_id
 WHERE c.status IN ('Resolved', 'Denied');
 
--- Archive View 3: Archived Forms View
+-- Archive View 3: Archived Forms View (Software Installations Only)
 CREATE OR REPLACE VIEW archived_forms_view AS
 SELECT 
-    -- Lab Requests
-    lr.request_id AS form_id,
-    'lab-request' AS form_type,
-    lr.date AS form_date,
-    lr.faculty_student_name AS name,
-    lr.status AS form_status,
-    lr.purpose,
-    lr.created_at,
-    lr.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    DATE_FORMAT(lr.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(lr.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    CONCAT(
-        COALESCE(lr.faculty_student_name, ''), ' ',
-        COALESCE(lr.purpose, ''), ' ',
-        COALESCE(lr.laboratory, '')
-    ) AS searchable_text
-FROM lab_requests lr
-LEFT JOIN users u ON lr.user_id = u.user_id
-WHERE lr.status IN ('Admin_Approved', 'Denied')
-
-UNION ALL
-
-SELECT 
-    -- Equipment Borrows
-    eb.borrow_id AS form_id,
-    'equipment-borrow' AS form_type,
-    eb.date AS form_date,
-    eb.faculty_student_name AS name,
-    eb.status AS form_status,
-    eb.purpose,
-    eb.created_at,
-    eb.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    DATE_FORMAT(eb.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(eb.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    CONCAT(
-        COALESCE(eb.faculty_student_name, ''), ' ',
-        COALESCE(eb.purpose, ''), ' ',
-        COALESCE(eb.laboratory, '')
-    ) AS searchable_text
-FROM equipment_borrows eb
-LEFT JOIN users u ON eb.user_id = u.user_id
-WHERE eb.status IN ('Admin_Approved', 'Custodian_Approved', 'Denied', 'Returned', 'Lost')
-
-UNION ALL
-
-SELECT 
-    -- Software Installations
+    -- Software Installations Only
     si.id AS form_id,
     'software-install' AS form_type,
     si.date AS form_date,
@@ -542,72 +492,10 @@ LEFT JOIN inventory_assets ia ON ws.workstation_id = ia.workstation_id
 LEFT JOIN asset_details ad ON ia.asset_id = ad.asset_id
 GROUP BY ws.workstation_id;
 
--- Management View 2: Active Forms Management View
+-- Management View 2: Active Forms Management View (Software Installations Only)
 CREATE OR REPLACE VIEW active_forms_view AS
 SELECT 
-    -- Lab Requests
-    lr.request_id AS form_id,
-    'lab-request' AS form_type,
-    lr.date AS form_date,
-    lr.faculty_student_name AS name,
-    lr.status AS form_status,
-    lr.purpose,
-    lr.created_at,
-    lr.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    CASE 
-        WHEN lr.status = 'Pending' THEN 'Awaiting Review'
-        WHEN lr.status = 'Admin_Approved' THEN 'Approved'
-        ELSE lr.status
-    END AS status_category,
-    DATE_FORMAT(lr.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(lr.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    DATEDIFF(CURDATE(), lr.created_at) AS days_pending,
-    CONCAT(
-        COALESCE(lr.faculty_student_name, ''), ' ',
-        COALESCE(lr.purpose, ''), ' ',
-        COALESCE(lr.laboratory, '')
-    ) AS searchable_text
-FROM lab_requests lr
-LEFT JOIN users u ON lr.user_id = u.user_id
-WHERE lr.status IN ('Pending', 'Admin_Approved')
-
-UNION ALL
-
-SELECT 
-    -- Equipment Borrows
-    eb.borrow_id AS form_id,
-    'equipment-borrow' AS form_type,
-    eb.date AS form_date,
-    eb.faculty_student_name AS name,
-    eb.status AS form_status,
-    eb.purpose,
-    eb.created_at,
-    eb.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    CASE 
-        WHEN eb.status = 'Pending' THEN 'Awaiting Review'
-        WHEN eb.status IN ('Admin_Approved', 'Custodian_Approved') THEN 'Approved'
-        ELSE eb.status
-    END AS status_category,
-    DATE_FORMAT(eb.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(eb.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    DATEDIFF(CURDATE(), eb.created_at) AS days_pending,
-    CONCAT(
-        COALESCE(eb.faculty_student_name, ''), ' ',
-        COALESCE(eb.purpose, ''), ' ',
-        COALESCE(eb.laboratory, '')
-    ) AS searchable_text
-FROM equipment_borrows eb
-LEFT JOIN users u ON eb.user_id = u.user_id
-WHERE eb.status IN ('Pending', 'Admin_Approved', 'Custodian_Approved')
-
-UNION ALL
-
-SELECT 
-    -- Software Installations
+    -- Software Installations Only
     si.id AS form_id,
     'software-install' AS form_type,
     si.date AS form_date,
@@ -752,7 +640,7 @@ GROUP BY p.procedure_id;
 -- STEP 3: VERIFICATION
 -- =============================================
 
--- Check that views were created successfully
+-- Check that views were created successfully (Updated for removed forms)
 SELECT 
     'Verification Results' as status,
     COUNT(*) as total_views_created
@@ -781,10 +669,10 @@ SELECT 'Testing Daily Reports View' as test_name, COUNT(*) as record_count FROM 
 SELECT 'Testing Inventory Assets View' as test_name, COUNT(*) as record_count FROM inventory_assets_view LIMIT 1;
 SELECT 'Testing Maintenance Analytics View' as test_name, COUNT(*) as record_count FROM maintenance_analytics_view LIMIT 1;
 
--- Test Archive Views
+-- Test Archive Views (Updated for software installations only)
 SELECT 'Testing Archived Daily Reports View' as test_name, COUNT(*) as record_count FROM archived_daily_reports_view LIMIT 1;
 SELECT 'Testing Archived Complaints View' as test_name, COUNT(*) as record_count FROM archived_complaints_view LIMIT 1;
-SELECT 'Testing Archived Forms View' as test_name, COUNT(*) as record_count FROM archived_forms_view LIMIT 1;
+SELECT 'Testing Archived Forms View (Software Installations Only)' as test_name, COUNT(*) as record_count FROM archived_forms_view LIMIT 1;
 
 -- Test Management Views
 SELECT 'Testing Workstation Management View' as test_name, COUNT(*) as record_count FROM workstation_management_view LIMIT 1;
@@ -798,5 +686,5 @@ SELECT 'Testing Procedures Management View' as test_name, COUNT(*) as record_cou
 -- =============================================
 SELECT 
     '🎉 100% SYSTEM OPTIMIZATION COMPLETE!' as status,
-    '14 views created successfully' as result,
+    '12 views created successfully (lab requests & equipment borrows removed)' as result,
     'All pages and features fully optimized' as next_step;

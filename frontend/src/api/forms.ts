@@ -1,67 +1,11 @@
 import api from "./axios";
 import type { PublicSoftwareInstallationData } from './publicForms';
 
-// Lab Request API
-export const submitLabRequest = async (formData: any) => {
-  const response = await api.post('/forms/lab-requests', formData);
-  return response.data;
-};
-
-// Get lab requests (with optional date filtering)
-export const getLabRequests = async (dateFilter?: { start_date?: string; end_date?: string }) => {
-  const queryParams = new URLSearchParams();
-  if (dateFilter?.start_date) queryParams.append("start_date", dateFilter.start_date);
-  if (dateFilter?.end_date) queryParams.append("end_date", dateFilter.end_date);
-
-  const response = await api.get(`/forms/lab-requests?${queryParams}`);
-  return response.data;
-};
-
-export const updateLabRequestStatus = async (id: number, status: string) => {
-  const response = await api.put(`/forms/lab-requests/${id}/status`, { status });
-  return response.data;
-};
-
-// Update lab request details (for custodian editing)
-export const updateLabRequestDetails = async (id: number, details: any) => {
-  const response = await api.put(`/forms/lab-requests/${id}`, details);
-  return response.data;
-};
-
-// Equipment Borrow API
-export const submitEquipmentBorrow = async (formData: any) => {
-  const response = await api.post('/forms/equipment-borrows', formData);
-  return response.data;
-};
-
-// Get equipment borrows (with optional date filtering)
-export const getEquipmentBorrows = async (dateFilter?: { start_date?: string; end_date?: string }) => {
-  const queryParams = new URLSearchParams();
-  if (dateFilter?.start_date) queryParams.append("start_date", dateFilter.start_date);
-  if (dateFilter?.end_date) queryParams.append("end_date", dateFilter.end_date);
-
-  const response = await api.get(`/forms/equipment-borrows?${queryParams}`);
-  return response.data;
-};
-
-export const updateEquipmentBorrowStatus = async (id: number, status: string) => {
-  const response = await api.put(`/forms/equipment-borrows/${id}/status`, { status });
-  return response.data;
-};
-
-// Update equipment borrow details (for custodian editing)
-export const updateEquipmentBorrowDetails = async (id: number, details: any) => {
-  const response = await api.put(`/forms/equipment-borrows/${id}`, details);
-  return response.data;
-};
-
 // Software Installation API
 export const submitSoftwareInstallation = async (formData: any) => {
   const response = await api.post('/forms/software-installations', formData);
   return response.data;
 };
-
-
 
 export const submitPublicSoftwareInstallation = async (data: PublicSoftwareInstallationData) => {
   const response = await api.post('/forms/software-installations', data);
