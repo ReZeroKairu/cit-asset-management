@@ -108,8 +108,6 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
       offset
     } = req.query;
 
-    console.log('?? Fetching CIT Lab Users logs with filters:', req.query);
-
     // Build where clause for filtering using the view
     let whereClause = '';
     const params: any[] = [];

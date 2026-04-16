@@ -53,6 +53,23 @@ export const mapReportDataToTemplate = (reportData: any) => {
     end_day_checks: false,
   };
 
+  // Map workstation checkmarks (ws_1 through ws_40), excluding Server
+  const workstationChecks: any = {};
+  for (let i = 1; i <= 40; i++) {
+    // Check if workstation was included in the daily report (selected by custodian)
+    const ws = reportData.workstations?.find((w: any) => {
+      // Skip Server workstation
+      if (w.workstation_name?.toLowerCase().includes('server')) {
+        return false;
+      }
+      const wsNum = w.workstation_name?.match(/\d+/)?.[0];
+      return wsNum === String(i);
+    });
+    
+    // Mark with checkmark if selected (no box - template has boxes already), blank if not
+    workstationChecks[`ws_${i}`] = ws ? "✔" : "";
+  }
+
   // Check which procedures are completed
   if (reportData.procedures) {
     reportData.procedures.forEach((procedure: any) => {
@@ -117,6 +134,9 @@ export const mapReportDataToTemplate = (reportData: any) => {
     user_management: procedureChecks.user_management ? "☑" : "☐",
     security_safety: procedureChecks.security_safety ? "☑" : "☐",
     end_day_checks: procedureChecks.end_day_checks ? "☑" : "☐",
+
+    // Workstation checkmarks
+    ...workstationChecks,
 
     // Keep original data for reference
     original_workstations: reportData.workstations || [],

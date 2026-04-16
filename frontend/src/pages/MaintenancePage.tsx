@@ -319,7 +319,7 @@ const MaintenancePage = () => {
             <div className="flex items-center justify-between flex-wrap gap-4">
               {/* Left Side: Toggles */}
               <div className="flex items-center space-x-3 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                <button
+                {/* <button
                   onClick={() => setActiveTab("all")}
                   className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "all"
@@ -328,8 +328,8 @@ const MaintenancePage = () => {
                   }`}
                 >
                   All Workstations
-                </button>
-                <button
+                </button> */}
+                {/* <button
                   onClick={() => setActiveTab("pending")}
                   className={`px-4 py-2 rounded-md font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === "pending"
@@ -338,7 +338,7 @@ const MaintenancePage = () => {
                   }`}
                 >
                   Other Assets
-                </button>
+                </button> */}
               </div>
 
               {/* Right Side: Action Controls */}
