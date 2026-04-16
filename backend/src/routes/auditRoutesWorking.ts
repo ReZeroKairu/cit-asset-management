@@ -8,16 +8,12 @@ const router = Router();
 // Simple working audit route
 router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (req, res) => {
   try {
-    console.log('🔍 Audit route hit!', { query: req.query });
-    
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
     
     const action = req.query.action as string;
     const search = req.query.search as string;
-    
-    console.log('🔍 Parameters:', { page, limit, action: action || 'none', search: search || 'none' });
     
     try {
       // Simple SQL query that uses the audit_logs_view
@@ -70,9 +66,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       sql += ` ORDER BY al.created_at DESC LIMIT ? OFFSET ?`;
       params.push(limit, offset);
       
-      console.log('🔍 SQL:', sql);
-      console.log('🔍 Params:', params);
-      
       // Execute main query
       const results = await prisma.$queryRawUnsafe(sql, ...params) as any[];
       
@@ -108,8 +101,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       
       // Format results - view already provides formatted data
       const logs = results;
-      
-      console.log('📊 Results:', { found: logs.length, total });
       
       res.json({
         logs,

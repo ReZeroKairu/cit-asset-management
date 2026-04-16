@@ -9,7 +9,6 @@ export const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 import api from "./axios";
-console.log("🌐 API_BASE_URL initialized to:", API_BASE_URL);
 
 export interface ComplaintData {
   lab_id: number;

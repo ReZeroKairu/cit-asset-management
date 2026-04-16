@@ -51,26 +51,10 @@ const InventoryAnalyticsSection = () => {
       try {
         // Fetch inventory analytics
         const analyticsData = await getInventoryAnalytics();
-        console.log("API Response:", analyticsData);
-
-        const transformedData: InventoryAnalyticsData = {
-          ...analyticsData,
-          statusDistribution: analyticsData.statusDistribution,
-        };
-
-        console.log("Transformed data:", transformedData);
-        setData(transformedData);
+        setData(analyticsData);
 
         // Fetch maintenance analytics
         const maintenanceAnalyticsData = await getMaintenanceAnalytics();
-        console.log(
-          "Maintenance Analytics Response:",
-          maintenanceAnalyticsData
-        );
-        console.log(
-          "Status Distribution:",
-          maintenanceAnalyticsData.statusDistribution
-        );
         setMaintenanceData(maintenanceAnalyticsData);
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
@@ -91,7 +75,6 @@ const InventoryAnalyticsSection = () => {
           complaintsStartDate || undefined,
           complaintsEndDate || undefined
         );
-        console.log("Complaints Analytics Response:", complaintsAnalyticsData);
         setComplaintsData(complaintsAnalyticsData);
       } catch (err) {
         console.error("Failed to fetch complaints analytics:", err);

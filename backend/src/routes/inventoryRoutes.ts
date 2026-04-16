@@ -16,7 +16,6 @@ const prisma = new PrismaClient();
 
 // Add a simple test endpoint to verify backend is working
 router.get("/test", (req, res) => {
-  console.log('🔍🔍🔍 BACKEND: Test endpoint called!');
   res.json({ message: "Backend is working!", timestamp: new Date().toISOString() });
 });
 

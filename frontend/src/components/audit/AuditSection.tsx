@@ -51,16 +51,7 @@ const AuditSection = () => {
       queryParams.append('page', filters.page.toString());
       queryParams.append('limit', filters.limit.toString());
 
-      console.log('🔍 Fetching audit logs with filters:', { 
-        action: filters.action, 
-        search: filters.search,
-        startDate: filters.startDate,
-        endDate: filters.endDate
-      });
-      
       const response = await api.get(`/audit?${queryParams}`);
-      
-      console.log('🔍 API Response:', response.data);
       setLogs(response.data.logs || []);
       setTotal(response.data.total || 0);
     } catch (error) {
@@ -74,20 +65,15 @@ const AuditSection = () => {
   };
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered with filters:', filters);
     fetchLogs();
   }, [filters.action, filters.search, filters.startDate, filters.endDate, filters.page, filters.limit]);
 
   const handleFilterChange = (key: keyof Filters, value: string | number) => {
-    setFilters(prev => {
-      const newFilters = {
-        ...prev,
-        [key]: value,
-        page: key === 'page' || key === 'limit' ? (typeof value === 'string' ? parseInt(value) : value) : 1
-      };
-      console.log('🔄 Filter changed:', { key, value, newFilters });
-      return newFilters;
-    });
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: key === 'page' || key === 'limit' ? (typeof value === 'string' ? parseInt(value) : value) : 1
+    }));
   };
 
   const handleRefresh = () => {

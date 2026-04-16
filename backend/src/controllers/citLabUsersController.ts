@@ -21,51 +21,29 @@ export const createCITLabUser = async (req: Request, res: Response) => {
       monitored_by
     } = req.body;
 
-    console.log('📥 CIT Lab Users request data:', req.body);
-
     // Basic validation
     const validationErrors = [];
     
-    console.log('🔍 Validating CIT Lab Users data:');
-    console.log('  - date:', date);
-    console.log('  - time_in:', time_in);
-    console.log('  - time_out:', time_out);
-    console.log('  - usage_type:', usage_type);
-    console.log('  - faculty_student_name:', faculty_student_name);
-    console.log('  - user_type:', user_type);
-    console.log('  - laboratory:', laboratory);
-    console.log('  - purpose:', purpose);
-    console.log('  - year_level:', year_level);
-    console.log('  - ws_number:', ws_number);
-    console.log('  - monitored_by:', monitored_by);
-    
     if (!date) {
       validationErrors.push('Date is required');
-      console.log('❌ Date validation failed');
     }
     if (!time_in) {
       validationErrors.push('Time in is required');
-      console.log('❌ Time in validation failed');
     }
     if (!usage_type) {
       validationErrors.push('Usage type is required');
-      console.log('❌ Usage type validation failed');
     }
     if (!faculty_student_name) {
       validationErrors.push('Name is required');
-      console.log('❌ Name validation failed');
     }
     if (!user_type) {
       validationErrors.push('User type is required');
-      console.log('❌ User type validation failed');
     }
     if (!laboratory) {
       validationErrors.push('Laboratory is required');
-      console.log('❌ Laboratory validation failed');
     }
     if (!purpose) {
       validationErrors.push('Purpose is required');
-      console.log('❌ Purpose validation failed');
     }
     
     if (faculty_student_name && faculty_student_name.length > 100) {
@@ -79,15 +57,12 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     }
 
     if (validationErrors.length > 0) {
-      console.error('❌ Validation failed:', validationErrors);
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
         errors: validationErrors
       });
     }
-
-    console.log('✅ Validation passed');
 
     const citLabLog = await prisma.cit_lab_logs.create({
       data: {
@@ -210,6 +185,7 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
         usage_type_display,
         user_type_category,
         laboratory_display,
+        laboratory_location,
         searchable_text
       FROM cit_lab_users_logs_view 
       ${finalWhereClause}
@@ -218,11 +194,7 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
       ${offsetClause}
     `;
 
-    console.log('?? Executing optimized query:', query);
-    console.log('?? Query parameters:', params);
-
     const logs = await prisma.$queryRawUnsafe(query, ...params) as any[];
-    console.log('?? View query successful, got', logs.length, 'records');
 
     // Get total count for pagination
     const countQuery = `
@@ -231,10 +203,8 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
       ${finalWhereClause}
     `;
     
-    console.log('?? Count query:', countQuery);
     const countResult = await prisma.$queryRawUnsafe(countQuery, ...params.slice(0, paramIndex - 1)) as any[];
     const totalCount = Number(countResult[0]?.total) || 0;
-    console.log('?? Count query successful, total:', totalCount);
 
     // Convert BigInt values to regular numbers to prevent serialization errors
     const serializedLogs = logs.map(log => {
@@ -350,8 +320,6 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       group_by = 'laboratory' // laboratory, usage_type, user_type, month, day_of_week
     } = req.query;
 
-    console.log('?? Fetching CIT Lab Users analytics with filters:', req.query);
-
     // Build where clause for filtering
     let whereClause = '';
     const params: any[] = [];
@@ -410,8 +378,6 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       ORDER BY total_logs DESC
     `;
 
-    console.log('?? Executing analytics query:', analyticsQuery);
-    console.log('?? Analytics parameters:', params);
     const analyticsData = await prisma.$queryRawUnsafe(analyticsQuery, ...params) as any[];
 
     // Get overall statistics
@@ -426,10 +392,8 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       ${finalWhereClause}
     `;
 
-    console.log('?? Executing stats query:', statsQuery);
     const statsData = await prisma.$queryRawUnsafe(statsQuery, ...params) as any[];
     const stats = statsData[0] || {};
-    console.log('?? Stats data:', stats);
 
     // Convert BigInt values to regular numbers to prevent serialization errors
     const serializedAnalyticsData = analyticsData.map(item => {
@@ -461,13 +425,6 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       message: `Retrieved CIT Lab Users analytics grouped by ${group_by}`
     });
   } catch (error) {
-    console.error('?? Error fetching CIT Lab Users analytics:', error);
-    console.error('?? Error details:', {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      query: req.query,
-      body: req.body
-    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch lab usage analytics',
@@ -481,14 +438,13 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
   try {
     const { limit = 50 } = req.query;
 
-    console.log('?? Fetching recent CIT Lab Users logs with limit:', limit);
-
     const query = `
       SELECT 
         log_id,
         faculty_student_name,
         user_type_category,
         laboratory_display,
+        laboratory_location,
         usage_type_display,
         purpose,
         reservation_date_formatted,
@@ -499,9 +455,7 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
       LIMIT ?
     `;
 
-    console.log('?? Executing recent logs query:', query);
     const logs = await prisma.$queryRawUnsafe(query, parseInt(limit as string)) as any[];
-    console.log('?? Recent logs query successful, got', logs.length, 'records');
 
     // Convert BigInt values to regular numbers to prevent serialization errors
     const serializedLogs = logs.map(log => {
@@ -524,13 +478,6 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
       message: `Retrieved ${logs.length} recent CIT Lab Users logs`
     });
   } catch (error) {
-    console.error('?? Error fetching recent CIT Lab Users logs:', error);
-    console.error('?? Error details:', {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      query: req.query,
-      body: req.body
-    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch recent lab usage logs',

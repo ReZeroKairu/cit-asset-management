@@ -342,17 +342,6 @@ router.post(
         asset_id,
       } = req.body;
 
-      console.log("Creating complaint with data:", {
-        lab_id,
-        workstation_id,
-        faculty_student_name,
-        user_type,
-        year_level,
-        issue_description,
-        asset_info,
-        asset_id,
-      });
-
       // Validation
       if (
         !lab_id ||
@@ -371,7 +360,6 @@ router.post(
 
       // Validate asset_id if provided
       if (asset_id) {
-        console.log("Validating asset_id:", asset_id);
         const assetExists = await prisma.inventory_assets.findUnique({
           where: { asset_id: parseInt(asset_id) },
         });
@@ -381,7 +369,6 @@ router.post(
             .status(400)
             .json({ message: `Asset with ID ${asset_id} does not exist` });
         }
-        console.log("Asset exists:", assetExists);
       }
 
       // Get laboratory and custodian info
@@ -827,7 +814,6 @@ router.get("/", authenticateToken, async (req, res) => {
       `, ...params);
       
       usedView = true;
-      console.log('✅ Using optimized view for complaints');
     } catch (viewError) {
       console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
       

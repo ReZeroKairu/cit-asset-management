@@ -47,7 +47,7 @@ export const auditMiddleware = (action: string, entityType: string) => {
                 const decoded = jwt.verify(token, config.jwtSecret) as any;
                 userId = decoded.userId;
               } catch (jwtError) {
-                console.log('❌ JWT decode failed:', jwtError);
+                // JWT decode failed, continue without user ID
               }
             }
           }
@@ -75,7 +75,7 @@ export const auditMiddleware = (action: string, entityType: string) => {
                 auditData.lab_id = lab.lab_id;
               }
             } catch (labError) {
-              console.log('Could not find lab_id for laboratory:', req.body.laboratory);
+              // Could not find lab_id, continue without it
             }
           }
 
@@ -85,8 +85,6 @@ export const auditMiddleware = (action: string, entityType: string) => {
         } catch (error) {
           console.error('❌ Audit logging failed:', error);
         }
-      } else {
-        console.log(`⚠️ Non-successful response (${statusCode}), skipping audit log`);
       }
     });
 

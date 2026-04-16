@@ -8,7 +8,6 @@ export const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-console.log('🌐 API_BASE_URL initialized to:', API_BASE_URL);
 
 export interface PublicSoftwareInstallationData {
   date: string;

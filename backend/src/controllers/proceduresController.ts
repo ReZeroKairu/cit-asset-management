@@ -30,8 +30,6 @@ export const getReportProcedures = async (req: Request, res: Response) => {
       where: { report_id: Number(reportId) }
     });
 
-    console.log('Backend: Found reportProcedures:', reportProcedures.length); // Debug log
-
     // Get procedure details separately
     const procedureIds = reportProcedures.map(rp => rp.procedure_id);
     const procedures = await prisma.procedures.findMany({

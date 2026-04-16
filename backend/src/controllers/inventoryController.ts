@@ -74,10 +74,7 @@ export const getInventory = async (req: Request, res: Response) => {
       `, ...params);
       
       usedView = true;
-      console.log('✅ Using optimized view for inventory');
     } catch (viewError) {
-      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
-      
       // Build Prisma where clause as fallback
       const prismaWhere: any = {};
       if (user?.role === "Custodian" && user.lab_id) {
@@ -410,7 +407,6 @@ export const deleteAsset = async (req: Request, res: Response) => {
           });
         }
         
-        console.log(`Cascade delete completed for asset ${assetId}`);
       } catch (cascadeError) {
         return res.status(500).json({ 
           error: "Failed to delete related records",
@@ -444,12 +440,8 @@ export const deleteAsset = async (req: Request, res: Response) => {
 // 5. UPDATE ASSET
 export const updateAsset = async (req: Request, res: Response) => {
   try {
-    console.log('🔍🔍🔍 BACKEND: updateAsset called!');
     const { id } = req.params;
     const assetId = Number(id);
-
-    console.log('🔍🔍🔍 BACKEND: Asset ID:', assetId);
-    console.log('🔍🔍🔍 BACKEND: Request body:', req.body);
 
     const {
       description,
@@ -464,9 +456,6 @@ export const updateAsset = async (req: Request, res: Response) => {
       status_id,
       disposed_by,
     } = req.body;
-
-    console.log('🔍🔍🔍 BACKEND: Extracted status_id:', status_id);
-    console.log('🔍🔍🔍 BACKEND: Extracted disposed_by:', disposed_by);
 
     // ✅ FIX: We build an update object dynamically.
     // It only includes fields that were actually sent by the frontend.
@@ -493,46 +482,33 @@ export const updateAsset = async (req: Request, res: Response) => {
     if (asset_remarks !== undefined)
       detailsData.asset_remarks = asset_remarks || null;
     if (status_id !== undefined && status_id !== null) {
-      console.log('Backend: Setting status_id in detailsData:', status_id, 'Number:', Number(status_id));
       detailsData.status_id = status_id ? Number(status_id) : undefined;
     }
     if (disposed_by !== undefined)
       detailsData.disposed_by = disposed_by || null;
 
-    console.log('Backend: Final detailsData to update:', detailsData);
-
     // Check if asset_details exists for this asset
     const existingAssetDetails = await prisma.asset_details.findUnique({
       where: { asset_id: assetId }
     });
-    
-    console.log('🔍 Backend: Existing asset_details:', existingAssetDetails);
 
     // Separate status_id from other details for proper handling
     const { status_id: statusIdField, ...otherDetails } = detailsData;
 
     // Check if status is being changed to "Disposed" and set date_disposed
     if (statusIdField !== undefined && statusIdField !== null) {
-      console.log('🔍 Backend: Checking status change for disposal, statusIdField:', statusIdField);
-      
       // Get the disposed status ID
       const disposedStatus = await prisma.asset_statuses.findUnique({
         where: { status_name: "Disposed" }
       });
-      
-      console.log('🔍 Backend: Disposed status from DB:', disposedStatus);
-      
+
       if (disposedStatus && Number(statusIdField) === disposedStatus.status_id) {
-        console.log('🔍 Backend: Setting date_disposed to current date');
         otherDetails.date_disposed = new Date();
-      } else {
-        console.log('🔍 Backend: Status does not match "Disposed", not setting date_disposed');
       }
     }
 
     let updatedAsset;
     if (!existingAssetDetails && Object.keys(otherDetails).length > 0) {
-      console.log('🔍 Backend: Creating new asset_details record');
       // Create asset_details if it doesn't exist
       updatedAsset = await prisma.inventory_assets.update({
         where: { asset_id: assetId },
@@ -556,7 +532,6 @@ export const updateAsset = async (req: Request, res: Response) => {
         },
       });
     } else {
-      console.log('🔍 Backend: Updating existing asset_details record');
       // Update existing asset_details
       updatedAsset = await prisma.inventory_assets.update({
         where: { asset_id: assetId },
@@ -582,11 +557,6 @@ export const updateAsset = async (req: Request, res: Response) => {
         },
       });
     }
-
-    console.log('🔍 Backend: Asset updated successfully');
-    console.log('🔍 Backend: New status:', updatedAsset.asset_details?.asset_statuses?.status_name);
-    console.log('🔍 Backend: New disposed_by:', (updatedAsset.asset_details as any)?.disposed_by);
-    console.log('🔍 Backend: New date_disposed:', (updatedAsset.asset_details as any)?.date_disposed);
 
     res.json(updatedAsset);
   } catch (error) {

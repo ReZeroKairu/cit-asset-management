@@ -518,7 +518,6 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             lab_name: userData.lab_name,
             location: userData.location
           };
-          console.log('✅ Using optimized view for user lab assignment');
         }
       } catch (viewError) {
         console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);

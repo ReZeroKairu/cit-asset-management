@@ -18,6 +18,7 @@ interface CITLabUsersLog {
   user_type: string;
   year_level: string | null;
   laboratory: string;
+  laboratory_location?: string | null;
   ws_number: string | null;
   purpose: string;
   monitored_by: string | null;
@@ -125,6 +126,12 @@ const CITLabUsersDetailsModal = ({
                     <p className="text-sm text-gray-500">Laboratory</p>
                     <p className="font-medium text-gray-900">{log.laboratory}</p>
                   </div>
+                  {log.laboratory_location && (
+                    <div>
+                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="font-medium text-gray-900">{log.laboratory_location}</p>
+                    </div>
+                  )}
                   {log.ws_number && (
                     <div>
                       <p className="text-sm text-gray-500">Workstation</p>

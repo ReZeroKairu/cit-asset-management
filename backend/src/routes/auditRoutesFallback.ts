@@ -8,7 +8,6 @@ const prisma = new PrismaClient();
 // Simple audit route with Prisma fallback when view fails
 router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (req, res) => {
   try {
-    console.log('Using fallback audit route with Prisma...');
     
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
@@ -39,7 +38,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
           whereClause.user_id = currentUserId;
         }
       } catch (error) {
-        console.log('Could not get custodian lab info, showing only own logs');
         whereClause.user_id = currentUserId;
       }
     }
@@ -97,7 +95,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       limit
     };
     
-    console.log('Fallback audit route success:', { logsCount: transformedLogs.length, total });
     res.json(response);
     
   } catch (error) {

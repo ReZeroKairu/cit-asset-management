@@ -37,13 +37,13 @@ router.delete("/:id", requireRole(["Admin"]), auditMiddleware("DELETE", "daily r
 
 // Workstation Checklists inside Reports
 router.get("/:id/workstations", getWorkstationChecklist);
-router.post("/:id/workstations", auditMiddleware("CREATE", "workstation checklist"), saveWorkstationChecklist);
+router.post("/:id/workstations", saveWorkstationChecklist);
 router.get("/utils/lab-workstations", getLabWorkstationsForReport); // Changed path slightly to avoid collision
 
 // Procedures inside Reports
 router.get("/utils/all-procedures", getAllProcedures);
 router.get("/:id/procedures", getReportProcedures);
-router.post("/:id/procedures", auditMiddleware("CREATE", "report procedures"), saveReportProcedures);
+router.post("/:id/procedures", saveReportProcedures);
 router.get("/utils/workstation-procedures", getWorkstationProcedures);
 
 export default router;

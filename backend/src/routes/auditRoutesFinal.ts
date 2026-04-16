@@ -8,8 +8,6 @@ const router = Router();
 // Enhanced audit service with filtering and search
 router.get('/', authenticateToken, requireRole(['Admin']), async (req, res) => {
   try {
-    console.log('🔍 Enhanced audit route hit!', { user: req.user, query: req.query });
-    
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50); // Max 50 for performance
     const offset = (page - 1) * limit;
@@ -18,8 +16,6 @@ router.get('/', authenticateToken, requireRole(['Admin']), async (req, res) => {
     const action = req.query.action as string;
     const search = req.query.search as string;
     const userId = req.query.userId as string;
-    
-    console.log('🔍 Using enhanced queries with filters:', { action, search, userId });
     
     try {
       // Build where clause for filtering
@@ -80,12 +76,6 @@ router.get('/', authenticateToken, requireRole(['Admin']), async (req, res) => {
         })
       );
       
-      console.log('📊 Enhanced filtered result:', { 
-        logsCount: enrichedLogs.length, 
-        total, 
-        filters: { action, search, userId } 
-      });
-      
       const result = {
         logs: enrichedLogs,
         total,
@@ -94,7 +84,6 @@ router.get('/', authenticateToken, requireRole(['Admin']), async (req, res) => {
         filters: { action, search, userId }
       };
       
-      console.log('📊 Final enhanced result being sent:', result);
       res.json(result);
     } catch (error) {
       console.error('❌ Error in enhanced audit route:', error);

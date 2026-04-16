@@ -104,7 +104,6 @@ const ArchiveCITLabUsersPage = () => {
       
       if (Array.isArray(data)) {
         const labNames = data.map((lab: any) => lab.lab_name).filter(Boolean);
-        console.log('🔬 All available labs from API:', labNames);
         setUniqueLabs(labNames);
       }
     } catch (error) {
@@ -139,7 +138,6 @@ const ArchiveCITLabUsersPage = () => {
       // Prevent multiple rapid requests within 1 second
       const now = Date.now();
       if (now - lastRequestTime.current < 1000) {
-        console.log('⏳ Throttling request to prevent 429 errors');
         return;
       }
       lastRequestTime.current = now;
@@ -147,13 +145,9 @@ const ArchiveCITLabUsersPage = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching CIT Lab Users logs...');
-      
       const response = await getCITLabUsersLogs();
       const logsData = response?.data || [];
       setLogs(logsData);
-      
-      console.log('✅ Successfully fetched CIT Lab Users logs:', logsData.length, 'records');
     } catch (err: any) {
       console.error('❌ Error fetching CIT Lab Users logs:', err);
       
@@ -161,7 +155,6 @@ const ArchiveCITLabUsersPage = () => {
       if (err.response?.status === 429) {
         if (retryCount < 3) {
           const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
-          console.log(`🔄 429 error, retrying in ${delay/1000}s... (attempt ${retryCount + 1}/3)`);
           setError(`Rate limited. Retrying in ${delay/1000} seconds...`);
           
           requestTimeout.current = setTimeout(() => {
@@ -194,27 +187,21 @@ const ArchiveCITLabUsersPage = () => {
   const applyFilters = useCallback(() => {
     // Use setTimeout to defer heavy filtering to next tick
     setTimeout(() => {
-      console.log('🔍 Applying filters:', filters);
-      console.log('📊 Total logs before filtering:', logs.length);
-      
       let filtered = logs;
 
       // For custodians: automatically filter to only their assigned lab
       if (user?.role === 'Custodian' && user?.lab_id) {
         filtered = filtered.filter(log => log.laboratory === user.lab_name);
-        console.log(`👮 Custodian filter: Only showing logs for ${user.lab_name} (ID: ${user.lab_id})`);
       } else {
         // Laboratory filter (skip if "all") - for admins
         if (filters.laboratory && filters.laboratory !== "all") {
           filtered = filtered.filter(log => log.laboratory === filters.laboratory);
-          console.log(`🔬 Lab filter "${filters.laboratory}": ${filtered.length} results`);
         }
       }
 
       // User type filter (skip if "all")
       if (filters.user_type && filters.user_type !== "all") {
         filtered = filtered.filter(log => log.user_type === filters.user_type);
-        console.log(`👤 User type filter "${filters.user_type}": ${filtered.length} results`);
       }
 
       // Date range filters
@@ -224,7 +211,6 @@ const ArchiveCITLabUsersPage = () => {
           const start = new Date(filters.startDate);
           return logDate >= start;
         });
-        console.log(`Start date filter "${filters.startDate}": ${filtered.length} results`);
       }
 
       if (filters.endDate) {
@@ -234,7 +220,6 @@ const ArchiveCITLabUsersPage = () => {
           end.setHours(23, 59, 59, 999); // Include entire end date
           return logDate <= end;
         });
-        console.log(`End date filter "${filters.endDate}": ${filtered.length} results`);
       }
 
       // Search filter
@@ -247,16 +232,13 @@ const ArchiveCITLabUsersPage = () => {
           (log.usage_type && log.usage_type.toLowerCase().includes(searchLower)) ||
           (log.monitored_by && log.monitored_by.toLowerCase().includes(searchLower))
         );
-        console.log(`🔍 Search filter "${filters.search}": ${filtered.length} results`);
       }
 
-      console.log('✅ Final filtered results:', filtered.length);
       setFilteredLogs(filtered);
     }, 0); // Defer to next tick
   }, [logs, filters, user]);
 
   const handleFilterChange = (field: string, value: string) => {
-    console.log(`🔄 Filter change: ${field} = ${value}`);
     setFilters(prev => ({
       ...prev,
       [field]: value
@@ -264,7 +246,6 @@ const ArchiveCITLabUsersPage = () => {
   };
 
   const clearFilters = () => {
-    console.log('Clearing all filters');
     setFilters({
       laboratory: "all",
       user_type: "all",

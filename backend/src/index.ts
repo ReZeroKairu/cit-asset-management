@@ -164,7 +164,6 @@ app.post(
   "/audit-middleware-test",
   auditMiddleware("TEST", "ENDPOINT"),
   async (req, res) => {
-    console.log("🔍 Test endpoint hit!");
     res.json({ success: true, message: "Audit middleware test successful!" });
   }
 );
@@ -204,11 +203,5 @@ const getLanIpv4Address = (): string | null => {
 };
 
 app.listen(config.port, "0.0.0.0", () => {
-  console.log(`Server running on http://localhost:${config.port}`);
   const lanIp = getLanIpv4Address();
-  if (lanIp) {
-    console.log(
-      `Server also accessible on network: http://${lanIp}:${config.port}`
-    );
-  }
 });

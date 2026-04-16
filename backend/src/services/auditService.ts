@@ -70,7 +70,6 @@ export class AuditService {
             where.user_id = currentUserId;
           }
         } catch (error) {
-          console.log('Could not get custodian lab info, showing only own logs');
           where.user_id = currentUserId;
         }
       }

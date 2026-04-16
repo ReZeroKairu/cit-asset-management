@@ -8,8 +8,6 @@ const router = Router();
 // Ultra-simple audit route that works
 router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (req, res) => {
   try {
-    console.log('🔍 Simple audit route hit');
-    
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
     const offset = (page - 1) * limit;
@@ -18,8 +16,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     const search = req.query.search as string;
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
-    
-    console.log('🔍 Params:', { page, limit, action, search, startDate, endDate });
     
     // First get all logs with user data
     const allLogsQuery = `
@@ -38,7 +34,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     `;
     
     const allLogs = await prisma.$queryRawUnsafe(allLogsQuery) as any[];
-    console.log('📊 Total logs in DB:', allLogs.length);
     
     // Filter in memory (simple and reliable)
     let filteredLogs = allLogs;
@@ -50,24 +45,18 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     // Date filtering
     if (startDate) {
       const start = new Date(startDate);
-      console.log('🔍 Start date filter:', { startDate, start });
       filteredLogs = filteredLogs.filter(log => {
         const logDate = new Date(log.created_at);
-        const matches = logDate >= start;
-        console.log(`🔍 Log ${log.id}: ${logDate} >= ${start} = ${matches}`);
-        return matches;
+        return logDate >= start;
       });
     }
     
     if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999); // Include entire day
-      console.log('🔍 End date filter:', { endDate, end });
       filteredLogs = filteredLogs.filter(log => {
         const logDate = new Date(log.created_at);
-        const matches = logDate <= end;
-        console.log(`🔍 Log ${log.id}: ${logDate} <= ${end} = ${matches}`);
-        return matches;
+        return logDate <= end;
       });
     }
     
@@ -80,7 +69,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         (log.full_name && log.full_name.toLowerCase().includes(searchLower)) ||
         (log.role && log.role.toLowerCase().includes(searchLower))
       );
-      console.log('🔍 After search filter:', filteredLogs.length);
     }
     
     // Apply pagination
@@ -112,11 +100,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         endDate: endDate || ''
       }
     };
-    
-    console.log('✅ Sending result:', { 
-      logsCount: result.logs.length, 
-      total: result.total 
-    });
     
     res.json(result);
     

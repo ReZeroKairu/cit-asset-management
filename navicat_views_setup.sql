@@ -92,13 +92,15 @@ SELECT
         WHEN cll.laboratory = 'e-forum' THEN 'E-Forum'
         ELSE COALESCE(cll.laboratory, 'Unknown Lab')
     END AS laboratory_display,
+    COALESCE(l.location, 'N/A') AS laboratory_location,
     CONCAT(
         COALESCE(cll.faculty_student_name, ''), ' ',
         COALESCE(cll.usage_type, ''), ' ',
         COALESCE(cll.laboratory, ''), ' ',
         COALESCE(cll.purpose, '')
     ) AS searchable_text
-FROM cit_lab_logs cll;
+FROM cit_lab_logs cll
+LEFT JOIN laboratories l ON cll.laboratory = l.lab_name;
 
 -- Essential View 3: Asset Lifecycle Timeline View
 CREATE OR REPLACE VIEW asset_lifecycle_timeline_view AS
@@ -321,6 +323,7 @@ SELECT
     w.workstation_remarks,
     w.created_at,
     l.lab_name,
+    l.location AS lab_location,
     ast.status_name AS workstation_status,
     COUNT(ia.asset_id) AS asset_count,
     MAX(pr.created_at) AS last_maintenance_date,

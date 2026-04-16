@@ -42,6 +42,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
           workstation_remarks,
           created_at,
           lab_name,
+          lab_location,
           workstation_status,
           asset_count,
           last_maintenance_date,
@@ -53,10 +54,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
       `, ...params);
       
       usedView = true;
-      console.log('✅ Using optimized view for workstations');
     } catch (viewError) {
-      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
-      
       // Build Prisma where clause as fallback
       const prismaWhere: any = {};
       if (user?.role === "Custodian" && user.lab_id) {
@@ -98,7 +96,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
         laboratories: ws.lab_name ? {
           lab_id: Number(ws.lab_id),
           lab_name: ws.lab_name,
-          location: null
+          location: ws.lab_location
         } : null,
         asset_statuses: ws.workstation_status ? {
           status_name: ws.workstation_status
