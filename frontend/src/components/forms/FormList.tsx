@@ -347,7 +347,7 @@ export const FormList: React.FC<FormListProps> = ({
                                   onUpdateStatus(
                                     form.id,
                                     form.type,
-                                    "Admin_Approved"
+                                    "Custodian_Approved"
                                   )
                                 }
                               >

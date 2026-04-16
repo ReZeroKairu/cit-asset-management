@@ -28,7 +28,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       openComplaints,
       inProgressComplaints,
       servicedWorkstations,
-      unservicedWorkstations
+      unservicedWorkstations,
+      dailyLabLogs
     ] = await Promise.all([
       // Total assets count - filtered by user role (excluding disposed)
       userRole === "Custodian" && userId
@@ -322,6 +323,52 @@ export const getDashboardStats = async (req: Request, res: Response) => {
             );
             
             return Math.max(0, totalWorkstations - servicedWorkstationIds.size);
+          })(),
+
+      // Daily CIT Lab Users Logs count - filtered by user role
+      userRole === "Custodian" && userId
+        ? prisma.users.findUnique({
+            where: { user_id: userId },
+            include: {
+              laboratories: {
+                select: {
+                  lab_name: true
+                }
+              }
+            }
+          }).then(user => {
+            if (user?.laboratories?.lab_name) {
+              // Get today's date range (start and end of day)
+              const today = new Date();
+              const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+              
+              return prisma.cit_lab_logs.count({
+                where: {
+                  laboratory: user.laboratories.lab_name,
+                  created_at: {
+                    gte: startOfDay,
+                    lt: endOfDay
+                  }
+                }
+              });
+            }
+            return 0;
+          })
+        : (() => {
+            // For admins: count logs from all labs for today
+            const today = new Date();
+            const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+            
+            return prisma.cit_lab_logs.count({
+              where: {
+                created_at: {
+                  gte: startOfDay,
+                  lt: endOfDay
+                }
+              }
+            });
           })()
     ]);
 
@@ -452,22 +499,45 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       };
     });
 
-    // Get user's assigned lab if they're a custodian
+    // Get user's assigned lab if they're a custodian (with view optimization + fallback)
     let userAssignedLab = null;
     if (userRole === "Custodian" && userId) {
-      const user = await prisma.users.findUnique({
-        where: { user_id: userId },
-        include: {
-          laboratories: {
-            select: {
-              lab_id: true,
-              lab_name: true,
-              location: true
+      try {
+        // Try optimized view first
+        const userLabData = await prisma.$queryRawUnsafe(`
+          SELECT lab_id, lab_name, lab_location as location
+          FROM view_user_lab_assignments
+          WHERE user_id = ?
+          LIMIT 1
+        `, userId);
+        
+        const userData = (userLabData as any[])[0];
+        if (userData) {
+          userAssignedLab = {
+            lab_id: userData.lab_id,
+            lab_name: userData.lab_name,
+            location: userData.location
+          };
+          console.log('✅ Using optimized view for user lab assignment');
+        }
+      } catch (viewError) {
+        console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+        
+        // Fallback to Prisma
+        const user = await prisma.users.findUnique({
+          where: { user_id: userId },
+          include: {
+            laboratories: {
+              select: {
+                lab_id: true,
+                lab_name: true,
+                location: true
+              }
             }
           }
-        }
-      });
-      userAssignedLab = user?.laboratories;
+        });
+        userAssignedLab = user?.laboratories;
+      }
     }
 
     const dashboardData = {
@@ -481,7 +551,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
         openComplaints,
         inProgressComplaints,
         servicedWorkstations,
-        unservicedWorkstations
+        unservicedWorkstations,
+        dailyLabLogs
       },
       recentReports,
       assetsByLab: assetsByLabWithNames,

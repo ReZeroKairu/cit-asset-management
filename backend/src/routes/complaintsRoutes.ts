@@ -25,9 +25,6 @@ router.post(
         asset_info,
       } = req.body;
 
-      // Get client IP address for tracking
-      const clientIP = req.ip || req.connection.remoteAddress || "unknown";
-
       // Get laboratory and workstation info
       const laboratory = await prisma.laboratories.findUnique({
         where: { lab_id },
@@ -67,7 +64,6 @@ router.post(
           monitored_by: laboratory.users[0]?.full_name || null,
           approved_by: laboratory.users[0]?.full_name || null,
           custodian_user_id: laboratory.users[0]?.user_id || null,
-          ip_address: clientIP,
           updated_at: new Date(),
         },
         include: {
@@ -335,15 +331,6 @@ router.post(
   validate(complaintSchema),
   async (req, res) => {
     try {
-      // Capture client IP address with comprehensive fallbacks
-      const clientIP =
-        req.ip ||
-        (req.headers["x-forwarded-for"] as string) ||
-        (req.headers["x-real-ip"] as string) ||
-        req.connection?.remoteAddress ||
-        req.socket?.remoteAddress ||
-        "Unknown";
-
       const {
         lab_id,
         workstation_id,
@@ -426,7 +413,6 @@ router.post(
           monitored_by: laboratory.users[0]?.full_name || null,
           approved_by: laboratory.users[0]?.full_name || null,
           custodian_user_id: laboratory.users[0]?.user_id || null,
-          ip_address: clientIP,
           updated_at: new Date(),
         },
         include: {
@@ -771,13 +757,15 @@ router.get("/check-asset/:assetId", authenticateToken, async (req, res) => {
   }
 });
 
-// Get all complaints (for custodian management)
+// Get all complaints (for custodian management) - with view optimization + fallback
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.userId;
     const userRole = req.user?.role;
 
-    let whereClause = {};
+    // Build SQL where conditions for view
+    let whereConditions: string[] = [];
+    const params: any[] = [];
 
     // For custodians, only show complaints from their assigned lab
     if (userRole === "Custodian") {
@@ -788,47 +776,147 @@ router.get("/", authenticateToken, async (req, res) => {
         });
 
         if (user?.lab_id) {
-          whereClause = { lab_id: user.lab_id };
+          whereConditions.push("lab_id = ?");
+          params.push(user.lab_id);
         } else {
-          // Unassigned custodians should see nothing
-          whereClause = { lab_id: -1 }; // Impossible lab_id that will return no results
+          // Unassigned custodians see nothing
+          return res.json([]);
         }
       } else {
         // No userId - should not happen with authentication middleware
-        whereClause = { lab_id: -1 };
+        return res.json([]);
       }
     }
 
-    const complaints = await prisma.complaints.findMany({
-      where: whereClause,
-      include: {
-        laboratories: {
-          select: {
-            lab_id: true,
-            lab_name: true,
-            location: true,
-          },
-        },
-        workstations: {
-          select: {
-            workstation_id: true,
-            workstation_name: true,
-          },
-        },
-        users: {
-          select: {
-            user_id: true,
-            full_name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+    const whereClause = whereConditions.length > 0
+      ? `WHERE ${whereConditions.join(" AND ")}`
+      : "";
 
-    res.json(complaints);
+    let complaints: any[] = [];
+    let usedView = false;
+
+    try {
+      // Try optimized view first
+      complaints = await prisma.$queryRawUnsafe(`
+        SELECT 
+          complaint_id,
+          lab_id,
+          workstation_id,
+          asset_id,
+          faculty_student_name,
+          user_type,
+          year_level,
+          issue_description,
+          asset_info,
+          complaint_status as status,
+          monitored_by,
+          approved_by,
+          custodian_user_id,
+          remarks,
+          resolved_at,
+          created_at,
+          updated_at,
+          accepted_at,
+          lab_name,
+          workstation_name,
+          asset_property_tag,
+          custodian_name
+        FROM view_complaint_details
+        ${whereClause}
+        ORDER BY created_at DESC
+      `, ...params);
+      
+      usedView = true;
+      console.log('✅ Using optimized view for complaints');
+    } catch (viewError) {
+      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+      
+      // Build Prisma where clause as fallback
+      const prismaWhere: any = {};
+      if (userRole === "Custodian" && userId) {
+        const user = await prisma.users.findUnique({
+          where: { user_id: userId },
+          select: { lab_id: true },
+        });
+        
+        if (user?.lab_id) {
+          prismaWhere.lab_id = user.lab_id;
+        } else {
+          prismaWhere.lab_id = -1;
+        }
+      }
+      
+      const prismaComplaints = await prisma.complaints.findMany({
+        where: prismaWhere,
+        include: {
+          laboratories: {
+            select: {
+              lab_id: true,
+              lab_name: true,
+              location: true,
+            },
+          },
+          workstations: {
+            select: {
+              workstation_id: true,
+              workstation_name: true,
+            },
+          },
+          users: {
+            select: {
+              user_id: true,
+              full_name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+      });
+      
+      return res.json(prismaComplaints);
+    }
+
+    if (usedView) {
+      // Transform view result to match Prisma structure
+      const transformedComplaints = (complaints as any[]).map(c => ({
+        complaint_id: Number(c.complaint_id),
+        lab_id: Number(c.lab_id),
+        workstation_id: Number(c.workstation_id),
+        asset_id: Number(c.asset_id),
+        faculty_student_name: c.faculty_student_name,
+        user_type: c.user_type,
+        year_level: c.year_level,
+        issue_description: c.issue_description,
+        asset_info: c.asset_info,
+        status: c.status,
+        monitored_by: c.monitored_by,
+        approved_by: c.approved_by,
+        custodian_user_id: Number(c.custodian_user_id),
+        remarks: c.remarks,
+        resolved_at: c.resolved_at,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        accepted_at: c.accepted_at,
+        laboratories: c.lab_name ? {
+          lab_id: Number(c.lab_id),
+          lab_name: c.lab_name,
+          location: null
+        } : null,
+        workstations: c.workstation_name ? {
+          workstation_id: Number(c.workstation_id),
+          workstation_name: c.workstation_name
+        } : null,
+        users: c.custodian_name ? {
+          user_id: Number(c.custodian_user_id),
+          full_name: c.custodian_name,
+          email: null
+        } : null
+      }));
+      
+      res.json(transformedComplaints);
+    }
   } catch (error) {
     console.error("Error fetching complaints:", error);
     res.status(500).json({ message: "Failed to fetch complaints" });

@@ -29,8 +29,6 @@ const getStatusColor = (status: string) => {
       return "bg-yellow-100 text-yellow-800";
     case "Custodian_Approved":
       return "bg-blue-100 text-blue-800";
-    case "Admin_Approved":
-      return "bg-green-100 text-green-800";
     case "Denied":
       return "bg-red-100 text-red-800";
         case "Completed":
@@ -165,10 +163,9 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
   }
 
   const canEdit =
-    (userRole === "Custodian" && form.status === "Admin_Approved") ||
-    (userRole === "Custodian" &&
-      form.type === "software-install" &&
-      form.status === "Custodian_Approved");
+    userRole === "Custodian" &&
+    form.type === "software-install" &&
+    form.status === "Custodian_Approved";
 
   console.log("Modal rendering...", {
     show,

@@ -55,13 +55,28 @@ export const auditMiddleware = (action: string, entityType: string) => {
           const auditData: any = {
             action,
             description: `${action} ${entityType}${req.params.id ? ` #${req.params.id}` : ''}`,
-            ip_address: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] as string,
             user_agent: req.headers['user-agent'] as string
           };
 
           // Only include user_id if we have a valid user
           if (userId) {
             auditData.user_id = userId;
+          }
+
+          // Capture lab_id for CIT Lab Users submissions
+          if (entityType === "cit lab users log" && req.body && req.body.laboratory) {
+            // Try to find lab_id from laboratory name
+            try {
+              const lab = await (prisma as any).laboratories.findFirst({
+                where: { lab_name: req.body.laboratory },
+                select: { lab_id: true }
+              });
+              if (lab) {
+                auditData.lab_id = lab.lab_id;
+              }
+            } catch (labError) {
+              console.log('Could not find lab_id for laboratory:', req.body.laboratory);
+            }
           }
 
           await (prisma as any).audit_logs.create({

@@ -53,17 +53,6 @@ export const createPublicSoftwareInstallation = async (
   res: Response
 ) => {
   try {
-    // Capture client IP address with comprehensive fallbacks
-    const clientIP =
-      req.ip ||
-      (Array.isArray(req.headers["x-forwarded-for"]) 
-        ? req.headers["x-forwarded-for"][0] 
-        : req.headers["x-forwarded-for"] as string) ||
-      (req.headers["x-real-ip"] as string) ||
-      req.connection?.remoteAddress ||
-      req.socket?.remoteAddress ||
-      "Unknown";
-
     const {
       date,
       faculty_name,
@@ -87,7 +76,6 @@ export const createPublicSoftwareInstallation = async (
         requested_by,
         installation_remarks,
         prepared_by,
-        ip_address: clientIP,
         user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
         status: "Pending", // Default status for public submissions
       },

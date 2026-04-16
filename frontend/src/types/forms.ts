@@ -14,9 +14,14 @@ export interface FormSubmission {
     user_type?: string;
     usage_type?: string;
     purpose?: string;
+    laboratory?: string;
+    requested_by?: string;
+    prepared_by?: string;
+    feedback_date?: string | Date;
+    installation_remarks?: string;
+    software_list?: string;
     [key: string]: unknown;
   };
-  // Form-specific ID fields
   request_id?: number;
   borrow_id?: number;
   software_id?: number;

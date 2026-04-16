@@ -10,7 +10,6 @@ export class AuditService {
     entityId?: number;
     oldValues?: any;
     newValues?: any;
-    ipAddress?: string;
     userAgent?: string;
     description?: string;
   }) {
@@ -51,9 +50,29 @@ export class AuditService {
       // Build where clause using the view for better performance
       const where: any = {};
       
-      // Role-based filtering: Custodians can only see their own logs
+      // Role-based filtering: Custodians can see logs related to their assigned lab
       if (currentUserRole === 'Custodian' && currentUserId) {
-        where.user_id = currentUserId;
+        // Get custodian's assigned lab
+        try {
+          const custodian = await (prisma as any).users.findUnique({
+            where: { user_id: currentUserId },
+            select: { lab_id: true }
+          });
+          
+          if (custodian?.lab_id) {
+            // Show logs for their lab (including system logs for their lab)
+            where.OR = [
+              { user_id: currentUserId }, // Their own actions
+              { lab_id: custodian.lab_id, user_id: null } // System actions for their lab
+            ];
+          } else {
+            // Fallback: only show their own logs if no lab assigned
+            where.user_id = currentUserId;
+          }
+        } catch (error) {
+          console.log('Could not get custodian lab info, showing only own logs');
+          where.user_id = currentUserId;
+        }
       }
       
       // Additional filters (Admin can see all, or apply specific filters)
@@ -76,7 +95,20 @@ export class AuditService {
       
       // Build parameters in the correct order
       const whereParams: any[] = [];
-      if (where.user_id) whereParams.push(where.user_id);
+      
+      // Handle OR condition parameters
+      if (where.OR) {
+        where.OR.forEach((orCondition: any) => {
+          if (orCondition.user_id) {
+            whereParams.push(orCondition.user_id);
+          }
+          if (orCondition.lab_id && orCondition.user_id === null) {
+            whereParams.push(orCondition.lab_id);
+          }
+        });
+      }
+      
+      if (where.user_id && !where.OR) whereParams.push(where.user_id);
       if (where.action) whereParams.push(where.action);
       if (where.search) whereParams.push(`%${where.search}%`);
       if (where.action_category) whereParams.push(where.action_category);
@@ -92,8 +124,7 @@ export class AuditService {
             id, user_id, action, description, created_at,
             log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
             user_name, user_email, user_role, user_lab_name, user_lab_location,
-            user_type, action_category, searchable_text,
-            ip_address_display
+            user_type, action_category, searchable_text
           FROM audit_logs_view 
           WHERE ${whereClause}
           ORDER BY created_at DESC 
@@ -124,7 +155,27 @@ export class AuditService {
   private static buildWhereClause(where: any): string {
     const conditions: string[] = [];
     
-    if (where.user_id) {
+    // Handle OR condition for lab-based filtering
+    if (where.OR) {
+      const orConditions: string[] = [];
+      where.OR.forEach((orCondition: any) => {
+        const innerConditions: string[] = [];
+        if (orCondition.user_id) {
+          innerConditions.push('user_id = ?');
+        }
+        if (orCondition.lab_id && orCondition.user_id === null) {
+          innerConditions.push('lab_id = ? AND user_id IS NULL');
+        }
+        if (innerConditions.length > 0) {
+          orConditions.push(`(${innerConditions.join(' AND ')})`);
+        }
+      });
+      if (orConditions.length > 0) {
+        conditions.push(`(${orConditions.join(' OR ')})`);
+      }
+    }
+    
+    if (where.user_id && !where.OR) {
       conditions.push('user_id = ?');
     }
     if (where.action) {
@@ -163,7 +214,6 @@ export class AuditService {
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
           user_type, action_category, searchable_text,
-          ip_address_display,
           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at DESC) as user_action_rank
         FROM audit_logs_view 
         WHERE user_id = ?
@@ -186,8 +236,7 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, searchable_text,
-          ip_address_display
+          user_type, action_category, searchable_text
         FROM audit_logs_view 
         WHERE user_type = 'System'
         ORDER BY created_at DESC 
@@ -209,8 +258,7 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, searchable_text,
-          ip_address_display
+          user_type, action_category, searchable_text
         FROM audit_logs_view 
         WHERE action IN ('DELETE', 'LOGIN', 'GENERATE')
         ORDER BY created_at DESC 
@@ -232,8 +280,7 @@ export class AuditService {
           id, user_id, action, description, created_at,
           log_date, log_time, formatted_timestamp, formatted_date, formatted_time,
           user_name, user_email, user_role, user_lab_name, user_lab_location,
-          user_type, action_category, searchable_text,
-          ip_address_display
+          user_type, action_category, searchable_text
         FROM audit_logs_view 
         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
         ORDER BY created_at DESC 

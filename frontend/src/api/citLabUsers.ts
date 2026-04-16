@@ -31,7 +31,6 @@ export interface CITLabUsersData {
   user_type: string;
   year_level?: string;
   laboratory: string;
-  printing_pages?: string;
   ws_number?: string;
   purpose: string;
   monitored_by?: string;

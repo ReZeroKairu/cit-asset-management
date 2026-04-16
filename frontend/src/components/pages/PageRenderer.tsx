@@ -40,6 +40,7 @@ interface PageRendererProps {
   setCreateUserData: React.Dispatch<React.SetStateAction<CreateUserData>>;
   labFormData: LabFormData;
   setLabFormData: React.Dispatch<React.SetStateAction<LabFormData>>;
+  urlParams: URLSearchParams;
 }
 
 const PageRenderer = ({
@@ -49,6 +50,7 @@ const PageRenderer = ({
   setCreateUserData,
   labFormData,
   setLabFormData,
+  urlParams,
 }: PageRendererProps) => {
   const { user } = useAuth();
 
@@ -69,7 +71,7 @@ const PageRenderer = ({
     case "admin-reports":
       return <AdminReportsPage />;
     case "archives":
-      return <ArchivesPage />;
+      return <ArchivesPage initialTab={urlParams.get('tab') || undefined} />;
     case "user-management":
       return (
         <UserManagementPage

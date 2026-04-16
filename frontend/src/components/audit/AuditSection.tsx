@@ -1,7 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { useState, useEffect } from 'react';
 import { Search, Filter, RefreshCw, Calendar } from 'lucide-react';
 import api from '../../api/axios';
 
@@ -14,7 +11,6 @@ interface AuditLog {
   user_name?: string;
   user_email?: string;
   user_role?: string;
-  ip_address_display?: string;
   user?: {
     email: string;
     full_name: string;
@@ -232,9 +228,6 @@ const AuditSection = () => {
                   Description
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date & Time
                 </th>
               </tr>
@@ -270,11 +263,6 @@ const AuditSection = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {log.description}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="font-mono text-xs text-gray-600">
-                      {log.ip_address_display || 'Unknown'}
-                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>

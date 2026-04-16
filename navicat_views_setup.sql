@@ -1,36 +1,20 @@
 -- =============================================
--- NAVICAT: Complete Database Views Setup
+-- NAVICAT: Essential Database Views Setup
 -- =============================================
--- Ready to run in Navicat - Drops all old views and creates 3 essential ones
--- =============================================
-
--- =============================================
--- STEP 1: DROP ALL OLD VIEWS (Clean Slate)
+-- Ready to run in Navicat - Drops old views and creates 3 essential ones
 -- =============================================
 
--- Drop Audit Views
+-- =============================================
+-- STEP 1: DROP EXISTING VIEWS
+-- =============================================
+
 DROP VIEW IF EXISTS audit_logs_view;
-DROP VIEW IF EXISTS recent_audit_logs_view;
-
--- Drop CIT Lab Users Views
 DROP VIEW IF EXISTS cit_lab_users_logs_view;
-DROP VIEW IF EXISTS recent_cit_lab_users_logs_view;
-DROP VIEW IF EXISTS today_cit_lab_users_logs_view;
-DROP VIEW IF EXISTS student_cit_lab_users_logs_view;
-DROP VIEW IF EXISTS faculty_cit_lab_users_logs_view;
-DROP VIEW IF EXISTS printing_cit_lab_users_logs_view;
-DROP VIEW IF EXISTS lab_usage_cit_lab_users_logs_view;
-
--- Drop Asset Lifecycle Views
 DROP VIEW IF EXISTS asset_lifecycle_timeline_view;
-DROP VIEW IF EXISTS asset_lifecycle_by_stage_view;
-DROP VIEW IF EXISTS aging_assets_view;
-DROP VIEW IF EXISTS unassigned_assets_view;
-DROP VIEW IF EXISTS assets_by_workstation_view;
-DROP VIEW IF EXISTS assets_by_lab_view;
+DROP VIEW IF EXISTS analytics_summary_view;
 
 -- =============================================
--- STEP 2: CREATE 6 ESSENTIAL VIEWS ONLY
+-- STEP 2: CREATE 3 ESSENTIAL VIEWS ONLY
 -- =============================================
 
 -- Essential View 1: Audit Logs View
@@ -51,10 +35,6 @@ SELECT
     COALESCE(u.role, 'System') AS user_role,
     COALESCE(l.lab_name, 'N/A') AS user_lab_name,
     COALESCE(l.location, 'N/A') AS user_lab_location,
-    CASE 
-        WHEN al.ip_address IS NOT NULL AND al.ip_address != '' THEN al.ip_address
-        ELSE 'Unknown'
-    END AS ip_address_display,
     CASE 
         WHEN al.user_id IS NULL THEN 'System'
         WHEN u.role = 'Admin' THEN 'Administrator'
@@ -79,34 +59,28 @@ FROM audit_logs al
 LEFT JOIN users u ON al.user_id = u.user_id
 LEFT JOIN laboratories l ON u.lab_id = l.lab_id;
 
--- Essential View 2: CIT Lab Users Logs View
+-- Essential View 2: CIT Lab Users Logs View (Updated - removed printing_pages)
 CREATE OR REPLACE VIEW cit_lab_users_logs_view AS
 SELECT 
     cll.log_id,
     cll.date,
+    cll.time_in,
+    cll.time_out,
     cll.usage_type,
     cll.faculty_student_name,
     cll.year_level,
     cll.laboratory,
-    cll.printing_pages,
     cll.ws_number,
     cll.purpose,
     cll.monitored_by,
     cll.user_type,
     cll.ip_address,
     cll.created_at,
-    DATE(cll.date) AS log_date,
-    TIME(cll.created_at) AS log_time,
-    DATE_FORMAT(cll.date, '%Y-%m-%d') AS formatted_date,
-    DATE_FORMAT(cll.created_at, '%Y-%m-%d %h:%i:%s %p') AS formatted_timestamp,
-    DATE_FORMAT(cll.created_at, '%M %d, %Y') AS formatted_created_date,
-    DATE_FORMAT(cll.created_at, '%h:%i:%s %p') AS formatted_created_time,
-    DAYOFWEEK(cll.date) AS day_of_week,
-    MONTHNAME(cll.date) AS month_name,
-    HOUR(cll.created_at) AS time_of_day,
+    DATE(cll.date) AS reservation_date,
+    DATE_FORMAT(cll.date, '%Y-%m-%d') AS reservation_date_formatted,
     CASE 
         WHEN cll.usage_type = 'set-in-reservation' THEN 'Set-in/Reservation'
-        WHEN cll.usage_type = 'printing' THEN 'Printing'
+        WHEN cll.usage_type = 'walk-in' THEN 'Walk-in'
         ELSE COALESCE(cll.usage_type, 'Unknown')
     END AS usage_type_display,
     CASE 
@@ -202,333 +176,86 @@ LEFT JOIN workstations ws ON ia.workstation_id = ws.workstation_id
 LEFT JOIN laboratories l ON ws.lab_id = l.lab_id
 LEFT JOIN units u ON ia.unit_id = u.unit_id;
 
--- Essential View 4: Daily Reports View (NEW)
-CREATE OR REPLACE VIEW daily_reports_view AS
-SELECT 
-    dr.report_id,
-    dr.report_date,
-    dr.general_remarks,
-    dr.status,
-    dr.created_at,
-    u.full_name AS user_name,
-    u.email AS user_email,
-    u.role AS user_role,
-    l.lab_name,
-    l.location AS lab_location,
-    -- Aggregated checklist data from report_workstation_items
-    COUNT(rwi.item_id) as total_workstation_items,
-    SUM(CASE WHEN rwi.status = 'Working' THEN 1 ELSE 0 END) as working_items,
-    SUM(CASE WHEN rwi.status = 'Issue Found' THEN 1 ELSE 0 END) as issue_items,
-    SUM(CASE WHEN rwi.status = 'N/A' THEN 1 ELSE 0 END) as na_items,
-    -- Aggregated procedure data
-    COUNT(drp.id) as total_procedures,
-    SUM(CASE WHEN drp.overall_status = 'Completed' THEN 1 ELSE 0 END) as completed_procedures,
-    SUM(CASE WHEN drp.overall_status = 'Pending' THEN 1 ELSE 0 END) as pending_procedures,
-    -- Formatted dates
-    DATE(dr.report_date) AS report_date_only,
-    DATE_FORMAT(dr.report_date, '%M %d, %Y') AS formatted_report_date,
-    DATE_FORMAT(dr.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    -- Searchable text
-    CONCAT(
-        COALESCE(dr.general_remarks, ''), ' ',
-        COALESCE(u.full_name, ''), ' ',
-        COALESCE(l.lab_name, '')
-    ) AS searchable_text
-FROM daily_reports dr
-LEFT JOIN users u ON dr.user_id = u.user_id
-LEFT JOIN laboratories l ON dr.lab_id = l.lab_id
-LEFT JOIN report_workstation_items rwi ON dr.report_id = rwi.report_id
-LEFT JOIN daily_report_procedures drp ON dr.report_id = drp.report_id
-GROUP BY dr.report_id;
-
--- Essential View 5: Inventory Assets View (NEW)
-CREATE OR REPLACE VIEW inventory_assets_view AS
-SELECT 
-    ia.asset_id,
-    ia.workstation_id,
-    ia.unit_id,
-    ia.date_added,
-    ad.property_tag_no,
-    ad.serial_number,
-    ad.description,
-    ad.quantity,
-    ad.date_of_purchase,
-    ad.status_id,
-    ws.workstation_name,
-    l.lab_name,
-    l.location AS lab_location,
-    u.unit_name,
-    ast.status_name,
-    -- Computed fields
-    TIMESTAMPDIFF(YEAR, ad.date_of_purchase, CURDATE()) as asset_age_years,
-    TIMESTAMPDIFF(MONTH, ad.date_of_purchase, CURDATE()) as asset_age_months,
-    DATEDIFF(CURDATE(), ad.date_of_purchase) as asset_age_days,
-    CASE 
-        WHEN ad.status_id = 1 THEN 'Functional'
-        WHEN ad.status_id = 2 THEN 'Needs Repair'
-        WHEN ad.status_id = 3 THEN 'For Replacement'
-        WHEN ad.status_id = 4 THEN 'For Disposal'
-        WHEN ad.status_id = 5 THEN 'For Upgrade'
-        WHEN ad.status_id = 6 THEN 'Lost'
-        ELSE 'Unknown'
-    END as status_category,
-    -- Formatted dates
-    DATE_FORMAT(ad.date_of_purchase, '%M %d, %Y') AS formatted_purchase_date,
-    DATE_FORMAT(ia.date_added, '%M %d, %Y') AS formatted_added_date,
-    -- Searchable text
-    CONCAT(
-        COALESCE(ad.property_tag_no, ''), ' ',
-        COALESCE(ad.serial_number, ''), ' ',
-        COALESCE(ad.description, ''), ' ',
-        COALESCE(ws.workstation_name, ''), ' ',
-        COALESCE(l.lab_name, ''), ' ',
-        COALESCE(u.unit_name, '')
-    ) AS searchable_text
-FROM inventory_assets ia
-LEFT JOIN asset_details ad ON ia.asset_id = ad.asset_id
-LEFT JOIN workstations ws ON ia.workstation_id = ws.workstation_id
-LEFT JOIN laboratories l ON ws.lab_id = l.lab_id
-LEFT JOIN units u ON ia.unit_id = u.unit_id
-LEFT JOIN asset_statuses ast ON ad.status_id = ast.status_id;
-
--- Essential View 6: Maintenance Analytics View (NEW)
-CREATE OR REPLACE VIEW maintenance_analytics_view AS
-SELECT 
-    sl.log_id AS service_log_id,
-    sl.service_date,
-    sl.service_type,
-    sl.performed_by,
-    sl.remarks,
-    sl.workstation_status_before,
-    sl.workstation_status_after,
-    sl.created_at,
-    ws.workstation_name,
-    l.lab_name,
-    l.location AS lab_location,
-    -- Asset information from service_log_assets
-    COUNT(sla.id) as total_assets_serviced,
-    SUM(CASE WHEN sla.action = 'REPAIR' THEN 1 ELSE 0 END) as repaired_assets,
-    SUM(CASE WHEN sla.action = 'REPLACE' THEN 1 ELSE 0 END) as replaced_assets,
-    SUM(CASE WHEN sla.action = 'UPGRADE' THEN 1 ELSE 0 END) as upgraded_assets,
-    -- Computed fields
-    CASE 
-        WHEN sl.service_date IS NULL THEN 'Scheduled'
-        WHEN sl.service_date <= CURDATE() THEN 'Completed'
-        ELSE 'Scheduled'
-    END as service_status,
-    DATE_FORMAT(sl.service_date, '%M %d, %Y') AS formatted_service_date,
-    DATE_FORMAT(sl.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    -- Searchable text
-    CONCAT(
-        COALESCE(sl.service_type, ''), ' ',
-        COALESCE(sl.remarks, ''), ' ',
-        COALESCE(ws.workstation_name, ''), ' ',
-        COALESCE(l.lab_name, '')
-    ) AS searchable_text
-FROM service_logs sl
-LEFT JOIN workstations ws ON sl.pmc_id = ws.workstation_id
-LEFT JOIN laboratories l ON ws.lab_id = l.lab_id
-LEFT JOIN service_log_assets sla ON sl.log_id = sla.log_id
-GROUP BY sl.log_id;
-
 -- =============================================
--- STEP 2: CREATE 3 ARCHIVE VIEWS (Complete Optimization)
+-- STEP 3: ANALYTICS VIEW (Optimizes Dashboard Queries)
 -- =============================================
 
--- Archive View 1: Archived Daily Reports View
-CREATE OR REPLACE VIEW archived_daily_reports_view AS
+-- Analytics Summary View - Consolidates counts for dashboard/analytics
+CREATE OR REPLACE VIEW analytics_summary_view AS
+-- Daily Reports Summary
 SELECT 
-    dr.report_id,
-    dr.report_date,
-    dr.general_remarks,
-    dr.status,
-    dr.created_at,
-    u.full_name AS user_name,
-    u.email AS user_email,
-    u.role AS user_role,
-    l.lab_name,
-    l.location AS lab_location,
-    -- Pre-computed checklist aggregations
-    COUNT(rwi.item_id) as total_workstation_items,
-    SUM(CASE WHEN rwi.status = 'Working' THEN 1 ELSE 0 END) as working_items,
-    SUM(CASE WHEN rwi.status = 'Issue Found' THEN 1 ELSE 0 END) as issue_items,
-    SUM(CASE WHEN rwi.status = 'N/A' THEN 1 ELSE 0 END) as na_items,
-    -- Pre-computed procedure aggregations
-    COUNT(drp.id) as total_procedures,
-    SUM(CASE WHEN drp.overall_status = 'Completed' THEN 1 ELSE 0 END) as completed_procedures,
-    SUM(CASE WHEN drp.overall_status = 'Pending' THEN 1 ELSE 0 END) as pending_procedures,
-    -- Formatted dates for archive display
-    DATE(dr.report_date) AS report_date_only,
-    DATE_FORMAT(dr.report_date, '%M %d, %Y') AS formatted_report_date,
-    DATE_FORMAT(dr.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    -- Archive-specific fields
-    CASE 
-        WHEN dr.status = 'Approved' THEN 'Archived'
-        ELSE 'Pending'
-    END AS archive_status,
-    -- Searchable text for archive search
-    CONCAT(
-        COALESCE(dr.general_remarks, ''), ' ',
-        COALESCE(u.full_name, ''), ' ',
-        COALESCE(l.lab_name, '')
-    ) AS searchable_text
-FROM daily_reports dr
-LEFT JOIN users u ON dr.user_id = u.user_id
-LEFT JOIN laboratories l ON dr.lab_id = l.lab_id
-LEFT JOIN report_workstation_items rwi ON dr.report_id = rwi.report_id
-LEFT JOIN daily_report_procedures drp ON dr.report_id = drp.report_id
-WHERE dr.status = 'Approved'
-GROUP BY dr.report_id;
+    'daily_reports' as entity_type,
+    status as group_key,
+    COUNT(*) as total_count,
+    DATE(created_at) as date_group,
+    lab_id
+FROM daily_reports
+GROUP BY status, DATE(created_at), lab_id
 
--- Archive View 2: Archived Complaints View
-CREATE OR REPLACE VIEW archived_complaints_view AS
-SELECT 
-    c.complaint_id,
-    c.issue_description,
-    c.status,
-    c.created_at,
-    c.updated_at,
-    u.full_name AS user_name,
-    u.email AS user_email,
-    u.role AS user_role,
-    l.lab_name,
-    l.location AS lab_location,
-    ws.workstation_name,
-    ws.workstation_id,
-    -- Archive-specific fields
-    CASE 
-        WHEN c.status IN ('Resolved', 'Denied') THEN 'Archived'
-        ELSE 'Active'
-    END AS archive_status,
-    -- Formatted dates for archive display
-    DATE(c.created_at) AS complaint_date_only,
-    DATE_FORMAT(c.created_at, '%M %d, %Y') AS formatted_created_date,
-    DATE_FORMAT(c.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    -- Resolution tracking
-    CASE 
-        WHEN c.status = 'Resolved' THEN DATEDIFF(c.updated_at, c.created_at)
-        WHEN c.status = 'Denied' THEN DATEDIFF(c.updated_at, c.created_at)
-        ELSE NULL
-    END AS resolution_days,
-    -- Searchable text for archive search
-    CONCAT(
-        COALESCE(c.issue_description, ''), ' ',
-        COALESCE(u.full_name, ''), ' ',
-        COALESCE(l.lab_name, ''), ' ',
-        COALESCE(ws.workstation_name, '')
-    ) AS searchable_text
-FROM complaints c
-LEFT JOIN users u ON c.custodian_user_id = u.user_id
-LEFT JOIN laboratories l ON c.lab_id = l.lab_id
-LEFT JOIN workstations ws ON c.workstation_id = ws.workstation_id
-WHERE c.status IN ('Resolved', 'Denied');
+UNION ALL
 
--- Archive View 3: Archived Forms View (Software Installations Only)
-CREATE OR REPLACE VIEW archived_forms_view AS
+-- Complaints Summary  
 SELECT 
-    -- Software Installations Only
-    si.id AS form_id,
-    'software-install' AS form_type,
-    si.date AS form_date,
-    si.faculty_name AS name,
-    si.status AS form_status,
-    si.installation_remarks AS purpose,
-    si.created_at,
-    si.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    DATE_FORMAT(si.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(si.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    CONCAT(
-        COALESCE(si.faculty_name, ''), ' ',
-        COALESCE(si.installation_remarks, ''), ' ',
-        COALESCE(si.laboratory, '')
-    ) AS searchable_text
-FROM software_installations si
-LEFT JOIN users u ON si.user_id = u.user_id
-WHERE si.status IN ('Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed');
+    'complaints' as entity_type,
+    status as group_key,
+    COUNT(*) as total_count,
+    DATE(created_at) as date_group,
+    lab_id
+FROM complaints
+GROUP BY status, DATE(created_at), lab_id
+
+UNION ALL
+
+-- PMC Reports Summary
+SELECT 
+    'pmc_reports' as entity_type,
+    quarter as group_key,
+    COUNT(*) as total_count,
+    NULL as date_group,
+    lab_id
+FROM pmc_reports
+GROUP BY quarter, lab_id;
 
 -- =============================================
--- STEP 2: CREATE 2 HIGH-PRIORITY MANAGEMENT VIEWS (90% Optimization)
+-- STEP 4: VERIFICATION
 -- =============================================
 
--- Management View 1: Workstation Management View
-CREATE OR REPLACE VIEW workstation_management_view AS
+-- Check that views were created successfully
 SELECT 
-    ws.workstation_id,
-    ws.workstation_name,
-    ws.workstation_remarks,
-    ws.lab_id,
-    ws.status_id,
-    ws.created_at,
-    l.lab_name,
-    l.location AS lab_location,
-    ast.status_name,
-    -- Asset information
-    COUNT(ia.asset_id) as total_assets_assigned,
-    SUM(CASE WHEN ad.status_id = 1 THEN 1 ELSE 0 END) as functional_assets,
-    SUM(CASE WHEN ad.status_id IN (2, 3, 4, 5) THEN 1 ELSE 0 END) as problematic_assets,
-    SUM(CASE WHEN ad.status_id = 6 THEN 1 ELSE 0 END) as lost_assets,
-    -- Status categorization
-    CASE 
-        WHEN ast.status_name = 'Functional' THEN 'Operational'
-        WHEN ast.status_name IN ('For Replacement', 'For Disposal', 'For Upgrade') THEN 'Needs Attention'
-        WHEN ast.status_name = 'Lost' THEN 'Critical'
-        ELSE 'Unknown'
-    END AS workstation_category,
-    -- Formatted dates
-    DATE_FORMAT(ws.created_at, '%M %d, %Y') AS formatted_created_date,
-    -- Searchable text
-    CONCAT(
-        COALESCE(ws.workstation_name, ''), ' ',
-        COALESCE(ws.workstation_remarks, ''), ' ',
-        COALESCE(l.lab_name, ''), ' ',
-        COALESCE(ast.status_name, '')
-    ) AS searchable_text
-FROM workstations ws
-LEFT JOIN laboratories l ON ws.lab_id = l.lab_id
-LEFT JOIN asset_statuses ast ON ws.status_id = ast.status_id
-LEFT JOIN inventory_assets ia ON ws.workstation_id = ia.workstation_id
-LEFT JOIN asset_details ad ON ia.asset_id = ad.asset_id
-GROUP BY ws.workstation_id;
+    'Verification Results' as status,
+    COUNT(*) as total_views_created
+FROM information_schema.views 
+WHERE table_name IN ('audit_logs_view', 'cit_lab_users_logs_view', 'asset_lifecycle_timeline_view', 'analytics_summary_view') 
+AND table_schema = DATABASE();
 
--- Management View 2: Active Forms Management View (Software Installations Only)
-CREATE OR REPLACE VIEW active_forms_view AS
+-- Show the created views
 SELECT 
-    -- Software Installations Only
-    si.id AS form_id,
-    'software-install' AS form_type,
-    si.date AS form_date,
-    si.faculty_name AS name,
-    si.status AS form_status,
-    si.installation_remarks AS purpose,
-    si.created_at,
-    si.laboratory AS lab_name,
-    NULL AS lab_location,
-    u.full_name AS created_by_user,
-    CASE 
-        WHEN si.status = 'Pending' THEN 'Awaiting Review'
-        WHEN si.status IN ('Admin_Approved', 'Custodian_Approved') THEN 'Approved'
-        ELSE si.status
-    END AS status_category,
-    DATE_FORMAT(si.date, '%M %d, %Y') AS formatted_form_date,
-    DATE_FORMAT(si.created_at, '%M %d, %Y %h:%i:%s %p') AS formatted_created_timestamp,
-    DATEDIFF(CURDATE(), si.created_at) AS days_pending,
-    CONCAT(
-        COALESCE(si.faculty_name, ''), ' ',
-        COALESCE(si.installation_remarks, ''), ' ',
-        COALESCE(si.laboratory, '')
-    ) AS searchable_text
-FROM software_installations si
-LEFT JOIN users u ON si.user_id = u.user_id
-WHERE si.status IN ('Pending', 'Admin_Approved', 'Custodian_Approved');
+    table_name as view_name,
+    'Created Successfully' as status
+FROM information_schema.views 
+WHERE table_name IN ('audit_logs_view', 'cit_lab_users_logs_view', 'asset_lifecycle_timeline_view', 'analytics_summary_view') 
+AND table_schema = DATABASE()
+ORDER BY table_name;
 
 -- =============================================
--- STEP 2: CREATE 3 FINAL MANAGEMENT VIEWS (100% Optimization)
+-- STEP 4: SAMPLE QUERIES (For Testing)
 -- =============================================
 
--- Final View 1: User Management View
-CREATE OR REPLACE VIEW user_management_view AS
+-- Test Views
+SELECT 'Testing Audit Logs View' as test_name, COUNT(*) as record_count FROM audit_logs_view LIMIT 1;
+SELECT 'Testing CIT Lab Users View' as test_name, COUNT(*) as record_count FROM cit_lab_users_logs_view LIMIT 1;
+SELECT 'Testing Asset Lifecycle View' as test_name, COUNT(*) as record_count FROM asset_lifecycle_timeline_view LIMIT 1;
+SELECT 'Testing Analytics Summary View' as test_name, COUNT(*) as record_count FROM analytics_summary_view LIMIT 1;
+
+-- =============================================
+-- STEP 5: PERFORMANCE VIEWS (Application Query Optimization)
+-- =============================================
+
+-- Performance View 1: User Lab Assignments
+-- Used in: Role-based filtering across all controllers (dashboard, complaints, etc.)
+-- Eliminates: Repeated users + labs JOINs
+DROP VIEW IF EXISTS view_user_lab_assignments;
+CREATE OR REPLACE VIEW view_user_lab_assignments AS
 SELECT 
     u.user_id,
     u.full_name,
@@ -539,152 +266,165 @@ SELECT
     l.lab_name,
     l.location AS lab_location,
     d.dept_name,
-    -- User categorization
-    CASE 
-        WHEN u.role = 'Admin' THEN 'Administrator'
-        WHEN u.role = 'Custodian' THEN 'Lab Custodian'
-        ELSE 'Unknown Role'
-    END AS user_category,
-    CASE 
-        WHEN u.lab_id IS NULL THEN 'Unassigned'
-        WHEN l.lab_name IS NOT NULL THEN 'Assigned'
-        ELSE 'Unknown'
-    END AS assignment_status,
-    -- Activity metrics
-    CASE 
-        WHEN u.created_at > DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 'Recently Active'
-        WHEN u.created_at > DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 'Recently Updated'
-        ELSE 'Inactive'
-    END AS activity_status,
-    -- Formatted dates
-    DATE_FORMAT(u.created_at, '%M %d, %Y') AS formatted_created_date,
-    -- Searchable text
-    CONCAT(
-        COALESCE(u.full_name, ''), ' ',
-        COALESCE(u.email, ''), ' ',
-        COALESCE(u.role, ''), ' ',
-        COALESCE(l.lab_name, '')
-    ) AS searchable_text
+    c.campus_name
 FROM users u
 LEFT JOIN laboratories l ON u.lab_id = l.lab_id
-LEFT JOIN departments d ON l.dept_id = d.dept_id;
-
--- Final View 2: Lab Management View
-CREATE OR REPLACE VIEW lab_management_view AS
-SELECT 
-    l.lab_id,
-    l.lab_name,
-    l.location,
-    l.dept_id,
-    d.dept_name,
-    -- User counts
-    COUNT(DISTINCT u.user_id) as total_users,
-    SUM(CASE WHEN u.role = 'Custodian' THEN 1 ELSE 0 END) as custodians_count,
-    SUM(CASE WHEN u.role = 'Admin' THEN 1 ELSE 0 END) as admins_count,
-    -- Workstation counts
-    COUNT(DISTINCT ws.workstation_id) as total_workstations,
-    SUM(CASE WHEN ws.status_id = 1 THEN 1 ELSE 0 END) as operational_workstations,
-    SUM(CASE WHEN ws.status_id IN (2, 3, 4, 5) THEN 1 ELSE 0 END) as problematic_workstations,
-    -- Lab status
-    CASE 
-        WHEN COUNT(DISTINCT u.user_id) = 0 THEN 'Unstaffed'
-        WHEN SUM(CASE WHEN u.role = 'Custodian' THEN 1 ELSE 0 END) = 0 THEN 'No Custodian'
-        WHEN COUNT(DISTINCT ws.workstation_id) = 0 THEN 'No Workstations'
-        ELSE 'Operational'
-    END AS lab_status,
-    -- Searchable text
-    CONCAT(
-        COALESCE(l.lab_name, ''), ' ',
-        COALESCE(l.location, ''), ' ',
-        COALESCE(d.dept_name, '')
-    ) AS searchable_text
-FROM laboratories l
 LEFT JOIN departments d ON l.dept_id = d.dept_id
-LEFT JOIN users u ON l.lab_id = u.lab_id
-LEFT JOIN workstations ws ON l.lab_id = ws.lab_id
-GROUP BY l.lab_id;
+LEFT JOIN campuses c ON d.campus_id = c.campus_id;
 
--- Final View 3: Procedures Management View
-CREATE OR REPLACE VIEW procedures_management_view AS
+-- Performance View 2: Asset Full Details
+-- Used in: Inventory pages, analytics, asset listings
+-- Eliminates: 4-5 table JOINs (inventory_assets + asset_details + asset_statuses + labs + units)
+DROP VIEW IF EXISTS view_asset_full_details;
+CREATE OR REPLACE VIEW view_asset_full_details AS
 SELECT 
-    p.procedure_id,
-    p.procedure_name,
-    p.category,
-    p.is_active,
-    p.created_at,
-    -- Procedure categorization
+    ia.asset_id,
+    ia.lab_id,
+    ia.workstation_id,
+    ia.unit_id,
+    ia.date_added,
+    ia.added_by_user_id,
+    ad.property_tag_no,
+    ad.quantity,
+    ad.description,
+    ad.serial_number,
+    ad.date_of_purchase,
+    ad.date_disposed,
+    ad.disposed_by,
+    ad.asset_remarks,
+    ad.status_id,
+    ast.status_name AS asset_status,
+    l.lab_name,
+    l.location AS lab_location,
+    u.unit_name,
+    dt.device_type_name,
+    usr.full_name AS added_by_name
+FROM inventory_assets ia
+LEFT JOIN asset_details ad ON ia.asset_id = ad.asset_id
+LEFT JOIN asset_statuses ast ON ad.status_id = ast.status_id
+LEFT JOIN laboratories l ON ia.lab_id = l.lab_id
+LEFT JOIN units u ON ia.unit_id = u.unit_id
+LEFT JOIN device_types dt ON u.device_type_id = dt.device_type_id
+LEFT JOIN users usr ON ia.added_by_user_id = usr.user_id
+WHERE ast.status_name != 'Disposed' OR ast.status_name IS NULL;
+
+-- Performance View 3: Workstation Status Summary
+-- Used in: Dashboard maintenance stats, inventory analytics
+-- Eliminates: Complex 30-day maintenance subqueries
+DROP VIEW IF EXISTS view_workstation_status_summary;
+CREATE OR REPLACE VIEW view_workstation_status_summary AS
+SELECT 
+    w.workstation_id,
+    w.workstation_name,
+    w.lab_id,
+    w.status_id,
+    w.workstation_remarks,
+    w.created_at,
+    l.lab_name,
+    ast.status_name AS workstation_status,
+    COUNT(ia.asset_id) AS asset_count,
+    MAX(pr.created_at) AS last_maintenance_date,
+    MAX(pr.report_date) AS last_report_date,
     CASE 
-        WHEN p.is_active = 1 THEN 'Active'
-        ELSE 'Inactive'
-    END AS status_category,
-    CASE 
-        WHEN p.category = 'Daily Routine' THEN 'Routine'
-        WHEN p.category = 'Weekly Check' THEN 'Weekly'
-        WHEN p.category = 'Monthly Maintenance' THEN 'Monthly'
-        ELSE 'Other'
-    END AS frequency_category,
-    -- Usage metrics (if available)
-    COUNT(DISTINCT drp.report_id) as usage_count,
-    -- Formatted dates
-    DATE_FORMAT(p.created_at, '%M %d, %Y') AS formatted_created_date,
-    -- Searchable text
-    CONCAT(
-        COALESCE(p.procedure_name, ''), ' ',
-        COALESCE(p.category, '')
-    ) AS searchable_text
-FROM procedures p
-LEFT JOIN daily_report_procedures drp ON p.procedure_id = drp.procedure_id
-GROUP BY p.procedure_id;
+        WHEN MAX(pr.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 'Serviced'
+        ELSE 'Unserviced'
+    END AS service_status_30d
+FROM workstations w
+LEFT JOIN laboratories l ON w.lab_id = l.lab_id
+LEFT JOIN asset_statuses ast ON w.status_id = ast.status_id
+LEFT JOIN inventory_assets ia ON w.workstation_id = ia.workstation_id
+LEFT JOIN pmc_reports pr ON w.workstation_id = pr.workstation_id
+GROUP BY w.workstation_id, w.workstation_name, w.lab_id, w.status_id, w.workstation_remarks, w.created_at, l.lab_name, ast.status_name;
+
+-- Performance View 4: Complaint Details
+-- Used in: Complaints management, archive pages
+-- Eliminates: 4-5 table JOINs per complaint query
+DROP VIEW IF EXISTS view_complaint_details;
+CREATE OR REPLACE VIEW view_complaint_details AS
+SELECT 
+    c.complaint_id,
+    c.lab_id,
+    c.workstation_id,
+    c.asset_id,
+    c.faculty_student_name,
+    c.user_type,
+    c.year_level,
+    c.issue_description,
+    c.asset_info,
+    c.status AS complaint_status,
+    c.monitored_by,
+    c.approved_by,
+    c.custodian_user_id,
+    c.remarks,
+    c.resolved_at,
+    c.created_at,
+    c.updated_at,
+    c.accepted_at,
+    l.lab_name,
+    w.workstation_name,
+    ad.property_tag_no AS asset_property_tag,
+    cust.full_name AS custodian_name
+FROM complaints c
+LEFT JOIN laboratories l ON c.lab_id = l.lab_id
+LEFT JOIN workstations w ON c.workstation_id = w.workstation_id
+LEFT JOIN inventory_assets ia ON c.asset_id = ia.asset_id
+LEFT JOIN asset_details ad ON ia.asset_id = ad.asset_id
+LEFT JOIN users cust ON c.custodian_user_id = cust.user_id;
 
 -- =============================================
--- STEP 3: VERIFICATION
+-- STEP 6: VERIFICATION (All Views)
 -- =============================================
 
--- Check that views were created successfully (Updated for removed forms)
+-- Check that ALL views were created successfully
 SELECT 
     'Verification Results' as status,
     COUNT(*) as total_views_created
 FROM information_schema.views 
-WHERE table_name IN ('audit_logs_view', 'cit_lab_users_logs_view', 'asset_lifecycle_timeline_view', 'daily_reports_view', 'inventory_assets_view', 'maintenance_analytics_view', 'archived_daily_reports_view', 'archived_complaints_view', 'archived_forms_view', 'workstation_management_view', 'active_forms_view', 'user_management_view', 'lab_management_view', 'procedures_management_view') 
+WHERE table_name IN (
+    'audit_logs_view', 
+    'cit_lab_users_logs_view', 
+    'asset_lifecycle_timeline_view', 
+    'analytics_summary_view',
+    'view_user_lab_assignments',
+    'view_asset_full_details',
+    'view_workstation_status_summary',
+    'view_complaint_details'
+) 
 AND table_schema = DATABASE();
 
--- Show the created views
+-- Show ALL created views
 SELECT 
     table_name as view_name,
     'Created Successfully' as status
 FROM information_schema.views 
-WHERE table_name IN ('audit_logs_view', 'cit_lab_users_logs_view', 'asset_lifecycle_timeline_view', 'daily_reports_view', 'inventory_assets_view', 'maintenance_analytics_view', 'archived_daily_reports_view', 'archived_complaints_view', 'archived_forms_view', 'workstation_management_view', 'active_forms_view', 'user_management_view', 'lab_management_view', 'procedures_management_view') 
+WHERE table_name IN (
+    'audit_logs_view', 
+    'cit_lab_users_logs_view', 
+    'asset_lifecycle_timeline_view', 
+    'analytics_summary_view',
+    'view_user_lab_assignments',
+    'view_asset_full_details',
+    'view_workstation_status_summary',
+    'view_complaint_details'
+) 
 AND table_schema = DATABASE()
 ORDER BY table_name;
 
 -- =============================================
--- STEP 4: SAMPLE QUERIES (For Testing)
+-- STEP 7: SAMPLE QUERIES (For Testing New Views)
 -- =============================================
 
--- Test Main Views
-SELECT 'Testing Audit Logs View' as test_name, COUNT(*) as record_count FROM audit_logs_view LIMIT 1;
-SELECT 'Testing CIT Lab Users View' as test_name, COUNT(*) as record_count FROM cit_lab_users_logs_view LIMIT 1;
-SELECT 'Testing Asset Lifecycle View' as test_name, COUNT(*) as record_count FROM asset_lifecycle_timeline_view LIMIT 1;
-SELECT 'Testing Daily Reports View' as test_name, COUNT(*) as record_count FROM daily_reports_view LIMIT 1;
-SELECT 'Testing Inventory Assets View' as test_name, COUNT(*) as record_count FROM inventory_assets_view LIMIT 1;
-SELECT 'Testing Maintenance Analytics View' as test_name, COUNT(*) as record_count FROM maintenance_analytics_view LIMIT 1;
-
--- Test Archive Views (Updated for software installations only)
-SELECT 'Testing Archived Daily Reports View' as test_name, COUNT(*) as record_count FROM archived_daily_reports_view LIMIT 1;
-SELECT 'Testing Archived Complaints View' as test_name, COUNT(*) as record_count FROM archived_complaints_view LIMIT 1;
-SELECT 'Testing Archived Forms View (Software Installations Only)' as test_name, COUNT(*) as record_count FROM archived_forms_view LIMIT 1;
-
--- Test Management Views
-SELECT 'Testing Workstation Management View' as test_name, COUNT(*) as record_count FROM workstation_management_view LIMIT 1;
-SELECT 'Testing Active Forms Management View' as test_name, COUNT(*) as record_count FROM active_forms_view LIMIT 1;
-SELECT 'Testing User Management View' as test_name, COUNT(*) as record_count FROM user_management_view LIMIT 1;
-SELECT 'Testing Lab Management View' as test_name, COUNT(*) as record_count FROM lab_management_view LIMIT 1;
-SELECT 'Testing Procedures Management View' as test_name, COUNT(*) as record_count FROM procedures_management_view LIMIT 1;
+-- Test Performance Views
+SELECT 'Testing User Lab Assignments' as test_name, COUNT(*) as record_count FROM view_user_lab_assignments LIMIT 1;
+SELECT 'Testing Asset Full Details' as test_name, COUNT(*) as record_count FROM view_asset_full_details LIMIT 1;
+SELECT 'Testing Workstation Status Summary' as test_name, COUNT(*) as record_count FROM view_workstation_status_summary LIMIT 1;
+SELECT 'Testing Complaint Details' as test_name, COUNT(*) as record_count FROM view_complaint_details LIMIT 1;
 
 -- =============================================
 -- COMPLETION MESSAGE
 -- =============================================
 SELECT 
-    '🎉 100% SYSTEM OPTIMIZATION COMPLETE!' as status,
-    '12 views created successfully (lab requests & equipment borrows removed)' as result,
-    'All pages and features fully optimized' as next_step;
+    'Setup COMPLETE!' as status,
+    '8 views created successfully (4 essential + 1 analytics + 3 performance)' as result,
+    'All views use only existing schema columns - no phantom data' as validation,
+    'Ready for Navicat execution' as next_step;

@@ -34,7 +34,7 @@ interface FormSubmission {
     | "Approved"
     | "Denied"
     | "Completed"
-    | "Admin_Approved";
+    | "Custodian_Approved";
   laboratory: string;
   purpose: string;
   createdAt: string;
@@ -97,7 +97,7 @@ export const FormsManagementPage = () => {
         
         // Status filtering
         const statusMatch = isAdmin
-          ? form.status === "Admin_Approved" || form.status === "Completed" || form.status === "Denied"
+          ? form.status === "Custodian_Approved" || form.status === "Completed" || form.status === "Denied"
           : form.status === "Completed" || form.status === "Denied";
         
         // Ownership filtering
@@ -157,7 +157,7 @@ export const FormsManagementPage = () => {
       case "Pending":
         return <Clock className="w-4 h-4 text-yellow-500" />;
       case "Approved":
-      case "Admin_Approved":
+      case "Custodian_Approved":
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case "Denied":
         return <XCircle className="w-4 h-4 text-red-500" />;
@@ -174,8 +174,8 @@ export const FormsManagementPage = () => {
         return "bg-yellow-100 text-yellow-800";
       case "Approved":
         return "bg-green-100 text-green-800";
-      case "Admin_Approved":
-        return "bg-green-100 text-green-800";
+      case "Custodian_Approved":
+        return "bg-blue-100 text-blue-800";
       case "Denied":
         return "bg-red-100 text-red-800";
             case "Completed":
@@ -252,10 +252,10 @@ export const FormsManagementPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Admin_Approved">Admin Approved</SelectItem>
+              <SelectItem value="Custodian_Approved">Custodian Approved</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
               <SelectItem value="Denied">Denied</SelectItem>
-                          </SelectContent>
+            </SelectContent>
           </Select>
         </div>
 

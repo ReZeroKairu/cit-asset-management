@@ -7,14 +7,6 @@ const prisma = new PrismaClient();
 // CIT Lab Users Controller (no authentication required)
 export const createCITLabUser = async (req: Request, res: Response) => {
   try {
-    // Capture client IP address with comprehensive fallbacks
-    const clientIP = req.ip || 
-                    req.headers['x-forwarded-for'] as string || 
-                    req.headers['x-real-ip'] as string || 
-                    req.connection?.remoteAddress || 
-                    req.socket?.remoteAddress || 
-                    'Unknown';
-    
     const {
       date,
       time_in,
@@ -24,7 +16,6 @@ export const createCITLabUser = async (req: Request, res: Response) => {
       user_type,
       year_level,
       laboratory,
-      printing_pages,
       ws_number,
       purpose,
       monitored_by
@@ -45,7 +36,6 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     console.log('  - laboratory:', laboratory);
     console.log('  - purpose:', purpose);
     console.log('  - year_level:', year_level);
-    console.log('  - printing_pages:', printing_pages);
     console.log('  - ws_number:', ws_number);
     console.log('  - monitored_by:', monitored_by);
     
@@ -107,13 +97,11 @@ export const createCITLabUser = async (req: Request, res: Response) => {
         usage_type,
         faculty_student_name,
         user_type: user_type,
-        year_level: year_level ? `${year_level} Year` : null,
+        year_level: year_level || null,
         laboratory,
-        printing_pages,
         ws_number,
         purpose,
         monitored_by,
-        ip_address: clientIP
       }
     });
 
@@ -145,6 +133,8 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
       offset
     } = req.query;
 
+    console.log('?? Fetching CIT Lab Users logs with filters:', req.query);
+
     // Build where clause for filtering using the view
     let whereClause = '';
     const params: any[] = [];
@@ -155,29 +145,29 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
     // Date range filtering
     if (start_date || end_date) {
       if (start_date && end_date) {
-        whereClause += ` AND log_date BETWEEN ? AND ? `;
+        whereClause += ` AND reservation_date BETWEEN ? AND ? `;
         params.push(start_date, end_date);
         paramIndex += 2;
       } else if (start_date) {
-        whereClause += ` AND log_date >= ? `;
+        whereClause += ` AND reservation_date >= ? `;
         params.push(start_date);
         paramIndex += 1;
       } else if (end_date) {
-        whereClause += ` AND log_date <= ? `;
+        whereClause += ` AND reservation_date <= ? `;
         params.push(end_date);
         paramIndex += 1;
       }
     }
     
     // Laboratory filtering
-    if (laboratory) {
+    if (laboratory && laboratory !== 'all') {
       whereClause += ` AND laboratory_display = ? `;
       params.push(laboratory);
       paramIndex += 1;
     }
     
     // User type filtering
-    if (user_type) {
+    if (user_type && user_type !== 'all') {
       const userTypeValue = user_type === 'student' ? 'Student' : 'Faculty';
       whereClause += ` AND user_type_category = ? `;
       params.push(userTypeValue);
@@ -204,180 +194,72 @@ export const getCITLabUsersLogs = async (req: Request, res: Response) => {
       SELECT 
         log_id,
         date,
+        time_in,
+        time_out,
         usage_type,
         faculty_student_name,
         year_level,
         laboratory,
-        printing_pages,
         ws_number,
         purpose,
         monitored_by,
         user_type,
-        ip_address,
         created_at,
-        formatted_date,
-        formatted_timestamp,
-        formatted_created_date,
-        formatted_created_time,
+        reservation_date,
+        reservation_date_formatted,
         usage_type_display,
         user_type_category,
         laboratory_display,
-        year_level_display,
-        ws_number_display,
-        printing_pages_display,
-        monitored_by_display,
-        ip_address_display,
-        usage_category,
-        user_category,
-        day_of_week,
-        month_name,
-        time_of_day
+        searchable_text
       FROM cit_lab_users_logs_view 
       ${finalWhereClause}
-      ORDER BY created_at DESC
+      ORDER BY created_at DESC 
       ${limitClause}
       ${offsetClause}
     `;
 
-    console.log('🔍 Executing optimized query:', query);
-    console.log('🔍 Query parameters:', params);
+    console.log('?? Executing optimized query:', query);
+    console.log('?? Query parameters:', params);
 
-    let logs, totalCount;
+    const logs = await prisma.$queryRawUnsafe(query, ...params) as any[];
+    console.log('?? View query successful, got', logs.length, 'records');
+
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM cit_lab_users_logs_view 
+      ${finalWhereClause}
+    `;
     
-    try {
-      // Try using the optimized view first
-      console.log('🔍 Attempting to use cit_lab_users_logs_view...');
-      console.log('🔍 Query:', query);
-      console.log('🔍 Parameters:', params);
-      
-      logs = await prisma.$queryRawUnsafe(query, ...params) as any[];
-      console.log('✅ View query successful, got', logs.length, 'records');
+    console.log('?? Count query:', countQuery);
+    const countResult = await prisma.$queryRawUnsafe(countQuery, ...params.slice(0, paramIndex - 1)) as any[];
+    const totalCount = Number(countResult[0]?.total) || 0;
+    console.log('?? Count query successful, total:', totalCount);
 
-      // Get total count for pagination
-      const countQuery = `
-        SELECT COUNT(*) as total
-        FROM cit_lab_users_logs_view 
-        ${finalWhereClause}
-      `;
-      
-      console.log('🔍 Count query:', countQuery);
-      const countResult = await prisma.$queryRawUnsafe(countQuery, ...params.slice(0, paramIndex - 1)) as any[];
-      totalCount = Number(countResult[0]?.total) || 0;
-      console.log('✅ Count query successful, total:', totalCount);
-      
-    } catch (viewError) {
-      console.log('❌ View query failed:', viewError);
-      console.log('⚠️ View not found, falling back to raw table:', viewError instanceof Error ? viewError.message : 'Unknown error');
-      
-      // Build fallback where clause for raw table
-      let fallbackWhereClause = '';
-      const fallbackParams: any[] = [];
-      let fallbackParamIndex = 1;
-      
-      // Date range filtering (using date field instead of log_date)
-      if (start_date || end_date) {
-        if (start_date && end_date) {
-          fallbackWhereClause += ` AND date BETWEEN ? AND ? `;
-          fallbackParams.push(start_date, end_date);
-          fallbackParamIndex += 2;
-        } else if (start_date) {
-          fallbackWhereClause += ` AND date >= ? `;
-          fallbackParams.push(start_date);
-          fallbackParamIndex += 1;
-        } else if (end_date) {
-          fallbackWhereClause += ` AND date <= ? `;
-          fallbackParams.push(end_date);
-          fallbackParamIndex += 1;
+    // Convert BigInt values to regular numbers to prevent serialization errors
+    const serializedLogs = logs.map(log => {
+      const serializedLog: any = {};
+      for (const key in log) {
+        const value = log[key];
+        if (typeof value === 'bigint') {
+          serializedLog[key] = Number(value);
+        } else {
+          serializedLog[key] = value;
         }
       }
-      
-      // Laboratory filtering
-      if (laboratory) {
-        fallbackWhereClause += ` AND laboratory = ? `;
-        fallbackParams.push(laboratory);
-        fallbackParamIndex += 1;
-      }
-      
-      // User type filtering
-      if (user_type) {
-        const userTypeValue = user_type === 'student' ? 'Student' : 'Faculty';
-        fallbackWhereClause += ` AND user_type = ? `;
-        fallbackParams.push(userTypeValue);
-        fallbackParamIndex += 1;
-      }
-      
-      // Search filtering (search across multiple fields)
-      if (search) {
-        fallbackWhereClause += ` AND (
-          faculty_student_name LIKE ? OR 
-          laboratory LIKE ? OR 
-          purpose LIKE ? OR 
-          usage_type LIKE ? OR
-          monitored_by LIKE ?
-        ) `;
-        const searchTerm = `%${search}%`;
-        fallbackParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
-        fallbackParamIndex += 5;
-      }
-      
-      // Add pagination
-      const fallbackLimitClause = limit ? ` LIMIT ? ` : '';
-      const fallbackOffsetClause = offset ? ` OFFSET ? ` : '';
-      if (limit) fallbackParams.push(parseInt(limit as string));
-      if (offset) fallbackParams.push(parseInt(offset as string));
-      
-      // Remove the initial ' AND ' if whereClause is not empty
-      const finalFallbackWhereClause = fallbackWhereClause ? `WHERE ${fallbackWhereClause.substring(5)}` : '';
-      
-      // Fallback to raw table query
-      const fallbackQuery = `
-        SELECT 
-          log_id,
-          date,
-          usage_type,
-          faculty_student_name,
-          year_level,
-          laboratory,
-          printing_pages,
-          ws_number,
-          purpose,
-          monitored_by,
-          user_type,
-          ip_address,
-          created_at
-        FROM cit_lab_logs 
-        ${finalFallbackWhereClause}
-        ORDER BY created_at DESC
-        ${fallbackLimitClause}
-        ${fallbackOffsetClause}
-      `;
-
-      logs = await prisma.$queryRawUnsafe(fallbackQuery, ...fallbackParams) as any[];
-      console.log('✅ Fallback query successful, got', logs.length, 'records');
-      
-      // Get total count for pagination
-      const fallbackCountQuery = `
-        SELECT COUNT(*) as total
-        FROM cit_lab_logs 
-        ${finalFallbackWhereClause}
-      `;
-      
-      console.log('🔍 Fallback count query:', fallbackCountQuery);
-      const countResult = await prisma.$queryRawUnsafe(fallbackCountQuery, ...fallbackParams.slice(0, fallbackParamIndex - 1)) as any[];
-      totalCount = Number(countResult[0]?.total) || 0;
-      console.log('✅ Fallback count query successful, total:', totalCount);
-    }
+      return serializedLog;
+    });
 
     res.status(200).json({
       success: true,
-      data: logs,
+      data: serializedLogs,
       count: logs.length,
       total: Number(totalCount),
       message: `Retrieved ${logs.length} CIT Lab Users logs successfully`
     });
   } catch (error) {
-    console.error('❌ Error fetching CIT Lab Users logs:', error);
-    console.error('❌ Error details:', {
+    console.error('?? Error fetching CIT Lab Users logs:', error);
+    console.error('?? Error details:', {
       message: (error as Error).message,
       stack: (error as Error).stack,
       query: req.query,
@@ -468,24 +350,26 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       group_by = 'laboratory' // laboratory, usage_type, user_type, month, day_of_week
     } = req.query;
 
+    console.log('?? Fetching CIT Lab Users analytics with filters:', req.query);
+
     // Build where clause for filtering
     let whereClause = '';
     const params: any[] = [];
     
     if (start_date || end_date) {
       if (start_date && end_date) {
-        whereClause += ' AND log_date BETWEEN ? AND ? ';
+        whereClause += ' AND reservation_date BETWEEN ? AND ? ';
         params.push(start_date, end_date);
       } else if (start_date) {
-        whereClause += ' AND log_date >= ? ';
+        whereClause += ' AND reservation_date >= ? ';
         params.push(start_date);
       } else if (end_date) {
-        whereClause += ' AND log_date <= ? ';
+        whereClause += ' AND reservation_date <= ? ';
         params.push(end_date);
       }
     }
     
-    if (laboratory) {
+    if (laboratory && laboratory !== 'all') {
       whereClause += ' AND laboratory_display = ? ';
       params.push(laboratory);
     }
@@ -501,13 +385,13 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
         groupByField = 'user_type_category';
         break;
       case 'month':
-        groupByField = 'month_name, year_number';
+        groupByField = 'MONTHNAME(reservation_date), YEAR(reservation_date)';
         break;
       case 'day_of_week':
-        groupByField = 'day_of_week';
+        groupByField = 'DAYOFWEEK(reservation_date)';
         break;
       case 'time_of_day':
-        groupByField = 'time_of_day';
+        groupByField = 'HOUR(created_at)';
         break;
       default:
         groupByField = 'laboratory_display';
@@ -518,7 +402,6 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
         ${groupByField},
         COUNT(*) as total_logs,
         COUNT(DISTINCT faculty_student_name) as unique_users,
-        SUM(CASE WHEN usage_type = 'printing' THEN 1 ELSE 0 END) as printing_count,
         SUM(CASE WHEN usage_type = 'set-in-reservation' THEN 1 ELSE 0 END) as lab_usage_count,
         MAX(created_at) as last_activity
       FROM cit_lab_users_logs_view 
@@ -527,7 +410,8 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       ORDER BY total_logs DESC
     `;
 
-    console.log('📊 Executing analytics query:', analyticsQuery);
+    console.log('?? Executing analytics query:', analyticsQuery);
+    console.log('?? Analytics parameters:', params);
     const analyticsData = await prisma.$queryRawUnsafe(analyticsQuery, ...params) as any[];
 
     // Get overall statistics
@@ -536,25 +420,39 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
         COUNT(*) as total_logs,
         COUNT(DISTINCT faculty_student_name) as unique_users,
         COUNT(DISTINCT laboratory_display) as unique_laboratories,
-        SUM(CASE WHEN usage_type = 'printing' THEN 1 ELSE 0 END) as total_printing,
         SUM(CASE WHEN usage_type = 'set-in-reservation' THEN 1 ELSE 0 END) as total_lab_usage,
-        COUNT(DISTINCT DATE(date)) as active_days
+        COUNT(DISTINCT reservation_date) as active_days
       FROM cit_lab_users_logs_view 
       ${finalWhereClause}
     `;
 
+    console.log('?? Executing stats query:', statsQuery);
     const statsData = await prisma.$queryRawUnsafe(statsQuery, ...params) as any[];
     const stats = statsData[0] || {};
+    console.log('?? Stats data:', stats);
+
+    // Convert BigInt values to regular numbers to prevent serialization errors
+    const serializedAnalyticsData = analyticsData.map(item => {
+      const serializedItem: any = {};
+      for (const key in item) {
+        const value = item[key];
+        if (typeof value === 'bigint') {
+          serializedItem[key] = Number(value);
+        } else {
+          serializedItem[key] = value;
+        }
+      }
+      return serializedItem;
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        analytics: analyticsData,
+        analytics: serializedAnalyticsData,
         statistics: {
           total_logs: parseInt(stats.total_logs) || 0,
           unique_users: parseInt(stats.unique_users) || 0,
           unique_laboratories: parseInt(stats.unique_laboratories) || 0,
-          total_printing: parseInt(stats.total_printing) || 0,
           total_lab_usage: parseInt(stats.total_lab_usage) || 0,
           active_days: parseInt(stats.active_days) || 0
         },
@@ -563,7 +461,13 @@ export const getCITLabUsersAnalytics = async (req: Request, res: Response) => {
       message: `Retrieved CIT Lab Users analytics grouped by ${group_by}`
     });
   } catch (error) {
-    console.error('Error fetching CIT Lab Users analytics:', error);
+    console.error('?? Error fetching CIT Lab Users analytics:', error);
+    console.error('?? Error details:', {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      query: req.query,
+      body: req.body
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch lab usage analytics',
@@ -577,6 +481,8 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
   try {
     const { limit = 50 } = req.query;
 
+    console.log('?? Fetching recent CIT Lab Users logs with limit:', limit);
+
     const query = `
       SELECT 
         log_id,
@@ -585,24 +491,46 @@ export const getRecentCITLabUsersLogs = async (req: Request, res: Response) => {
         laboratory_display,
         usage_type_display,
         purpose,
-        formatted_created_timestamp,
-        time_of_day
+        reservation_date_formatted,
+        created_at
       FROM cit_lab_users_logs_view
       WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) 
       ORDER BY created_at DESC
       LIMIT ?
     `;
 
+    console.log('?? Executing recent logs query:', query);
     const logs = await prisma.$queryRawUnsafe(query, parseInt(limit as string)) as any[];
+    console.log('?? Recent logs query successful, got', logs.length, 'records');
+
+    // Convert BigInt values to regular numbers to prevent serialization errors
+    const serializedLogs = logs.map(log => {
+      const serializedLog: any = {};
+      for (const key in log) {
+        const value = log[key];
+        if (typeof value === 'bigint') {
+          serializedLog[key] = Number(value);
+        } else {
+          serializedLog[key] = value;
+        }
+      }
+      return serializedLog;
+    });
 
     res.status(200).json({
       success: true,
-      data: logs,
+      data: serializedLogs,
       count: logs.length,
       message: `Retrieved ${logs.length} recent CIT Lab Users logs`
     });
   } catch (error) {
-    console.error('Error fetching recent CIT Lab Users logs:', error);
+    console.error('?? Error fetching recent CIT Lab Users logs:', error);
+    console.error('?? Error details:', {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      query: req.query,
+      body: req.body
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to fetch recent lab usage logs',

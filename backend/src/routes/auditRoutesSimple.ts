@@ -40,7 +40,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     // });
     
     try {
-      // console.log('🔍 Using optimized audit service with view tables...');
+      console.log('🔍 Using optimized audit service with view tables...');
       
       // Use the enhanced AuditService with view tables and role-based filtering
       const result = await AuditService.getAuditLogs({

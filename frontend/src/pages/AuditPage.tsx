@@ -24,7 +24,6 @@ interface AuditLog {
   user_lab_location: string;
   action_category: string;
   searchable_text: string;
-  ip_address_display: string;
 }
 
 const AuditPage = () => {
@@ -178,10 +177,8 @@ const AuditPage = () => {
               <div className="flex items-center justify-between p-2 border-b bg-gray-50 text-xs font-medium text-gray-700 rounded-t">
                 <div className="flex items-center space-x-2 flex-1 min-w-0">
                   <div className="w-12 text-center">Action</div>
-                  <div className="flex-1">Details</div>
-                </div>
-                <div className="text-right">
-                  <div>IP Address</div>
+                  <div>User</div>
+                  <div>Description</div>
                   <div>Date & Time</div>
                 </div>
               </div>
@@ -191,7 +188,7 @@ const AuditPage = () => {
               {logs.map((log) => (
                 <div key={log.id} className="flex items-center justify-between p-2 border rounded text-sm hover:bg-gray-50">
                   <div className="flex items-center space-x-2 flex-1 min-w-0">
-                    <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${getActionColor(log.action)} flex-shrink-0`}>
+                    <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${getActionColor(log.action)} shrink-0`}>
                       {log.action}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -201,8 +198,7 @@ const AuditPage = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 flex-shrink-0 text-right">
-                    <div className="font-mono text-xs">{log.ip_address_display}</div>
+                  <div className="text-xs text-gray-500 shrink-0 text-right">
                     <div className="text-xs">{formatDate(log.created_at)}</div>
                   </div>
                 </div>

@@ -4,47 +4,114 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// 1. GET ALL WORKSTATIONS (with assigned assets)
+// 1. GET ALL WORKSTATIONS (with view optimization + fallback)
 export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const user = req.user;
 
-    // Build where clause based on user role
-    let whereClause: any = {};
+    // Build SQL where conditions for view
+    let whereConditions: string[] = [];
+    const params: any[] = [];
 
     // Role-based access control
     if (user?.role === "Custodian") {
       if (user.lab_id) {
-        // Custodians can only see workstations from their assigned lab
-        whereClause.lab_id = user.lab_id;
+        whereConditions.push("lab_id = ?");
+        params.push(user.lab_id);
       } else {
-        // Unassigned custodians should see nothing
-        whereClause.lab_id = -1; // Impossible lab_id that will return no results
+        // Unassigned custodians see nothing
+        return res.json([]);
       }
     }
-    // Admins can see all workstations (no filtering needed)
 
-    const workstations = await prisma.workstations.findMany({
-      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-      include: {
-        laboratories: {
-          select: {
-            lab_id: true,
-            lab_name: true,
-            location: true,
+    const whereClause = whereConditions.length > 0
+      ? `WHERE ${whereConditions.join(" AND ")}`
+      : "";
+
+    let workstations: any[] = [];
+    let usedView = false;
+
+    try {
+      // Try optimized view first
+      workstations = await prisma.$queryRawUnsafe(`
+        SELECT 
+          workstation_id,
+          workstation_name,
+          lab_id,
+          status_id,
+          workstation_remarks,
+          created_at,
+          lab_name,
+          workstation_status,
+          asset_count,
+          last_maintenance_date,
+          last_report_date,
+          service_status_30d
+        FROM view_workstation_status_summary
+        ${whereClause}
+        ORDER BY workstation_name ASC
+      `, ...params);
+      
+      usedView = true;
+      console.log('✅ Using optimized view for workstations');
+    } catch (viewError) {
+      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+      
+      // Build Prisma where clause as fallback
+      const prismaWhere: any = {};
+      if (user?.role === "Custodian" && user.lab_id) {
+        prismaWhere.lab_id = user.lab_id;
+      }
+      
+      const prismaWorkstations = await prisma.workstations.findMany({
+        where: Object.keys(prismaWhere).length > 0 ? prismaWhere : undefined,
+        include: {
+          laboratories: {
+            select: {
+              lab_id: true,
+              lab_name: true,
+              location: true,
+            },
+          },
+          asset_statuses: true,
+          inventory_assets: {
+            include: {
+              asset_details: true,
+              units: true,
+            },
           },
         },
-        asset_statuses: true,
-        inventory_assets: {
-          include: {
-            asset_details: true,
-            units: true,
-          },
-        },
-      },
-    });
+      });
+      
+      return res.json(prismaWorkstations);
+    }
 
-    res.json(workstations);
+    if (usedView) {
+      // Transform view result to match Prisma structure
+      const transformedWorkstations = (workstations as any[]).map(ws => ({
+        workstation_id: Number(ws.workstation_id),
+        workstation_name: ws.workstation_name,
+        lab_id: Number(ws.lab_id),
+        status_id: Number(ws.status_id),
+        workstation_remarks: ws.workstation_remarks,
+        created_at: ws.created_at,
+        laboratories: ws.lab_name ? {
+          lab_id: Number(ws.lab_id),
+          lab_name: ws.lab_name,
+          location: null
+        } : null,
+        asset_statuses: ws.workstation_status ? {
+          status_name: ws.workstation_status
+        } : null,
+        inventory_assets: [], // Asset count available separately
+        asset_count: Number(ws.asset_count || 0),
+        last_maintenance_date: ws.last_maintenance_date,
+        last_report_date: ws.last_report_date,
+        service_status_30d: ws.service_status_30d
+      }));
+      
+      res.json(transformedWorkstations);
+    }
   } catch (error) {
     console.error("Error fetching workstations:", error);
     res.status(500).json({ error: "Failed to fetch workstations" });

@@ -41,7 +41,6 @@ export interface Complaint {
   created_at: string;
   updated_at: string;
   accepted_at?: string;
-  ip_address?: string;
   laboratories?: {
     lab_id: number;
     lab_name: string;

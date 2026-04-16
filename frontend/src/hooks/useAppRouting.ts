@@ -43,6 +43,7 @@ const getInitialPage = (): PageType => {
 export const useAppRouting = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageType>(getInitialPage);
+  const [urlParams, setUrlParams] = useState<URLSearchParams>(new URLSearchParams(window.location.search));
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -54,6 +55,9 @@ export const useAppRouting = () => {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
+      const search = window.location.search;
+      setUrlParams(new URLSearchParams(search));
+      
       if (path === "/public-forms") {
         setCurrentPage("public-forms");
       } else if (path === "/complaints") {
@@ -77,8 +81,15 @@ export const useAppRouting = () => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [user]);
 
-  const handleNavigate = (page: PageType) => {
-    setCurrentPage(page);
+  const handleNavigate = (pageWithParams: string) => {
+    // Parse page and parameters
+    const [page, queryString] = pageWithParams.split('?');
+    const params = queryString ? new URLSearchParams(queryString) : new URLSearchParams();
+    
+    // Set current page
+    setCurrentPage(page as PageType);
+    
+    // Update URL with parameters
     if (page === "public-forms") {
       window.history.pushState(null, "", "/public-forms");
     } else if (page === "complaints") {
@@ -92,13 +103,19 @@ export const useAppRouting = () => {
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
     } else {
-      window.history.pushState(null, "", "/");
+      // For pages like "archives?tab=cit-lab-users"
+      const url = queryString ? `/?${queryString}` : "/";
+      window.history.pushState(null, "", url);
     }
+    
+    // Update URL params state
+    setUrlParams(params);
   };
 
   return {
     currentPage,
     setCurrentPage,
     handleNavigate,
+    urlParams,
   };
 };

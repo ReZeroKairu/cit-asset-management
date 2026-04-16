@@ -6,9 +6,6 @@ const prisma = new PrismaClient();
 // Software Installation Controllers
 export const createSoftwareInstallation = async (req: Request, res: Response) => {
   try {
-    // Capture client IP address
-    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
-    
     const {
       faculty_name,
       date,
@@ -32,7 +29,6 @@ export const createSoftwareInstallation = async (req: Request, res: Response) =>
         prepared_by,
         feedback_date: feedback_date ? new Date(feedback_date) : null,
         user_id: user_id || null,
-        ip_address: clientIP
       }
     });
 
@@ -104,7 +100,7 @@ export const updateSoftwareInstallationStatus = async (req: Request, res: Respon
     const { status } = req.body;
 
     // Validate status against the enum
-    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed'];
+    const validStatuses = ['Pending', 'Custodian_Approved', 'Denied', 'Completed'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,

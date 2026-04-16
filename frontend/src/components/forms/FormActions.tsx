@@ -44,8 +44,8 @@ export const FormActions: React.FC<FormActionsProps> = ({
 
   const showEdit =
     userRole === "Custodian" &&
-    (form.status === "Admin_Approved" ||
-      (form.type === "software-install" && form.status === "Custodian_Approved"));
+    form.type === "software-install" &&
+    form.status === "Custodian_Approved";
 
   const showDownload = userRole === "Custodian" && !!onDownloadForm;
 

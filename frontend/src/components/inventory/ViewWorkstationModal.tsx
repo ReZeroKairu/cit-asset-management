@@ -396,7 +396,7 @@ const ViewWorkstationModal: React.FC<Props> = ({
                         <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                           <button
                             onClick={handleSelectAll}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-gray-700 hover:text-gray-900 transition-colors"
                             title={(() => {
                             const eligibleAssets = assets.filter(
                               (asset) => {
@@ -473,13 +473,13 @@ const ViewWorkstationModal: React.FC<Props> = ({
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <button
                               onClick={() => handleAssetSelection(asset.asset_id)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
+                              className="text-gray-700 hover:text-gray-900 transition-colors"
                               title={selectedAssets.includes(asset.asset_id) ? "Deselect" : "Select"}
                             >
                               {selectedAssets.includes(asset.asset_id) ? (
-                                <CheckSquare className="w-4 h-4" />
+                                <CheckSquare className="w-4 h-4 text-gray-900" />
                               ) : (
-                                <Square className="w-4 h-4" />
+                                <Square className="w-4 h-4 text-gray-900" />
                               )}
                             </button>
                           </td>

@@ -57,7 +57,7 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
 
         switch (formType) {
           case "software-install":
-            return apiUpdateSoftwareInstallationStatus(formId, "Admin_Approved");
+            return apiUpdateSoftwareInstallationStatus(formId, "Custodian_Approved");
           default:
             console.error("Unknown form type:", formType);
             return Promise.resolve();

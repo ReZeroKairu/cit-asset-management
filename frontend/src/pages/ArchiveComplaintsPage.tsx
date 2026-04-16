@@ -205,9 +205,6 @@ const ArchiveComplaintsPage = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    IP Address
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -270,9 +267,6 @@ const ArchiveComplaintsPage = () => {
                       <div className="text-xs text-gray-400">
                         Click row for details
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {complaint.ip_address || "Unknown"}
                     </td>
                   </tr>
                 ))}

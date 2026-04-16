@@ -63,9 +63,9 @@ const ArchiveFormsPage = () => {
       // Filter for archived/completed forms only - role-based filtering
       let archivedForms = transformedForms.filter((form) => {
         if (user?.role === "Admin") {
-          // Admin sees Admin_Approved and Completed statuses
+          // Admin sees Custodian_Approved and Completed statuses
           return (
-            form.status === "Admin_Approved" || form.status === "Completed"
+            form.status === "Custodian_Approved" || form.status === "Completed"
           );
         } else if (user?.role === "Custodian") {
           // Custodian sees only Completed and Denied statuses

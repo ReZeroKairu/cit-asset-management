@@ -19,7 +19,7 @@ import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
 import complaintsRoutes from "./routes/complaintsRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
-import auditRoutes from "./routes/auditRoutesSimple";
+import auditRoutes from "./routes/auditRoutesFallback";
 import { auditMiddleware } from "./middleware/audit";
 
 const app = express();
@@ -27,7 +27,9 @@ const prisma = new PrismaClient();
 
 // Security: Restrict CORS to your frontend and network IP
 // In development, allow all localhost origins
-const isDevelopment = process.env.NODE_ENV === "development";
+
+// This ensures that if it's undefined, it defaults to development rules
+const isDevelopment = process.env.NODE_ENV !== "production";
 app.use(
   cors({
     origin: isDevelopment ? [
@@ -70,7 +72,7 @@ app.use(
       "http://172.72.102.4:3001",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
 

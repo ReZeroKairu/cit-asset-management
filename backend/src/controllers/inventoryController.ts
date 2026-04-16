@@ -3,61 +3,156 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// 1. GET ALL ASSETS
+// 1. GET ALL ASSETS (with view optimization + fallback)
 export const getInventory = async (req: Request, res: Response) => {
   try {
     const { workstation_id, lab_id } = req.query;
     const user = req.user;
 
-    // Build where clause based on query parameters and user role
-    let whereClause: any = {};
-
-    if (workstation_id) {
-      whereClause.workstation_id = Number(workstation_id);
-    }
-
-    if (lab_id) {
-      whereClause.lab_id = Number(lab_id);
-    }
+    // Build SQL where conditions for view
+    let whereConditions: string[] = [];
+    const params: any[] = [];
 
     // Role-based access control
     if (user?.role === "Custodian") {
       if (user.lab_id) {
-        // Custodians can only see assets from their assigned lab
-        // If they're already filtering by their lab, allow it
-        // Otherwise, restrict to their lab
-        if (!whereClause.lab_id) {
-          whereClause.lab_id = user.lab_id;
-        } else if (whereClause.lab_id !== user.lab_id) {
-          // Custodian trying to access assets from a lab they're not assigned to
+        const requestedLabId = lab_id ? Number(lab_id) : user.lab_id;
+        if (lab_id && Number(lab_id) !== user.lab_id) {
           return res.status(403).json({ error: "Access denied: You can only view assets from your assigned laboratory" });
         }
+        whereConditions.push("lab_id = ?");
+        params.push(requestedLabId);
       } else {
-        // Unassigned custodians should see nothing
-        whereClause.lab_id = -1; // Impossible lab_id that will return no results
+        // Unassigned custodians see nothing
+        return res.json([]);
       }
+    } else if (lab_id) {
+      whereConditions.push("lab_id = ?");
+      params.push(Number(lab_id));
     }
-    // Admins can see all assets (no additional filtering needed)
 
-    const assets = await prisma.inventory_assets.findMany({
-      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-      include: {
-        asset_details: {
-          include: {
-            asset_statuses: true, // Include the status name (e.g. "Functional")
+    if (workstation_id) {
+      whereConditions.push("workstation_id = ?");
+      params.push(Number(workstation_id));
+    }
+
+    const whereClause = whereConditions.length > 0
+      ? `WHERE ${whereConditions.join(" AND ")}`
+      : "";
+
+    let assets: any[] = [];
+    let usedView = false;
+
+    try {
+      // Try optimized view first
+      assets = await prisma.$queryRawUnsafe(`
+        SELECT 
+          asset_id,
+          lab_id,
+          workstation_id,
+          unit_id,
+          date_added,
+          added_by_user_id,
+          property_tag_no,
+          quantity,
+          description,
+          serial_number,
+          date_of_purchase,
+          date_disposed,
+          disposed_by,
+          asset_remarks,
+          status_id,
+          asset_status,
+          lab_name,
+          lab_location,
+          unit_name,
+          device_type_name,
+          added_by_name
+        FROM view_asset_full_details
+        ${whereClause}
+        ORDER BY date_added DESC
+      `, ...params);
+      
+      usedView = true;
+      console.log('✅ Using optimized view for inventory');
+    } catch (viewError) {
+      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+      
+      // Build Prisma where clause as fallback
+      const prismaWhere: any = {};
+      if (user?.role === "Custodian" && user.lab_id) {
+        const requestedLabId = lab_id ? Number(lab_id) : user.lab_id;
+        if (!lab_id || Number(lab_id) === user.lab_id) {
+          prismaWhere.lab_id = requestedLabId;
+        }
+      } else if (lab_id) {
+        prismaWhere.lab_id = Number(lab_id);
+      }
+      if (workstation_id) {
+        prismaWhere.workstation_id = Number(workstation_id);
+      }
+      
+      const prismaAssets = await prisma.inventory_assets.findMany({
+        where: Object.keys(prismaWhere).length > 0 ? prismaWhere : undefined,
+        include: {
+          asset_details: {
+            include: {
+              asset_statuses: true,
+            },
           },
+          laboratories: true,
+          units: true,
+          users: true,
+          workstations: true,
         },
-        laboratories: true,
-        units: true,
-        users: true,
-        workstations: true, // Include workstation relationship
-      },
-      orderBy: {
-        date_added: "desc",
-      },
-    });
-    res.json(assets);
+        orderBy: {
+          date_added: "desc",
+        },
+      });
+      
+      return res.json(prismaAssets);
+    }
+
+    if (usedView) {
+      // Transform view result to match Prisma structure
+      const transformedAssets = (assets as any[]).map(asset => ({
+        asset_id: Number(asset.asset_id),
+        lab_id: Number(asset.lab_id),
+        workstation_id: Number(asset.workstation_id),
+        unit_id: Number(asset.unit_id),
+        date_added: asset.date_added,
+        added_by_user_id: Number(asset.added_by_user_id),
+        asset_details: {
+          property_tag_no: asset.property_tag_no,
+          quantity: Number(asset.quantity || 0),
+          description: asset.description,
+          serial_number: asset.serial_number,
+          date_of_purchase: asset.date_of_purchase,
+          date_disposed: asset.date_disposed,
+          disposed_by: asset.disposed_by,
+          asset_remarks: asset.asset_remarks,
+          status_id: Number(asset.status_id),
+          asset_statuses: {
+            status_name: asset.asset_status
+          }
+        },
+        laboratories: asset.lab_name ? {
+          lab_name: asset.lab_name,
+          location: asset.lab_location
+        } : null,
+        units: asset.unit_name ? {
+          unit_name: asset.unit_name
+        } : null,
+        users: asset.added_by_name ? {
+          full_name: asset.added_by_name
+        } : null,
+        workstations: null
+      }));
+      
+      res.json(transformedAssets);
+    }
   } catch (error) {
+    console.error("Error fetching inventory:", error);
     res.status(500).json({ error: "Failed to fetch assets" });
   }
 };
@@ -500,7 +595,7 @@ export const updateAsset = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to update asset", details: error instanceof Error ? error.message : String(error) });
   }
 };
-
+  
 // ✅ NEW: Get all asset statuses
 export const getAssetStatuses = async (req: Request, res: Response) => {
   try {

@@ -41,8 +41,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
           al.user_lab_location,
           al.action_category,
           al.priority_level,
-          al.searchable_text,
-          al.ip_address_display
+          al.searchable_text
         FROM audit_logs_view al
         WHERE 1=1
       `;

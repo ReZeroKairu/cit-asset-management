@@ -11,6 +11,7 @@ import {
   Wrench,
   ClipboardList,
   MessageSquare,
+  Users,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "../../api/dashboard";
 import { getLabSchedules } from "../../api/schedule";
@@ -126,12 +127,12 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
     }
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, tab?: string) => {
     if (page === "user-management" && user?.role !== "Admin") {
-      console.log("Access denied: Admin only");
       return;
     }
-    onNavigate(page);
+    const navigationString = tab ? `${page}?tab=${tab}` : page;
+    onNavigate(navigationString);
   };
 
   if (loading) {
@@ -223,6 +224,17 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
           iconColor="text-purple-600"
           subtitleColor="text-purple-600"
           onClick={() => handleNavigate(isAdmin ? "admin-reports" : "reports")}
+        />
+
+        <DashboardCard
+          title="Daily Lab Logs"
+          value={stats.dailyLabLogs || 0}
+          subtitle="Today's CIT Lab Users →"
+          icon={Users}
+          iconBgColor="bg-teal-100"
+          iconColor="text-teal-600"
+          subtitleColor="text-teal-600"
+          onClick={() => handleNavigate("archives", "cit-lab-users")}
         />
 
         {userRole !== "Admin" && (
