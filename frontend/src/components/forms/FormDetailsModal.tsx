@@ -38,7 +38,8 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getFormTypeLabel = (type: string) => {
+const getFormTypeLabel = (type: string | undefined) => {
+  if (!type) return "Unknown";
   switch (type) {
     case "software-install":
       return "Software Installation";

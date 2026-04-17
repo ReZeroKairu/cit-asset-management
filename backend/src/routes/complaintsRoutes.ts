@@ -12,8 +12,25 @@ const prisma = new PrismaClient();
 router.post(
   "/",
   validate(complaintSchema),
-  auditMiddleware("CREATE", "public complaint"),
   async (req, res) => {
+    // Custom audit logging for public complaints
+    const auditData: any = {
+      action: "CREATE",
+      description: "CREATE public complaint",
+      user_agent: req.headers['user-agent'] as string
+    };
+
+    // Add lab_id to audit data if available
+    if (req.body.lab_id) {
+      auditData.lab_id = req.body.lab_id;
+      auditData.user_id = null; // Public action, no user
+    }
+
+    // Create audit log
+    await (prisma as any).audit_logs.create({
+      data: auditData
+    });
+
     try {
       const {
         lab_id,
@@ -469,7 +486,7 @@ router.get("/analytics", authenticateToken, async (req, res) => {
       }
     }
 
-    // Get total complaints count
+    // Get total complaints count (all statuses)
     const totalComplaints = await prisma.complaints.count({
       where: whereClause,
     });
@@ -482,7 +499,10 @@ router.get("/analytics", authenticateToken, async (req, res) => {
       },
     });
 
-    // Get complaints grouped by laboratory (total)
+    // Define unfinished statuses for active calculations
+    const unfinishedStatuses = ["Open", "In_Progress"];
+
+    // Get complaints grouped by laboratory (all statuses)
     const labComplaints = await prisma.complaints.groupBy({
       by: ["lab_id"],
       where: whereClause,
@@ -541,6 +561,11 @@ router.get("/analytics", authenticateToken, async (req, res) => {
         labComplaints.find((lc) => lc.lab_id === labId)?._count.complaint_id ||
         0,
       resolved_count: resolvedLookup[labId] || 0,
+      active_count: Math.max(
+        0,
+        (labComplaints.find((lc) => lc.lab_id === labId)?._count.complaint_id || 0) -
+          (resolvedLookup[labId] || 0)
+      ),
     }));
 
     res.json({

@@ -178,11 +178,14 @@ const ComplaintsManagementPage = () => {
     })
     .sort((a, b) => a.lab_name.localeCompare(b.lab_name));
 
-  // Get unique workstations from filtered complaints
+  // Get unique workstations from unfinished complaints only (excluding resolved/denied)
   const uniqueWorkstations = Array.from(
     new Set(
       complaints
-        .filter((c) => labFilter === "all" || c.lab_id.toString() === labFilter)
+        .filter((c) =>
+          (labFilter === "all" || c.lab_id.toString() === labFilter) &&
+          ["Open", "In_Progress"].includes(c.status)
+        )
         .map((c) => c.workstation_id)
         .filter(Boolean)
     )

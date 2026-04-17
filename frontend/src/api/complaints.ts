@@ -297,5 +297,6 @@ export interface ComplaintsAnalyticsData {
     lab_name: string;
     total_count: number;
     resolved_count: number;
+    active_count: number;
   }>;
 }

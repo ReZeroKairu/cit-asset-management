@@ -345,7 +345,7 @@ const InventoryAnalyticsSection = () => {
                     <h4 className="text-sm font-medium text-gray-900 mb-2">
                       Lab Performance
                     </h4>
-                    <ResponsiveContainer width="100%" height={150}>
+                    <ResponsiveContainer width="100%" height={100}>
                       <BarChart data={maintenanceData.perLabAnalytics}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
@@ -460,37 +460,41 @@ const InventoryAnalyticsSection = () => {
                 </div>
                 <div className="text-xs text-gray-500">Resolved Complaints</div>
                 <div className="text-lg font-semibold text-gray-700 mt-2">
-                  {complaintsData.totalComplaints -
-                    complaintsData.totalResolvedComplaints}
+                  {complaintsData.totalComplaints - complaintsData.totalResolvedComplaints}
                 </div>
                 <div className="text-xs text-gray-500">Active Complaints</div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={complaintsData.labComplaints.map((lab) => ({
-                    ...lab,
-                    active_count: lab.total_count - lab.resolved_count,
-                  }))}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="lab_name"
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    fontSize={12}
-                  />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="total_count" fill="#3b82f6" name="Total" />
-                  <Bar
-                    dataKey="resolved_count"
-                    fill="#10b981"
-                    name="Resolved"
-                  />
-                  <Bar dataKey="active_count" fill="#f59e0b" name="Active" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-2">
+                {complaintsData.labComplaints.map((lab) => (
+                  <div key={lab.lab_name} className="bg-gray-50 rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">{lab.lab_name}</h4>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <BarChart
+                        data={[
+                          { type: 'Total', count: lab.total_count, fill: '#3b82f6' },
+                          { type: 'Resolved', count: lab.resolved_count, fill: '#10b981' },
+                          { type: 'Active', count: lab.active_count, fill: '#f59e0b' },
+                        ]}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="type" fontSize={12} />
+                        <YAxis fontSize={12} />
+                        <Tooltip 
+                          formatter={(value: any, _name: any, props: any) => {
+                            const item = props.payload;
+                            return [value, item.type];
+                          }}
+                        />
+                        <Bar dataKey="count">
+                          <Cell fill="#3b82f6" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#f59e0b" />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
