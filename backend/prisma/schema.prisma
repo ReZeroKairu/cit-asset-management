@@ -51,6 +51,7 @@ model complaints {
   created_at           DateTime          @default(now()) @db.Timestamp(0)
   updated_at           DateTime          @db.Timestamp(0)
   accepted_at          DateTime?         @db.Timestamp(0)
+  ip_address           String?           @db.VarChar(45)
   inventory_assets     inventory_assets? @relation(fields: [asset_id], references: [asset_id])
   users                users?            @relation(fields: [custodian_user_id], references: [user_id])
   laboratories         laboratories      @relation(fields: [lab_id], references: [lab_id])
@@ -319,11 +320,13 @@ model software_installations {
   laboratory           String                        @db.VarChar(20)
   software_list        String                        @db.Text
   requested_by         String                        @db.VarChar(100)
+  user_type            String?                        @db.VarChar(20)
   installation_remarks String?                       @db.Text
   prepared_by          String?                       @db.VarChar(100)
   feedback_date        DateTime?                     @db.Date
   status               software_installations_status @default(Pending)
   created_at           DateTime                      @default(now()) @db.Timestamp(0)
+  ip_address           String?                       @db.VarChar(45)
   users                users?                        @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -396,7 +399,7 @@ model cit_lab_logs {
   log_id               Int      @id @default(autoincrement())
   date                 DateTime @db.Date
   time_in              String   @db.VarChar(5)  // HH:MM format
-  time_out             String?  @db.VarChar(5)  // HH:MM format, optional
+  time_out             String   @db.VarChar(5)  // HH:MM format, now required
   usage_type           String   @db.VarChar(20)
   faculty_student_name String   @db.VarChar(100)
   year_level           String?  @db.VarChar(20)
@@ -406,6 +409,7 @@ model cit_lab_logs {
   monitored_by         String?  @db.VarChar(100)
   user_type            String?  @db.VarChar(20)
   created_at           DateTime @default(now()) @db.Timestamp(0)
+  ip_address           String?  @db.VarChar(45)
 
   @@index([created_at])
   @@index([laboratory])

@@ -59,6 +59,7 @@ export const createPublicSoftwareInstallation = async (
       laboratory,
       software_list,
       requested_by,
+      user_type,
       installation_remarks,
       prepared_by,
     } = req.body;
@@ -67,6 +68,16 @@ export const createPublicSoftwareInstallation = async (
       laboratory
     );
 
+    // Get client IP address
+    const getClientIP = (req: any) => {
+      return req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress ||
+             (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+             req.ip;
+    };
+
     const softwareInstallation = await prisma.software_installations.create({
       data: {
         date: new Date(date),
@@ -74,10 +85,12 @@ export const createPublicSoftwareInstallation = async (
         laboratory,
         software_list,
         requested_by,
+        user_type,
         installation_remarks,
         prepared_by,
         user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
         status: "Pending", // Default status for public submissions
+        ip_address: getClientIP(req),
       },
     });
 

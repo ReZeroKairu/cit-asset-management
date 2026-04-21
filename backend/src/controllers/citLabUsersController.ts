@@ -30,6 +30,9 @@ export const createCITLabUser = async (req: Request, res: Response) => {
     if (!time_in) {
       validationErrors.push('Time in is required');
     }
+    if (!time_out) {
+      validationErrors.push('Time out is required');
+    }
     if (!usage_type) {
       validationErrors.push('Usage type is required');
     }
@@ -64,11 +67,21 @@ export const createCITLabUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Get client IP address
+    const getClientIP = (req: any) => {
+      return req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress ||
+             (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+             req.ip;
+    };
+
     const citLabLog = await prisma.cit_lab_logs.create({
       data: {
         date: new Date(date),
         time_in,
-        time_out: time_out || null,
+        time_out,
         usage_type,
         faculty_student_name,
         user_type: user_type,
@@ -77,6 +90,7 @@ export const createCITLabUser = async (req: Request, res: Response) => {
         ws_number,
         purpose,
         monitored_by,
+        ip_address: getClientIP(req),
       }
     });
 

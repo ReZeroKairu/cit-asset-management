@@ -15,6 +15,7 @@ export interface PublicSoftwareInstallationData {
   laboratory: string;
   software_list: string;
   requested_by: string;
+  user_type: string;
   approved_by?: string;
   installation_remarks?: string;
   prepared_by?: string;
@@ -32,6 +33,11 @@ export const submitPublicSoftwareInstallation = async (data: PublicSoftwareInsta
 
   if (!response.ok) {
     const error = await response.json();
+    // Handle validation errors specifically
+    if (error.message === 'Validation failed' && error.errors) {
+      const errorMessages = error.errors.map((err: any) => `${err.field}: ${err.message}`).join('\n');
+      throw new Error(`Validation failed:\n${errorMessages}`);
+    }
     throw new Error(error.message || 'Failed to submit software installation request');
   }
 

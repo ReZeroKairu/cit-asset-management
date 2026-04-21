@@ -70,10 +70,12 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
     laboratory: '',
     software_list: '',
     requested_by: '', // Default value for public submissions
+    user_type: 'Faculty', // Set default user type
     approved_by: '',
     installation_remarks: '',
     prepared_by: ''
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // If assignedLab is provided, pre-fill the laboratory field.
   useEffect(() => {
@@ -169,8 +171,35 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
       return;
     }
     
-    if (!formData.faculty_name || !formData.laboratory || !formData.software_list) {
-      alert('Please fill in all required fields');
+    // Field-specific validation
+    const validationErrors: Record<string, string> = {};
+    
+    if (!formData.faculty_name.trim()) {
+      validationErrors.faculty_name = "Please enter faculty name";
+    }
+    
+    if (!formData.laboratory) {
+      validationErrors.laboratory = "Please select a laboratory";
+    }
+    
+    if (!formData.software_list.trim()) {
+      validationErrors.software_list = "Please list the software to be installed";
+    }
+    
+    if (!formData.requested_by.trim()) {
+      validationErrors.requested_by = "Please enter who requested this installation";
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      
+      // Scroll to first error field
+      const firstErrorField = document.querySelector('[data-error="true"]') as HTMLElement;
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+      }
+      
       return;
     }
 
@@ -195,6 +224,7 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
         laboratory: '',
         software_list: '',
         requested_by: '', // Default value for public submissions
+        user_type: 'Faculty', // Set default user type
         approved_by: '',
         installation_remarks: '',
         prepared_by: ''
@@ -232,22 +262,40 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="user-type">User Type</Label>
+          <Input
+            id="user-type"
+            value="Faculty"
+            disabled
+            readOnly
+            className="bg-gray-100 cursor-not-allowed"
+          />
+          <p className="text-xs text-gray-500 mt-1">This form is for faculty members only</p>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="faculty_name">Faculty Name *</Label>
           <Input
             id="faculty_name"
             value={formData.faculty_name}
             onChange={(e) => handleInputChange('faculty_name', e.target.value)}
             placeholder="Enter faculty name"
-            className="capitalize-first"
+            className={`capitalize-first ${errors.faculty_name ? "border-red-500 outline-red-500" : ""}`}
+            data-error={errors.faculty_name ? "true" : undefined}
             required
             disabled={disabled}
           />
+          {errors.faculty_name && (
+            <span className="text-red-500 text-sm">
+              {errors.faculty_name}
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="laboratory">Laboratory *</Label>
           <Select value={formData.laboratory} onValueChange={(value) => handleInputChange('laboratory', value)} required disabled={disabled}>
-            <SelectTrigger>
+            <SelectTrigger className={errors.laboratory ? "border-red-500 outline-red-500" : ""} data-error={errors.laboratory ? "true" : undefined}>
               <SelectValue placeholder="Select laboratory" />
             </SelectTrigger>
             <SelectContent>
@@ -258,17 +306,30 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
               ))}
             </SelectContent>
           </Select>
+          {errors.laboratory && (
+            <span className="text-red-500 text-sm">
+              {errors.laboratory}
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="requested_by">Requested By</Label>
+          <Label htmlFor="requested_by">Requested By *</Label>
           <Input
             id="requested_by"
             value={formData.requested_by}
             onChange={(e) => handleInputChange('requested_by', e.target.value)}
             placeholder="Your name"
+            className={errors.requested_by ? "border-red-500 outline-red-500" : ""}
+            data-error={errors.requested_by ? "true" : undefined}
+            required
             disabled={disabled}
           />
+          {errors.requested_by && (
+            <span className="text-red-500 text-sm">
+              {errors.requested_by}
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -306,9 +367,16 @@ export const PublicSoftwareInstallForm = ({ onSubmit, disabled = false, custodia
           onChange={(e) => handleInputChange('software_list', e.target.value)}
           placeholder="List the software to be installed (one per line or comma-separated)"
           rows={4}
+          className={errors.software_list ? "border-red-500 outline-red-500" : ""}
+          data-error={errors.software_list ? "true" : undefined}
           required
           disabled={disabled}
         />
+        {errors.software_list && (
+          <span className="text-red-500 text-sm">
+            {errors.software_list}
+          </span>
+        )}
         <p className="text-sm text-gray-500">
           Example: Adobe Photoshop, Microsoft Office, AutoCAD, etc.
         </p>

@@ -11,6 +11,12 @@ export const nameSchema = z.string()
   .max(100, "Name must be less than 100 characters")
   .regex(/^[a-zA-Z\s.-]+$/, "Name can only contain letters, spaces, dots, and hyphens");
 
+// More lenient name schema for public forms
+export const publicNameSchema = z.string()
+  .min(2, "Name must be at least 2 characters")
+  .max(100, "Name must be less than 100 characters")
+  .regex(/^[a-zA-Z\s\p{L}\p{M}.'-]+$/u, "Name can only contain letters, spaces, dots, hyphens, and apostrophes");
+
 export const emailSchema = z.string()
   .min(5, "Email must be at least 5 characters")
   .max(100, "Email must be less than 100 characters")
@@ -38,10 +44,11 @@ export const purposeSchema = z.string()
 // Software Installation Validation
 export const softwareInstallationSchema = z.object({
   date: dateSchema,
-  faculty_name: nameSchema,
+  faculty_name: publicNameSchema,
   laboratory: z.string().min(1, "Laboratory is required"),
-  software_list: z.string().min(5, "Software list must be at least 5 characters"),
-  requested_by: nameSchema,
+  software_list: z.string().min(3, "Software list must be at least 3 characters"),
+  requested_by: publicNameSchema,
+  user_type: z.string().min(1, "User type is required"),
   installation_remarks: z.string().max(500, "Remarks must be less than 500 characters").optional().nullable(),
   prepared_by: z.string().optional().nullable()
 });

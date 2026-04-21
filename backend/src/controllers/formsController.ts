@@ -18,6 +18,16 @@ export const createSoftwareInstallation = async (req: Request, res: Response) =>
       user_id
     } = req.body;
 
+    // Get client IP address
+    const getClientIP = (req: any) => {
+      return req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress ||
+             (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+             req.ip;
+    };
+
     const softwareInstallation = await prisma.software_installations.create({
       data: {
         faculty_name,
@@ -29,6 +39,7 @@ export const createSoftwareInstallation = async (req: Request, res: Response) =>
         prepared_by,
         feedback_date: feedback_date ? new Date(feedback_date) : null,
         user_id: user_id || null,
+        ip_address: getClientIP(req),
       }
     });
 

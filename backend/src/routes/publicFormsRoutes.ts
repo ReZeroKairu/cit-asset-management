@@ -10,7 +10,7 @@ import { authenticateToken } from '../middleware/auth';
 const router = express.Router();
 
 // Public form submission routes (no authentication required)
-router.post('/software-installations', auditMiddleware("CREATE", "public software installation"), createPublicSoftwareInstallation);
+router.post('/software-installations', validate(softwareInstallationSchema), auditMiddleware("CREATE", "public software installation"), createPublicSoftwareInstallation);
 router.post('/cit-lab-users', auditMiddleware("CREATE", "cit lab users log"), createCITLabUser);
 
 // Protected view routes for CIT Lab Users logs (authentication required)

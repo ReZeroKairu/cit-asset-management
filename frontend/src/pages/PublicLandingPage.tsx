@@ -30,7 +30,7 @@ const PublicLandingPage = () => {
                     Submit Forms
                   </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Submit requests for software installation without login.
+                    Submit requests for software installation.
                   </p>
                 </div>
               </div>
@@ -39,7 +39,7 @@ const PublicLandingPage = () => {
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
-                Access Public Forms
+                Submit Form
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </CardContent>
@@ -56,8 +56,7 @@ const PublicLandingPage = () => {
                     Submit Complaint
                   </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Report issues with laboratory equipment, software, or
-                    facilities.
+                    Report issues with laboratory equipment.
                   </p>
                 </div>
               </div>
@@ -83,8 +82,7 @@ const PublicLandingPage = () => {
                     CIT Lab Users
                   </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    For CIT Students & Faculty Laboratory and Workstation usage.
-                    Fill out this log to track and monitor your records.
+                    For CIT Students & Faculty only. Log your Laboratory and Workstation usage.
                   </p>
                 </div>
               </div>
@@ -93,7 +91,7 @@ const PublicLandingPage = () => {
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
-                Log Lab Usage
+                Log Usage
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </CardContent>
@@ -110,7 +108,7 @@ const PublicLandingPage = () => {
                     Staff Portal
                   </h2>
                   <p className="text-gray-600 leading-relaxed">
-                    Login to access the full management system for staff and
+                    Login for custodians and
                     administrators.
                   </p>
                 </div>
@@ -120,7 +118,7 @@ const PublicLandingPage = () => {
                 variant="outline"
                 className="w-full mt-4 py-3 text-base font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
-                Staff Login
+                Login
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </CardContent>

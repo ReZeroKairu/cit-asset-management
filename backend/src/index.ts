@@ -86,11 +86,12 @@ const publicFormsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 6, // Allow 6 submissions per IP per hour
   message: {
-    error: "Too many form submissions. Please try again in an hour.",
+    error: "Form submission limit reached. Please try again in an hour.",
     retryAfter: "1 hour",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Suppress warning for school network
   // Apply rate limiting only to POST requests
   skip: (req) => req.method !== "POST",
 });

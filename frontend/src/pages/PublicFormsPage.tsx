@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { FileText, CheckCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle, ArrowLeft } from "lucide-react";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
 import {
   submitPublicSoftwareInstallation,
@@ -17,6 +17,11 @@ interface SubmittedForm {
     usage_type?: string;
     purpose?: string;
     software_list?: string;
+    laboratory?: string;
+    date?: string;
+    requested_by?: string;
+    installation_remarks?: string;
+    prepared_by?: string;
     approved_by?: string;
   };
   result?: {
@@ -32,7 +37,6 @@ interface FormError {
 }
 
 const PublicFormsPage = () => {
-  const [activeTab, setActiveTab] = useState("software-install");
   const [submittedForm, setSubmittedForm] = useState<SubmittedForm | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,8 +57,7 @@ const PublicFormsPage = () => {
         submittedAt: new Date().toISOString(),
       });
 
-      // Show success message
-      setActiveTab("success");
+      // Success is handled by the submittedForm state
     } catch (error: unknown) {
       console.error("Error submitting form:", error);
 
@@ -104,25 +107,9 @@ const PublicFormsPage = () => {
           </div>
         </div>
 
-        {/* Form selection tabs */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex flex-wrap sm:flex sm:space-x-8 gap-2 sm:gap-0">
-            <button
-              className={`pb-3 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center gap-2 whitespace-nowrap ${
-                activeTab === "software-install"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-              onClick={() => setActiveTab("software-install")}
-            >
-              <FileText className="w-4 h-4" />
-              Software Install
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab content */}
-        {activeTab === "success" && submittedForm && (
+        
+        {/* Success message */}
+        {submittedForm && (
           <div className="space-y-6">
             <Card>
               <CardContent className="p-6 text-center">
@@ -153,9 +140,27 @@ const PublicFormsPage = () => {
                       {submittedForm.data.user_type || "N/A"}
                     </p>
                     <p>
-                      <strong>Approved By:</strong>{" "}
-                      {submittedForm.data.approved_by}
+                      <strong>Laboratory:</strong>{" "}
+                      {submittedForm.data.laboratory || "N/A"}
                     </p>
+                    <p>
+                      <strong>Date:</strong>{" "}
+                      {submittedForm.data.date ? new Date(submittedForm.data.date).toLocaleDateString() : "N/A"}
+                    </p>
+                    <p>
+                      <strong>Software List:</strong>{" "}
+                      {submittedForm.data.software_list || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Requested By:</strong>{" "}
+                      {submittedForm.data.requested_by || "N/A"}
+                    </p>
+                    {submittedForm.data.installation_remarks && (
+                      <p>
+                        <strong>Installation Remarks:</strong>{" "}
+                        {submittedForm.data.installation_remarks}
+                      </p>
+                    )}
                     {submittedForm.data.approved_by && (
                       <p>
                         <strong>Approved By:</strong>{" "}
@@ -169,14 +174,20 @@ const PublicFormsPage = () => {
                   </div>
                 </div>
                 <div className="space-y-4">
-                                  </div>
+                  <Button
+                    onClick={() => setSubmittedForm(null)}
+                    className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  >
+                    Submit Another Form
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
 
         {/* Software Installation Form */}
-        {activeTab === "software-install" && (
+        {!submittedForm && (
           <div className="space-y-6">
             <Card>
               <CardContent className="p-4 sm:p-6">
