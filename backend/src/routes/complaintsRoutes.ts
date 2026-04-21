@@ -35,6 +35,7 @@ router.post(
       const {
         lab_id,
         workstation_id,
+        asset_id,
         faculty_student_name,
         user_type,
         year_level,
@@ -67,22 +68,88 @@ router.post(
         }
       }
 
+      // Check for existing pending complaints for the same asset/workstation/lab
+      let existingComplaint = null;
+      
+      if (asset_id && asset_id !== "") {
+        // Check for existing complaints for this specific asset
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            asset_id: parseInt(asset_id),
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      } else if (workstation_id && workstation_id !== "") {
+        // Check for existing complaints for this workstation (no asset specified)
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            workstation_id: parseInt(workstation_id),
+            asset_id: null, // Only block if no specific asset complaint exists
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      } else {
+        // Check for existing complaints in the same lab
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            lab_id: parseInt(lab_id),
+            workstation_id: null,
+            asset_id: null,
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      }
+
+      if (existingComplaint) {
+        let conflictMessage = "A complaint is already pending";
+        if (asset_id && asset_id !== "") {
+          conflictMessage = `A complaint is already pending for this asset`;
+        } else if (existingComplaint.workstation_id) {
+          conflictMessage = `A complaint is already pending for this workstation`;
+        } else {
+          conflictMessage = `A complaint is already pending for this laboratory`;
+        }
+        
+        return res.status(409).json({ 
+          message: conflictMessage,
+          existingComplaintId: existingComplaint.complaint_id
+        });
+      }
+
+      // Get client IP address
+      const getClientIP = (req: any) => {
+        return req.headers['x-forwarded-for'] || 
+               req.headers['x-real-ip'] || 
+               req.connection?.remoteAddress || 
+               req.socket?.remoteAddress ||
+               (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+               req.ip;
+      };
+
       // Create complaint
       const complaint = await prisma.complaints.create({
         data: {
           lab_id,
           workstation_id: workstation_id || null,
+          asset_id: asset_id ? parseInt(asset_id) : null,
           faculty_student_name,
           user_type,
           year_level: year_level || null,
           issue_description,
           asset_info: asset_info || null,
+          ip_address: getClientIP(req),
           status: "Open",
           monitored_by: laboratory.users[0]?.full_name || null,
           approved_by: laboratory.users[0]?.full_name || null,
           custodian_user_id: laboratory.users[0]?.user_id || null,
           updated_at: new Date(),
-        },
+        } as any,
         include: {
           laboratories: true,
           workstations: true,
@@ -401,6 +468,60 @@ router.post(
 
       if (!laboratory) {
         return res.status(400).json({ message: "Invalid laboratory" });
+      }
+
+      // Check for existing pending complaints for the same asset/workstation/lab
+      let existingComplaint = null;
+      
+      if (asset_id && asset_id !== "") {
+        // Check for existing complaints for this specific asset
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            asset_id: parseInt(asset_id),
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      } else if (workstation_id && workstation_id !== "") {
+        // Check for existing complaints for this workstation (no asset specified)
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            workstation_id: parseInt(workstation_id),
+            asset_id: null, // Only block if no specific asset complaint exists
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      } else {
+        // Check for existing complaints in the same lab
+        existingComplaint = await prisma.complaints.findFirst({
+          where: {
+            lab_id: parseInt(lab_id),
+            workstation_id: null,
+            asset_id: null,
+            status: {
+              in: ['Open', 'In_Progress']
+            }
+          }
+        });
+      }
+
+      if (existingComplaint) {
+        let conflictMessage = "A complaint is already pending";
+        if (asset_id && asset_id !== "") {
+          conflictMessage = `A complaint is already pending for this asset`;
+        } else if (existingComplaint.workstation_id) {
+          conflictMessage = `A complaint is already pending for this workstation`;
+        } else {
+          conflictMessage = `A complaint is already pending for this laboratory`;
+        }
+        
+        return res.status(409).json({ 
+          message: conflictMessage,
+          existingComplaintId: existingComplaint.complaint_id
+        });
       }
 
       // Create complaint with auto-generated number

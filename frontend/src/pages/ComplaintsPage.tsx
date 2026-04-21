@@ -33,7 +33,7 @@ const ComplaintsPage = () => {
       ) {
         alert("Maximum submission reached. Please try again in an hour.");
       } else {
-        alert("Error submitting complaint. Please try again.");
+        alert(error.message || "Error submitting complaint. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
