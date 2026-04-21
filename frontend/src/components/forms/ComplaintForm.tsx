@@ -175,6 +175,8 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
 
     if (!formData.issue_description.trim()) {
       validationErrors.issue_description = "Please describe the issue";
+    } else if (formData.issue_description.trim().length < 3) {
+      validationErrors.issue_description = "Issue description must be at least 3 characters";
     }
 
     if (!formData.selected_asset?.asset_id) {
