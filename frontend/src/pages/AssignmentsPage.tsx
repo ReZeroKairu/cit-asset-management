@@ -219,8 +219,8 @@ const AssignmentsPage: React.FC = () => {
                             )
                           }
                         >
-                          <option value="">Select Laboratory</option>
-                          <option value="">-- Remove Assignment --</option>
+                          <option value="" disabled hidden>Select Laboratory</option>
+                          <option value="">Remove Assignment</option>
                           {laboratories.map((lab) => (
                             <option key={lab.lab_id} value={lab.lab_id}>
                               {lab.lab_name}{" "}
