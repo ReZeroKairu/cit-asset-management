@@ -4,11 +4,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// 1. GET ALL WORKSTATIONS (with view optimization + fallback)
+// 1. GET ALL WORKSTATIONS (with view optimization + asset fetching)
 export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const user = req.user;
-    const includeAssets = req.query.include_assets === "true";
+    const includeAssets = req.query.includeAssets === 'true';
 
     // Build SQL where conditions for view
     let whereConditions: string[] = [];
@@ -32,8 +32,31 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
     let workstations: any[] = [];
     let usedView = false;
 
-    if (includeAssets) {
-      // Directly use Prisma with assets included
+    try {
+      // Try optimized view first
+      workstations = await prisma.$queryRawUnsafe(`
+        SELECT 
+          workstation_id,
+          workstation_name,
+          lab_id,
+          status_id,
+          workstation_remarks,
+          created_at,
+          lab_name,
+          lab_location,
+          workstation_status,
+          asset_count,
+          last_maintenance_date,
+          last_report_date,
+          service_status_30d
+        FROM view_workstation_status_summary
+        ${whereClause}
+        ORDER BY workstation_name ASC
+      `, ...params);
+      
+      usedView = true;
+    } catch (viewError) {
+      // Build Prisma where clause as fallback
       const prismaWhere: any = {};
       if (user?.role === "Custodian" && user.lab_id) {
         prismaWhere.lab_id = user.lab_id;
@@ -60,63 +83,11 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
       });
       
       return res.json(prismaWorkstations);
-    } else {
-      try {
-        // Try optimized view first
-        workstations = await prisma.$queryRawUnsafe(`
-        SELECT 
-          workstation_id,
-          workstation_name,
-          lab_id,
-          status_id,
-          workstation_remarks,
-          created_at,
-          lab_name,
-          lab_location,
-          workstation_status,
-          asset_count,
-          last_maintenance_date,
-          last_report_date,
-          service_status_30d
-        FROM view_workstation_status_summary
-        ${whereClause}
-        ORDER BY workstation_name ASC
-      `, ...params);
-      
-        usedView = true;
-      } catch (viewError) {
-        // Build Prisma where clause as fallback
-        const prismaWhere: any = {};
-        if (user?.role === "Custodian" && user.lab_id) {
-          prismaWhere.lab_id = user.lab_id;
-        }
-        
-        const prismaWorkstations = await prisma.workstations.findMany({
-          where: Object.keys(prismaWhere).length > 0 ? prismaWhere : undefined,
-          include: {
-            laboratories: {
-              select: {
-                lab_id: true,
-                lab_name: true,
-                location: true,
-              },
-            },
-            asset_statuses: true,
-            inventory_assets: {
-              include: {
-                asset_details: true,
-                units: true,
-              },
-            },
-          },
-        });
-        
-        return res.json(prismaWorkstations);
-      }
+    }
 
-      if (usedView) {
-        // Transform view result to match Prisma structure
-        const transformedWorkstations = (workstations as any[]).map(ws => ({
+    if (usedView) {
+      // Transform view result to match Prisma structure
+      let transformedWorkstations: any[] = (workstations as any[]).map(ws => ({
         workstation_id: Number(ws.workstation_id),
         workstation_name: ws.workstation_name,
         lab_id: Number(ws.lab_id),
@@ -131,15 +102,45 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
         asset_statuses: ws.workstation_status ? {
           status_name: ws.workstation_status
         } : null,
-        inventory_assets: [], // Asset count available separately
+        inventory_assets: [], // Will be populated if needed
         asset_count: Number(ws.asset_count || 0),
         last_maintenance_date: ws.last_maintenance_date,
         last_report_date: ws.last_report_date,
         service_status_30d: ws.service_status_30d
       }));
+
+      // If assets are needed (for workstation reports), fetch them separately
+      if (includeAssets && transformedWorkstations.length > 0) {
+        const workstationIds = transformedWorkstations.map(ws => ws.workstation_id);
+        
+        const assets = await prisma.inventory_assets.findMany({
+          where: {
+            workstation_id: {
+              in: workstationIds
+            }
+          },
+          include: {
+            asset_details: true,
+            units: true,
+          },
+        });
+
+        // Group assets by workstation_id
+        const assetsByWorkstation = assets.reduce((acc, asset) => {
+          const wsId = asset.workstation_id;
+          if (wsId && !acc[wsId]) acc[wsId] = [];
+          if (wsId) acc[wsId].push(asset);
+          return acc;
+        }, {} as Record<number, any[]>);
+
+        // Attach assets to workstations
+        transformedWorkstations = transformedWorkstations.map(ws => ({
+          ...ws,
+          inventory_assets: assetsByWorkstation[ws.workstation_id] || []
+        }));
+      }
       
       res.json(transformedWorkstations);
-      }
     }
   } catch (error) {
     console.error("Error fetching workstations:", error);
