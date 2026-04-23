@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
     const user = req.user;
+    const includeAssets = req.query.include_assets === "true";
 
     // Build SQL where conditions for view
     let whereConditions: string[] = [];
@@ -31,31 +32,8 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
     let workstations: any[] = [];
     let usedView = false;
 
-    try {
-      // Try optimized view first
-      workstations = await prisma.$queryRawUnsafe(`
-        SELECT 
-          workstation_id,
-          workstation_name,
-          lab_id,
-          status_id,
-          workstation_remarks,
-          created_at,
-          lab_name,
-          lab_location,
-          workstation_status,
-          asset_count,
-          last_maintenance_date,
-          last_report_date,
-          service_status_30d
-        FROM view_workstation_status_summary
-        ${whereClause}
-        ORDER BY workstation_name ASC
-      `, ...params);
-      
-      usedView = true;
-    } catch (viewError) {
-      // Build Prisma where clause as fallback
+    if (includeAssets) {
+      // Directly use Prisma with assets included
       const prismaWhere: any = {};
       if (user?.role === "Custodian" && user.lab_id) {
         prismaWhere.lab_id = user.lab_id;
@@ -82,11 +60,63 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
       });
       
       return res.json(prismaWorkstations);
-    }
+    } else {
+      try {
+        // Try optimized view first
+        workstations = await prisma.$queryRawUnsafe(`
+        SELECT 
+          workstation_id,
+          workstation_name,
+          lab_id,
+          status_id,
+          workstation_remarks,
+          created_at,
+          lab_name,
+          lab_location,
+          workstation_status,
+          asset_count,
+          last_maintenance_date,
+          last_report_date,
+          service_status_30d
+        FROM view_workstation_status_summary
+        ${whereClause}
+        ORDER BY workstation_name ASC
+      `, ...params);
+      
+        usedView = true;
+      } catch (viewError) {
+        // Build Prisma where clause as fallback
+        const prismaWhere: any = {};
+        if (user?.role === "Custodian" && user.lab_id) {
+          prismaWhere.lab_id = user.lab_id;
+        }
+        
+        const prismaWorkstations = await prisma.workstations.findMany({
+          where: Object.keys(prismaWhere).length > 0 ? prismaWhere : undefined,
+          include: {
+            laboratories: {
+              select: {
+                lab_id: true,
+                lab_name: true,
+                location: true,
+              },
+            },
+            asset_statuses: true,
+            inventory_assets: {
+              include: {
+                asset_details: true,
+                units: true,
+              },
+            },
+          },
+        });
+        
+        return res.json(prismaWorkstations);
+      }
 
-    if (usedView) {
-      // Transform view result to match Prisma structure
-      const transformedWorkstations = (workstations as any[]).map(ws => ({
+      if (usedView) {
+        // Transform view result to match Prisma structure
+        const transformedWorkstations = (workstations as any[]).map(ws => ({
         workstation_id: Number(ws.workstation_id),
         workstation_name: ws.workstation_name,
         lab_id: Number(ws.lab_id),
@@ -109,6 +139,7 @@ export const getAllWorkstations = async (req: Request, res: Response) => {
       }));
       
       res.json(transformedWorkstations);
+      }
     }
   } catch (error) {
     console.error("Error fetching workstations:", error);
