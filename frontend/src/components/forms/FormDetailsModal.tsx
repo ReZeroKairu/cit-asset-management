@@ -176,7 +176,7 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-99999 flex items-center justify-center p-4"
+        className="fixed inset-0 backdrop-blur-md bg-black/20 z-99999 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <div
