@@ -1,35 +1,36 @@
-import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from "express";
+import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
+import { config } from "../config/config";
 
 const prisma = new PrismaClient();
 
 export const auditMiddleware = (action: string, entityType: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     // console.log(`🔍 Audit middleware called: ${action} ${entityType}`);
-    
+
     // Store original res.json to intercept responses
     const originalJson = res.json;
     let responseData: any;
     let statusCode: number;
 
-    res.json = function(data: any) {
+    res.json = function (data: any) {
       responseData = data;
       statusCode = res.statusCode;
       return originalJson.call(this, data);
     };
 
     // Handle the audit logging after response is sent
-    res.on('finish', async () => {
+    res.on("finish", async () => {
       // console.log(`✅ Response finished with status: ${statusCode}`);
-      
+
       // Log successful responses (2xx status codes)
       if (statusCode >= 200 && statusCode < 300) {
         // console.log(`✅ Successful response, creating audit log`);
         try {
           // Try to get user info from multiple sources
           let userId: number | null = null;
-          
+
           // 1. Check if user is already attached to request (from previous middleware)
           if (req.user && req.user.userId) {
             userId = req.user.userId;
@@ -40,22 +41,21 @@ export const auditMiddleware = (action: string, entityType: string) => {
           }
           // 3. Try to get from Authorization header (fallback)
           else {
-            const token = req.headers.authorization?.replace('Bearer ', '');
+            const token = req.headers.authorization?.replace("Bearer ", "");
             if (token) {
               try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+                const decoded = jwt.verify(token, config.jwtSecret) as any;
                 userId = decoded.userId;
               } catch (jwtError) {
-                console.log('❌ JWT decode failed:', jwtError);
+                // JWT decode failed, continue without user ID
               }
             }
           }
 
           const auditData: any = {
             action,
-            description: `${action} ${entityType}${req.params.id ? ` #${req.params.id}` : ''}`,
-            ip_address: req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] as string,
-            user_agent: req.headers['user-agent'] as string
+            description: `${action} ${entityType}${req.params.id ? ` #${req.params.id}` : ""}`,
+            user_agent: req.headers["user-agent"] as string,
           };
 
           // Only include user_id if we have a valid user
@@ -63,14 +63,32 @@ export const auditMiddleware = (action: string, entityType: string) => {
             auditData.user_id = userId;
           }
 
+          // Capture lab_id for CIT Lab Users submissions
+          if (
+            entityType === "cit lab users log" &&
+            req.body &&
+            req.body.laboratory
+          ) {
+            // Try to find lab_id from laboratory name
+            try {
+              const lab = await (prisma as any).laboratories.findFirst({
+                where: { lab_name: req.body.laboratory },
+                select: { lab_id: true },
+              });
+              if (lab) {
+                auditData.lab_id = lab.lab_id;
+              }
+            } catch (labError) {
+              // Could not find lab_id, continue without it
+            }
+          }
+
           await (prisma as any).audit_logs.create({
-            data: auditData
+            data: auditData,
           });
         } catch (error) {
-          console.error('❌ Audit logging failed:', error);
+          console.error("❌ Audit logging failed:", error);
         }
-      } else {
-        console.log(`⚠️ Non-successful response (${statusCode}), skipping audit log`);
       }
     });
 

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { SearchableSelect } from "../ui/searchable-select";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Loader2, AlertCircle, Monitor, X } from "lucide-react";
 import {
@@ -49,6 +50,7 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
   const [loadingWorkstations, setLoadingWorkstations] = useState(false);
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedLab, setSelectedLab] = useState<Laboratory | null>(null);
 
   // Year levels for students
@@ -155,30 +157,42 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    // Validation
+    
+    // Field-specific validation
+    const validationErrors: Record<string, string> = {};
+    
     if (!formData.lab_id) {
-      setError("Please select a laboratory");
-      return;
+      validationErrors.laboratory = "Please select a laboratory";
     }
 
     if (!formData.faculty_student_name.trim()) {
-      setError("Please enter your name");
-      return;
+      validationErrors.faculty_student_name = "Please enter your name";
     }
 
     if (formData.user_type === "Student" && !formData.year_level?.trim()) {
-      setError("Please select your year level");
-      return;
+      validationErrors.year_level = "Please select your year level";
     }
 
     if (!formData.issue_description.trim()) {
-      setError("Please describe the issue");
-      return;
+      validationErrors.issue_description = "Please describe the issue";
+    } else if (formData.issue_description.trim().length < 3) {
+      validationErrors.issue_description = "Issue description must be at least 3 characters";
     }
 
     if (!formData.selected_asset?.asset_id) {
-      setError("Please select the affected asset");
+      validationErrors.selected_asset = "Please select the affected asset";
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      
+      // Scroll to first error field
+      const firstErrorField = document.querySelector('[data-error="true"]') as HTMLElement;
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+      }
+      
       return;
     }
 
@@ -209,7 +223,7 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
           if (result.hasExistingComplaint) {
             const errorMessage = `⚠️ **Duplicate Complaint Detected**
 
-This asset already has an ongoing complaint (Complaint #${result.existingComplaintId}). The custodian is currently processing it.
+This asset already has an ongoing complaint. The custodian is currently processing it.
 
 Please wait for the current complaint to be resolved before submitting a new one.`;
             setError(errorMessage);
@@ -358,39 +372,50 @@ Please wait for the current complaint to be resolved before submitting a new one
                 placeholder={`Enter ${
                   formData.user_type === "Faculty" ? "faculty" : "student"
                 } name`}
-                className="capitalize-first"
+                className={`capitalize-first ${errors.faculty_student_name ? "border-red-500 outline-red-500" : ""}`}
+                data-error={errors.faculty_student_name ? "true" : undefined}
                 disabled={disabled}
                 required
               />
+              {errors.faculty_student_name && (
+                <span className="text-red-500 text-sm">
+                  {errors.faculty_student_name}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Year Level - Only for Students */}
-          {formData.user_type === "Student" && (
-            <div>
-              <Label htmlFor="year_level">Year Level *</Label>
-              <Select
-                value={formData.year_level}
-                onValueChange={(value) =>
-                  handleInputChange("year_level", value)
-                }
-                disabled={disabled}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select year level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearLevels.map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Year Level - Only for Students */}
+            {formData.user_type === "Student" && (
+              <div>
+                <Label htmlFor="year_level">Year Level *</Label>
+                <Select
+                  value={formData.year_level}
+                  onValueChange={(value) =>
+                    handleInputChange("year_level", value)
+                  }
+                  disabled={disabled}
+                >
+                  <SelectTrigger className={errors.year_level ? "border-red-500 outline-red-500" : ""} data-error={errors.year_level ? "true" : undefined}>
+                    <SelectValue placeholder="Select year level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearLevels.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.year_level && (
+                  <span className="text-red-500 text-sm">
+                    {errors.year_level}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div>
               <Label htmlFor="lab_id">Laboratory *</Label>
               <Select
@@ -398,7 +423,7 @@ Please wait for the current complaint to be resolved before submitting a new one
                 onValueChange={handleLabChange}
                 disabled={disabled || loading}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors.laboratory ? "border-red-500 outline-red-500" : ""} data-error={errors.laboratory ? "true" : undefined}>
                   <SelectValue
                     placeholder={
                       loading ? "Loading laboratories..." : "Select laboratory"
@@ -421,45 +446,38 @@ Please wait for the current complaint to be resolved before submitting a new one
                   ))}
                 </SelectContent>
               </Select>
+              {errors.laboratory && (
+                <span className="text-red-500 text-sm">
+                  {errors.laboratory}
+                </span>
+              )}
             </div>
 
             <div>
               <Label htmlFor="workstation_id">Workstation</Label>
-              <Select
+              <SearchableSelect
                 value={
                   formData.workstation_id
                     ? formData.workstation_id.toString()
                     : "none"
                 }
                 onValueChange={handleWorkstationChange}
+                placeholder={
+                  !formData.lab_id
+                    ? "Select laboratory first"
+                    : loadingWorkstations
+                    ? "Loading workstations..."
+                    : "Select workstation (optional)"
+                }
                 disabled={disabled || loadingWorkstations || !formData.lab_id}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      !formData.lab_id
-                        ? "Select laboratory first"
-                        : loadingWorkstations
-                        ? "Loading workstations..."
-                        : "Select workstation (optional)"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No specific workstation</SelectItem>
-                  {workstations.map((workstation) => (
-                    <SelectItem
-                      key={workstation.workstation_id}
-                      value={workstation.workstation_id.toString()}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Monitor className="w-4 h-4" />
-                        {workstation.workstation_name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={[
+                  { value: "none", label: "No specific workstation" },
+                  ...workstations.map((workstation) => ({
+                    value: workstation.workstation_id.toString(),
+                    label: workstation.workstation_name,
+                  })),
+                ]}
+              />
             </div>
           </div>
 
@@ -476,7 +494,7 @@ Please wait for the current complaint to be resolved before submitting a new one
               }}
               disabled={disabled || loadingAssets || !formData.workstation_id}
             >
-              <SelectTrigger>
+              <SelectTrigger className={errors.selected_asset ? "border-red-500 outline-red-500" : ""} data-error={errors.selected_asset ? "true" : undefined}>
                 <SelectValue
                   placeholder={
                     !formData.workstation_id
@@ -518,6 +536,11 @@ Please wait for the current complaint to be resolved before submitting a new one
                 )}
               </SelectContent>
             </Select>
+            {errors.selected_asset && (
+              <span className="text-red-500 text-sm">
+                {errors.selected_asset}
+              </span>
+            )}
             <p className="text-sm text-gray-500">
               Select the specific asset that has the issue. Asset selection is
               required.
@@ -534,9 +557,16 @@ Please wait for the current complaint to be resolved before submitting a new one
               }
               placeholder="Please describe the issue in detail..."
               rows={4}
+              className={errors.issue_description ? "border-red-500 outline-red-500" : ""}
+              data-error={errors.issue_description ? "true" : undefined}
               disabled={disabled}
               required
             />
+            {errors.issue_description && (
+              <span className="text-red-500 text-sm">
+                {errors.issue_description}
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

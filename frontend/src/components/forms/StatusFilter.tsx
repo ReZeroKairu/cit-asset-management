@@ -68,7 +68,6 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
         <SelectContent>
           <SelectItem value="all">All Status</SelectItem>
           <SelectItem value="Pending">Pending ({pendingCount})</SelectItem>
-          <SelectItem value="Admin_Approved">Admin Approved</SelectItem>
           <SelectItem value="Custodian_Approved">Custodian Approved</SelectItem>
         </SelectContent>
       </Select>

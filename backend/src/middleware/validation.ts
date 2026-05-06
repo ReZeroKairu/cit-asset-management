@@ -11,6 +11,12 @@ export const nameSchema = z.string()
   .max(100, "Name must be less than 100 characters")
   .regex(/^[a-zA-Z\s.-]+$/, "Name can only contain letters, spaces, dots, and hyphens");
 
+// More lenient name schema for public forms
+export const publicNameSchema = z.string()
+  .min(2, "Name must be at least 2 characters")
+  .max(100, "Name must be less than 100 characters")
+  .regex(/^[a-zA-Z\s\p{L}\p{M}.'-]+$/u, "Name can only contain letters, spaces, dots, hyphens, and apostrophes");
+
 export const emailSchema = z.string()
   .min(5, "Email must be at least 5 characters")
   .max(100, "Email must be less than 100 characters")
@@ -33,52 +39,16 @@ export const purposeSchema = z.string()
   .min(3, "Purpose must be at least 3 characters")
   .max(500, "Purpose must be less than 500 characters");
 
-// Lab Request Validation
-export const labRequestSchema = z.object({
-  date: dateSchema,
-  usage_type: z.enum(["printing", "set-in-reservation"], {
-    errorMap: () => ({ message: "Usage type must be printing or set-in-reservation" })
-  }),
-  faculty_student_name: nameSchema,
-  user_type: userTypeSchema,
-  laboratory: z.string().min(1, "Laboratory is required"),
-  printing_pages: z.string().optional().nullable(),
-  ws_number: z.string().optional().nullable(),
-  time_in: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 
-    "Time in must be in HH:MM format").optional().nullable(),
-  time_out: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 
-    "Time out must be in HH:MM format").optional().nullable().or(z.literal("")).transform((val) => val === "" ? null : val),
-  purpose: purposeSchema,
-  requested_by: nameSchema,
-  remarks: z.string().max(500, "Remarks must be less than 500 characters").optional().nullable(),
-  monitored_by: z.string().optional().nullable()
-});
-
-// Equipment Borrow Validation
-export const equipmentBorrowSchema = z.object({
-  date: dateSchema,
-  faculty_student_name: nameSchema,
-  user_type: userTypeSchema,
-  year_level: yearLevelSchema,
-  laboratory: z.string().min(1, "Laboratory is required"),
-  equipment_list: z.array(z.string()).min(1, "At least one equipment item is required"),
-  purpose: purposeSchema,
-  release_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 
-    "Release time must be in HH:MM format"),
-  returned_time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 
-    "Return time must be in HH:MM format").optional().nullable(),
-  requested_by: nameSchema,
-  remarks: z.string().max(500, "Remarks must be less than 500 characters").optional().nullable(),
-  monitored_by: z.string().optional().nullable()
-});
+// Lab request and equipment borrow forms are no longer supported
 
 // Software Installation Validation
 export const softwareInstallationSchema = z.object({
   date: dateSchema,
-  faculty_name: nameSchema,
+  faculty_name: publicNameSchema,
   laboratory: z.string().min(1, "Laboratory is required"),
-  software_list: z.string().min(5, "Software list must be at least 5 characters"),
-  requested_by: nameSchema,
+  software_list: z.string().min(3, "Software list must be at least 3 characters"),
+  requested_by: publicNameSchema,
+  user_type: z.string().min(1, "User type is required"),
   installation_remarks: z.string().max(500, "Remarks must be less than 500 characters").optional().nullable(),
   prepared_by: z.string().optional().nullable()
 });

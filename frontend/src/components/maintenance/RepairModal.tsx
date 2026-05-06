@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Wrench } from "lucide-react";
 import { createRepairLog } from "../../api/maintenance";
+import { createAsset, updateAsset, getUnits } from "../../api/inventory";
 
 interface WorkstationAssetItem {
   asset_id: number;
@@ -37,13 +38,33 @@ const RepairModal: React.FC<Props> = ({
     new Date().toISOString().split("T")[0]
   );
   const [actionType, setActionType] = useState<
-    "REPAIR" | "REPLACE" | "UPGRADE"
-  >("REPAIR");
+    "REPLACE" | "UPGRADE"
+  >("REPLACE");
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [newStatus, setNewStatus] = useState("Functional");
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [allUnits, setAllUnits] = useState<any[]>([]);
+
+  // Load all units for unit_id lookup
+  useEffect(() => {
+    const loadUnits = async () => {
+      try {
+        const units = await getUnits();
+        setAllUnits(units);
+      } catch (error) {
+        console.error("Failed to load units:", error);
+      }
+    };
+    loadUnits();
+  }, []);
+
+  // Helper function to get unit_id from unit_name
+  const getUnitIdFromName = (unitName: string): number | null => {
+    const unit = allUnits.find((u) => u.unit_name === unitName);
+    return unit ? unit.unit_id : null;
+  };
 
   // Replacement fields
   const [replacementDetails, setReplacementDetails] = useState<{
@@ -109,32 +130,61 @@ const RepairModal: React.FC<Props> = ({
     setLoading(true);
 
     try {
-      const asset_actions = Array.from(selectedAssets).map((assetId) => {
-        const asset = assets.find((a) => a.asset_id === assetId);
-        const action: Record<string, unknown> = {
-          asset_id: assetId,
-          action:
-            actionType === "REPAIR"
-              ? "REPAIRED"
-              : actionType === "REPLACE"
-              ? "REPLACED"
-              : "UPGRADED",
-          status_before: asset?.status || "Unknown",
-          status_after: newStatus,
-          old_property_tag: asset?.property_tag_no,
+      // Find the "For Disposal" status ID from the ORIGINAL statusOptions (not filtered)
+      const forDisposalStatus = statusOptions.find(
+        (status) => status.status_name === "For Disposal"
+      );
+
+      if (!forDisposalStatus) {
+        throw new Error("For Disposal status not found");
+      }
+
+      // Process each selected asset
+      const assetPromises = Array.from(selectedAssets).map(async (assetId) => {
+        const originalAsset = assets.find((a) => a.asset_id === assetId);
+        if (!originalAsset) return null;
+
+        // Find unit_id from the original asset
+        // We need to get the unit_id to properly identify the component type
+        const unitId = await getUnitIdFromName(originalAsset.unit_name);
+
+        // Apply same logic for both REPLACE and UPGRADE
+        // Create new asset and dispose original for both actions
+        const newAssetData = {
+          lab_id: labId,
+          workstation_id: workstation.id,
+          unit_id: unitId, // Add unit_id for proper identification
+          unit_name: originalAsset.unit_name, // Same unit name as original
+          property_tag_no: replacementDetails[assetId]?.new_property_tag || "",
+          serial_number: replacementDetails[assetId]?.new_serial_number || "",
+          description: replacementDetails[assetId]?.new_description || "",
+          date_of_purchase: new Date().toISOString().split('T')[0], // Current date for purchase
+          status_id: statusOptions.find((s) => s.status_name === newStatus)?.status_id,
+          asset_remarks: `${actionType === "REPLACE" ? "Replaced" : "Upgraded"} asset #${originalAsset.asset_id}`,
         };
 
-        if (actionType === "REPLACE" && replacementDetails[assetId]) {
-          action.new_property_tag =
-            replacementDetails[assetId].new_property_tag;
-          action.new_serial_number =
-            replacementDetails[assetId].new_serial_number;
-          action.new_description = replacementDetails[assetId].new_description;
-        }
+        const newAsset = await createAsset(newAssetData);
 
-        return action;
+        // Update original asset status to "For Disposal" for both REPLACE and UPGRADE
+        await updateAsset(assetId, {
+          status_id: forDisposalStatus.status_id,
+          asset_remarks: `${actionType === "REPLACE" ? "Replaced" : "Upgraded"} by new asset #${newAsset.asset_id}`,
+        });
+
+        return {
+          asset_id: assetId,
+          action: actionType === "REPLACE" ? "REPLACED" : "UPGRADED",
+          new_status: newStatus,
+          remarks,
+          new_asset_id: newAsset.asset_id, // Track new asset
+        };
       });
 
+      const asset_actions = (await Promise.all(assetPromises)).filter(
+        (action): action is NonNullable<typeof action> => action !== null
+      );
+
+      // Create repair log with updated actions
       await createRepairLog({
         workstation_id: workstation.id,
         quarter,
@@ -148,9 +198,9 @@ const RepairModal: React.FC<Props> = ({
       onSuccess();
       onClose();
     } catch (err) {
-      console.error("Failed to create repair log:", err);
+      console.error("Failed to create action log:", err);
       const error = err as { response?: { data?: { error?: string } } };
-      setError(error.response?.data?.error || "Failed to submit repair log");
+      setError(error.response?.data?.error || "Failed to submit action log");
     } finally {
       setLoading(false);
     }
@@ -174,7 +224,7 @@ const RepairModal: React.FC<Props> = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">
-                  Repair Component
+                  Asset Action
                 </h2>
                 <p className="text-blue-100 text-sm">
                   {workstation.name} - {quarter} Quarter
@@ -221,17 +271,6 @@ const RepairModal: React.FC<Props> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setActionType("REPAIR")}
-                  className={`flex-1 px-4 py-2 rounded-md border transition-colors ${
-                    actionType === "REPAIR"
-                      ? "bg-orange-100 border-orange-500 text-orange-700"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  Repair
-                </button>
-                <button
-                  type="button"
                   onClick={() => setActionType("REPLACE")}
                   className={`flex-1 px-4 py-2 rounded-md border transition-colors ${
                     actionType === "REPLACE"
@@ -261,7 +300,7 @@ const RepairModal: React.FC<Props> = ({
                 Select Component(s)
               </label>
               <div className="border border-gray-300 rounded-md max-h-48 overflow-y-auto">
-                {assets.map((asset) => (
+                {assets.filter(asset => asset.status !== "Disposed").map((asset) => (
                   <label
                     key={asset.asset_id}
                     className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
@@ -285,8 +324,6 @@ const RepairModal: React.FC<Props> = ({
                               ? "bg-green-100 text-green-800"
                               : asset.status === "For Replacement"
                               ? "bg-red-100 text-red-800"
-                              : asset.status === "For Repair"
-                              ? "bg-amber-100 text-amber-800"
                               : asset.status === "For Upgrade"
                               ? "bg-blue-100 text-blue-800"
                               : "bg-gray-100 text-gray-800"
@@ -305,14 +342,18 @@ const RepairModal: React.FC<Props> = ({
             {actionType === "REPLACE" && selectedAssets.size > 0 && (
               <div className="space-y-4 p-4 bg-red-50 border border-red-200 rounded-md">
                 <h3 className="text-sm font-semibold text-red-900">
-                  Replacement Details
+                  New Asset Details (Replacement)
                 </h3>
+                <p className="text-xs text-red-700">
+                  These details will create a new asset to replace the selected one(s). 
+                  The original assets will be automatically marked as "For Disposal".
+                </p>
                 {Array.from(selectedAssets).map((assetId) => {
                   const asset = assets.find((a) => a.asset_id === assetId);
                   return (
                     <div key={assetId} className="space-y-2">
                       <p className="text-xs font-medium text-red-800">
-                        {asset?.unit_name} ({asset?.property_tag_no})
+                        New {asset?.unit_name} (replacing {asset?.property_tag_no})
                       </p>
                       <div className="grid grid-cols-1 gap-2">
                         <input
@@ -378,19 +419,93 @@ const RepairModal: React.FC<Props> = ({
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors bg-white text-gray-900"
                 required
               >
-                {statusOptions.map((status) => (
-                  <option
-                    key={status.status_id}
-                    value={status.status_name}
-                    className="text-gray-900"
-                  >
-                    {status.status_name}
-                  </option>
-                ))}
+                {statusOptions
+                  .filter(
+                    (status) =>
+                      status.status_name !== "Disposed" &&
+                      status.status_name !== "For Disposal"
+                  )
+                  .map((status) => (
+                    <option
+                      key={status.status_id}
+                      value={status.status_name}
+                      className="text-gray-900"
+                    >
+                      {status.status_name}
+                    </option>
+                  ))}
               </select>
             </div>
 
-            {/* Remarks */}
+            {/* Upgrade Details (only shown when Upgrade is selected) */}
+            {actionType === "UPGRADE" && selectedAssets.size > 0 && (
+              <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-md">
+                <h3 className="text-sm font-semibold text-purple-900">
+                  New Asset Details (Upgrade)
+                </h3>
+                <p className="text-xs text-purple-700">
+                  These details will create a new asset to upgrade selected one(s). 
+                  The original assets will be automatically marked as "For Disposal".
+                </p>
+                {Array.from(selectedAssets).map((assetId) => {
+                  const asset = assets.find((a) => a.asset_id === assetId);
+                  return (
+                    <div key={assetId} className="space-y-2">
+                      <p className="text-xs font-medium text-purple-800">
+                        New {asset?.unit_name} (upgrading {asset?.property_tag_no})
+                      </p>
+                      <div className="grid grid-cols-1 gap-2">
+                        <input
+                          type="text"
+                          placeholder="New Property Tag"
+                          value={
+                            replacementDetails[assetId]?.new_property_tag || ""
+                          }
+                          onChange={(e) =>
+                            handleReplacementDetailChange(
+                              assetId,
+                              "new_property_tag",
+                              e.target.value
+                            )
+                          }
+                          className="px-3 py-1.5 text-sm border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="New Serial Number"
+                          value={
+                            replacementDetails[assetId]?.new_serial_number || ""
+                          }
+                          onChange={(e) =>
+                            handleReplacementDetailChange(
+                              assetId,
+                              "new_serial_number",
+                              e.target.value
+                            )
+                          }
+                          className="px-3 py-1.5 text-sm border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={
+                            replacementDetails[assetId]?.new_description || ""
+                          }
+                          onChange={(e) =>
+                            handleReplacementDetailChange(
+                              assetId,
+                              "new_description",
+                              e.target.value
+                            )
+                          }
+                          className="px-3 py-1.5 text-sm border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Remarks
@@ -400,7 +515,7 @@ const RepairModal: React.FC<Props> = ({
                 onChange={(e) => setRemarks(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="Additional notes about this repair..."
+                placeholder="Additional notes about this action..."
               />
             </div>
 
@@ -427,7 +542,7 @@ const RepairModal: React.FC<Props> = ({
                 ) : (
                   <>
                     <Wrench className="h-4 w-4" />
-                    Submit Repair
+                    Submit Action
                   </>
                 )}
               </button>

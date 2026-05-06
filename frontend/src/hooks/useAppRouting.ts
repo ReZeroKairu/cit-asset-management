@@ -13,7 +13,6 @@ export type PageType =
   | "forms"
   | "public-forms"
   | "public-landing"
-  | "one-time-form"
   | "complaints"
   | "complaints-management"
   | "login"
@@ -30,8 +29,6 @@ const getInitialPage = (): PageType => {
   if (path === "/public-complaints") return "public-complaints";
   if (path === "/cit-lab-users") return "cit-lab-users";
   if (path === "/disposals") return "disposals";
-  if (path === "/one-time" || path.startsWith("/one-time"))
-    return "one-time-form";
 
   const storedUser = localStorage.getItem("user");
   const isLoggedIn = storedUser && storedUser !== "null";
@@ -46,6 +43,7 @@ const getInitialPage = (): PageType => {
 export const useAppRouting = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageType>(getInitialPage);
+  const [urlParams, setUrlParams] = useState<URLSearchParams>(new URLSearchParams(window.location.search));
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -57,6 +55,9 @@ export const useAppRouting = () => {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
+      const search = window.location.search;
+      setUrlParams(new URLSearchParams(search));
+      
       if (path === "/public-forms") {
         setCurrentPage("public-forms");
       } else if (path === "/complaints") {
@@ -67,8 +68,6 @@ export const useAppRouting = () => {
         setCurrentPage("cit-lab-users");
       } else if (path === "/disposals") {
         setCurrentPage("disposals");
-      } else if (path === "/one-time" || path.startsWith("/one-time")) {
-        setCurrentPage("one-time-form");
       } else if (path === "/public-landing") {
         setCurrentPage("public-landing");
       } else if (!user) {
@@ -82,8 +81,15 @@ export const useAppRouting = () => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [user]);
 
-  const handleNavigate = (page: PageType) => {
-    setCurrentPage(page);
+  const handleNavigate = (pageWithParams: string) => {
+    // Parse page and parameters
+    const [page, queryString] = pageWithParams.split('?');
+    const params = queryString ? new URLSearchParams(queryString) : new URLSearchParams();
+    
+    // Set current page
+    setCurrentPage(page as PageType);
+    
+    // Update URL with parameters
     if (page === "public-forms") {
       window.history.pushState(null, "", "/public-forms");
     } else if (page === "complaints") {
@@ -96,16 +102,20 @@ export const useAppRouting = () => {
       window.history.pushState(null, "", "/disposals");
     } else if (page === "login") {
       window.history.pushState(null, "", "/login");
-    } else if (page === "one-time-form") {
-      window.history.pushState(null, "", "/one-time");
     } else {
-      window.history.pushState(null, "", "/");
+      // For pages like "archives?tab=cit-lab-users"
+      const url = queryString ? `/?${queryString}` : "/";
+      window.history.pushState(null, "", url);
     }
+    
+    // Update URL params state
+    setUrlParams(params);
   };
 
   return {
     currentPage,
     setCurrentPage,
     handleNavigate,
+    urlParams,
   };
 };

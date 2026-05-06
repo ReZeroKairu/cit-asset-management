@@ -9,7 +9,6 @@ export const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 import api from "./axios";
-console.log("🌐 API_BASE_URL initialized to:", API_BASE_URL);
 
 export interface ComplaintData {
   lab_id: number;
@@ -41,7 +40,6 @@ export interface Complaint {
   created_at: string;
   updated_at: string;
   accepted_at?: string;
-  ip_address?: string;
   laboratories?: {
     lab_id: number;
     lab_name: string;
@@ -282,8 +280,13 @@ export const updateComplaintRemarks = async (
 };
 
 // Get complaints analytics for dashboard
-export const getComplaintsAnalytics = async () => {
-  const response = await api.get("/complaints/analytics");
+export const getComplaintsAnalytics = async (startDate?: string, endDate?: string) => {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  
+  const url = params.toString() ? `/complaints/analytics?${params}` : '/complaints/analytics';
+  const response = await api.get(url);
   return response.data;
 };
 
@@ -294,5 +297,6 @@ export interface ComplaintsAnalyticsData {
     lab_name: string;
     total_count: number;
     resolved_count: number;
+    active_count: number;
   }>;
 }

@@ -18,14 +18,13 @@ const LoginPage = () => {
   const [formKey, setFormKey] = useState(0); // Key to force re-render when needed
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
-  const mountTime = useRef(Date.now());
+
 
   // Restore email from sessionStorage on mount (but not password for security)
   useEffect(() => {
     const savedEmail = sessionStorage.getItem('login_email');
     
     if (savedEmail) {
-      console.log("📧 Restored email from sessionStorage:", savedEmail);
       setEmail(savedEmail);
     }
     // NOTE: Don't restore password from sessionStorage for security
@@ -74,17 +73,13 @@ const LoginPage = () => {
     const currentEmail = email;
     const currentPassword = password;
     
-    console.log("Submitting with:", { email: currentEmail, password: "***" });
-    
     try {
       const res = await api.post("/login", { email: currentEmail, password: currentPassword });
       login(res.data.token, res.data.user);
       
       // Redirect to dashboard after successful login
-      console.log("Login successful, redirecting to dashboard...");
       window.location.href = '/';
     } catch (err: any) {
-      console.log("Login failed, keeping email:", currentEmail);
       setError("Invalid email or password");
       
       // Force restore values after a tick
@@ -115,16 +110,11 @@ const LoginPage = () => {
       const input = passwordInputRef.current;
       const expectedType = showPassword ? "text" : "password";
       if (input.type !== expectedType) {
-        console.log("🔧 Password click: fixing type from", input.type, "to", expectedType);
         input.type = expectedType;
       }
     }
   };
 
-  // Debug showPassword state changes
-  useEffect(() => {
-    console.log("🔍 showPassword state:", showPassword);
-  }, [showPassword]);
 
   // Ensure password input type is correct
   useEffect(() => {
@@ -132,7 +122,6 @@ const LoginPage = () => {
       const input = passwordInputRef.current;
       const expectedType = showPassword ? "text" : "password";
       if (input.type !== expectedType) {
-        console.log("🔧 Fixing password input type from", input.type, "to", expectedType);
         input.type = expectedType;
       }
     }

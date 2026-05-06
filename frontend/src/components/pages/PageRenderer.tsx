@@ -10,7 +10,6 @@ import UserManagementPage from "../../pages/UserManagementPage";
 import FormsPage from "../../pages/FormsPage";
 import PublicFormsPage from "../../pages/PublicFormsPage";
 import PublicLandingPage from "../../pages/PublicLandingPage";
-import OneTimeFormPage from "../../pages/OneTimeFormPage";
 import ComplaintsPage from "../../pages/ComplaintsPage";
 import ComplaintsManagementPage from "../../pages/ComplaintsManagementPage";
 import CITLabUsersPage from "../../pages/CITLabUsersPage";
@@ -41,6 +40,7 @@ interface PageRendererProps {
   setCreateUserData: React.Dispatch<React.SetStateAction<CreateUserData>>;
   labFormData: LabFormData;
   setLabFormData: React.Dispatch<React.SetStateAction<LabFormData>>;
+  urlParams: URLSearchParams;
 }
 
 const PageRenderer = ({
@@ -50,6 +50,7 @@ const PageRenderer = ({
   setCreateUserData,
   labFormData,
   setLabFormData,
+  urlParams,
 }: PageRendererProps) => {
   const { user } = useAuth();
 
@@ -70,7 +71,7 @@ const PageRenderer = ({
     case "admin-reports":
       return <AdminReportsPage />;
     case "archives":
-      return <ArchivesPage />;
+      return <ArchivesPage initialTab={urlParams.get('tab') || undefined} />;
     case "user-management":
       return (
         <UserManagementPage
@@ -83,10 +84,12 @@ const PageRenderer = ({
     case "maintenance":
       return <MaintenancePage />;
     case "forms":
+      // Only non-admin users can access forms page
+      if (user?.role === "Admin") {
+        return <HomePage onNavigate={onNavigate} />;
+      }
       return <FormsPage />;
-    case "one-time-form":
-      return <OneTimeFormPage />;
-    case "public-forms":
+        case "public-forms":
       return <PublicFormsPage />;
     case "public-complaints":
       return <ComplaintsPage />;

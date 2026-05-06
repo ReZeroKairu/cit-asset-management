@@ -178,11 +178,14 @@ const ComplaintsManagementPage = () => {
     })
     .sort((a, b) => a.lab_name.localeCompare(b.lab_name));
 
-  // Get unique workstations from filtered complaints
+  // Get unique workstations from unfinished complaints only (excluding resolved/denied)
   const uniqueWorkstations = Array.from(
     new Set(
       complaints
-        .filter((c) => labFilter === "all" || c.lab_id.toString() === labFilter)
+        .filter((c) =>
+          (labFilter === "all" || c.lab_id.toString() === labFilter) &&
+          ["Open", "In_Progress"].includes(c.status)
+        )
         .map((c) => c.workstation_id)
         .filter(Boolean)
     )
@@ -400,22 +403,22 @@ const ComplaintsManagementPage = () => {
             <table className="w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                     Complaint Info
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     User
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                    Location
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                    Workstation
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Submitted
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     Actions
                   </th>
                 </tr>
@@ -431,7 +434,7 @@ const ComplaintsManagementPage = () => {
                       setIsEditingRemarks(false); // Open modal in read-only mode
                     }}
                   >
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900">
                         Complaint #{complaint.complaint_id}
                       </div>
@@ -446,7 +449,7 @@ const ComplaintsManagementPage = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
                         {complaint.faculty_student_name}
                       </div>
@@ -456,18 +459,13 @@ const ComplaintsManagementPage = () => {
                           ` • Year ${complaint.year_level}`}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
-                        {complaint.laboratories?.lab_name ||
-                          `Lab ${complaint.lab_id}`}
+                        {complaint.workstations?.workstation_name ||
+                          `Workstation ${complaint.workstation_id || 'N/A'}`}
                       </div>
-                      {complaint.workstations && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
-                          {complaint.workstations.workstation_name}
-                        </div>
-                      )}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap text-center">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
                           complaint.status
@@ -476,12 +474,12 @@ const ComplaintsManagementPage = () => {
                         {complaint.status.replace("_", " ")}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                       {new Date(complaint.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div
-                        className="flex items-center gap-2"
+                        className="flex items-center justify-center gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* Show Accept/Deny buttons for Open complaints - but not for admins */}

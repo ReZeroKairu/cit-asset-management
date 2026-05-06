@@ -25,7 +25,7 @@ interface LabFormData {
 
 function App() {
   const { user } = useAuth();
-  const { currentPage, handleNavigate } = useAppRouting();
+  const { currentPage, handleNavigate, urlParams } = useAppRouting();
 
   const [createUserData, setCreateUserData] = useState<CreateUserData>({
     full_name: "",
@@ -53,6 +53,7 @@ function App() {
       setCreateUserData={setCreateUserData}
       labFormData={labFormData}
       setLabFormData={setLabFormData}
+      urlParams={urlParams}
     />;
   }
 
@@ -71,6 +72,7 @@ function App() {
         setCreateUserData={setCreateUserData}
         labFormData={labFormData}
         setLabFormData={setLabFormData}
+        urlParams={urlParams}
       />
     </MainLayout>
   );

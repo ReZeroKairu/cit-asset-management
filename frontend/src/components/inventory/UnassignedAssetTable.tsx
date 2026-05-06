@@ -1,22 +1,55 @@
-import React from "react";
+import React, { useState } from "react";
 import { Edit, Trash2 } from "lucide-react";
 
 interface Props {
   assets: any[];
   onEdit: (asset: any) => void;
-  onDelete: (id: number) => void;
+  onMarkForDisposal: (id: number) => void;
+  onBulkDispose?: (assetIds: number[]) => void; // New prop for bulk disposal
 }
 
 const UnassignedAssetTable: React.FC<Props> = ({
   assets,
   onEdit,
-  onDelete,
+  onMarkForDisposal,
+  onBulkDispose,
 }) => {
+  const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   return (
     <div className="overflow-x-auto">
+      {selectedAssets.size > 0 && (
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              {selectedAssets.size} asset{selectedAssets.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => onBulkDispose?.(Array.from(selectedAssets))}
+              className="px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 flex items-center shadow-sm cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Mark for Disposal
+            </button>
+          </div>
+        </div>
+      )}
       <table className="w-full">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <input
+                type="checkbox"
+                checked={selectedAssets.size === assets.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedAssets(new Set(assets.map(asset => asset.asset_id)));
+                  } else {
+                    setSelectedAssets(new Set());
+                  }
+                }}
+                className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Property Tag
             </th>
@@ -43,13 +76,29 @@ const UnassignedAssetTable: React.FC<Props> = ({
         <tbody className="bg-white divide-y divide-gray-200">
           {assets.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+              <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                 No unassigned assets found.
               </td>
             </tr>
           ) : (
             assets.map((asset) => (
               <tr key={asset.asset_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={selectedAssets.has(asset.asset_id)}
+                    onChange={(e) => {
+                      const newSelected = new Set(selectedAssets);
+                      if (e.target.checked) {
+                        newSelected.add(asset.asset_id);
+                      } else {
+                        newSelected.delete(asset.asset_id);
+                      }
+                      setSelectedAssets(newSelected);
+                    }}
+                    className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
                   {asset.asset_details?.property_tag_no || "N/A"}
                 </td>
@@ -79,9 +128,9 @@ const UnassignedAssetTable: React.FC<Props> = ({
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    className="text-red-600 hover:text-red-800 cursor-pointer"
-                    onClick={() => onDelete(asset.asset_id)}
-                    title="Delete"
+                    className="text-orange-600 hover:text-orange-800 cursor-pointer"
+                    onClick={() => onMarkForDisposal(asset.asset_id)}
+                    title="Mark for Disposal"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

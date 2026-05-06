@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FileText, Download, ArrowLeft, Loader2 } from "lucide-react";
-import { getLabPMCReports, getPMCReport } from "../../api/maintenance";
+import { getLabPMCReports, getPMCReport, getServiceHistory } from "../../api/maintenance";
 import { getWorkstationAssets } from "../../api/inventory";
 import { useAuth } from "../../context/AuthContext";
 import { calculateWorstStatus } from "../../utils/statusUtils";
@@ -30,6 +30,15 @@ const QuarterlyReportsView: React.FC<Props> = ({
   const [workstationAssets, setWorkstationAssets] = useState<{
     [key: number]: any[];
   }>({});
+  const [latestServiceTimes, setLatestServiceTimes] = useState<{
+    [key: number]: Date | null;
+  }>({});
+
+  // Calculate latest service date for each workstation
+  const getLatestServiceDateTime = (workstationId: number) => {
+    // Use the latest service time from our state (fetched from all quarters)
+    return latestServiceTimes[workstationId] || null;
+  };
 
   // Calculate real workstation status based on assets (same logic as MaintenanceView)
   const calculateWorkstationStatus = (assets: any[]) => {
@@ -80,10 +89,49 @@ const QuarterlyReportsView: React.FC<Props> = ({
         }, {} as { [key: number]: any[] });
 
         setWorkstationAssets(assetsMap);
+
+        // Fetch latest service times for all workstations (across all quarters)
+        const serviceTimePromises = reportsData.map(async (report: any) => {
+          try {
+            // Fetch ALL service history (not just current quarter) to get true latest service
+            const serviceHistory = await getServiceHistory(report.workstation_id); // No quarter parameter = all history
+            if (serviceHistory && serviceHistory.length > 0) {
+              // Find the most recent service log
+              const latestService = serviceHistory.reduce((latest, current) => {
+                const latestDate = new Date(latest.service_date || latest.created_at);
+                const currentDate = new Date(current.service_date || current.created_at);
+                return currentDate > latestDate ? current : latest;
+              });
+              
+              // Use service_date if available, otherwise fall back to created_at
+              const serviceDate = latestService.service_date || latestService.created_at;
+              return { 
+                workstationId: report.workstation_id, 
+                latestServiceDate: new Date(serviceDate)
+              };
+            }
+            return { workstationId: report.workstation_id, latestServiceDate: null };
+          } catch (error) {
+            console.error(
+              `Failed to fetch service history for workstation ${report.workstation_id}:`,
+              error
+            );
+            return { workstationId: report.workstation_id, latestServiceDate: null };
+          }
+        });
+
+        const serviceTimeResults = await Promise.all(serviceTimePromises);
+        const serviceTimesMap = serviceTimeResults.reduce((acc, result) => {
+          acc[result.workstationId] = result.latestServiceDate;
+          return acc;
+        }, {} as { [key: number]: Date | null });
+
+        setLatestServiceTimes(serviceTimesMap);
       } catch (error) {
         console.error("Failed to fetch reports", error);
         setReports([]);
         setWorkstationAssets({});
+        setLatestServiceTimes({});
       } finally {
         setLoadingReports(false);
       }
@@ -99,10 +147,11 @@ const QuarterlyReportsView: React.FC<Props> = ({
         selectedQuarter
       );
       const assetData = await getWorkstationAssets(report.workstation_id);
+      const filteredAssetData = assetData.filter((asset: any) => asset.status !== 'Disposed');
       // Use the same shared function:
       await generateQPMCReportFromDb({
         pmcReport: detailedReport,
-        assets: assetData,
+        assets: filteredAssetData,
         lab: labName,
         workstation: getWorkstationName(report.workstation_id),
         user,
@@ -141,9 +190,9 @@ const QuarterlyReportsView: React.FC<Props> = ({
       year: "numeric",
     });
 
-    // Get the current time
-    const currentTime = new Date();
-    const formattedTime = currentTime.toLocaleTimeString("en-US", {
+    // Get service time from the report
+    const serviceTime = new Date(pmcReport.report_date);
+    const formattedTime = serviceTime.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -170,13 +219,13 @@ const QuarterlyReportsView: React.FC<Props> = ({
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
           (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-        )
+        ) && asset.status !== 'Disposed'
     );
 
     // Build components list with Peripherals first
@@ -425,13 +474,39 @@ const QuarterlyReportsView: React.FC<Props> = ({
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 font-medium">
-                            {new Date(report.report_date).toLocaleDateString()}
+                            {(() => {
+                              const latestDateTime = getLatestServiceDateTime(report.workstation_id);
+                              return latestDateTime 
+                                ? latestDateTime.toLocaleDateString()
+                                : new Date(report.report_date).toLocaleDateString();
+                            })()}
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            {new Date(report.report_date).toLocaleTimeString(
-                              [],
-                              { hour: "2-digit", minute: "2-digit" }
-                            )}
+                            {(() => {
+                              const latestDateTime = getLatestServiceDateTime(report.workstation_id);
+                              if (latestDateTime) {
+                                const dateString = latestDateTime.toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric", year: "numeric" }
+                                );
+                                
+                                // Check if the time is not midnight UTC (which becomes 8 AM SGT)
+                                const isMidnightUTC = latestDateTime.getUTCHours() === 0 && 
+                                                      latestDateTime.getUTCMinutes() === 0 && 
+                                                      latestDateTime.getUTCSeconds() === 0;
+
+                                if (!isMidnightUTC) {
+                                  const timeDisplay = latestDateTime.toLocaleTimeString(
+                                    "en-US",
+                                    { hour: "numeric", minute: "2-digit", hour12: true }
+                                  );
+                                  return `Service: ${dateString} at ${timeDisplay}`;
+                                } else {
+                                  return `Service: ${dateString}`;
+                                }
+                              }
+                              return "No service";
+                            })()}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

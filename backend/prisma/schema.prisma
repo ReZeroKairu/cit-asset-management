@@ -10,11 +10,13 @@ datasource db {
 model asset_details {
   detail_id        Int              @id @default(autoincrement())
   asset_id         Int              @unique
-  property_tag_no  String?          @unique(map: "property_tag_no") @db.VarChar(50)
+  property_tag_no  String?          @db.VarChar(50)
   quantity         Int?             @default(1)
   description      String?          @db.Text
   serial_number    String?          @db.VarChar(100)
   date_of_purchase DateTime?        @db.Date
+  date_disposed    DateTime?        @db.Date
+  disposed_by      String?          @db.VarChar(100)
   asset_remarks    String?          @db.Text
   status_id        Int?             @default(1)
   inventory_assets inventory_assets @relation(fields: [asset_id], references: [asset_id])
@@ -114,29 +116,6 @@ model device_types {
   units            units[]
 }
 
-model equipment_borrows {
-  borrow_id            Int                      @id @default(autoincrement())
-  user_id              Int?
-  date                 DateTime                 @db.Date
-  laboratory           String                   @db.VarChar(20)
-  faculty_student_name String                   @db.VarChar(100)
-  year_level           String?                  @db.VarChar(20)
-  release_time         String                   @db.VarChar(10)
-  returned_time        String?                  @db.VarChar(10)
-  equipment_list       Json
-  purpose              String                   @db.Text
-  requested_by         String                   @db.VarChar(100)
-  remarks              String?                  @db.Text
-  monitored_by         String?                  @db.VarChar(100)
-  approved_by          String?                  @db.VarChar(100)
-  status               equipment_borrows_status @default(Pending)
-  created_at           DateTime                 @default(now()) @db.Timestamp(0)
-  user_type            String?                  @db.VarChar(20)
-  ip_address           String?                  @db.VarChar(45)
-  users                users?                   @relation(fields: [user_id], references: [user_id])
-
-  @@index([user_id])
-}
 
 model inventory_assets {
   asset_id           Int                  @id @default(autoincrement())
@@ -202,18 +181,6 @@ model office_types {
   departments departments[]
 }
 
-model one_time_links {
-  id           Int      @id @default(autoincrement())
-  token        String   @unique @db.VarChar(255)
-  form_type    String?  @db.VarChar(50)
-  generated_by Int?
-  created_at   DateTime @default(now()) @db.Timestamp(0)
-  expires_at   DateTime @db.Timestamp(0)
-  used         Boolean  @default(false)
-  users        users?   @relation(fields: [generated_by], references: [user_id])
-
-  @@index([generated_by], map: "one_time_links_generated_by_fkey")
-}
 
 model pmc_report_procedures {
   id           Int         @id @default(autoincrement())
@@ -293,32 +260,6 @@ model asset_statuses {
   @@map("asset_statuses")
 }
 
-model lab_requests {
-  request_id           Int                 @id @default(autoincrement())
-  user_id              Int?
-  date                 DateTime            @db.Date
-  usage_type           String              @db.VarChar(20)
-  faculty_student_name String              @db.VarChar(100)
-  year_level           String?             @db.VarChar(20)
-  laboratory           String              @db.VarChar(20)
-  printing_pages       String?             @db.VarChar(50)
-  ws_number            String?             @db.VarChar(50)
-  time_in              String?             @db.VarChar(10)
-  time_out             String?             @db.VarChar(10)
-  purpose              String              @db.Text
-  requested_by         String              @db.VarChar(100)
-  remarks              String?             @db.Text
-  monitored_by         String?             @db.VarChar(100)
-  approved_by          String?             @db.VarChar(100)
-  status               lab_requests_status @default(Pending)
-  created_at           DateTime            @default(now()) @db.Timestamp(0)
-  user_type            String?             @db.VarChar(20)
-  ip_address           String?             @db.VarChar(45)
-  users                users?              @relation(fields: [user_id], references: [user_id])
-
-  @@index([user_id])
-  @@map("lab_requests")
-}
 
 model service_log_assets {
   id                   Int              @id @default(autoincrement())
@@ -379,6 +320,7 @@ model software_installations {
   laboratory           String                        @db.VarChar(20)
   software_list        String                        @db.Text
   requested_by         String                        @db.VarChar(100)
+  user_type            String?                        @db.VarChar(20)
   installation_remarks String?                       @db.Text
   prepared_by          String?                       @db.VarChar(100)
   feedback_date        DateTime?                     @db.Date
@@ -411,16 +353,11 @@ model users {
   audit_logs             audit_logs[]
   complaints             complaints[]
   daily_reports          daily_reports[]
-  equipment_borrows      equipment_borrows[]
   inventory_assets       inventory_assets[]
-  lab_requests           lab_requests[]
-  one_time_links         one_time_links[]
   pmc_reports            pmc_reports[]
   service_logs           service_logs[]
   software_installations software_installations[]
   laboratories           laboratories?            @relation(fields: [lab_id], references: [lab_id])
-  approved_disposals     asset_disposals[]        @relation("DisposalApprover")
-  processed_disposals    asset_disposals[]        @relation("DisposalProcessor")
 
   @@index([lab_id], map: "users_lab_id_fkey")
 }
@@ -428,14 +365,15 @@ model users {
 model audit_logs {
   id          Int      @id @default(autoincrement())
   user_id     Int?
+  lab_id      Int?
   action      String   @db.VarChar(50)
   description String?  @db.Text
   created_at  DateTime @default(now())
-  ip_address  String?  @db.VarChar(45)
   user_agent  String?  @db.Text
   users       users?   @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
+  @@index([lab_id])
 }
 
 model workstations {
@@ -460,21 +398,23 @@ model workstations {
 model cit_lab_logs {
   log_id               Int      @id @default(autoincrement())
   date                 DateTime @db.Date
+  time_in              String   @db.VarChar(5)  // HH:MM format
+  time_out             String   @db.VarChar(5)  // HH:MM format, now required
   usage_type           String   @db.VarChar(20)
   faculty_student_name String   @db.VarChar(100)
   year_level           String?  @db.VarChar(20)
   laboratory           String   @db.VarChar(20)
-  printing_pages       String?  @db.VarChar(50)
   ws_number            String?  @db.VarChar(50)
   purpose              String   @db.Text
   monitored_by         String?  @db.VarChar(100)
   user_type            String?  @db.VarChar(20)
-  ip_address           String?  @db.VarChar(45)
   created_at           DateTime @default(now()) @db.Timestamp(0)
+  ip_address           String?  @db.VarChar(45)
 
   @@index([created_at])
   @@index([laboratory])
   @@index([date])
+  @@index([time_in])
 }
 
 enum users_role {
@@ -496,54 +436,9 @@ enum complaints_status {
 
 enum software_installations_status {
   Pending
-  Admin_Approved
   Custodian_Approved
   Denied
   Completed
 }
 
-model asset_disposals {
-  disposal_id        Int      @id @default(autoincrement())
-  asset_id          Int      @unique
-  workstation_id    Int?
-  workstation_name  String?   @db.Text
-  lab_id            Int?
-  lab_name          String?   @db.Text
-  disposal_date      DateTime  @db.Date
-  disposal_reason    String?   @db.Text
-  disposal_method    String?   @db.VarChar(50)
-  disposal_value     Float?
-  approved_by        Int?
-  disposed_by        Int?
-  disposal_document  String?   @db.Text
-  disposal_remarks  String?   @db.Text
-  property_tag_no    String?   @db.VarChar(50)
-  asset_description  String?   @db.Text
-  serial_number      String?   @db.VarChar(50)
-  date_of_purchase   DateTime? @db.Date
-  quantity          Int?      @default(1)
-  created_at        DateTime  @default(now()) @db.Timestamp(0)
-  
-  // Relations
-  approved_by_user    users?    @relation("DisposalApprover", fields: [approved_by], references: [user_id])
-  disposed_by_user    users?    @relation("DisposalProcessor", fields: [disposed_by], references: [user_id])
-  
-  @@map("asset_disposals")
-}
 
-enum equipment_borrows_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Returned
-  Lost
-}
-
-enum lab_requests_status {
-  Pending
-  Admin_Approved
-  Custodian_Approved
-  Denied
-  Completed
-}

@@ -1,7 +1,10 @@
-//backend/scripts/export-current-data.ts
+// backend/scripts/export-current-data.ts
 import { PrismaClient } from "@prisma/client";
 import * as fs from "fs";
 import * as path from "path";
+
+// No need for fileURLToPath or import.meta.url!
+// __dirname is natively available in CommonJS.
 
 const prisma = new PrismaClient();
 

@@ -15,7 +15,6 @@ import {
   History,
   ChevronDown,
   ChevronUp,
-  Download,
 } from "lucide-react";
 import ServiceHistoryTimeline from "./ServiceHistoryTimeline";
 import RepairModal from "./RepairModal";
@@ -86,7 +85,15 @@ const MaintenanceView: React.FC<Props> = ({
 
       // Fetch service history
       const historyData = await getServiceHistory(workstation.id, quarter);
-      setServiceLogs(historyData);
+      
+      // Sort service logs by date and time (most recent first)
+      const sortedHistoryData = historyData.sort((a, b) => {
+        const dateA = new Date(a.service_date || a.created_at);
+        const dateB = new Date(b.service_date || b.created_at);
+        return dateB.getTime() - dateA.getTime(); // Descending order (newest first)
+      });
+      
+      setServiceLogs(sortedHistoryData);
 
       // Fetch status options
       const statuses = await getAssetStatuses();
@@ -147,13 +154,13 @@ const MaintenanceView: React.FC<Props> = ({
     const systemComponents = assets.filter((asset) =>
       SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
     );
     const peripheralComponents = assets.filter(
       (asset) =>
         !SYSTEM_UNIT_TYPES.some(
           (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-        )
+        ) && asset.status !== 'Disposed'
     );
 
     // 4. Start building the list with Peripherals first
@@ -245,13 +252,13 @@ const MaintenanceView: React.FC<Props> = ({
   const systemAssets = assets.filter((asset) =>
     SYSTEM_UNIT_TYPES.some(
       (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-    )
+    ) && asset.status !== 'Disposed'
   );
   const peripheralAssets = assets.filter(
     (asset) =>
       !SYSTEM_UNIT_TYPES.some(
         (type) => type.toLowerCase() === asset.unit_name.toLowerCase()
-      )
+      ) && asset.status !== 'Disposed'
   );
 
   // Use shared utility to calculate System Unit (Overall) status
@@ -464,7 +471,7 @@ const MaintenanceView: React.FC<Props> = ({
               className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors flex items-center shadow-sm cursor-pointer"
             >
               <Wrench className="w-4 h-4 mr-2" />
-              Repair Component
+              Update Component
             </button>
           )}
 

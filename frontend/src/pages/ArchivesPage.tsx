@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Calendar, MessageSquare, Users, PackageMinus } from "lucide-react";
 import DailyReportList from "../components/daily-report/DailyReportList";
 import ArchiveComplaintsPage from "./ArchiveComplaintsPage.tsx";
@@ -6,8 +6,18 @@ import ArchiveFormsPage from "./ArchiveFormsPage.tsx";
 import ArchiveDisposalsPage from "./ArchiveDisposalsPage.tsx";
 import ArchiveCITLabUsersPage from "./ArchiveCITLabUsersPage.tsx";
 
-export const ArchivesPage = () => {
+interface ArchivesPageProps {
+  initialTab?: string;
+}
+
+export const ArchivesPage = ({ initialTab }: ArchivesPageProps = {}) => {
   const [activeTab, setActiveTab] = useState("reports");
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   return (
     <div className="space-y-6">

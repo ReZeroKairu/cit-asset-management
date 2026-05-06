@@ -13,63 +13,33 @@ import CITLabUsersDetailsModal from "../components/citlab/CITLabUsersDetailsModa
 interface CITLabUsersLog {
   log_id: number;
   date: string;
+  time_in: string;
+  time_out: string | null;
   usage_type: string;
   faculty_student_name: string;
   user_type: string;
   year_level: string | null;
   laboratory: string;
-  printing_pages: string | null;
   ws_number: string | null;
   purpose: string;
   monitored_by: string | null;
-  ip_address: string | null;
   created_at: string;
   // Enhanced fields from view
-  formatted_date?: string;
-  formatted_timestamp?: string;
-  formatted_created_date?: string;
-  formatted_created_time?: string;
+  reservation_date?: string;
+  reservation_date_formatted?: string;
   usage_type_display?: string;
   user_type_category?: string;
   laboratory_display?: string;
-  year_level_display?: string;
-  ws_number_display?: string;
-  printing_pages_display?: string;
-  monitored_by_display?: string;
-  ip_address_display?: string;
-  usage_category?: string;
-  user_category?: string;
-  priority_level?: string;
-  day_of_week?: string;
-  month_name?: string;
-  time_of_day?: string;
+  searchable_text?: string;
 }
 
 // Memoized table row component to prevent unnecessary re-renders
 const LogTableRow = ({ log, onClick }: { log: CITLabUsersLog; onClick: (log: CITLabUsersLog) => void }) => {
-  const getUsageTypeLabel = (usageType: string) => {
-    return usageType === 'set-in-reservation' ? 'Set-in/Reservation' : 
-           usageType === 'printing' ? 'Printing' : 
-           usageType;
-  };
-
-  const getUsageTypeColor = (usageType: string) => {
-    switch (usageType) {
-      case 'printing':
-        return 'bg-orange-100 text-orange-800';
-      case 'set-in-reservation':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
-  };
-
   // Use enhanced display fields from view, fallback to original fields for compatibility
-  const usageTypeDisplay = log.usage_type_display || getUsageTypeLabel(log.usage_type);
   const laboratoryDisplay = log.laboratory_display || log.laboratory;
   const userTypeCategory = log.user_type_category || log.user_type;
-  const monitoredByDisplay = log.monitored_by_display || log.monitored_by;
-  const createdTimeDisplay = log.formatted_created_time || new Date(log.created_at).toLocaleString();
+  const monitoredByDisplay = log.monitored_by;
+  const createdTimeDisplay = new Date(log.created_at).toLocaleString();
 
   return (
     <tr 
@@ -88,20 +58,10 @@ const LogTableRow = ({ log, onClick }: { log: CITLabUsersLog; onClick: (log: CIT
         </span>
       </td>
       <td className="py-4 px-4">{laboratoryDisplay}</td>
-      <td className="py-4 px-4">
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getUsageTypeColor(log.usage_type)}`}>
-          {usageTypeDisplay}
-        </span>
-      </td>
       <td className="py-4 px-4 max-w-lg" title={log.purpose}>
         <div className="text-sm leading-relaxed break-words">{log.purpose}</div>
       </td>
       <td className="py-4 px-4">{monitoredByDisplay || '-'}</td>
-      <td className="py-4 px-4">
-        <span className="font-mono text-xs text-gray-600">
-          {log.ip_address || 'Unknown'}
-        </span>
-      </td>
       <td className="py-4 px-4 text-gray-500 text-sm">
         {createdTimeDisplay}
       </td>
@@ -120,7 +80,9 @@ const ArchiveCITLabUsersPage = () => {
   const [filters, setFilters] = useState({
     laboratory: "all",
     user_type: "all",
-    search: ""
+    search: "",
+    startDate: "",
+    endDate: ""
   });
   const [uniqueLabs, setUniqueLabs] = useState<string[]>([]);
   const hasFetched = useRef(false);
@@ -142,7 +104,6 @@ const ArchiveCITLabUsersPage = () => {
       
       if (Array.isArray(data)) {
         const labNames = data.map((lab: any) => lab.lab_name).filter(Boolean);
-        console.log('🔬 All available labs from API:', labNames);
         setUniqueLabs(labNames);
       }
     } catch (error) {
@@ -177,7 +138,6 @@ const ArchiveCITLabUsersPage = () => {
       // Prevent multiple rapid requests within 1 second
       const now = Date.now();
       if (now - lastRequestTime.current < 1000) {
-        console.log('⏳ Throttling request to prevent 429 errors');
         return;
       }
       lastRequestTime.current = now;
@@ -185,13 +145,9 @@ const ArchiveCITLabUsersPage = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Fetching CIT Lab Users logs...');
-      
       const response = await getCITLabUsersLogs();
       const logsData = response?.data || [];
       setLogs(logsData);
-      
-      console.log('✅ Successfully fetched CIT Lab Users logs:', logsData.length, 'records');
     } catch (err: any) {
       console.error('❌ Error fetching CIT Lab Users logs:', err);
       
@@ -199,7 +155,6 @@ const ArchiveCITLabUsersPage = () => {
       if (err.response?.status === 429) {
         if (retryCount < 3) {
           const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
-          console.log(`🔄 429 error, retrying in ${delay/1000}s... (attempt ${retryCount + 1}/3)`);
           setError(`Rate limited. Retrying in ${delay/1000} seconds...`);
           
           requestTimeout.current = setTimeout(() => {
@@ -232,27 +187,39 @@ const ArchiveCITLabUsersPage = () => {
   const applyFilters = useCallback(() => {
     // Use setTimeout to defer heavy filtering to next tick
     setTimeout(() => {
-      console.log('🔍 Applying filters:', filters);
-      console.log('📊 Total logs before filtering:', logs.length);
-      
       let filtered = logs;
 
       // For custodians: automatically filter to only their assigned lab
       if (user?.role === 'Custodian' && user?.lab_id) {
         filtered = filtered.filter(log => log.laboratory === user.lab_name);
-        console.log(`👮 Custodian filter: Only showing logs for ${user.lab_name} (ID: ${user.lab_id})`);
       } else {
         // Laboratory filter (skip if "all") - for admins
         if (filters.laboratory && filters.laboratory !== "all") {
           filtered = filtered.filter(log => log.laboratory === filters.laboratory);
-          console.log(`🔬 Lab filter "${filters.laboratory}": ${filtered.length} results`);
         }
       }
 
       // User type filter (skip if "all")
       if (filters.user_type && filters.user_type !== "all") {
         filtered = filtered.filter(log => log.user_type === filters.user_type);
-        console.log(`👤 User type filter "${filters.user_type}": ${filtered.length} results`);
+      }
+
+      // Date range filters
+      if (filters.startDate) {
+        filtered = filtered.filter(log => {
+          const logDate = new Date(log.created_at);
+          const start = new Date(filters.startDate);
+          return logDate >= start;
+        });
+      }
+
+      if (filters.endDate) {
+        filtered = filtered.filter(log => {
+          const logDate = new Date(log.created_at);
+          const end = new Date(filters.endDate);
+          end.setHours(23, 59, 59, 999); // Include entire end date
+          return logDate <= end;
+        });
       }
 
       // Search filter
@@ -265,16 +232,13 @@ const ArchiveCITLabUsersPage = () => {
           (log.usage_type && log.usage_type.toLowerCase().includes(searchLower)) ||
           (log.monitored_by && log.monitored_by.toLowerCase().includes(searchLower))
         );
-        console.log(`🔍 Search filter "${filters.search}": ${filtered.length} results`);
       }
 
-      console.log('✅ Final filtered results:', filtered.length);
       setFilteredLogs(filtered);
     }, 0); // Defer to next tick
   }, [logs, filters, user]);
 
   const handleFilterChange = (field: string, value: string) => {
-    console.log(`🔄 Filter change: ${field} = ${value}`);
     setFilters(prev => ({
       ...prev,
       [field]: value
@@ -282,11 +246,12 @@ const ArchiveCITLabUsersPage = () => {
   };
 
   const clearFilters = () => {
-    console.log('🧹 Clearing all filters');
     setFilters({
       laboratory: "all",
       user_type: "all",
-      search: ""
+      search: "",
+      startDate: "",
+      endDate: ""
     });
   };
 
@@ -353,69 +318,102 @@ const ArchiveCITLabUsersPage = () => {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="laboratory">Laboratory</Label>
-              {user?.role === 'Custodian' ? (
-                <Select value={user.lab_name || 'no-lab-assigned'} disabled>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No lab assigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={user.lab_name || 'no-lab-assigned'}>
-                      {user.lab_name || 'No lab assigned'}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Select value={filters.laboratory} onValueChange={(value) => handleFilterChange("laboratory", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Labs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Labs</SelectItem>
-                    {uniqueLabs.map((lab) => (
-                      <SelectItem key={lab} value={lab}>
-                        {lab}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="user_type">User Type</Label>
-              <Select value={filters.user_type} onValueChange={(value) => handleFilterChange("user_type", value)}>
+      <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange("startDate", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange("endDate", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+        
+        {/* Additional filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="laboratory">Laboratory</Label>
+            {user?.role === 'Custodian' ? (
+              <Select value={user.lab_name || 'no-lab-assigned'} disabled>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
+                  <SelectValue placeholder="No lab assigned" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Student">Student</SelectItem>
-                  <SelectItem value="Faculty">Faculty</SelectItem>
+                  <SelectItem value={user.lab_name || 'no-lab-assigned'}>
+                    {user.lab_name || 'No lab assigned'}
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Search name, lab, purpose..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            ) : (
+              <Select value={filters.laboratory} onValueChange={(value) => handleFilterChange("laboratory", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Labs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Labs</SelectItem>
+                  {uniqueLabs.map((lab) => (
+                    <SelectItem key={lab} value={lab}>
+                      {lab}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="user_type">User Type</Label>
+            <Select value={filters.user_type} onValueChange={(value) => handleFilterChange("user_type", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Student">Student</SelectItem>
+                <SelectItem value="Faculty">Faculty</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="search">Search</Label>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+              <Input
+                id="search"
+                placeholder="Search name, lab, purpose..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Logs Table */}
       <Card>
@@ -434,11 +432,9 @@ const ArchiveCITLabUsersPage = () => {
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Name</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">User Type</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Laboratory</th>
-                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Usage Type</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Purpose</th>
-                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Monitored By</th>
-                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">IP Address</th>
-                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Submitted</th>
+                    <th className="py-3 px-4 text-left font-semibold text-sm text-  gray-700">Monitored By</th>
+                    <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Logged Date & Time</th>
                   </tr>
                 </thead>
                 <tbody>

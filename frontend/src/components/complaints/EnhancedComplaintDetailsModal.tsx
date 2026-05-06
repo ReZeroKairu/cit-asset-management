@@ -184,14 +184,6 @@ const EnhancedComplaintDetailsModal = ({
                       </p>
                     </div>
                   )}
-                  {complaint.ip_address && (
-                    <div>
-                      <p className="text-sm text-gray-500">IP Address</p>
-                      <p className="font-medium text-gray-900 font-mono text-sm">
-                        {complaint.ip_address}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

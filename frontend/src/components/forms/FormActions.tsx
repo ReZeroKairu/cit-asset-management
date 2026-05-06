@@ -31,20 +31,8 @@ export const FormActions: React.FC<FormActionsProps> = ({
     return true;
   };
 
-  const handleLabRequestComplete = () => {
-    const missingFields = [];
-    if (!form.details.time_out) missingFields.push("Time Out");
-    if (!form.details.remarks) missingFields.push("Remarks");
-    if (validateRequiredFields(missingFields)) handleStatusUpdate("Completed");
-  };
-
-  const handleEquipmentReturn = () => {
-    const missingFields = [];
-    if (!form.details.returned_time) missingFields.push("Returned Time");
-    if (!form.details.remarks) missingFields.push("Remarks");
-    if (validateRequiredFields(missingFields)) handleStatusUpdate("Returned");
-  };
-
+  
+  
   const handleSoftwareComplete = () => {
     const missingFields = [];
     if (!form.details.installation_remarks) missingFields.push("Installation Remarks");
@@ -56,8 +44,8 @@ export const FormActions: React.FC<FormActionsProps> = ({
 
   const showEdit =
     userRole === "Custodian" &&
-    (form.status === "Admin_Approved" ||
-      (form.type === "software-install" && form.status === "Custodian_Approved"));
+    form.type === "software-install" &&
+    form.status === "Custodian_Approved";
 
   const showDownload = userRole === "Custodian" && !!onDownloadForm;
 
@@ -65,8 +53,6 @@ export const FormActions: React.FC<FormActionsProps> = ({
     form.status === "Pending" &&
     !(userRole === "Admin" && form.type === "software-install");
 
-  const showLabComplete  = form.type === "lab-request"      && form.status === "Admin_Approved";
-  const showEquipment    = form.type === "equipment-borrow" && form.status === "Admin_Approved";
   const showSoftComplete = form.type === "software-install" && form.status === "Custodian_Approved";
 
   // ── Shared styles ──────────────────────────────────────────────────
@@ -84,7 +70,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       {/* Slot 1 — Edit (fixed, always reserves 28px) */}
-      <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+      <div className="w-7 h-7 shrink-0 flex items-center justify-center">
         {showEdit ? (
           <button
             className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors cursor-pointer"
@@ -94,12 +80,12 @@ export const FormActions: React.FC<FormActionsProps> = ({
             <Edit className="w-4 h-4 transition-transform hover:scale-105" />
           </button>
         ) : (
-          <span className="w-7 h-7 flex-shrink-0" />
+          <span className="w-7 h-7 shrink-0" />
         )}
       </div>
 
       {/* Slot 2 — Download (fixed, always reserves 28px) */}
-      <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+      <div className="w-7 h-7 shrink-0 flex items-center justify-center">
         {showDownload ? (
           <button
             className="text-green-600 hover:text-green-800 p-1 rounded transition-colors cursor-pointer"
@@ -109,12 +95,12 @@ export const FormActions: React.FC<FormActionsProps> = ({
             <Download className="w-4 h-4 transition-transform hover:scale-105" />
           </button>
         ) : (
-          <span className="w-7 h-7 flex-shrink-0" />
+          <span className="w-7 h-7 shrink-0" />
         )}
       </div>
 
       {/* Divider — always rendered to keep column width stable */}
-      <span className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
+      <span className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
       {/* Slot 3 — Status buttons (min-width keeps column stable) */}
       <div className="flex items-center gap-1 min-w-[120px]">
@@ -135,32 +121,7 @@ export const FormActions: React.FC<FormActionsProps> = ({
           </>
         )}
 
-        {showLabComplete && (
-          <button
-            className={`${statusBtn} bg-green-600 hover:bg-green-700`}
-            onClick={handleLabRequestComplete}
-          >
-            Completed
-          </button>
-        )}
-
-        {showEquipment && (
-          <>
-            <button
-              className={`${statusBtn} bg-green-600 hover:bg-green-700`}
-              onClick={handleEquipmentReturn}
-            >
-              Returned
-            </button>
-            <button
-              className={`${statusBtn} bg-red-600 hover:bg-red-700`}
-              onClick={() => handleStatusUpdate("Lost")}
-            >
-              Lost
-            </button>
-          </>
-        )}
-
+        
         {showSoftComplete && (
           <button
             className={`${statusBtn} bg-green-600 hover:bg-green-700`}

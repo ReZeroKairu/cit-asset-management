@@ -1,29 +1,27 @@
 import { Card, CardContent } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { useEffect } from "react";
 import { 
   Users, 
   User, 
   MapPin, 
   FileText,
-  Clock,
-  X,
-  Printer,
-  Globe
+  X
 } from "lucide-react";
 
 interface CITLabUsersLog {
   log_id: number;
+  date: string;
+  time_in: string;
+  time_out: string | null;
   usage_type: string;
   faculty_student_name: string;
   user_type: string;
   year_level: string | null;
   laboratory: string;
-  printing_pages: string | null;
+  laboratory_location?: string | null;
   ws_number: string | null;
   purpose: string;
   monitored_by: string | null;
-  ip_address: string | null;
   created_at: string;
 }
 
@@ -38,32 +36,7 @@ const CITLabUsersDetailsModal = ({
   isOpen,
   onClose
 }: CITLabUsersDetailsModalProps) => {
-  const getUsageTypeIcon = (usageType: string) => {
-    switch (usageType) {
-      case "set-in-reservation": return <Clock className="w-4 h-4" />;
-      case "walk-in": return <Users className="w-4 h-4" />;
-      case "printing": return <Printer className="w-4 h-4" />;
-      default: return <Users className="w-4 h-4" />;
-    }
-  };
-
-  const getUsageTypeColor = (usageType: string) => {
-    switch (usageType) {
-      case "set-in-reservation": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "walk-in": return "bg-green-100 text-green-800 border-green-200";
-      case "printing": return "bg-purple-100 text-purple-800 border-purple-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getUserTypeColor = (userType: string) => {
-    switch (userType) {
-      case "Student": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Faculty": return "bg-green-100 text-green-800 border-green-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
+  
   // Add ESC key support
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
@@ -136,14 +109,12 @@ const CITLabUsersDetailsModal = ({
                   {log.year_level && (
                     <div>
                       <p className="text-sm text-gray-500">Year Level</p>
-                      <p className="font-medium text-gray-900">{log.year_level}</p>
+                        <p className="font-medium text-gray-900">{log.year_level.replace(' Year', '')}</p>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
-
-            {/* Location Information Card */}
             <Card className="border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -155,6 +126,12 @@ const CITLabUsersDetailsModal = ({
                     <p className="text-sm text-gray-500">Laboratory</p>
                     <p className="font-medium text-gray-900">{log.laboratory}</p>
                   </div>
+                  {log.laboratory_location && (
+                    <div>
+                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="font-medium text-gray-900">{log.laboratory_location}</p>
+                    </div>
+                  )}
                   {log.ws_number && (
                     <div>
                       <p className="text-sm text-gray-500">Workstation</p>
@@ -179,7 +156,6 @@ const CITLabUsersDetailsModal = ({
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full border border-blue-200">
                   <span className="font-medium text-sm">
                     {log.usage_type === 'set-in-reservation' ? 'Set-in/Reservation' : 
-                     log.usage_type === 'printing' ? 'Printing' : 
                      log.usage_type}
                   </span>
                 </div>
@@ -192,21 +168,7 @@ const CITLabUsersDetailsModal = ({
             </CardContent>
           </Card>
 
-          {/* Additional Details */}
-          {log.printing_pages && (
-            <Card className="border-gray-200 mb-6">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Printer className="w-5 h-5 text-indigo-600" />
-                  <h3 className="font-semibold text-gray-900">Printing Details</h3>
-                </div>
-                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                  <p className="text-gray-900">Pages: {log.printing_pages}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+          
           {/* Monitoring Information */}
           <Card className="border-gray-200 mb-6">
             <CardContent className="p-4">
@@ -220,12 +182,6 @@ const CITLabUsersDetailsModal = ({
                     Monitored by: {log.monitored_by || 'Not assigned'}
                   </p>
                 </div>
-                {log.ip_address && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Globe className="w-4 h-4" />
-                    <span>IP Address: {log.ip_address}</span>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -233,15 +189,27 @@ const CITLabUsersDetailsModal = ({
           {/* Timestamp Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-500 mb-1">Logged Date & Time</p>
+              <p className="text-gray-500 mb-1">Reservation Date</p>
               <p className="font-medium text-gray-900">
-                {new Date(log.created_at).toLocaleString()}
+                {new Date(log.date).toLocaleDateString()}
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-500 mb-1">Usage Type</p>
-              <p className="font-medium text-gray-900 capitalize">
-                {log.usage_type.replace('-', ' ')}
+              <p className="text-gray-500 mb-1">Time In</p>
+              <p className="font-medium text-gray-900 font-mono">
+                {log.time_in}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-gray-500 mb-1">Time Out</p>
+              <p className="font-medium text-gray-900 font-mono">
+                {log.time_out || 'Not logged out'}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-gray-500 mb-1">Logged Date & Time</p>
+              <p className="font-medium text-gray-900">
+                {new Date(log.created_at).toLocaleString()}
               </p>
             </div>
           </div>

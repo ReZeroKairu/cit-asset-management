@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/axios";
 import { getLaboratories } from "../api/laboratories";
-import { getInventory, deleteAsset } from "../api/inventory";
+import { getInventory, deleteAsset, updateAsset, getAssetStatuses, getWorkstationAssets } from "../api/inventory";
 import { getAllWorkstations } from "../api/workstations";
 import { getWorkstationPMCReports } from "../api/maintenance";
 import { getCurrentQuarter } from "../utils/quarterLogic";
@@ -19,6 +18,7 @@ import UploadAssetModal from "../components/inventory/UploadAssetModal";
 // Import our newly extracted table components
 import WorkstationTable from "../components/inventory/WorkstationTable";
 import UnassignedAssetTable from "../components/inventory/UnassignedAssetTable";
+import ForDisposalToggle from "../components/inventory/ForDisposalToggle";
 
 interface Asset {
   asset_id: number;
@@ -87,6 +87,8 @@ const InventoryPage = () => {
   const [showViewWSModal, setShowViewWSModal] = useState(false);
   const [showEditWSModal, setShowEditWSModal] = useState(false);
   const [showUnassignedAssets, setShowUnassignedAssets] = useState(false);
+  const [showForDisposalAssets, setShowForDisposalAssets] = useState(false);
+  const [disposalAssetsCount, setDisposalAssetsCount] = useState(0);
   const [showWorkstationReport, setShowWorkstationReport] = useState(false);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
@@ -114,6 +116,12 @@ const InventoryPage = () => {
     try {
       const data = await getInventory();
       setAssets(data);
+      // Calculate disposal assets count
+      const disposalAssets = data.filter((asset: any) => 
+        asset.asset_details?.asset_statuses?.status_name === 'For Repair' ||
+        asset.asset_details?.asset_statuses?.status_name === 'For Disposal'
+      );
+      setDisposalAssetsCount(disposalAssets.length);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
@@ -214,6 +222,37 @@ const InventoryPage = () => {
     }
   };
 
+  const handleMarkForDisposal = async (assetId: number) => {
+    if (!confirm("Are you sure you want to mark this asset for disposal? This will change its status to 'For Disposal'.")) {
+      return;
+    }
+
+    try {
+      // Get asset statuses to find the "For Disposal" status ID
+      const statuses = await getAssetStatuses();
+      const forDisposalStatus = statuses.find((status: any) => status.status_name === "For Disposal");
+      
+      if (!forDisposalStatus) {
+        alert("For Disposal status not found in system");
+        return;
+      }
+
+      // Update asset status to "For Disposal"
+      await updateAsset(assetId, {
+        status_id: forDisposalStatus.status_id
+      });
+      
+      // Refresh the inventory data
+      fetchInventory();
+      
+      alert("Asset status changed to For Disposal");
+      
+    } catch (err: any) {
+      console.error("Failed to update asset status:", err);
+      alert("Failed to update asset status. Please try again.");
+    }
+  };
+
   const handleViewWorkstation = (workstation: Workstation) => {
     setViewingWorkstation(workstation);
     setShowViewWSModal(true);
@@ -222,23 +261,6 @@ const InventoryPage = () => {
   const handleEditWorkstation = (workstation: Workstation) => {
     setEditingWorkstation(workstation);
     setShowEditWSModal(true);
-  };
-
-  const handleDeleteWorkstation = async (workstationId: number) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this workstation? This will also remove all asset assignments."
-      )
-    )
-      return;
-    try {
-      await api.delete(`/workstations/${workstationId}`);
-      await fetchWorkstations();
-      await fetchInventory();
-    } catch (err: any) {
-      console.error("Failed to delete workstation:", err);
-      alert(err.response?.data?.error || "Failed to delete workstation");
-    }
   };
 
   const handleWorkstationModalSuccess = () => {
@@ -254,9 +276,108 @@ const InventoryPage = () => {
     fetchWorkstations();
   };
 
+  const handleBulkDisposeWorkstations = async (workstationIds: number[]) => {
+    if (!confirm(`Are you sure you want to mark all assets in ${workstationIds.length} workstation(s) for disposal? This will change the status of all assets in these workstations to 'For Disposal' but keep the workstations intact.`)) return;
+    
+    try {
+      // Get all asset statuses
+      const statuses = await getAssetStatuses();
+      const forDisposalStatus = statuses.find((s: any) => s.status_name === "For Disposal");
+      
+      if (!forDisposalStatus) {
+        alert("For Disposal status not found");
+        return;
+      }
+
+      let totalAssetsUpdated = 0;
+
+      // Update all active assets in each selected workstation
+      for (const workstationId of workstationIds) {
+        try {
+          const assets = await getWorkstationAssets(workstationId);
+          
+          for (const asset of assets) {
+            const statusName = asset.status || asset.details?.current_status?.status_name || "Functional";
+            
+            // Only update assets that are not already in disposal workflow
+            if (statusName !== "For Disposal" && 
+                statusName !== "Disposed" && 
+                statusName !== "For Replacement") {
+              await updateAsset(asset.asset_id, { 
+                status_id: forDisposalStatus.status_id 
+              });
+              totalAssetsUpdated++;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to update assets for workstation ${workstationId}:`, error);
+        }
+      }
+      
+      fetchInventory();
+      alert(`Successfully marked ${totalAssetsUpdated} assets in ${workstationIds.length} workstation(s) for disposal. Workstations remain intact.`);
+    } catch (err) {
+      console.error("Failed to bulk dispose workstations:", err);
+      alert("Failed to update asset statuses. Please try again.");
+    }
+  };
+
+  const handleBulkDisposeUnassignedAssets = async (assetIds: number[]) => {
+    if (!confirm(`Are you sure you want to mark ${assetIds.length} unassigned asset(s) for disposal? This will change their status to 'For Disposal'.`)) return;
+    
+    try {
+      // Get all asset statuses
+      const statuses = await getAssetStatuses();
+      const forDisposalStatus = statuses.find((s: any) => s.status_name === "For Disposal");
+      
+      if (!forDisposalStatus) {
+        alert("For Disposal status not found");
+        return;
+      }
+
+      let totalAssetsUpdated = 0;
+
+      // Update each selected unassigned asset
+      for (const assetId of assetIds) {
+        try {
+          // Find the asset to check its current status
+          const asset = assets.find(a => a.asset_id === assetId);
+          if (asset) {
+            const statusName = (asset as any).asset_details?.asset_statuses?.status_name || "Functional";
+            
+            // Only update assets that are not already in disposal workflow
+            if (statusName !== "For Disposal" && 
+                statusName !== "Disposed" && 
+                statusName !== "For Replacement") {
+              await updateAsset(assetId, { 
+                status_id: forDisposalStatus.status_id 
+              });
+              totalAssetsUpdated++;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to update asset ${assetId}:`, error);
+        }
+      }
+      
+      fetchInventory();
+      alert(`Successfully marked ${totalAssetsUpdated} unassigned asset(s) for disposal.`);
+    } catch (err) {
+      console.error("Failed to bulk dispose unassigned assets:", err);
+      alert("Failed to update asset statuses. Please try again.");
+    }
+  };
+
   // --- Filtering Logic ---
   const unassignedAssets = (assets || []).filter(
     (asset: any) => !asset.workstation && !asset.workstation_id
+  ).filter(
+    (asset: any) => {
+      const statusName = asset.asset_details?.asset_statuses?.status_name;
+      return statusName !== "For Disposal" && 
+             statusName !== "Disposed" && 
+             statusName !== "For Replacement";
+    }
   );
 
   const filteredWorkstations = (
@@ -346,18 +467,20 @@ const InventoryPage = () => {
   useEffect(() => {
     setWorkstationSearch("");
     setAssetSearch("");
-  }, [showUnassignedAssets]);
+  }, [showUnassignedAssets, showForDisposalAssets]);
 
   const getStatusColor = (statusName?: string) => {
     switch (statusName) {
       case "Functional":
         return "bg-green-100 text-green-800";
-      case "For Repair":
-        return "bg-yellow-100 text-yellow-800";
+      case "For Disposal":
+        return "bg-red-100 text-red-800";
       case "For Replacement":
         return "bg-red-100 text-red-800";
       case "For Upgrade":
         return "bg-blue-100 text-blue-800";
+      case "Disposed":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -426,9 +549,12 @@ const InventoryPage = () => {
               {/* View Toggles - Always show for all users */}
               <>
                 <button
-                  onClick={() => setShowUnassignedAssets(false)}
+                  onClick={() => {
+                    setShowUnassignedAssets(false);
+                    setShowForDisposalAssets(false);
+                  }}
                   className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                    !showUnassignedAssets
+                    !showUnassignedAssets && !showForDisposalAssets
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -436,14 +562,30 @@ const InventoryPage = () => {
                   🖥️ Workstations ({filteredWorkstations.length})
                 </button>
                 <button
-                  onClick={() => setShowUnassignedAssets(true)}
+                  onClick={() => {
+                    setShowUnassignedAssets(true);
+                    setShowForDisposalAssets(false);
+                  }}
                   className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                    showUnassignedAssets
+                    showUnassignedAssets && !showForDisposalAssets
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   📦 Other Assets ({filteredUnassignedAssets.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUnassignedAssets(false);
+                    setShowForDisposalAssets(true);
+                  }}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    showForDisposalAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🗑️ For Disposal ({disposalAssetsCount})
                 </button>
               </>
             </div>
@@ -455,9 +597,12 @@ const InventoryPage = () => {
           <div className="mb-4 flex items-center justify-start">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setShowUnassignedAssets(false)}
+                onClick={() => {
+                  setShowUnassignedAssets(false);
+                  setShowForDisposalAssets(false);
+                }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                  !showUnassignedAssets
+                  !showUnassignedAssets && !showForDisposalAssets
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
@@ -465,14 +610,30 @@ const InventoryPage = () => {
                 🖥️ Workstations ({filteredWorkstations.length})
               </button>
               <button
-                onClick={() => setShowUnassignedAssets(true)}
+                onClick={() => {
+                  setShowUnassignedAssets(true);
+                  setShowForDisposalAssets(false);
+                }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                  showUnassignedAssets
+                  showUnassignedAssets && !showForDisposalAssets
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 📦 Other Assets ({filteredUnassignedAssets.length})
+              </button>
+              <button
+                onClick={() => {
+                  setShowUnassignedAssets(false);
+                  setShowForDisposalAssets(true);
+                }}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  showForDisposalAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                🗑️ For Disposal ({disposalAssetsCount})
               </button>
             </div>
           </div>
@@ -481,7 +642,7 @@ const InventoryPage = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-4">
             {/* Workstation Search - Moved to first position */}
-            {!showUnassignedAssets && (
+            {!showUnassignedAssets && !showForDisposalAssets && (
               <div className="flex items-center space-x-2">
                 <label
                   htmlFor="workstation-search"
@@ -515,7 +676,7 @@ const InventoryPage = () => {
             )}
 
             {/* Asset Search - Only show when viewing unassigned assets */}
-            {showUnassignedAssets && (
+            {(showUnassignedAssets || showForDisposalAssets) && (
               <div className="flex items-center space-x-2">
                 <label
                   htmlFor="asset-search"
@@ -546,7 +707,7 @@ const InventoryPage = () => {
             )}
 
             {/* Action Buttons - Moved beside search */}
-            {!showUnassignedAssets && (
+            {!showUnassignedAssets && !showForDisposalAssets && (
               <button
                 className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
@@ -599,13 +760,13 @@ const InventoryPage = () => {
 
       {/* Main Content Rendered via Components */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {!showUnassignedAssets ? (
+        {!showUnassignedAssets && !showForDisposalAssets ? (
           <>
             <WorkstationTable
               workstations={paginatedWorkstations}
               onView={handleViewWorkstation}
               onEdit={handleEditWorkstation}
-              onDelete={handleDeleteWorkstation}
+              onBulkDispose={handleBulkDisposeWorkstations}
               getStatusColor={getStatusColor}
               pmcReports={pmcReports}
             />
@@ -639,11 +800,14 @@ const InventoryPage = () => {
               </div>
             )}
           </>
+        ) : showForDisposalAssets ? (
+          <ForDisposalToggle onDisposalSuccess={fetchInventory} />
         ) : (
           <UnassignedAssetTable
             assets={filteredUnassignedAssets}
             onEdit={handleEdit}
-            onDelete={handleDelete}
+            onMarkForDisposal={handleMarkForDisposal}
+            onBulkDispose={handleBulkDisposeUnassignedAssets}
           />
         )}
       </div>
@@ -655,6 +819,7 @@ const InventoryPage = () => {
         onSuccess={() => {
           fetchInventory();
           fetchWorkstations();
+          // Disposal count will be updated in fetchInventory
         }}
       />
       <EditAssetModal
@@ -667,6 +832,7 @@ const InventoryPage = () => {
         onSuccess={() => {
           fetchInventory();
           fetchWorkstations();
+          // Disposal count will be updated in fetchInventory
         }}
       />
       <AddWorkstationModal
@@ -702,6 +868,7 @@ const InventoryPage = () => {
         onSuccess={() => {
           fetchInventory();
           fetchWorkstations();
+          // Disposal count will be updated in fetchInventory
         }}
       />
     </div>

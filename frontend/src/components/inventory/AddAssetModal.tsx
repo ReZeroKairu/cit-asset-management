@@ -84,7 +84,24 @@ const AddAssetModal: React.FC<Props> = ({
             ],
           );
           setDeviceTypes(deviceTypeData);
-          setWorkstations(wsData);
+          setWorkstations(wsData.sort((a: any, b: any) => {
+  const nameA = a.workstation_name || "";
+  const nameB = b.workstation_name || "";
+  
+  // Extract numbers for proper numeric sorting
+  const numA = parseInt(nameA.replace(/\D+/g, "")) || 0;
+  const numB = parseInt(nameB.replace(/\D+/g, "")) || 0;
+  
+  // If both have numbers, compare numerically first
+  if (numA && numB) {
+    if (numA !== numB) {
+      return numA - numB;
+    }
+  }
+  
+  // If numbers are equal or one/both don't have numbers, compare alphabetically
+  return nameA.localeCompare(nameB);
+}));
           setUnits(unitData);
           setLabs(labData);
         } catch (err) {

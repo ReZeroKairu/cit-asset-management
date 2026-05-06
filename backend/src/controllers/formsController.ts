@@ -1,518 +1,108 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+// src/controllers/formsController.ts
+import { Request, Response } from "express";
+import * as FormsService from "../services/formsService";
 
-const prisma = new PrismaClient();
+const getClientIP = (req: any) => {
+  return (
+    req.headers["x-forwarded-for"] ||
+    req.headers["x-real-ip"] ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+    req.ip
+  );
+};
 
-// Lab Request Controllers
-export const createLabRequest = async (req: Request, res: Response) => {
+export const createSoftwareInstallation = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    // Capture client IP address
-    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
-    
-    const {
-      date,
-      usage_type,
-      faculty_student_name,
-      user_type,
-      year_level,
-      laboratory,
-      printing_pages,
-      ws_number,
-      time_in,
-      time_out,
-      purpose,
-      requested_by,
-      approved_by,
-      remarks,
-      monitored_by,
-      user_id
-    } = req.body;
-
-    const labRequest = await prisma.lab_requests.create({
-      data: {
-        date: new Date(date),
-        usage_type,
-        faculty_student_name,
-        user_type,
-        year_level,
-        laboratory,
-        printing_pages,
-        ws_number,
-        time_in,
-        time_out,
-        purpose,
-        requested_by,
-        approved_by,
-        remarks,
-        monitored_by,
-        user_id: user_id || null,
-        ip_address: clientIP
-      }
-    });
-
+    const data = await FormsService.createSoftwareInstallation(
+      req.body,
+      getClientIP(req),
+      false,
+    );
     res.status(201).json({
       success: true,
-      message: 'Lab request submitted successfully',
-      data: labRequest
+      message: "Software installation request submitted successfully",
+      data,
     });
-  } catch (error) {
-    console.error('Error creating lab request:', error);
+  } catch (error: any) {
+    console.error("Error creating software installation request:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to submit lab request',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-export const getLabRequests = async (req: Request, res: Response) => {
-  try {
-    const { start_date, end_date } = req.query;
-    
-    const whereClause: any = {};
-    if (start_date || end_date) {
-      whereClause.date = {};
-      if (start_date) {
-        whereClause.date.gte = new Date(start_date as string);
-      }
-      if (end_date) {
-        whereClause.date.lte = new Date(end_date as string);
-      }
-    }
-
-    const labRequests = await prisma.lab_requests.findMany({
-      where: whereClause,
-      include: {
-        users: {
-          select: {
-            full_name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      data: labRequests
-    });
-  } catch (error) {
-    console.error('Error fetching lab requests:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch lab requests',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-export const updateLabRequestStatus = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    // Validate status against the enum
-    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status',
-        error: `Status must be one of: ${validStatuses.join(', ')}`
-      });
-    }
-
-    const labRequest = await prisma.lab_requests.update({
-      where: { request_id: parseInt(id as string) },
-      data: { status }
-    });
-
-    res.json({
-      success: true,
-      message: 'Lab request status updated successfully',
-      data: labRequest
-    });
-  } catch (error) {
-    console.error('❌ Error updating lab request status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update lab request status',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-// Update lab request details (for custodian editing)
-export const updateLabRequestDetails = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { time_out, remarks } = req.body;
-
-    const labRequest = await prisma.lab_requests.update({
-      where: { request_id: parseInt(id as string) },
-      data: { 
-        time_out: time_out || null,
-        remarks: remarks || null
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Lab request details updated successfully',
-      data: labRequest
-    });
-  } catch (error) {
-    console.error('❌ Error updating lab request details:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update lab request details',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-// Equipment Borrow Controllers
-export const createEquipmentBorrow = async (req: Request, res: Response) => {
-  try {
-    // Capture client IP address
-    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
-    
-    const {
-      date,
-      laboratory,
-      faculty_student_name,
-      user_type,
-      year_level,
-      release_time,
-      returned_time,
-      equipment_list,
-      purpose,
-      requested_by,
-      approved_by,
-      remarks,
-      monitored_by,
-      user_id
-    } = req.body;
-
-    const equipmentBorrow = await prisma.equipment_borrows.create({
-      data: {
-        date: new Date(date),
-        laboratory,
-        faculty_student_name,
-        user_type,
-        year_level,
-        release_time,
-        returned_time,
-        equipment_list,
-        purpose,
-        requested_by,
-        approved_by,
-        remarks,
-        monitored_by,
-        user_id: user_id || null,
-        ip_address: clientIP
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Equipment borrow request submitted successfully',
-      data: equipmentBorrow
-    });
-  } catch (error) {
-    console.error('Error creating equipment borrow request:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit equipment borrow request',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-export const getEquipmentBorrows = async (req: Request, res: Response) => {
-  try {
-    const { start_date, end_date } = req.query;
-    
-    const whereClause: any = {};
-    if (start_date || end_date) {
-      whereClause.date = {};
-      if (start_date) {
-        whereClause.date.gte = new Date(start_date as string);
-      }
-      if (end_date) {
-        whereClause.date.lte = new Date(end_date as string);
-      }
-    }
-
-    const equipmentBorrows = await prisma.equipment_borrows.findMany({
-      where: whereClause,
-      include: {
-        users: {
-          select: {
-            full_name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
-
-    res.status(200).json({
-      success: true,
-      data: equipmentBorrows
-    });
-  } catch (error) {
-    console.error('Error fetching equipment borrows:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch equipment borrows',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-export const updateEquipmentBorrowStatus = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    // Validate status against the enum
-    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Returned', 'Lost'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status',
-        error: `Status must be one of: ${validStatuses.join(', ')}`
-      });
-    }
-
-    const equipmentBorrow = await prisma.equipment_borrows.update({
-      where: { borrow_id: parseInt(id as string) },
-      data: { status }
-    });
-
-    res.json({
-      success: true,
-      message: 'Equipment borrow status updated successfully',
-      data: equipmentBorrow
-    });
-  } catch (error) {
-    console.error('❌ Error updating equipment borrow status:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update equipment borrow status',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-// Update equipment borrow details (for custodian editing)
-export const updateEquipmentBorrowDetails = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { returned_time, remarks } = req.body;
-
-    console.log('🔧 Updating equipment borrow details:', { id, returned_time, remarks });
-
-    const equipmentBorrow = await prisma.equipment_borrows.update({
-      where: { borrow_id: parseInt(id as string) },
-      data: { 
-        returned_time: returned_time || null,
-        remarks: remarks || null
-      }
-    });
-
-    console.log('✅ Equipment borrow details updated successfully:', equipmentBorrow);
-
-    res.status(200).json({
-      success: true,
-      message: 'Equipment borrow details updated successfully',
-      data: equipmentBorrow
-    });
-  } catch (error) {
-    console.error('❌ Error updating equipment borrow details:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update equipment borrow details',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
-// Software Installation Controllers
-export const createSoftwareInstallation = async (req: Request, res: Response) => {
-  try {
-    // Capture client IP address
-    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || 'Unknown';
-    
-    const {
-      faculty_name,
-      date,
-      laboratory,
-      software_list,
-      requested_by,
-      installation_remarks,
-      prepared_by,
-      feedback_date,
-      user_id
-    } = req.body;
-
-    const softwareInstallation = await prisma.software_installations.create({
-      data: {
-        faculty_name,
-        date: new Date(date),
-        laboratory,
-        software_list,
-        requested_by,
-        installation_remarks,
-        prepared_by,
-        feedback_date: feedback_date ? new Date(feedback_date) : null,
-        user_id: user_id || null,
-        ip_address: clientIP
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Software installation request submitted successfully',
-      data: softwareInstallation
-    });
-  } catch (error) {
-    console.error('Error creating software installation request:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit software installation request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to submit software installation request",
+      error: error.message,
     });
   }
 };
 
 export const getSoftwareInstallations = async (req: Request, res: Response) => {
   try {
-    const { start_date, end_date } = req.query;
-    
-    const whereClause: any = {};
-    if (start_date || end_date) {
-      whereClause.date = {};
-      if (start_date) {
-        whereClause.date.gte = new Date(start_date as string);
-      }
-      if (end_date) {
-        whereClause.date.lte = new Date(end_date as string);
-      }
-    }
-
-    const softwareInstallations = await prisma.software_installations.findMany({
-      where: whereClause,
-      include: {
-        users: {
-          select: {
-            full_name: true,
-            email: true
-          }
-        }
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
+    const data = await FormsService.getSoftwareInstallations({
+      start_date: req.query.start_date as string,
+      end_date: req.query.end_date as string,
     });
-
-    res.status(200).json({
-      success: true,
-      data: softwareInstallations
-    });
-  } catch (error) {
-    console.error('Error fetching software installations:', error);
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    console.error("Error fetching software installations:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch software installations',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to fetch software installations",
+      error: error.message,
     });
   }
 };
 
-export const updateSoftwareInstallationStatus = async (req: Request, res: Response) => {
-  console.log('🚀 updateSoftwareInstallationStatus called!');
-  console.log('📥 Request params:', req.params);
-  console.log('📥 Request body:', req.body);
+export const updateSoftwareInstallationStatus = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    // Validate status against the enum
-    const validStatuses = ['Pending', 'Admin_Approved', 'Custodian_Approved', 'Denied', 'Completed'];
-    if (!validStatuses.includes(status)) {
+    const data = await FormsService.updateSoftwareInstallationStatus(
+      parseInt(req.params.id as string),
+      req.body.status,
+    );
+    res.status(200).json({
+      success: true,
+      message: "Software installation status updated successfully",
+      data,
+    });
+  } catch (error: any) {
+    if (error.message.includes("VALIDATION"))
       return res.status(400).json({
         success: false,
-        message: 'Invalid status',
-        error: `Status must be one of: ${validStatuses.join(', ')}`
+        message: "Invalid status",
+        error: error.message,
       });
-    }
-
-    const softwareInstallation = await prisma.software_installations.update({
-      where: { id: parseInt(id as string) },
-      data: { status }
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Software installation status updated successfully',
-      data: softwareInstallation
-    });
-
-  } catch (error) {
-    console.error('❌ Error updating software installation status:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update software installation status',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to update software installation status",
+      error: error.message,
     });
   }
 };
 
-export const updateSoftwareInstallationDetails = async (req: Request, res: Response) => {
-  console.log('🚀 updateSoftwareInstallationDetails called!');
-  console.log('📥 Request params:', req.params);
-  console.log('📥 Request body:', req.body);
+export const updateSoftwareInstallationDetails = async (
+  req: Request,
+  res: Response,
+) => {
   try {
-    const { id } = req.params;
-    const { installation_remarks, feedback_date } = req.body;
-
-    // Build update data object
-    const updateData: any = {};
-    
-    if (installation_remarks !== undefined) {
-      updateData.installation_remarks = installation_remarks;
-    }
-    
-    if (feedback_date !== undefined) {
-      updateData.feedback_date = feedback_date ? new Date(feedback_date) : null;
-    }
-
-    console.log('📝 Update data:', updateData);
-
-    // Update software installation details
-    const softwareInstallation = await prisma.software_installations.update({
-      where: { id: parseInt(id as string) },
-      data: updateData
-    });
-
+    const data = await FormsService.updateSoftwareInstallationDetails(
+      parseInt(req.params.id as string),
+      req.body,
+    );
     res.status(200).json({
       success: true,
-      message: 'Software installation details updated successfully',
-      data: softwareInstallation
+      message: "Software installation details updated successfully",
+      data,
     });
-
-  } catch (error) {
-    console.error('❌ Error updating software installation details:', error);
+  } catch (error: any) {
     res.status(500).json({
       success: false,
-      message: 'Failed to update software installation details',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to update software installation details",
+      error: error.message,
     });
   }
 };

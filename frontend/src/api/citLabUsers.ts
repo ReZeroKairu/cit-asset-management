@@ -22,7 +22,6 @@ export const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-console.log('🌐 API_BASE_URL initialized to:', API_BASE_URL);
 
 export interface CITLabUsersData {
   date: string;
@@ -31,7 +30,6 @@ export interface CITLabUsersData {
   user_type: string;
   year_level?: string;
   laboratory: string;
-  printing_pages?: string;
   ws_number?: string;
   purpose: string;
   monitored_by?: string;

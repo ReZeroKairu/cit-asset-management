@@ -1,7 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { useState, useEffect } from 'react';
 import { Search, Filter, RefreshCw, Calendar } from 'lucide-react';
 import api from '../../api/axios';
 
@@ -14,7 +11,6 @@ interface AuditLog {
   user_name?: string;
   user_email?: string;
   user_role?: string;
-  ip_address_display?: string;
   user?: {
     email: string;
     full_name: string;
@@ -55,16 +51,7 @@ const AuditSection = () => {
       queryParams.append('page', filters.page.toString());
       queryParams.append('limit', filters.limit.toString());
 
-      console.log('🔍 Fetching audit logs with filters:', { 
-        action: filters.action, 
-        search: filters.search,
-        startDate: filters.startDate,
-        endDate: filters.endDate
-      });
-      
       const response = await api.get(`/audit?${queryParams}`);
-      
-      console.log('🔍 API Response:', response.data);
       setLogs(response.data.logs || []);
       setTotal(response.data.total || 0);
     } catch (error) {
@@ -78,20 +65,15 @@ const AuditSection = () => {
   };
 
   useEffect(() => {
-    console.log('🔄 useEffect triggered with filters:', filters);
     fetchLogs();
   }, [filters.action, filters.search, filters.startDate, filters.endDate, filters.page, filters.limit]);
 
   const handleFilterChange = (key: keyof Filters, value: string | number) => {
-    setFilters(prev => {
-      const newFilters = {
-        ...prev,
-        [key]: value,
-        page: key === 'page' || key === 'limit' ? (typeof value === 'string' ? parseInt(value) : value) : 1
-      };
-      console.log('🔄 Filter changed:', { key, value, newFilters });
-      return newFilters;
-    });
+    setFilters(prev => ({
+      ...prev,
+      [key]: value,
+      page: key === 'page' || key === 'limit' ? (typeof value === 'string' ? parseInt(value) : value) : 1
+    }));
   };
 
   const handleRefresh = () => {
@@ -232,9 +214,6 @@ const AuditSection = () => {
                   Description
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date & Time
                 </th>
               </tr>
@@ -270,11 +249,6 @@ const AuditSection = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {log.description}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="font-mono text-xs text-gray-600">
-                      {log.ip_address_display || 'Unknown'}
-                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>

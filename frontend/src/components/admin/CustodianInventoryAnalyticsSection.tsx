@@ -14,9 +14,8 @@ import { Search } from "lucide-react";
 const COLORS = {
   Functional: "#10b981",
   "For Replacement": "#f59e0b",
-  "For Repair": "#3b82f6",
+  "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
 };
 
 const CustodianInventoryAnalyticsSection = () => {
@@ -37,20 +36,8 @@ const CustodianInventoryAnalyticsSection = () => {
         const analyticsData = await getInventoryAnalytics();
         console.log("API Response:", analyticsData);
 
-        // Transform the data to get Lost value from API
         const transformedData: InventoryAnalyticsData = {
           ...analyticsData,
-          labStatusData: analyticsData.labStatusData.map((lab) => {
-            console.log("Lab data:", lab);
-            console.log("All lab properties:", Object.keys(lab));
-            // Get Lost value from lab data (provided by backend per-lab calculation)
-            const lostValue = lab.Lost || 0;
-            console.log("Lost value for lab", lab.lab_name, ":", lostValue);
-            return {
-              ...lab,
-              Lost: lostValue, // Use Lost count for this specific lab
-            };
-          }),
           statusDistribution: analyticsData.statusDistribution,
         };
 
@@ -349,13 +336,7 @@ const CustodianInventoryAnalyticsSection = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={(entry) => {
-                        const dataItem =
-                          filteredData.statusDistribution[entry.index];
-                        return `${dataItem.status_name}: ${
-                          entry.percent ? (entry.percent * 100).toFixed(1) : "0.0"
-                        }%`;
-                      }}
+                      label={false}
                       outerRadius={70}
                       fill="#8884d8"
                       dataKey="count"
@@ -370,7 +351,23 @@ const CustodianInventoryAnalyticsSection = () => {
                         />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const entry = payload[0].payload;
+                          const total = filteredData.statusDistribution.reduce((sum: number, item: any) => sum + item.count, 0);
+                          const percentage = ((entry.count / total) * 100).toFixed(1);
+                          return (
+                            <div className="bg-white p-2 border border-gray-200 rounded shadow-lg">
+                              <p className="font-medium">{entry.status_name}</p>
+                              <p className="text-sm">Count: {entry.count}</p>
+                              <p className="text-sm">Percentage: {percentage}%</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
@@ -432,21 +429,15 @@ const CustodianInventoryAnalyticsSection = () => {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-blue-600">Repair:</span>
-                    <span className="font-medium text-blue-600">
-                      {filteredData.labStatusData[0]["For Repair"]}
+                    <span className="text-red-600">Disposal:</span>
+                    <span className="font-medium text-red-600">
+                      {filteredData.labStatusData[0]["For Disposal"]}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-purple-600">Upgrade:</span>
                     <span className="font-medium text-purple-600">
                       {filteredData.labStatusData[0]["For Upgrade"] || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-red-600">Lost:</span>
-                    <span className="font-medium text-red-600">
-                      {filteredData.labStatusData[0].Lost || 0}
                     </span>
                   </div>
                 </div>

@@ -307,8 +307,8 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                             value={userItem.lab_id || ''}
                             onChange={(e) => handleAssignmentChange(userItem.user_id, e.target.value ? parseInt(e.target.value) : null)}
                           >
-                            <option value="">Select Laboratory</option>
-                            <option value="">-- Remove Assignment --</option>
+                            <option value="" disabled hidden>Select Laboratory</option>
+                            <option value="">Remove Assignment</option>
                             {laboratories.map((lab) => (
                               <option key={lab.lab_id} value={lab.lab_id}>
                                 {lab.lab_name} {lab.location && `(${lab.location})`}

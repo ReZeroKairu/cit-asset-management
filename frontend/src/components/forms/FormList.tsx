@@ -258,22 +258,7 @@ export const FormList: React.FC<FormListProps> = ({
                       className="text-xs text-gray-400 mt-0.5 truncate"
                       style={{ maxWidth: "200px" }}
                     >
-                      {form.type === "lab-request" && (
-                        <>
-                          {form.details?.user_type && (
-                            <span className="capitalize">
-                              {form.details.user_type.replace("-", " ")}
-                            </span>
-                          )}
-                          {form.details?.usage_type && (
-                            <span>
-                              {" "}
-                              &bull; {form.details.usage_type.replace("-", " ")}
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {form.type !== "lab-request" && form.laboratory && (
+                      {form.laboratory && (
                         <span>{form.laboratory}</span>
                       )}
                     </p>
@@ -313,7 +298,7 @@ export const FormList: React.FC<FormListProps> = ({
                       {showIconSlots && (
                         <>
                           {/* Slot 1 — Edit */}
-                          <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                          <div className="w-7 h-7 shrink-0 flex items-center justify-center">
                             {showEdit ? (
                               <Button
                                 size="sm"
@@ -325,12 +310,12 @@ export const FormList: React.FC<FormListProps> = ({
                                 <Edit className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
-                              <span className="w-7 h-7 flex-shrink-0" />
+                              <span className="w-7 h-7 shrink-0" />
                             )}
                           </div>
 
                           {/* Slot 2 — Download */}
-                          <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
+                          <div className="w-7 h-7 shrink-0 flex items-center justify-center">
                             {showDownload ? (
                               <Button
                                 size="sm"
@@ -342,12 +327,12 @@ export const FormList: React.FC<FormListProps> = ({
                                 <Download className="w-3.5 h-3.5" />
                               </Button>
                             ) : (
-                              <span className="w-7 h-7 flex-shrink-0" />
+                              <span className="w-7 h-7 shrink-0" />
                             )}
                           </div>
 
                           {/* Divider — only when icon slots are present */}
-                          <span className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
+                          <span className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
                         </>
                       )}
 
@@ -362,7 +347,7 @@ export const FormList: React.FC<FormListProps> = ({
                                   onUpdateStatus(
                                     form.id,
                                     form.type,
-                                    "Admin_Approved"
+                                    "Custodian_Approved"
                                   )
                                 }
                               >

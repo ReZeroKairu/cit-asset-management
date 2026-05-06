@@ -11,6 +11,7 @@ import {
   Wrench,
   ClipboardList,
   MessageSquare,
+  Users,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "../../api/dashboard";
 import { getLabSchedules } from "../../api/schedule";
@@ -126,12 +127,12 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
     }
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, tab?: string) => {
     if (page === "user-management" && user?.role !== "Admin") {
-      console.log("Access denied: Admin only");
       return;
     }
-    onNavigate(page);
+    const navigationString = tab ? `${page}?tab=${tab}` : page;
+    onNavigate(navigationString);
   };
 
   if (loading) {
@@ -226,15 +227,28 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         />
 
         <DashboardCard
-          title={isAdmin ? "Forms for Approval" : "Active Forms"}
-          value={stats.totalForms}
-          subtitle="Click to view forms →"
-          icon={ClipboardList}
-          iconBgColor="bg-indigo-100"
-          iconColor="text-indigo-600"
-          subtitleColor="text-indigo-600"
-          onClick={() => handleNavigate("forms")}
+          title="Daily Lab Logs"
+          value={stats.dailyLabLogs || 0}
+          subtitle="Today's CIT Lab Users →"
+          icon={Users}
+          iconBgColor="bg-teal-100"
+          iconColor="text-teal-600"
+          subtitleColor="text-teal-600"
+          onClick={() => handleNavigate("archives", "cit-lab-users")}
         />
+
+        {userRole !== "Admin" && (
+          <DashboardCard
+            title="Active Forms"
+            value={stats.totalForms}
+            subtitle="Click to view forms →"
+            icon={ClipboardList}
+            iconBgColor="bg-indigo-100"
+            iconColor="text-indigo-600"
+            subtitleColor="text-indigo-600"
+            onClick={() => handleNavigate("forms")}
+          />
+        )}
 
         {isAdmin && (
           <DashboardCard
@@ -270,8 +284,8 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         <CustodianInventoryAnalyticsSection />
       ) : null}
 
-      {/* Audit Section - Admin Only */}
-      {isAdmin && (
+      {/* Audit Section - Admin and Custodian */}
+      {(isAdmin || userRole === "Custodian") && (
         <AuditSection />
       )}
     </div>

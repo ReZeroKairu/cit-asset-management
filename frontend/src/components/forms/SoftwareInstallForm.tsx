@@ -64,6 +64,7 @@ export const SoftwareInstallForm = () => {
     preparedBy: "",
     feedbackDate: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Fetch assigned lab information and auto-populate form fields
   useEffect(() => {
@@ -71,10 +72,8 @@ export const SoftwareInstallForm = () => {
       // Fetch assigned lab name
       const fetchAssignedLab = async () => {
         try {
-          const response = await api.get(
-            `/api/one-time-forms/users/${user.id}/assigned-lab`
-          );
-          const labName = response.data.labName || "";
+          const response = await api.get("/users/assigned-lab");
+          const labName = response.data.assigned_lab?.lab_name || "";
           setAssignedLab(labName);
 
           // Set custodian name in all caps
@@ -158,6 +157,43 @@ export const SoftwareInstallForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage(null);
+    
+    // Field-specific validation
+    const validationErrors: Record<string, string> = {};
+    
+    if (!formData.facultyName.trim()) {
+      validationErrors.facultyName = "Please enter faculty name";
+    }
+    
+    if (!formData.date) {
+      validationErrors.date = "Please select a date";
+    }
+    
+    if (!formData.laboratory) {
+      validationErrors.laboratory = "Please select a laboratory";
+    }
+    
+    if (!formData.softwareList.trim()) {
+      validationErrors.softwareList = "Please list the software to be installed";
+    }
+    
+    if (!formData.requestedBy.trim()) {
+      validationErrors.requestedBy = "Please enter who requested this installation";
+    }
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      setIsSubmitting(false);
+      
+      // Scroll to first error field
+      const firstErrorField = document.querySelector('[data-error="true"]') as HTMLElement;
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+      }
+      
+      return;
+    }
 
     try {
       const response = await submitSoftwareInstallation({
@@ -248,7 +284,7 @@ export const SoftwareInstallForm = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="software-facultyName">Faculty Name</Label>
+              <Label htmlFor="software-facultyName">Faculty Name *</Label>
               <Input
                 id="software-facultyName"
                 value={formData.facultyName}
@@ -256,31 +292,57 @@ export const SoftwareInstallForm = () => {
                   handleInputChange("facultyName", e.target.value)
                 }
                 placeholder="Enter faculty name"
-                className="capitalize-first"
+                className={`capitalize-first ${errors.facultyName ? "border-red-500 outline-red-500" : ""}`}
+                data-error={errors.facultyName ? "true" : undefined}
                 required
               />
+              {errors.facultyName && (
+                <span className="text-red-500 text-sm">
+                  {errors.facultyName}
+                </span>
+              )}
             </div>
             <div>
-              <Label htmlFor="software-date">Date</Label>
+              <Label htmlFor="user-type">User Type</Label>
+              <Input
+                id="user-type"
+                value="Faculty"
+                disabled
+                readOnly
+                className="bg-gray-100 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-1">This form is for faculty members only</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="software-date">Date *</Label>
               <Input
                 id="software-date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => handleInputChange("date", e.target.value)}
+                className={`cursor-pointer ${errors.date ? "border-red-500 outline-red-500" : ""}`}
+                data-error={errors.date ? "true" : undefined}
                 required
-                className="cursor-pointer"
               />
+              {errors.date && (
+                <span className="text-red-500 text-sm">
+                  {errors.date}
+                </span>
+              )}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="laboratory">Laboratory</Label>
+            <Label htmlFor="laboratory">Laboratory *</Label>
             <Select
               value={formData.laboratory}
               onValueChange={(value) => handleInputChange("laboratory", value)}
               required
             >
-              <SelectTrigger>
+              <SelectTrigger className={errors.laboratory ? "border-red-500 outline-red-500" : ""} data-error={errors.laboratory ? "true" : undefined}>
                 <SelectValue placeholder="Select laboratory" />
               </SelectTrigger>
               <SelectContent>
@@ -291,11 +353,16 @@ export const SoftwareInstallForm = () => {
                 ))}
               </SelectContent>
             </Select>
+            {errors.laboratory && (
+              <span className="text-red-500 text-sm">
+                {errors.laboratory}
+              </span>
+            )}
           </div>
 
           <div>
             <Label htmlFor="software-softwareList">
-              List of Software/Program to be installed
+              List of Software/Program to be installed *
             </Label>
             <Textarea
               id="software-softwareList"
@@ -305,19 +372,33 @@ export const SoftwareInstallForm = () => {
               }
               placeholder="List all software/programs to be installed"
               rows={4}
+              className={errors.softwareList ? "border-red-500 outline-red-500" : ""}
+              data-error={errors.softwareList ? "true" : undefined}
               required
             />
+            {errors.softwareList && (
+              <span className="text-red-500 text-sm">
+                {errors.softwareList}
+              </span>
+            )}
           </div>
 
           <div>
-            <Label htmlFor="requestedBy">Requested by</Label>
+            <Label htmlFor="requestedBy">Requested by *</Label>
             <Input
               id="requestedBy"
               value={formData.requestedBy}
               onChange={(e) => handleInputChange("requestedBy", e.target.value)}
               placeholder="Your name"
+              className={errors.requestedBy ? "border-red-500 outline-red-500" : ""}
+              data-error={errors.requestedBy ? "true" : undefined}
               required
             />
+            {errors.requestedBy && (
+              <span className="text-red-500 text-sm">
+                {errors.requestedBy}
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">

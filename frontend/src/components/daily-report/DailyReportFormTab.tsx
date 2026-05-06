@@ -11,6 +11,7 @@ import api from "../../api/axios";
 import type { DailyReport } from "../../api/dailyReports";
 import type { Procedure, ReportProcedure } from "../../api/procedures";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Monitor } from "lucide-react";
 
 interface DailyReportFormTabProps {
   report?: DailyReport;
@@ -144,7 +145,13 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
     try {
       const reportId = report?.report_id;
       const data = await getLabWorkstationsForReport(labId, reportId);
-      setWorkstations(data);
+      // Sort workstations by number in name (e.g., "PC 1", "PC 2", "PC 10")
+      const sortedData = data.sort((a: any, b: any) => {
+        const numA = parseInt(a.workstation_name?.match(/\d+/)?.[0] || "0");
+        const numB = parseInt(b.workstation_name?.match(/\d+/)?.[0] || "0");
+        return numA - numB;
+      });
+      setWorkstations(sortedData);
     } catch (err: any) {
       console.error("Failed to load workstations:", err);
     }
@@ -415,126 +422,89 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Custom Procedure Dropdown */}
+                {/* Custom Procedure Dropdown with Integrated Search */}
                 <div className="relative" id="procedure-dropdown">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProcedureDropdownOpen(!isProcedureDropdownOpen);
-                      setProcedureSearch(""); // Clear search when opening
-                    }}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
-                  >
-                    <span
-                      className={`text-sm ${
-                        procedures.filter(
-                          (proc) => proc.overall_status === "Completed"
-                        ).length > 0
-                          ? "text-black"
-                          : "text-black"
-                      }`}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={isProcedureDropdownOpen ? procedureSearch : (procedures.filter((proc) => proc.overall_status === "Completed").length > 0 ? `${procedures.filter((proc) => proc.overall_status === "Completed").length} procedures selected` : "")}
+                      onChange={(e) => {
+                        setProcedureSearch(e.target.value);
+                        if (!isProcedureDropdownOpen) {
+                          setIsProcedureDropdownOpen(true);
+                        }
+                      }}
+                      onFocus={() => {
+                        setIsProcedureDropdownOpen(true);
+                      }}
+                      placeholder={procedures.filter((proc) => proc.overall_status === "Completed").length > 0 ? "" : "Select procedures..."}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-left pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsProcedureDropdownOpen(!isProcedureDropdownOpen)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {procedures.filter(
-                        (proc) => proc.overall_status === "Completed"
-                      ).length > 0
-                        ? `${
-                            procedures.filter(
-                              (proc) => proc.overall_status === "Completed"
-                            ).length
-                          } procedures selected`
-                        : "Select procedures..."}
-                    </span>
-                    <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                        isProcedureDropdownOpen ? "rotate-180" : ""
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className={`w-5 h-5 transition-transform duration-200 ${
+                          isProcedureDropdownOpen ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
 
                   {isProcedureDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
-                      {/* Search Input */}
-                      <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
-                        <div className="relative">
-                          <svg
-                            className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {procedures
+                        .filter((proc) => proc.overall_status !== "Completed")
+                        .filter((proc) =>
+                          proc.procedure_name
+                            .toLowerCase()
+                            .includes(procedureSearch.toLowerCase())
+                        )
+                        .map((procedure) => (
+                          <button
+                            key={procedure.procedure_id}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const updatedProcedures = procedures.map(
+                                (proc) =>
+                                  proc.procedure_id === procedure.procedure_id
+                                    ? { ...proc, overall_status: "Completed" }
+                                    : proc
+                              );
+                              setProcedures(updatedProcedures);
+                              setProcedureSearch("");
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-blue-50 active:bg-blue-100 transition-colors text-sm"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                          </svg>
-                          <input
-                            type="text"
-                            value={procedureSearch}
-                            onChange={(e) => setProcedureSearch(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            placeholder="Search procedures..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
-                          />
+                            {procedure.procedure_name}
+                          </button>
+                        ))}
+                      {procedures
+                        .filter((proc) => proc.overall_status !== "Completed")
+                        .filter((proc) =>
+                          proc.procedure_name
+                            .toLowerCase()
+                            .includes(procedureSearch.toLowerCase())
+                        ).length === 0 && (
+                        <div className="px-4 py-3 text-gray-500 text-sm text-center">
+                          {procedureSearch
+                            ? "No procedures found"
+                            : "All procedures selected"}
                         </div>
-                      </div>
-
-                      {/* Scrollable List */}
-                      <div className="max-h-48 overflow-y-auto">
-                        {procedures
-                          .filter((proc) => proc.overall_status !== "Completed")
-                          .filter((proc) =>
-                            proc.procedure_name
-                              .toLowerCase()
-                              .includes(procedureSearch.toLowerCase())
-                          )
-                          .map((procedure) => (
-                            <button
-                              key={procedure.procedure_id}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const updatedProcedures = procedures.map(
-                                  (proc) =>
-                                    proc.procedure_id === procedure.procedure_id
-                                      ? { ...proc, overall_status: "Completed" }
-                                      : proc
-                                );
-                                setProcedures(updatedProcedures);
-                                setProcedureSearch(""); // Clear search after selection
-                              }}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
-                            >
-                              <span className="text-sm text-black">
-                                {procedure.procedure_name}
-                              </span>
-                            </button>
-                          ))}
-                        {procedures
-                          .filter((proc) => proc.overall_status !== "Completed")
-                          .filter((proc) =>
-                            proc.procedure_name
-                              .toLowerCase()
-                              .includes(procedureSearch.toLowerCase())
-                          ).length === 0 && (
-                          <div className="px-4 py-3 text-gray-500 text-sm text-center">
-                            {procedureSearch
-                              ? "No procedures found"
-                              : "All procedures selected"}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -631,123 +601,91 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Custom Workstation Dropdown */}
+                {/* Custom Workstation Dropdown with Integrated Search */}
                 <div className="relative" id="workstation-dropdown">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsDropdownOpen(!isDropdownOpen);
-                      setWorkstationSearch(""); // Clear search when opening
-                    }}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none bg-white text-left flex items-center justify-between hover:border-gray-300 active:bg-gray-100 transition-colors"
-                  >
-                    <span
-                      className={`text-sm ${
-                        workstations.filter((ws) => ws.checked).length > 0
-                          ? "text-black"
-                          : "text-black"
-                      }`}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={isDropdownOpen ? workstationSearch : (workstations.filter((ws) => ws.checked).length > 0 ? `${workstations.filter((ws) => ws.checked).length} workstations selected` : "")}
+                      onChange={(e) => {
+                        setWorkstationSearch(e.target.value);
+                        if (!isDropdownOpen) {
+                          setIsDropdownOpen(true);
+                        }
+                      }}
+                      onFocus={() => {
+                        setIsDropdownOpen(true);
+                      }}
+                      placeholder={workstations.filter((ws) => ws.checked).length > 0 ? "" : "Select workstations..."}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white text-left pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {workstations.filter((ws) => ws.checked).length > 0
-                        ? `${
-                            workstations.filter((ws) => ws.checked).length
-                          } workstations selected`
-                        : "Select workstations..."}
-                    </span>
-                    <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                        isDropdownOpen ? "rotate-180" : ""
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        className={`w-5 h-5 transition-transform duration-200 ${
+                          isDropdownOpen ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
 
                   {isDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-xl">
-                      {/* Search Input */}
-                      <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
-                        <div className="relative">
-                          <svg
-                            className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {workstations
+                        .filter((ws) => !ws.checked)
+                        .filter((ws) =>
+                          ws.workstation_name
+                            .toLowerCase()
+                            .includes(workstationSearch.toLowerCase())
+                        )
+                        .map((workstation) => (
+                          <button
+                            key={workstation.workstation_id}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const updatedWorkstations = workstations.map(
+                                (ws) =>
+                                  ws.workstation_id ===
+                                  workstation.workstation_id
+                                    ? { ...ws, checked: true }
+                                    : ws
+                              );
+                              setWorkstations(updatedWorkstations);
+                              setWorkstationSearch("");
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-blue-50 active:bg-blue-100 transition-colors text-sm flex items-center gap-2"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                          </svg>
-                          <input
-                            type="text"
-                            value={workstationSearch}
-                            onChange={(e) =>
-                              setWorkstationSearch(e.target.value)
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            placeholder="Search workstations..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
-                          />
+                            <Monitor className="w-4 h-4 text-gray-500" />
+                            {workstation.workstation_name}
+                          </button>
+                        ))}
+                      {workstations
+                        .filter((ws) => !ws.checked)
+                        .filter((ws) =>
+                          ws.workstation_name
+                            .toLowerCase()
+                            .includes(workstationSearch.toLowerCase())
+                        ).length === 0 && (
+                        <div className="px-4 py-3 text-gray-500 text-sm text-center">
+                          {workstationSearch
+                            ? "No workstations found"
+                            : "All workstations selected"}
                         </div>
-                      </div>
-
-                      {/* Scrollable List */}
-                      <div className="max-h-48 overflow-y-auto">
-                        {workstations
-                          .filter((ws) => !ws.checked)
-                          .filter((ws) =>
-                            ws.workstation_name
-                              .toLowerCase()
-                              .includes(workstationSearch.toLowerCase())
-                          )
-                          .map((workstation) => (
-                            <button
-                              key={workstation.workstation_id}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const updatedWorkstations = workstations.map(
-                                  (ws) =>
-                                    ws.workstation_id ===
-                                    workstation.workstation_id
-                                      ? { ...ws, checked: true }
-                                      : ws
-                                );
-                                setWorkstations(updatedWorkstations);
-                                setWorkstationSearch(""); // Clear search after selection
-                              }}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-100 active:bg-gray-200 transition-colors duration-150"
-                            >
-                              <span className="text-sm text-black">
-                                {workstation.workstation_name}
-                              </span>
-                            </button>
-                          ))}
-                        {workstations
-                          .filter((ws) => !ws.checked)
-                          .filter((ws) =>
-                            ws.workstation_name
-                              .toLowerCase()
-                              .includes(workstationSearch.toLowerCase())
-                          ).length === 0 && (
-                          <div className="px-4 py-3 text-gray-500 text-sm text-center">
-                            {workstationSearch
-                              ? "No workstations found"
-                              : "All workstations selected"}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>

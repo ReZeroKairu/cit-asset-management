@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { PlusCircle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { PlusCircle, Search, ChevronDown } from "lucide-react";
 import { getUnits } from "../../../api/inventory";
 import AddUnitModal from "./AddUnitModal";
 
@@ -33,6 +33,26 @@ const AssetFormInputs: React.FC<Props> = ({
   setUnits,
 }) => {
   const [isAddUnitModalOpen, setIsAddUnitModalOpen] = useState(false);
+  const [isWorkstationDropdownOpen, setIsWorkstationDropdownOpen] = useState(false);
+  const [workstationSearchTerm, setWorkstationSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsWorkstationDropdownOpen(false);
+      }
+    };
+
+    if (isWorkstationDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isWorkstationDropdownOpen]);
 
   const handleAddUnit = async () => {
     // Refresh the units list
@@ -134,48 +154,105 @@ const AssetFormInputs: React.FC<Props> = ({
       {/* Workstation */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Workstation{" "}
-          <span className="text-xs font-normal text-gray-500">(Optional)</span>
+          Workstation (Optional)
         </label>
-        <select
-          name="workstation_id"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:text-gray-600 bg-white"
-          value={formData.workstation_id}
-          onChange={handleChange}
-          disabled={!!preselectedWorkstation}
-        >
-          <option value="">Select Workstation...</option>
-          {workstations
-            .filter(
-              (ws) => !formData.lab_id || ws.lab_id === Number(formData.lab_id),
-            )
-            .sort((a, b) =>
-              a.workstation_name.localeCompare(b.workstation_name),
-            )
-            .map((ws) => (
-              <option key={ws.workstation_id} value={ws.workstation_id}>
-                {ws.workstation_name}
-              </option>
-            ))}
-        </select>
-      </div>
+        <div className="relative" ref={dropdownRef}>
+          {/* Selected Workstation Display */}
+          {formData.workstation_id && (
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
+              {workstations.find(ws => ws.workstation_id === Number(formData.workstation_id))?.workstation_name}
+            </div>
+          )}
+          
+          {/* Searchable Dropdown */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={formData.workstation_id ? `Selected: ${workstations.find(ws => ws.workstation_id === Number(formData.workstation_id))?.workstation_name || ""}` : "Search workstation..."}
+              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:text-gray-600 bg-white"
+              value={workstationSearchTerm}
+              onChange={(e) => setWorkstationSearchTerm(e.target.value)}
+              onFocus={() => setIsWorkstationDropdownOpen(true)}
+              disabled={!!preselectedWorkstation}
+              readOnly={!!preselectedWorkstation}
+            />
+            {!preselectedWorkstation && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={() => setIsWorkstationDropdownOpen(!isWorkstationDropdownOpen)}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-      {/* Quantity */}
-      {/* <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          Quantity
-        </label>
-        <input
-          type="number"
-          name="quantity"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-gray-100 text-gray-600 cursor-not-allowed"
-          value={formData.quantity}
-          onChange={handleChange}
-          min="1"
-          disabled
-          readOnly
-        />
-      </div> */}
+          {/* Dropdown Options */}
+          {isWorkstationDropdownOpen && !preselectedWorkstation && (
+            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {/* Search Input */}
+              <div className="p-2 border-b border-gray-200">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search workstations..."
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={workstationSearchTerm}
+                    onChange={(e) => setWorkstationSearchTerm(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Workstation Options */}
+              {workstations
+                .filter(
+                  (ws) => !formData.lab_id || ws.lab_id === Number(formData.lab_id),
+                )
+                .filter((ws) =>
+                  ws.workstation_name.toLowerCase().includes(workstationSearchTerm.toLowerCase())
+                )
+                .sort((a, b) => {
+                  const nameA = a.workstation_name || "";
+                  const nameB = b.workstation_name || "";
+                  
+                  // Extract numbers for proper numeric sorting
+                  const numA = parseInt(nameA.replace(/\D+/g, "")) || 0;
+                  const numB = parseInt(nameB.replace(/\D+/g, "")) || 0;
+                  
+                  // If both have numbers, compare numerically first
+                  if (numA && numB) {
+                    if (numA !== numB) {
+                      return numA - numB;
+                    }
+                  }
+                  
+                  // If numbers are equal or one/both don't have numbers, compare alphabetically
+                  return nameA.localeCompare(nameB);
+                })
+                .map((ws) => (
+                  <div
+                    key={ws.workstation_id}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                    onClick={() => {
+                      handleChange({
+                        target: {
+                          name: "workstation_id",
+                          value: ws.workstation_id.toString(),
+                        },
+                      } as React.ChangeEvent<HTMLSelectElement>);
+                      setWorkstationSearchTerm(ws.workstation_name);
+                      setIsWorkstationDropdownOpen(false);
+                    }}
+                  >
+                    {ws.workstation_name}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Property Tag */}
       <div>

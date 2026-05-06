@@ -1,23 +1,18 @@
 import React, { useState, useCallback } from "react";
 import { useAuth, type users_role } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
-import QRCodeModal from "../components/QRCodeModal";
 import { StatusFilter } from "../components/forms/StatusFilter";
 import { FormList } from "../components/forms/FormList";
-import { LabRequestForm } from "../components/forms/LabRequestForm";
-import { EquipmentBorrowForm } from "../components/forms/EquipmentBorrowForm";
 import { SoftwareInstallForm } from "../components/forms/SoftwareInstallForm";
 import { FileText } from "lucide-react";
 import { FormActions } from "../components/forms/FormActions";
 import { generateFormDocument } from "../utils/formTemplateMapping";
-import QRCodeGenerator from "../components/QRCodeGenerator";
 import { useFormsData } from "../hooks/useFormsData";
 import { useFormStatus } from "../hooks/useFormStatus";
 import { useFormFiltering } from "../hooks/useFormFiltering";
 import { getFormStatusColor } from "../utils/statusUtils";
 import {
   formatUserType,
-  formatUsageType,
   formatLaboratory,
 } from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
@@ -41,10 +36,6 @@ interface SubmittedFormsTableProps {
 
 const getFormTypeLabel = (type: string) => {
   switch (type) {
-    case "lab-request":
-      return "Lab Request";
-    case "equipment-borrow":
-      return "Equipment Borrow";
     case "software-install":
       return "Software Install";
     default:
@@ -53,25 +44,7 @@ const getFormTypeLabel = (type: string) => {
 };
 
 const FormMetaLine = ({ form }: { form: FormSubmission }) => {
-  if (form.type === "lab-request") {
-    return (
-      <>
-        {form.details?.user_type && (
-          <span className="capitalize">
-            {formatUserType(form.details.user_type)}
-          </span>
-        )}
-        {form.details?.usage_type && (
-          <span> &bull; {formatUsageType(form.details.usage_type)}</span>
-        )}
-        {form.laboratory && (
-          <span> &bull; {formatLaboratory(form.laboratory)}</span>
-        )}
-      </>
-    );
-  }
-
-  if (form.type === "equipment-borrow" || form.type === "software-install") {
+  if (form.type === "software-install") {
     return (
       <>
         {form.details?.user_type && (
@@ -260,12 +233,10 @@ const SubmittedFormsTable = ({
 
 const TAB_ITEMS = [
   { id: "submitted", label: "Submitted Forms" },
-  { id: "lab-request", label: "Lab Request" },
-  { id: "equipment-borrow", label: "Equipment Borrow" },
   { id: "software-install", label: "Software Install" },
 ] as const;
 
-type TabId = (typeof TAB_ITEMS)[number]["id"] | "qr-code";
+type TabId = (typeof TAB_ITEMS)[number]["id"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -289,7 +260,6 @@ const FormsPage = () => {
   const [selectedForm, setSelectedForm] = useState<FormSubmission | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("submitted");
-  const [showQRModal, setShowQRModal] = useState(false);
 
   const handleViewDetails = useCallback((form: FormSubmission) => {
     setSelectedForm(form);
@@ -305,7 +275,7 @@ const FormsPage = () => {
 
   const handleDownloadForm = useCallback((form: FormSubmission) => {
     try {
-      generateFormDocument(form);
+      generateFormDocument(form as any);
     } catch (error) {
       console.error("Error downloading form:", error);
     }
@@ -321,9 +291,6 @@ const FormsPage = () => {
   if (user?.role !== ("Admin" as users_role)) {
     const tabs = [
       ...TAB_ITEMS,
-      ...(user?.role === "Custodian"
-        ? [{ id: "qr-code" as const, label: "QR Code" }]
-        : []),
     ];
 
     return (
@@ -332,8 +299,7 @@ const FormsPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Forms</h1>
           <p className="text-gray-600 mt-1">
-            Submit your requests for laboratory usage, equipment borrowing, and
-            software installation.
+            Submit your requests for software installation.
           </p>
         </div>
 
@@ -388,24 +354,6 @@ const FormsPage = () => {
           </div>
         )}
 
-        {activeTab === "lab-request" && (
-          <div className="space-y-6">
-            <h2 className="text-base font-semibold text-gray-800">
-              Lab Request Form
-            </h2>
-            <LabRequestForm />
-          </div>
-        )}
-
-        {activeTab === "equipment-borrow" && (
-          <div className="space-y-6">
-            <h2 className="text-base font-semibold text-gray-800">
-              Equipment Borrow Form
-            </h2>
-            <EquipmentBorrowForm />
-          </div>
-        )}
-
         {activeTab === "software-install" && (
           <div className="space-y-6">
             <h2 className="text-base font-semibold text-gray-800">
@@ -415,9 +363,6 @@ const FormsPage = () => {
           </div>
         )}
 
-        {activeTab === "qr-code" && user?.role === "Custodian" && (
-          <QRCodeGenerator />
-        )}
 
         {selectedForm && (
           <FormDetailsModal
@@ -479,13 +424,6 @@ const FormsPage = () => {
         />
       )}
 
-      {user?.role === "Custodian" && (
-        <QRCodeModal
-          show={showQRModal}
-          onClose={() => setShowQRModal(false)}
-          baseUrl={window.location.origin}
-        />
-      )}
     </div>
   );
 };

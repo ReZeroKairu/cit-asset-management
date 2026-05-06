@@ -28,30 +28,8 @@ import {
 const COLORS = {
   Functional: "#10b981",
   "For Replacement": "#f59e0b",
-  "For Repair": "#3b82f6",
+  "For Disposal": "#ef4444",
   "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
-};
-
-const MAINTENANCE_COLORS = {
-  Functional: "#10b981",
-  Working: "#10b981",
-  Operational: "#10b981",
-  "Needs Repair": "#f59e0b",
-  "For Repair": "#3b82f6",
-  "Under Repair": "#3b82f6",
-  Critical: "#ef4444",
-  Urgent: "#ef4444",
-  "Under Maintenance": "#8b5cf6",
-  Maintenance: "#8b5cf6",
-  "Not Functional": "#ef4444",
-  Down: "#ef4444",
-  Offline: "#ef4444",
-  Issue: "#f59e0b",
-  Problem: "#f59e0b",
-  "For Replacement": "#f59e0b",
-  "For Upgrade": "#8b5cf6",
-  Lost: "#ef4444",
 };
 
 const InventoryAnalyticsSection = () => {
@@ -62,49 +40,21 @@ const InventoryAnalyticsSection = () => {
     useState<MaintenanceAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Date filter states for complaints analytics
+  const currentYear = new Date().getFullYear();
+  const [complaintsStartDate, setComplaintsStartDate] = useState(`${currentYear}-01-01`);
+  const [complaintsEndDate, setComplaintsEndDate] = useState(`${currentYear}-12-31`);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch inventory analytics
         const analyticsData = await getInventoryAnalytics();
-        console.log("API Response:", analyticsData);
-
-        // Transform the data to get Lost value from API
-        const transformedData: InventoryAnalyticsData = {
-          ...analyticsData,
-          labStatusData: analyticsData.labStatusData.map((lab) => {
-            console.log("Lab data:", lab);
-            console.log("All lab properties:", Object.keys(lab));
-            // Get Lost value from lab data (provided by backend per-lab calculation)
-            const lostValue = lab.Lost || 0;
-            console.log("Lost value for lab", lab.lab_name, ":", lostValue);
-            return {
-              ...lab,
-              Lost: lostValue, // Use Lost count for this specific lab
-            };
-          }),
-          statusDistribution: analyticsData.statusDistribution,
-        };
-
-        console.log("Transformed data:", transformedData);
-        setData(transformedData);
-
-        // Fetch complaints analytics
-        const complaintsAnalyticsData = await getComplaintsAnalytics();
-        console.log("Complaints Analytics Response:", complaintsAnalyticsData);
-        setComplaintsData(complaintsAnalyticsData);
+        setData(analyticsData);
 
         // Fetch maintenance analytics
         const maintenanceAnalyticsData = await getMaintenanceAnalytics();
-        console.log(
-          "Maintenance Analytics Response:",
-          maintenanceAnalyticsData
-        );
-        console.log(
-          "Status Distribution:",
-          maintenanceAnalyticsData.statusDistribution
-        );
         setMaintenanceData(maintenanceAnalyticsData);
       } catch (err) {
         console.error("Failed to fetch analytics:", err);
@@ -116,6 +66,23 @@ const InventoryAnalyticsSection = () => {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchComplaintsAnalytics = async () => {
+      try {
+        // Fetch complaints analytics with date filters
+        const complaintsAnalyticsData = await getComplaintsAnalytics(
+          complaintsStartDate || undefined,
+          complaintsEndDate || undefined
+        );
+        setComplaintsData(complaintsAnalyticsData);
+      } catch (err) {
+        console.error("Failed to fetch complaints analytics:", err);
+      }
+    };
+
+    fetchComplaintsAnalytics();
+  }, [complaintsStartDate, complaintsEndDate]);
 
   if (loading) {
     return (
@@ -173,12 +140,7 @@ const InventoryAnalyticsSection = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(entry) => {
-                    const dataItem = data.statusDistribution[entry.index];
-                    return `${dataItem.status_name}: ${
-                      entry.percent ? (entry.percent * 100).toFixed(1) : "0.0"
-                    }%`;
-                  }}
+                  label={false}
                   outerRadius={70}
                   fill="#8884d8"
                   dataKey="count"
@@ -193,7 +155,23 @@ const InventoryAnalyticsSection = () => {
                     />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const entry = payload[0].payload;
+                      const total = data.statusDistribution.reduce((sum: number, item: any) => sum + item.count, 0);
+                      const percentage = ((entry.count / total) * 100).toFixed(1);
+                      return (
+                        <div className="bg-white p-2 border border-gray-200 rounded shadow-lg">
+                          <p className="font-medium">{entry.status_name}</p>
+                          <p className="text-sm">Count: {entry.count}</p>
+                          <p className="text-sm">Percentage: {percentage}%</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
             <div className="mt-4 flex flex-wrap gap-2 justify-center">
@@ -232,9 +210,8 @@ const InventoryAnalyticsSection = () => {
                 {[
                   "Functional",
                   "For Replacement",
-                  "For Repair",
+                  "For Disposal",
                   "For Upgrade",
-                  "Lost",
                 ].map((statusName) => {
                   const status = data.statusDistribution.find(
                     (s) => s.status_name === statusName
@@ -248,19 +225,17 @@ const InventoryAnalyticsSection = () => {
                             ? "text-green-600"
                             : statusName === "For Replacement"
                             ? "text-yellow-600"
-                            : statusName === "For Repair"
-                            ? "text-blue-600"
+                            : statusName === "For Disposal"
+                            ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
-                            : statusName === "Lost"
-                            ? "text-red-600"
                             : "text-gray-600"
                         }
                       >
                         {statusName === "For Replacement"
                           ? "Replace"
-                          : statusName === "For Repair"
-                          ? "Repair"
+                          : statusName === "For Disposal"
+                          ? "Disposal"
                           : statusName === "For Upgrade"
                           ? "Upgrade"
                           : statusName}
@@ -272,12 +247,10 @@ const InventoryAnalyticsSection = () => {
                             ? "text-green-600"
                             : statusName === "For Replacement"
                             ? "text-yellow-600"
-                            : statusName === "For Repair"
-                            ? "text-blue-600"
+                            : statusName === "For Disposal"
+                            ? "text-red-600"
                             : statusName === "For Upgrade"
                             ? "text-purple-600"
-                            : statusName === "Lost"
-                            ? "text-red-600"
                             : "text-gray-600"
                         }`}
                       >
@@ -308,7 +281,7 @@ const InventoryAnalyticsSection = () => {
                         {lab.total} assets
                       </span>
                     </div>
-                    <div className="grid grid-cols-5 gap-2 text-xs">
+                    <div className="grid grid-cols-4 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-medium text-green-600">
                           {lab.Functional || 0}
@@ -322,12 +295,6 @@ const InventoryAnalyticsSection = () => {
                         <div className="text-gray-500">Replace</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-medium text-blue-600">
-                          {lab["For Repair"] || 0}
-                        </div>
-                        <div className="text-gray-500">Repair</div>
-                      </div>
-                      <div className="text-center">
                         <div className="font-medium text-purple-600">
                           {lab["For Upgrade"] || 0}
                         </div>
@@ -335,9 +302,9 @@ const InventoryAnalyticsSection = () => {
                       </div>
                       <div className="text-center">
                         <div className="font-medium text-red-600">
-                          {lab.Lost || 0}
+                          {lab["For Disposal"] || 0}
                         </div>
-                        <div className="text-gray-500">Lost</div>
+                        <div className="text-gray-500">Disposal</div>
                       </div>
                     </div>
                   </div>
@@ -378,7 +345,7 @@ const InventoryAnalyticsSection = () => {
                     <h4 className="text-sm font-medium text-gray-900 mb-2">
                       Lab Performance
                     </h4>
-                    <ResponsiveContainer width="100%" height={150}>
+                    <ResponsiveContainer width="100%" height={100}>
                       <BarChart data={maintenanceData.perLabAnalytics}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
@@ -444,6 +411,45 @@ const InventoryAnalyticsSection = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
+              {/* Date Filters */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={complaintsStartDate}
+                      onChange={(e) => setComplaintsStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={complaintsEndDate}
+                      onChange={(e) => setComplaintsEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => {
+                        setComplaintsStartDate(`${currentYear}-01-01`);
+                        setComplaintsEndDate(`${currentYear}-12-31`);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
               <div className="mb-4 text-center">
                 <div className="text-2xl font-bold text-blue-600">
                   {complaintsData.totalComplaints}
@@ -454,37 +460,41 @@ const InventoryAnalyticsSection = () => {
                 </div>
                 <div className="text-xs text-gray-500">Resolved Complaints</div>
                 <div className="text-lg font-semibold text-gray-700 mt-2">
-                  {complaintsData.totalComplaints -
-                    complaintsData.totalResolvedComplaints}
+                  {complaintsData.totalComplaints - complaintsData.totalResolvedComplaints}
                 </div>
                 <div className="text-xs text-gray-500">Active Complaints</div>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={complaintsData.labComplaints.map((lab) => ({
-                    ...lab,
-                    active_count: lab.total_count - lab.resolved_count,
-                  }))}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="lab_name"
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    fontSize={12}
-                  />
-                  <YAxis fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="total_count" fill="#3b82f6" name="Total" />
-                  <Bar
-                    dataKey="resolved_count"
-                    fill="#10b981"
-                    name="Resolved"
-                  />
-                  <Bar dataKey="active_count" fill="#f59e0b" name="Active" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="space-y-2">
+                {complaintsData.labComplaints.map((lab) => (
+                  <div key={lab.lab_name} className="bg-gray-50 rounded-lg p-3">
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">{lab.lab_name}</h4>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <BarChart
+                        data={[
+                          { type: 'Total', count: lab.total_count, fill: '#3b82f6' },
+                          { type: 'Resolved', count: lab.resolved_count, fill: '#10b981' },
+                          { type: 'Active', count: lab.active_count, fill: '#f59e0b' },
+                        ]}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="type" fontSize={12} />
+                        <YAxis fontSize={12} />
+                        <Tooltip 
+                          formatter={(value: any, _name: any, props: any) => {
+                            const item = props.payload;
+                            return [value, item.type];
+                          }}
+                        />
+                        <Bar dataKey="count">
+                          <Cell fill="#3b82f6" />
+                          <Cell fill="#10b981" />
+                          <Cell fill="#f59e0b" />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

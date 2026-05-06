@@ -211,7 +211,13 @@ const MaintenanceForm: React.FC<Props> = ({
   const loadStatuses = async () => {
     try {
       const data = await getAssetStatuses();
-      setStatusOptions(data);
+      // Filter out "Disposed" and "For Disposal" status options
+      const filteredStatuses = data.filter(
+        (status: any) => 
+          status.status_name !== "Disposed" && 
+          status.status_name !== "For Disposal"
+      );
+      setStatusOptions(filteredStatuses);
     } catch (err) {
       console.error(err);
     }
@@ -221,18 +227,25 @@ const MaintenanceForm: React.FC<Props> = ({
     try {
       const data = await getWorkstationAssets(id);
 
-      // ✅ FIX: Flatten data for the form so it displays the correct names
-      const mappedAssets = data.map((item: any) => ({
-        asset_id: item.asset_id,
-        unit_name: item.units?.unit_name || item.unit_name || "Unknown",
-        property_tag_no:
-          item.details?.property_tag_no || item.property_tag_no || "N/A",
-        asset_remarks: item.details?.asset_remarks || item.asset_remarks || "",
-        status:
-          item.details?.current_status?.status_name ||
-          item.status ||
-          "Functional",
-      }));
+      // ✅ FIX: Flatten data for form so it displays correct names
+      const mappedAssets = data
+        .filter((item: any) => {
+          const statusName = item.details?.current_status?.status_name ||
+                           item.status ||
+                           "Functional";
+          return statusName !== "Disposed"; // ✅ Exclude disposed assets
+        })
+        .map((item: any) => ({
+          asset_id: item.asset_id,
+          unit_name: item.units?.unit_name || item.unit_name || "Unknown",
+          property_tag_no:
+            item.details?.property_tag_no || item.property_tag_no || "N/A",
+          asset_remarks: item.details?.asset_remarks || item.asset_remarks || "",
+          status:
+            item.details?.current_status?.status_name ||
+            item.status ||
+            "Functional",
+        }));
       setWorkstationAssets(mappedAssets);
     } catch (err) {
       console.error(err);

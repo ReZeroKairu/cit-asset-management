@@ -12,6 +12,7 @@ export interface DashboardStats {
   inProgressComplaints: number;
   servicedWorkstations: number;
   unservicedWorkstations: number;
+  dailyLabLogs: number;
 }
 
 export interface RecentReport {
