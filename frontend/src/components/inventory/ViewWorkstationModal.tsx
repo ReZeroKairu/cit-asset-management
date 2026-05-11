@@ -261,9 +261,6 @@ const ViewWorkstationModal: React.FC<Props> = ({
                 <h3 className="text-lg font-semibold">
                   {workstation.workstation_name}
                 </h3>
-                <p className="text-blue-100 text-sm">
-                  {workstation.laboratories?.lab_name || "No Laboratory"}
-                </p>
               </div>
               <button
                 type="button"

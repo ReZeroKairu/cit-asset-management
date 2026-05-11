@@ -73,7 +73,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
     try {
       // Use the correct public laboratories endpoint
       const apiBaseUrl = getApiBaseUrl();
-      console.log(`🔄 Attempting to fetch labs from: ${apiBaseUrl}/laboratories/public`);
       
       const response = await fetch(`${apiBaseUrl}/laboratories/public`, {
         method: 'GET',
@@ -88,7 +87,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       }
       
       const data = await response.json();
-      console.log('✅ Successfully fetched labs:', data);
       
       // Process fetched data
       if (data && Array.isArray(data)) {
@@ -99,32 +97,18 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
           lab_id: lab.lab_id
         }));
         setLabs(labOptions);
-        console.log('✅ Labs processed:', labOptions.length);
       } else {
         throw new Error('Invalid data format received');
       }
     } catch (error) {
       console.error('❌ Error fetching labs:', error);
       
-      // Check if it's a timeout error
-      if (error instanceof Error && error.name === 'TimeoutError') {
-        console.log('⏰ Request timed out, using fallback data');
-      } else if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        console.log('🔌 Network error, using fallback data');
-      } else {
-        console.log('❓ Unknown error, using fallback data');
-      }
-      
       // Fallback data
       const fallbackLabs = [
-        { value: "e-forum", label: "E-Forum", monitor: "SYSTEM ADMINISTRATOR", lab_id: 1 },
-        { value: "hardware-lab", label: "Hardware Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 2 },
-        { value: "software-lab", label: "Software Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 3 },
-        { value: "network-lab", label: "Network Lab", monitor: "SYSTEM ADMINISTRATOR", lab_id: 4 },
+        { value: "CIT-Lab 2", label: "CIT-Lab 2", monitor: "Marco Marvin Rado", lab_id: 2 },
         { value: "CIT-Lab 1", label: "CIT-Lab 1", monitor: "John Custodians", lab_id: 1 }
       ];
       setLabs(fallbackLabs);
-      console.log('🔄 Using fallback labs data');
     }
   };
 
@@ -136,7 +120,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       
       if (data.success && Array.isArray(data.data)) {
         setWorkstations(data.data);
-        console.log('✅ Workstations fetched:', data.data.length);
       }
     } catch (error) {
       console.error('❌ Error fetching workstations:', error);
@@ -177,7 +160,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
         if (selectedLab && selectedLab.monitor) {
           newData.monitored_by = selectedLab.monitor;
           setIsMonitorAutoPopulated(true);
-          console.log('🔄 Auto-populated monitored_by:', selectedLab.monitor, 'for lab:', value);
           
           // Fetch workstations for this lab
           if (selectedLab.lab_id) {
@@ -240,24 +222,14 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
     
     // Network connectivity check
     if (!navigator.onLine) {
-      console.log('❌ Network check failed - User is offline');
       alert('You appear to be offline. Please check your internet connection and try again.');
       return;
     }
     
     setIsSubmitting(true);
     
-    // TEST: Check if we reach validation
-    console.log('🧪 TEST: About to run client-side validation...');
-    
     // Client-side validation
     const clientValidationErrors = [];
-    
-    console.log('🔍 Client-side validation check:');
-    console.log('  - formData.usage_type:', formData.usage_type);
-    console.log('  - formData.faculty_student_name:', formData.faculty_student_name);
-    console.log('  - formData.laboratory:', formData.laboratory);
-    console.log('  - formData.purpose:', formData.purpose);
     
     if (!formData.usage_type) clientValidationErrors.push('Usage type is required');
     if (!formData.faculty_student_name.trim()) clientValidationErrors.push('Name is required');
@@ -274,38 +246,21 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       clientValidationErrors.push('Name contains invalid characters (only letters, spaces, dots, and hyphens allowed)');
     }
     
-    console.log('📊 Client validation errors:', clientValidationErrors);
-    
     if (clientValidationErrors.length > 0) {
       console.error('❌ Client-side validation failed:', clientValidationErrors);
       alert('Please fix the following errors:\n' + clientValidationErrors.join('\n'));
       setIsSubmitting(false);
       return;
-    } else {
-      console.log('✅ Client-side validation passed');
     }
     
     try {
       const apiBaseUrl = getApiBaseUrl();
-      console.log('🌐 Submitting CIT Lab Users form to:', apiBaseUrl);
       
       const submissionData = {
         ...formData,
         user_type: userType === 'student' ? 'Student' : 'Faculty',
         year_level: formData.year_level || null,
       };
-      
-      console.log('📤 Form data being submitted:', submissionData);
-      console.log('📊 Individual fields:');
-      console.log('  - date:', submissionData.date);
-      console.log('  - usage_type:', submissionData.usage_type);
-      console.log('  - faculty_student_name:', submissionData.faculty_student_name);
-      console.log('  - user_type:', submissionData.user_type);
-      console.log('  - laboratory:', submissionData.laboratory);
-      console.log('  - purpose:', submissionData.purpose);
-      console.log('  - year_level:', submissionData.year_level);
-      console.log('  - ws_number:', submissionData.ws_number);
-      console.log('  - monitored_by:', submissionData.monitored_by);
       
       const response = await fetch(`${apiBaseUrl}/public-forms/cit-lab-users`, {
         method: 'POST',
@@ -318,13 +273,8 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
       const data = await response.json();
 
       if (response.ok && data.success) {
-        console.log('✅ CIT Lab Users form submitted successfully:', data);
-        
         // Call onSubmit callback if provided with current form data
         if (onSubmit) {
-          console.log('🔍 User type debugging:');
-          console.log('  - userType state:', userType);
-          console.log('  - userType condition result:', userType === 'student' ? 'Student' : 'Faculty');
           
           onSubmit({
             ...data,
@@ -356,8 +306,6 @@ export const CITLabUsersForm = ({ onSubmit, disabled = false }: CITLabUsersFormP
         // Show success message
         alert('CIT Lab Users log submitted successfully!');
       } else {
-        console.log('Submission failed:', data);
-        console.log('Response status:', response.status);
         
         // Handle rate limiting (429 Too Many Requests)
         if (response.status === 429) {

@@ -39,31 +39,10 @@ export const useFormFiltering = (forms: FormSubmission[]) => {
   );
 
   const { filteredForms, pendingCount } = useMemo(() => {
-    console.log('🔍 Filtering forms:', {
-      totalForms: forms.length,
-      currentFilter: filter,
-      forms: forms.map(f => ({ 
-        id: f.id, 
-        status: f.status, 
-        type: f.type,
-        fullForm: f
-      }))
-    });
-    
     const filtered = forms.filter((form) => {
       const matchesStatus = filter === "all" || form.status === filter;
       const matchesDate = filterByDate(form);
       return matchesStatus && matchesDate;
-    });
-
-    console.log('✅ Filtered result:', {
-      filteredCount: filtered.length,
-      filteredForms: filtered.map(f => ({ 
-        id: f.id, 
-        status: f.status, 
-        type: f.type,
-        fullForm: f
-      }))
     });
 
     return {
@@ -75,7 +54,6 @@ export const useFormFiltering = (forms: FormSubmission[]) => {
   }, [forms, filter, filterByDate]);
 
   const handleFilterChange = useCallback((newFilter: string) => {
-    console.log('🎯 FormsPage filter change called:', newFilter);
     setFilter(newFilter);
   }, []);
 

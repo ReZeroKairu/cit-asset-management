@@ -46,44 +46,46 @@ export const mapReportDataToTemplate = (reportData: any) => {
       // Handle traditional procedure array structure
       reportData.procedures.forEach((procedure: any) => {
         const procedureName = procedure.procedure_name || procedure.name || '';
+        const isCompleted = procedure.overall_status === "Completed";
+        
         switch (procedureName.toLowerCase()) {
           case "hardware checks":
-            procedureChecks.hardware_checks = true;
+            procedureChecks.hardware_checks = isCompleted;
             break;
           case "software checks":
-            procedureChecks.software_checks = true;
+            procedureChecks.software_checks = isCompleted;
             break;
           case "network & connectivity checks":
-            procedureChecks.network_checks = true;
+            procedureChecks.network_checks = isCompleted;
             break;
           case "cleanliness & organization":
-            procedureChecks.cleanliness_checks = true;
+            procedureChecks.cleanliness_checks = isCompleted;
             break;
           case "user management":
-            procedureChecks.user_management = true;
+            procedureChecks.user_management = isCompleted;
             break;
           case "security & safety":
-            procedureChecks.security_safety = true;
+            procedureChecks.security_safety = isCompleted;
             break;
           case "end of day checks":
-            procedureChecks.end_day_checks = true;
+            procedureChecks.end_day_checks = isCompleted;
             break;
           default:
             // Try to match by partial name
             if (procedureName.toLowerCase().includes('hardware')) {
-              procedureChecks.hardware_checks = true;
+              procedureChecks.hardware_checks = isCompleted;
             } else if (procedureName.toLowerCase().includes('software')) {
-              procedureChecks.software_checks = true;
+              procedureChecks.software_checks = isCompleted;
             } else if (procedureName.toLowerCase().includes('network')) {
-              procedureChecks.network_checks = true;
+              procedureChecks.network_checks = isCompleted;
             } else if (procedureName.toLowerCase().includes('cleanliness')) {
-              procedureChecks.cleanliness_checks = true;
+              procedureChecks.cleanliness_checks = isCompleted;
             } else if (procedureName.toLowerCase().includes('user')) {
-              procedureChecks.user_management = true;
+              procedureChecks.user_management = isCompleted;
             } else if (procedureName.toLowerCase().includes('security')) {
-              procedureChecks.security_safety = true;
+              procedureChecks.security_safety = isCompleted;
             } else if (procedureName.toLowerCase().includes('end')) {
-              procedureChecks.end_day_checks = true;
+              procedureChecks.end_day_checks = isCompleted;
             }
         }
       });
@@ -92,26 +94,44 @@ export const mapReportDataToTemplate = (reportData: any) => {
 
   // Map workstation checkmarks (ws_1 through ws_40), excluding Server
   const workstationChecks: any = {};
+  const workstationRemarks: any = {};
+  
   for (let i = 1; i <= 40; i++) {
     // Check if workstation was included in daily report (selected by custodian)
     const ws = reportData.workstations?.find((w: any) => {
+      // Try matching by workstation_id first, then by name
+      if (w.workstation_id === i) {
+        return true;
+      }
+      
       // Skip Server workstation
       if (w.workstation_name?.toLowerCase().includes('server')) {
         return false;
       }
+      
       const wsNum = w.workstation_name?.match(/\d+/)?.[0];
       return wsNum === String(i);
     });
     
-    // Handle automated DAR structure (checked field)
-    if (ws && ws.checked) {
-      workstationChecks[`ws_${i}`] = "✓";
+    // Handle workstation checkmarks
+    const wsKey = `ws_${i}`;
+    if (ws) {
+      // For auto-generated reports, check if workstation has any data or status
+      // Auto-generated reports should have checkmarks for workstations that were involved
+      if (ws.checked || ws.status === "Working" || (ws.remarks && ws.remarks.trim() !== "")) {
+        workstationChecks[wsKey] = "✓";
+      } else {
+        workstationChecks[wsKey] = "";
+      }
     } else {
-      workstationChecks[`ws_${i}`] = "";
+      workstationChecks[wsKey] = "";
     }
-  }
 
-  return {
+    // Map workstation remarks
+    workstationRemarks[`ws_${i}_remarks`] = ws?.remarks || "";
+  }
+  
+  const result = {
     // Basic info
     lab_name: reportData.lab_name,
     current_datetime: formattedDateTime,
@@ -128,11 +148,16 @@ export const mapReportDataToTemplate = (reportData: any) => {
     security_safety: procedureChecks.security_safety ? "☑" : "☐",
     end_day_checks: procedureChecks.end_day_checks ? "☑" : "☐",
 
-    // Workstation checkmarks
+    // Workstation checkmarks - direct assignment based on actual workstations found
     ...workstationChecks,
+
+    // Workstation remarks (using different keys to avoid conflicts)
+    ...workstationRemarks,
 
     // Keep original data for reference
     original_workstations: reportData.workstations || [],
     original_procedures: reportData.procedures || [],
   };
+  
+  return result;
 };

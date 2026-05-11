@@ -66,18 +66,10 @@ export const batchCreateAssets = async (assets: any[]) => {
 
 // Update asset
 export const updateAsset = async (id: number, data: any) => {
-  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-  const fullUrl = `${baseURL}/inventory/${id}`;
   const timestamp = new Date().getTime();
-  
-  console.log('🔍 API Call - Full URL:', fullUrl);
-  console.log('🔍 API Call - Data:', data);
-  console.log('🔍 API Call - Timestamp:', timestamp);
   
   // Add timestamp to bypass caching
   const response = await api.put(`/inventory/${id}?t=${timestamp}`, data);
-  console.log('🔍 API Response:', response.data);
-  console.log('🔍 API Response Status:', response.status);
   return response.data;
 };
 

@@ -7,8 +7,6 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
   const updateStatus = useCallback(
     async (formId: number, formType: string, newStatus: string) => {
       try {
-        console.log(`🔄 Updating status for ${formType} ID ${formId} to ${newStatus}`);
-
         switch (formType) {
           case "software-install":
             await apiUpdateSoftwareInstallationStatus(formId, newStatus);
@@ -17,7 +15,6 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
             throw new Error(`Unsupported form type: ${formType}`);
         }
 
-        console.log(`✅ Successfully updated status to ${newStatus}`);
         onSuccess?.();
       } catch (error) {
         console.error("❌ Error updating status:", error);
@@ -44,7 +41,6 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
     if (!selectedForms || selectedForms.size === 0) return;
 
     try {
-      console.log('Bulk approving forms:', Array.from(selectedForms));
       const approvalPromises = Array.from(selectedForms).map((formIdStr) => {
         const parts = formIdStr.split("-");
         const idStr = parts[parts.length - 1];
@@ -65,7 +61,6 @@ export const useFormStatus = (onSuccess?: () => void, selectedForms?: Set<string
       });
 
       await Promise.all(approvalPromises);
-      console.log('Bulk approval completed successfully');
       
       onSuccess?.();
       alert(`Successfully approved ${selectedForms.size} forms!`);

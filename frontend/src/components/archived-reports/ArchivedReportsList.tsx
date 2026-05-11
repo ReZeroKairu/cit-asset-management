@@ -72,9 +72,6 @@ const ArchivedReportsList: React.FC = () => {
 
   const handleGenerateReport = async (report: DailyReport) => {
     try {
-      console.log("Generating report for:", report.report_id);
-      console.log("Report object:", report);
-
       // Show loading state
       setError("");
 
@@ -84,11 +81,8 @@ const ArchivedReportsList: React.FC = () => {
       }
 
       // Use the same API call as DailyAccomplishmentReport that works
-      console.log("Fetching detailed report data for ID:", report.report_id);
       const response = await api.get(`/daily-reports/${report.report_id}`);
       const detailedReport = response.data;
-
-      console.log("Detailed report data:", detailedReport);
 
       // Check if detailedReport exists and has the expected structure
       if (!detailedReport) {
@@ -105,11 +99,8 @@ const ArchivedReportsList: React.FC = () => {
           remarks: item.remarks || "",
         })) || [];
 
-      console.log("Processed workstations:", processedWorkstations);
-
       // Use procedures data directly from the API response
       const proceduresData = detailedReport.procedures || [];
-      console.log("Procedures data:", proceduresData);
 
       // Map the report data to template format the same way as DailyAccomplishmentReport
       const templateData = mapReportDataToTemplate({
@@ -125,8 +116,6 @@ const ArchivedReportsList: React.FC = () => {
         created_at: detailedReport.created_at || detailedReport.report_date,
         report_date: detailedReport.report_date,
       });
-
-      console.log("Template data:", templateData);
 
       // Determine template based on lab_id
       const getLabTemplate = (labId: number): string => {
@@ -152,13 +141,8 @@ const ArchivedReportsList: React.FC = () => {
         reportDate.toISOString().split("T")[0]
       }.docx`;
 
-      console.log("Using template:", templateFile);
-      console.log("File name:", fileName);
-
       // Generate and download the report
       await generateTemplateReport(templateFile, templateData, fileName);
-
-      console.log("Report generated successfully!");
     } catch (error) {
       console.error("Failed to generate report:", error);
       setError(

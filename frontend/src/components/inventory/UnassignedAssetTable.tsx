@@ -48,15 +48,7 @@ const UnassignedAssetTable: React.FC<Props> = ({
     return wsA.textPrefix.localeCompare(wsB.textPrefix);
   }) : assets;
   
-  // Debug: Show what assets we're sorting
-  if (showWorkstationColumn && assets.length > 0) {
-    console.log('Assets being sorted:', assets.map(a => ({
-      id: a.asset_id,
-      ws: a.workstation?.workstation_name || a.workstations?.workstation_name || `WS-${a.workstation_id}`,
-      desc: a.asset_details?.description
-    })));
-  }
-  return (
+    return (
     <div className="overflow-x-auto">
       {selectedAssets.size > 0 && (
         <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">

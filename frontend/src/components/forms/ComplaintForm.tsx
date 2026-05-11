@@ -199,10 +199,6 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
     // Check for existing complaints on the same asset
     if (formData.selected_asset?.asset_id) {
       try {
-        console.log(
-          "Checking for existing complaints on asset:",
-          formData.selected_asset.asset_id
-        );
         const response = await fetch(
           `${getApiBaseUrl()}/public-complaints/public-check-asset/${
             formData.selected_asset.asset_id
@@ -218,7 +214,6 @@ const ComplaintForm: React.FC<ComplaintFormProps> = ({
           // Continue with submission even if check fails
         } else {
           const result = await response.json();
-          console.log("Duplicate check result:", result);
 
           if (result.hasExistingComplaint) {
             const errorMessage = `⚠️ **Duplicate Complaint Detected**
@@ -229,8 +224,6 @@ Please wait for the current complaint to be resolved before submitting a new one
             setError(errorMessage);
             window.scrollTo({ top: 0, behavior: "smooth" });
             return;
-          } else {
-            console.log("No existing complaints found via asset_id check");
           }
         }
       } catch (error) {
@@ -245,14 +238,12 @@ Please wait for the current complaint to be resolved before submitting a new one
     // Additional fallback check: If no specific asset selected, or if asset_id check failed
     if (formData.selected_asset && !error) {
       try {
-        console.log("Performing fallback check using asset info");
         // For now, let's show a general message if any asset is selected
         // This can be enhanced later to check by asset name or other identifiers
         const assetName =
           formData.selected_asset.units?.unit_name ||
           formData.selected_asset.asset_details?.property_tag_no ||
           "selected asset";
-        console.log("Asset selected for fallback check:", assetName);
 
         // You could add another API call here for fallback checking if needed
         // For now, we'll proceed with submission but log the selection

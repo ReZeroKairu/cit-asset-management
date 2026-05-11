@@ -143,15 +143,6 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
   // Handle confirmation of disposal
   const handleConfirmDisposal = async (disposedBy: string) => {
     try {
-      console.log('🔍 Starting disposal process...');
-      
-      // Test API connection first
-      try {
-        const testResponse = await fetch('/api/health', { method: 'GET' });
-        console.log('🔍 API Health check:', testResponse.status);
-      } catch (healthError) {
-        console.error('❌ API Health check failed:', healthError);
-      }
       
       // Get all assets from selected workstations
       const allSelectedAssets: DisposalAsset[] = [];
@@ -159,8 +150,6 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
         const workstationAssets = groupedAssets[workstationName] || [];
         allSelectedAssets.push(...workstationAssets);
       });
-      
-      console.log('🔍 Assets to dispose:', allSelectedAssets.length);
       
       if (allSelectedAssets.length === 0) {
         alert("No assets found in selected workstations to dispose.");
@@ -171,12 +160,10 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
       // Update each asset's status to 'Disposed' (status_id = 5) and set disposed_by
       const updatePromises = allSelectedAssets.map(async (asset: DisposalAsset) => {
         try {
-          console.log(`Updating asset ${asset.asset_id} with status_id: 5, disposed_by: ${disposedBy}`);
           const updateData = {
             status_id: 5, // 'Disposed' status
             disposed_by: disposedBy
           };
-          console.log('🔍 Sending update data:', updateData);
           
           // Try direct fetch as backup
           try {
@@ -195,13 +182,7 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
               body: JSON.stringify(updateData)
             });
             
-            console.log('🔍 Direct fetch response status:', directResponse.status);
             const directResult = await directResponse.json();
-            console.log('🔍 Direct fetch result:', directResult);
-            
-            // Check if the response actually contains the updated status
-            console.log('🔍 Direct fetch result asset_details:', directResult.asset_details);
-            console.log('🔍 Direct fetch result status:', directResult.asset_details?.asset_statuses?.status_name);
             
             if (directResponse.ok) {
               return directResult;
@@ -213,7 +194,6 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
             
             // Fall back to axios
             const result = await updateAsset(asset.asset_id, updateData);
-            console.log(`🔍 Axios update result for asset ${asset.asset_id}:`, result);
             return result;
           }
         } catch (error) {
@@ -223,12 +203,9 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
       });
       
       const results = await Promise.all(updatePromises);
-      console.log('🔍 All update results:', results);
       
       // Refresh data to show updated status
       await fetchDisposalAssets();
-      
-      console.log(`Successfully disposed ${allSelectedAssets.length} assets from ${selectedWorkstations.length} workstations by ${disposedBy}`);
       
       // Clear selection after successful disposal
       setSelectedWorkstations([]);

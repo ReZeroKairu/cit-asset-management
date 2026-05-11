@@ -61,24 +61,8 @@ const MaintenanceView: React.FC<Props> = ({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log("🔍 MAINTENANCE VIEW - Fetching data for:", {
-        workstationId: workstation.id,
-        quarter,
-      });
-
       const assetData = await getWorkstationAssets(workstation.id);
       setAssets(assetData);
-
-      console.log("📦 MAINTENANCE VIEW - Assets loaded:", {
-        count: assetData.length,
-        assets: assetData.map((asset: any) => ({
-          asset_id: asset.asset_id,
-          unit_name: asset.unit_name,
-          status: asset.status,
-          remarks: asset.asset_remarks || "NONE",
-          property_tag_no: asset.property_tag_no || "N/A",
-        })),
-      });
 
       const reportData = await getPMCReport(workstation.id, quarter);
       setPmcReport(reportData);

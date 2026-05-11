@@ -171,9 +171,6 @@ const MaintenanceForm: React.FC<Props> = ({
       }
     } catch (err) {
       // No existing report found — that's fine, use defaults
-      console.log(
-        "No existing report for this workstation/quarter — using defaults.",
-      );
     }
   };
 
@@ -295,21 +292,6 @@ const MaintenanceForm: React.FC<Props> = ({
         remarks: asset.asset_remarks || "NONE",
       }));
 
-      console.log("🔧 FRONTEND - Submitting PMC Report:", {
-        workstationId: targetWorkstation?.id,
-        report_date: formData.report_date,
-        quarter: formData.quarter,
-        workstation_status: formData.workstation_status, // Let backend determine the actual status
-        overall_remarks: formData.general_remarks,
-        software_name: networkItems[0].remarks,
-        software_status: networkItems[0].status,
-        assetCount: workstationAssets.length,
-        asset_actions,
-        networkItems,
-        completedProcedures: procedures
-          .filter((p) => p.overall_status === "Completed")
-          .map((p) => p.procedure_id),
-      });
 
       const reportPayload = {
         lab_id: formData.lab_id,
@@ -331,37 +313,16 @@ const MaintenanceForm: React.FC<Props> = ({
         asset_actions,
       };
 
-      // ✅ LOGGING: Log form submission data
-      console.log("🔧 FRONTEND - Submitting PMC Report:", {
-        payload: {
-          ...reportPayload,
-          overall_remarks: reportPayload.overall_remarks || "EMPTY",
-          software_name: reportPayload.software_name || "EMPTY",
-          connectivity_type: reportPayload.connectivity_type || "EMPTY",
-          connectivity_speed: reportPayload.connectivity_speed || "EMPTY",
-        },
-        workstationAssetsCount: workstationAssets.length,
-        networkItems,
-        completedProcedures: procedures
-          .filter((p) => p.overall_status === "Completed")
-          .map((p) => p.procedure_name),
-      });
-
       await createPMCReport(reportPayload);
-
-      console.log("✅ FRONTEND - PMC Report submitted successfully");
 
       // ✅ FIX: Added `&& targetWorkstation` to satisfy TypeScript
       if (workstationAssets.length > 0 && targetWorkstation) {
-        console.log("🔧 FRONTEND - Updating asset statuses:", {
-          assetCount: workstationAssets.length,
-          assets: workstationAssets.map(asset => ({
+        const assetStatusUpdates = workstationAssets.map((asset) => ({
             asset_id: asset.asset_id,
             unit_name: asset.unit_name,
             new_status: asset.status,
             remarks: asset.asset_remarks || "NONE",
-          })),
-        });
+        }));
 
         await Promise.all(
           workstationAssets.map((asset) => {
@@ -379,10 +340,8 @@ const MaintenanceForm: React.FC<Props> = ({
           }),
         );
 
-        console.log("✅ FRONTEND - Asset statuses updated successfully");
-      }
+        }
 
-      console.log("🎉 FRONTEND - Service completion successful, calling onSuccess");
       onSuccess();
     } catch (err: any) {
       console.error(err);
