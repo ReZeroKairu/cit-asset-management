@@ -5,57 +5,20 @@ interface Props {
   assets: any[];
   onEdit: (asset: any) => void;
   onMarkForDisposal: (id: number) => void;
-  onBulkDispose?: (assetIds: number[]) => void; // New prop for bulk disposal
-  showWorkstationColumn?: boolean; // Only show workstation column for Asset Search
+  onBulkDispose?: (assetIds: number[]) => void;
 }
 
-const UnassignedAssetTable: React.FC<Props> = ({
+const AssetSearchTable: React.FC<Props> = ({
   assets,
   onEdit,
   onMarkForDisposal,
   onBulkDispose,
-  showWorkstationColumn = false,
 }) => {
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
 
-  // Sort assets by workstation (alphabetical with numeric fallback) - only for Asset Search
-  const sortedAssets = showWorkstationColumn ? [...assets].sort((a, b) => {
-    const getWorkstationSortValue = (asset: any) => {
-      const wsName = asset.workstation?.workstation_name || 
-                     asset.workstations?.workstation_name || 
-                     `WS-${asset.workstation_id}` || 
-                     'N/A';
-      
-      // Extract text prefix and number
-      const textMatch = wsName.match(/^([A-Za-z-]+)/);
-      const numMatch = wsName.match(/(\d+)/);
-      
-      const textPrefix = textMatch ? textMatch[1] : '';
-      const number = numMatch ? parseInt(numMatch[1]) : 999999;
-      
-      return { textPrefix, number, original: wsName };
-    };
-    
-    const wsA = getWorkstationSortValue(a);
-    const wsB = getWorkstationSortValue(b);
-    
-    // If text prefixes are the same, compare numbers (most workstations will have same prefix)
-    if (wsA.textPrefix === wsB.textPrefix) {
-      return wsA.number - wsB.number;
-    }
-    
-    // Otherwise compare text prefixes alphabetically
-    return wsA.textPrefix.localeCompare(wsB.textPrefix);
-  }) : assets;
-  
-  // Debug: Show what assets we're sorting
-  if (showWorkstationColumn && assets.length > 0) {
-    console.log('Assets being sorted:', assets.map(a => ({
-      id: a.asset_id,
-      ws: a.workstation?.workstation_name || a.workstations?.workstation_name || `WS-${a.workstation_id}`,
-      desc: a.asset_details?.description
-    })));
-  }
+  // Assets are already sorted in the main component
+  const sortedAssets = assets;
+
   return (
     <div className="overflow-x-auto">
       {selectedAssets.size > 0 && (
@@ -91,11 +54,9 @@ const UnassignedAssetTable: React.FC<Props> = ({
                 className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </th>
-            {showWorkstationColumn && (
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Workstation
-              </th>
-            )}
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Workstation
+            </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Property Tag
             </th>
@@ -122,8 +83,8 @@ const UnassignedAssetTable: React.FC<Props> = ({
         <tbody className="bg-white divide-y divide-gray-200">
           {sortedAssets.length === 0 ? (
             <tr>
-              <td colSpan={showWorkstationColumn ? 9 : 8} className="px-6 py-4 text-center text-gray-500">
-                No unassigned assets found.
+              <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
+                No assets found.
               </td>
             </tr>
           ) : (
@@ -145,13 +106,11 @@ const UnassignedAssetTable: React.FC<Props> = ({
                     className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </td>
-                {showWorkstationColumn && (
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                      {asset.workstation?.workstation_name || asset.workstations?.workstation_name || `WS-${asset.workstation_id}` || "N/A"}
-                    </span>
-                  </td>
-                )}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                    {asset.workstation?.workstation_name || asset.workstations?.workstation_name || `WS-${asset.workstation_id}` || "N/A"}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-blue-600 font-semibold">
                   {asset.asset_details?.property_tag_no || "N/A"}
                 </td>
@@ -197,4 +156,4 @@ const UnassignedAssetTable: React.FC<Props> = ({
   );
 };
 
-export default UnassignedAssetTable;
+export default AssetSearchTable;

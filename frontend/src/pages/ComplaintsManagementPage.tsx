@@ -79,15 +79,23 @@ const ComplaintsManagementPage = () => {
     }
   };
 
-  const handleStatusUpdate = async (complaintId: number, newStatus: string) => {
+  const handleStatusUpdate = async (complaintId: number, newStatus: string, remarks?: string) => {
     try {
       setIsUpdating(true);
-      await updateComplaintStatus(complaintId, newStatus);
+      
+      // Check if resolving without remarks
+      if (newStatus === "Resolved" && (!remarks || remarks.trim() === "")) {
+        setError("Remarks are required when resolving a complaint");
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+      
+      await updateComplaintStatus(complaintId, newStatus, remarks);
 
       // Update local state
       setComplaints((prev) =>
         prev.map((c) =>
-          c.complaint_id === complaintId ? { ...c, status: newStatus } : c
+          c.complaint_id === complaintId ? { ...c, status: newStatus, remarks: remarks || c.remarks } : c
         )
       );
 
@@ -534,7 +542,8 @@ const ComplaintsManagementPage = () => {
                                 onValueChange={(value) =>
                                   handleStatusUpdate(
                                     complaint.complaint_id,
-                                    value
+                                    value,
+                                    complaint.remarks // Pass current remarks when changing status
                                   )
                                 }
                               >

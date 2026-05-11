@@ -1063,18 +1063,35 @@ router.put(
   async (req, res) => {
     try {
       const { complaintId } = req.params;
-      const { status } = req.body;
+      const { status, remarks } = req.body;
 
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
 
+      // Require remarks when resolving a complaint
+      if (status === "Resolved" && (!remarks || remarks?.trim() === "")) {
+        return res.status(400).json({ 
+          message: "Remarks are required when resolving a complaint" 
+        });
+      }
+
+      const updateData: any = {
+        status: status,
+        updated_at: new Date(),
+      };
+
+      // Set resolved_at and remarks when status is changed to "Resolved"
+      if (status === "Resolved") {
+        updateData.resolved_at = new Date();
+        if (remarks && remarks.trim() !== "") {
+          updateData.remarks = remarks;
+        }
+      }
+
       const updatedComplaint = await prisma.complaints.update({
         where: { complaint_id: parseInt(complaintId as string) },
-        data: {
-          status: status,
-          updated_at: new Date(),
-        },
+        data: updateData,
         include: {
           laboratories: {
             select: {

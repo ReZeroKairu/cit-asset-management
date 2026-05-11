@@ -266,9 +266,10 @@ export const getComplaints = async (): Promise<Complaint[]> => {
 // Update complaint status
 export const updateComplaintStatus = async (
   complaintId: number,
-  status: string
+  status: string,
+  remarks?: string
 ): Promise<void> => {
-  await api.put(`/complaints/${complaintId}/status`, { status });
+  await api.put(`/complaints/${complaintId}/status`, { status, remarks });
 };
 
 // Update complaint remarks
