@@ -71,7 +71,7 @@ const PageRenderer = ({
     case "admin-reports":
       return <AdminReportsPage />;
     case "archives":
-      return <ArchivesPage initialTab={urlParams.get('tab') || undefined} />;
+      return <ArchivesPage initialTab={urlParams.get("tab") || undefined} />;
     case "user-management":
       return (
         <UserManagementPage
@@ -89,7 +89,7 @@ const PageRenderer = ({
         return <HomePage onNavigate={onNavigate} />;
       }
       return <FormsPage />;
-        case "public-forms":
+    case "public-forms":
       return <PublicFormsPage />;
     case "public-complaints":
       return <ComplaintsPage />;

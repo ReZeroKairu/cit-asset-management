@@ -409,6 +409,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </button>
               </li>
             )}
+
             {user?.role !== "Admin" && (
               <li>
                 <button
