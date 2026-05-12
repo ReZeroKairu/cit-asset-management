@@ -19,7 +19,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
     } catch (error) {
       console.error("Refresh error:", error);
       alert(
-        "Failed to refresh user data. Please check the console for details or try logging out and back in."
+        "Failed to refresh user data. Please check the console for details or try logging out and back in.",
       );
     }
   };
@@ -409,6 +409,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                 </button>
               </li>
             )}
+
             {user?.role !== "Admin" && (
               <li>
                 <button

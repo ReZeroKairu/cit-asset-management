@@ -134,7 +134,7 @@ const ComplaintsPage = () => {
                     <p>
                       <strong>Submitted:</strong>{" "}
                       {new Date(
-                        submittedComplaint.submittedAt
+                        submittedComplaint.submittedAt,
                       ).toLocaleString()}
                     </p>
                   </div>

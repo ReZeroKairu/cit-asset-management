@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
-export type PageType = 
+export type PageType =
   | "home"
   | "inventory"
   | "labs"
@@ -19,7 +19,8 @@ export type PageType =
   | "maintenance"
   | "public-complaints"
   | "cit-lab-users"
-  | "disposals";
+  | "disposals"
+  | "developer";
 
 const getInitialPage = (): PageType => {
   const path = window.location.pathname;
@@ -43,7 +44,9 @@ const getInitialPage = (): PageType => {
 export const useAppRouting = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageType>(getInitialPage);
-  const [urlParams, setUrlParams] = useState<URLSearchParams>(new URLSearchParams(window.location.search));
+  const [urlParams, setUrlParams] = useState<URLSearchParams>(
+    new URLSearchParams(window.location.search),
+  );
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -57,7 +60,7 @@ export const useAppRouting = () => {
       const path = window.location.pathname;
       const search = window.location.search;
       setUrlParams(new URLSearchParams(search));
-      
+
       if (path === "/public-forms") {
         setCurrentPage("public-forms");
       } else if (path === "/complaints") {
@@ -83,12 +86,14 @@ export const useAppRouting = () => {
 
   const handleNavigate = (pageWithParams: string) => {
     // Parse page and parameters
-    const [page, queryString] = pageWithParams.split('?');
-    const params = queryString ? new URLSearchParams(queryString) : new URLSearchParams();
-    
+    const [page, queryString] = pageWithParams.split("?");
+    const params = queryString
+      ? new URLSearchParams(queryString)
+      : new URLSearchParams();
+
     // Set current page
     setCurrentPage(page as PageType);
-    
+
     // Update URL with parameters
     if (page === "public-forms") {
       window.history.pushState(null, "", "/public-forms");
@@ -107,7 +112,7 @@ export const useAppRouting = () => {
       const url = queryString ? `/?${queryString}` : "/";
       window.history.pushState(null, "", url);
     }
-    
+
     // Update URL params state
     setUrlParams(params);
   };
