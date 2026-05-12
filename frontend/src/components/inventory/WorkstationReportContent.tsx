@@ -64,7 +64,7 @@ const WorkstationReportContent: React.FC<Props> = ({
     try {
       setLoading(true);
       onLoadingChange(true);
-      const endpoint = "/workstations";
+      const endpoint = "/workstations?includeAssets=true";
       const response = await api.get(endpoint);
 
       let data: Workstation[] = response.data.map((ws: any) => ({

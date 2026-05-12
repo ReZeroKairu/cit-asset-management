@@ -14,21 +14,10 @@ const CITLabUsersPage = () => {
     try {
       const result = await submitCITLabUsers(response);
       
-      console.log('🔍 About to store submitted form data:');
-      console.log('  - response:', response);
-      console.log('  - result:', result);
-      
       // Extract form data from response.formData (if available) or use response directly
       const formDataToStore = response.formData || response;
       
       setSubmittedForm({
-        type: 'cit-lab-users',
-        data: formDataToStore,
-        result: result,
-        submittedAt: new Date().toISOString()
-      });
-      
-      console.log('✅ Submitted form state set:', {
         type: 'cit-lab-users',
         data: formDataToStore,
         result: result,

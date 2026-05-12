@@ -54,9 +54,6 @@ const EditAssetModal: React.FC<Props> = ({
     if (show) {
       loadDropdowns();
       if (asset) {
-        console.log('EditAssetModal - Asset data:', asset);
-        console.log('Asset lab_id:', asset.lab_id);
-        console.log('Asset laboratories:', asset.laboratories);
         // ✅ Map nested backend data to flat form state
         setFormData({
           property_tag_no:
@@ -78,7 +75,6 @@ const EditAssetModal: React.FC<Props> = ({
           unit_id: asset.unit_id?.toString() || "",
           workstation_id: asset.workstation_id?.toString() || "",
         });
-        console.log('Set lab_id to:', asset.lab_id?.toString() || asset.laboratories?.lab_id?.toString() || "");
       }
     }
   }, [show, asset]);

@@ -2,41 +2,19 @@
 // Template mapping for Daily Accomplishment Report
 export const mapReportDataToTemplate = (reportData: any) => {
 
-  // Use the report's creation date for current_datetime
+  // Use current date/time for Word document generation
   let formattedDateTime = "";
   try {
-    // Try to use created_at first, then report_date as fallback
-    const dateSource = reportData.created_at || reportData.report_date;
-    if (dateSource) {
-      const date = new Date(dateSource);
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+    const hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const formattedHours = String(hours % 12 || 12).padStart(2, "0");
 
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date");
-      }
-
-      // Format as MM/DD/YYYY HH:MM AM/PM
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const year = date.getFullYear();
-      const hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const formattedHours = String(hours % 12 || 12).padStart(2, "0");
-
-      formattedDateTime = `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
-    } else {
-      // Fallback to current date/time
-      const now = new Date();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      const year = now.getFullYear();
-      const hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const formattedHours = String(hours % 12 || 12).padStart(2, "0");
-
-      formattedDateTime = `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
-    }
+    formattedDateTime = `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
   } catch (error) {
     console.error("Date formatting error:", error);
     formattedDateTime = new Date().toLocaleString(); // Fallback
@@ -53,72 +31,107 @@ export const mapReportDataToTemplate = (reportData: any) => {
     end_day_checks: false,
   };
 
+  // Handle automated DAR structure (procedures as boolean flags)
+  if (reportData.procedures && typeof reportData.procedures === 'object') {
+    // Check if it's the automated DAR structure with boolean flags
+    if (typeof reportData.procedures.hardware_checks === 'boolean') {
+      procedureChecks.hardware_checks = reportData.procedures.hardware_checks;
+      procedureChecks.software_checks = reportData.procedures.software_checks;
+      procedureChecks.network_checks = reportData.procedures.network_checks;
+      procedureChecks.cleanliness_checks = reportData.procedures.cleanliness_checks;
+      procedureChecks.user_management = reportData.procedures.user_management;
+      procedureChecks.security_safety = reportData.procedures.security_safety;
+      procedureChecks.end_day_checks = reportData.procedures.end_day_checks;
+    } else {
+      // Handle traditional procedure array structure
+      reportData.procedures.forEach((procedure: any) => {
+        const procedureName = procedure.procedure_name || procedure.name || '';
+        const isCompleted = procedure.overall_status === "Completed";
+        
+        switch (procedureName.toLowerCase()) {
+          case "hardware checks":
+            procedureChecks.hardware_checks = isCompleted;
+            break;
+          case "software checks":
+            procedureChecks.software_checks = isCompleted;
+            break;
+          case "network & connectivity checks":
+            procedureChecks.network_checks = isCompleted;
+            break;
+          case "cleanliness & organization":
+            procedureChecks.cleanliness_checks = isCompleted;
+            break;
+          case "user management":
+            procedureChecks.user_management = isCompleted;
+            break;
+          case "security & safety":
+            procedureChecks.security_safety = isCompleted;
+            break;
+          case "end of day checks":
+            procedureChecks.end_day_checks = isCompleted;
+            break;
+          default:
+            // Try to match by partial name
+            if (procedureName.toLowerCase().includes('hardware')) {
+              procedureChecks.hardware_checks = isCompleted;
+            } else if (procedureName.toLowerCase().includes('software')) {
+              procedureChecks.software_checks = isCompleted;
+            } else if (procedureName.toLowerCase().includes('network')) {
+              procedureChecks.network_checks = isCompleted;
+            } else if (procedureName.toLowerCase().includes('cleanliness')) {
+              procedureChecks.cleanliness_checks = isCompleted;
+            } else if (procedureName.toLowerCase().includes('user')) {
+              procedureChecks.user_management = isCompleted;
+            } else if (procedureName.toLowerCase().includes('security')) {
+              procedureChecks.security_safety = isCompleted;
+            } else if (procedureName.toLowerCase().includes('end')) {
+              procedureChecks.end_day_checks = isCompleted;
+            }
+        }
+      });
+    }
+  }
+
   // Map workstation checkmarks (ws_1 through ws_40), excluding Server
   const workstationChecks: any = {};
+  const workstationRemarks: any = {};
+  
   for (let i = 1; i <= 40; i++) {
-    // Check if workstation was included in the daily report (selected by custodian)
+    // Check if workstation was included in daily report (selected by custodian)
     const ws = reportData.workstations?.find((w: any) => {
+      // Try matching by workstation_id first, then by name
+      if (w.workstation_id === i) {
+        return true;
+      }
+      
       // Skip Server workstation
       if (w.workstation_name?.toLowerCase().includes('server')) {
         return false;
       }
+      
       const wsNum = w.workstation_name?.match(/\d+/)?.[0];
       return wsNum === String(i);
     });
     
-    // Mark with checkmark if selected (no box - template has boxes already), blank if not
-    workstationChecks[`ws_${i}`] = ws ? "✔" : "";
-  }
-
-  // Check which procedures are completed
-  if (reportData.procedures) {
-    reportData.procedures.forEach((procedure: any) => {
-      const procedureName = procedure.procedure_name || procedure.name || '';
-      switch (procedureName.toLowerCase()) {
-        case "hardware checks":
-          procedureChecks.hardware_checks = true;
-          break;
-        case "software checks":
-          procedureChecks.software_checks = true;
-          break;
-        case "network & connectivity checks":
-          procedureChecks.network_checks = true;
-          break;
-        case "cleanliness & organization":
-          procedureChecks.cleanliness_checks = true;
-          break;
-        case "user management":
-          procedureChecks.user_management = true;
-          break;
-        case "security & safety":
-          procedureChecks.security_safety = true;
-          break;
-        case "end of day checks":
-          procedureChecks.end_day_checks = true;
-          break;
-        default:
-          // Try to match by partial name
-          if (procedureName.toLowerCase().includes('hardware')) {
-            procedureChecks.hardware_checks = true;
-          } else if (procedureName.toLowerCase().includes('software')) {
-            procedureChecks.software_checks = true;
-          } else if (procedureName.toLowerCase().includes('network')) {
-            procedureChecks.network_checks = true;
-          } else if (procedureName.toLowerCase().includes('cleanliness')) {
-            procedureChecks.cleanliness_checks = true;
-          } else if (procedureName.toLowerCase().includes('user')) {
-            procedureChecks.user_management = true;
-          } else if (procedureName.toLowerCase().includes('security')) {
-            procedureChecks.security_safety = true;
-          } else if (procedureName.toLowerCase().includes('end')) {
-            procedureChecks.end_day_checks = true;
-          }
+    // Handle workstation checkmarks
+    const wsKey = `ws_${i}`;
+    if (ws) {
+      // For auto-generated reports, check if workstation has any data or status
+      // Auto-generated reports should have checkmarks for workstations that were involved
+      if (ws.checked || ws.status === "Working" || (ws.remarks && ws.remarks.trim() !== "")) {
+        workstationChecks[wsKey] = "✓";
+      } else {
+        workstationChecks[wsKey] = "";
       }
-    });
+    } else {
+      workstationChecks[wsKey] = "";
+    }
+
+    // Map workstation remarks
+    workstationRemarks[`ws_${i}_remarks`] = ws?.remarks || "";
   }
   
-
-  return {
+  const result = {
     // Basic info
     lab_name: reportData.lab_name,
     current_datetime: formattedDateTime,
@@ -135,11 +148,16 @@ export const mapReportDataToTemplate = (reportData: any) => {
     security_safety: procedureChecks.security_safety ? "☑" : "☐",
     end_day_checks: procedureChecks.end_day_checks ? "☑" : "☐",
 
-    // Workstation checkmarks
+    // Workstation checkmarks - direct assignment based on actual workstations found
     ...workstationChecks,
+
+    // Workstation remarks (using different keys to avoid conflicts)
+    ...workstationRemarks,
 
     // Keep original data for reference
     original_workstations: reportData.workstations || [],
     original_procedures: reportData.procedures || [],
   };
+  
+  return result;
 };

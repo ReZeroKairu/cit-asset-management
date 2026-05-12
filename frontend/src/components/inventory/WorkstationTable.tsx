@@ -163,7 +163,7 @@ const WorkstationTable: React.FC<Props> = ({
                 className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
               Workstation Name
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -217,9 +217,11 @@ const WorkstationTable: React.FC<Props> = ({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {/* Text turns darker blue when row is hovered */}
-                  <span className="font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
-                    {workstation.workstation_name}
-                  </span>
+                  <div className="flex items-center justify-center h-full">
+                    <span className="font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">
+                      {workstation.workstation_name}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">

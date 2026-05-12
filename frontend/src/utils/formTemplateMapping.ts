@@ -74,6 +74,7 @@ interface FormMappingData {
     remarks?: string;
     monitored_by?: string;
     installation_remarks?: string;
+    prepared_by?: string;
   };
   name?: string;
   faculty_name?: string;
@@ -122,6 +123,7 @@ export const mapFormDataToTemplate = (formData: FormMappingData) => {
     course_code: formData.details?.course_code || '',
     year_level: formData.details?.year_level || '',
     installation_remarks: formData.details?.installation_remarks || '',
+    prepared_by: formData.details?.prepared_by || '',
     feedback_date: (() => {
       const feedbackDate = formData.details?.feedback_date;
       if (!feedbackDate) return '';
@@ -140,7 +142,7 @@ export const mapFormDataToTemplate = (formData: FormMappingData) => {
       return '';
     })(),
     requested_by: formData.details?.requested_by || '',
-    approved_by: formData.details?.approved_by || 'DR. MARCO MARVIN L. RADO',
+    approved_by: '', // No approved_by field in database, leave empty
     remarks: formData.details?.remarks || '',
     monitored_by: formData.details?.monitored_by || '',
   };
@@ -150,6 +152,7 @@ export const mapFormDataToTemplate = (formData: FormMappingData) => {
     case 'software-install':
       return {
         ...baseData,
+        approved_by: formData.details?.prepared_by || '', // For software install, approved_by is same as prepared_by
       };
     default:
       return baseData;

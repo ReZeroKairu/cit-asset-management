@@ -1,7 +1,7 @@
 //backend/src/middleware/auth.ts
 import { Request, Response, NextFunction } from "express";
 import * as jwt from "jsonwebtoken";
-import { config } from "../config/config";
+import { config } from "../config";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -40,11 +40,11 @@ export const authenticateToken = (
       // Fetch user details including lab_id from database
       const user = await prisma.users.findUnique({
         where: { user_id: decoded.userId },
-        select: {
-          user_id: true,
-          role: true,
-          lab_id: true,
-        },
+        select: { 
+          user_id: true, 
+          role: true, 
+          lab_id: true 
+        }
       });
 
       if (!user) {

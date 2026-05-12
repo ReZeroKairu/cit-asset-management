@@ -8,8 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import { MessageSquare, Edit, Clock, AlertTriangle } from "lucide-react";
+import { MessageSquare, Edit, Clock, AlertTriangle, X } from "lucide-react";
 import {
   getComplaints,
   updateComplaintStatus,
@@ -33,11 +32,22 @@ const ComplaintsManagementPage = () => {
   const [remarksText, setRemarksText] = useState("");
   const [completionDate, setCompletionDate] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'error' | 'success';
+    visible: boolean;
+  } | null>(null);
 
   // Check if user is admin
   const isAdmin = user?.role === "Admin";
+
+  // Toast helper functions
+  const showToast = (message: string, type: 'error' | 'success') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
 
   // Status options - only unfinished statuses for management
   const statusOptions = [
@@ -72,29 +82,41 @@ const ComplaintsManagementPage = () => {
       const data = await getComplaints();
       setComplaints(data);
     } catch (err) {
-      setError("Failed to fetch complaints");
+      showToast("Failed to fetch complaints", "error");
       console.error("Error fetching complaints:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (complaintId: number, newStatus: string) => {
+  const handleStatusUpdate = async (complaintId: number, newStatus: string, remarks?: string) => {
     try {
       setIsUpdating(true);
-      await updateComplaintStatus(complaintId, newStatus);
+      
+      // Check if resolving without remarks or completion date
+      if (newStatus === "Resolved") {
+        if (!remarks || remarks.trim() === "") {
+          showToast("Remarks are required when resolving a complaint", "error");
+          return;
+        }
+        if (!completionDate) {
+          showToast("Completion date is required when resolving a complaint", "error");
+          return;
+        }
+      }
+      
+      await updateComplaintStatus(complaintId, newStatus, remarks);
 
       // Update local state
       setComplaints((prev) =>
         prev.map((c) =>
-          c.complaint_id === complaintId ? { ...c, status: newStatus } : c
+          c.complaint_id === complaintId ? { ...c, status: newStatus, remarks: remarks || c.remarks } : c
         )
       );
 
-      setSuccess("Complaint status updated successfully");
-      setTimeout(() => setSuccess(null), 3000);
+      showToast("Complaint status updated successfully", "success");
     } catch (err) {
-      setError("Failed to update complaint status");
+      showToast("Failed to update complaint status", "error");
       console.error("Error updating complaint status:", err);
     } finally {
       setIsUpdating(false);
@@ -135,10 +157,9 @@ const ComplaintsManagementPage = () => {
         resolved_at: completionDate || undefined,
       });
       setIsEditingRemarks(false);
-      setSuccess("Remarks updated successfully");
-      setTimeout(() => setSuccess(null), 3000);
+      showToast("Remarks updated successfully", "success");
     } catch (err) {
-      setError("Failed to update remarks");
+      showToast("Failed to update remarks", "error");
       console.error("Error updating remarks:", err);
     } finally {
       setIsUpdating(false);
@@ -366,20 +387,7 @@ const ComplaintsManagementPage = () => {
         </CardContent>
       </Card>
 
-      {/* Alerts */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert className="bg-green-50 border-green-200">
-          <AlertDescription className="text-green-800">
-            {success}
-          </AlertDescription>
-        </Alert>
-      )}
-
+      
       {/* Complaints List */}
       <div className="space-y-4">
         {filteredComplaints.length === 0 ? (
@@ -511,7 +519,7 @@ const ComplaintsManagementPage = () => {
                           </>
                         )}
 
-                        {/* Show Edit button and status dropdown for In_Progress complaints - but not for admins */}
+                        {/* Show Edit button and Resolved button for In_Progress complaints - but not for admins */}
                         {complaint.status === "In_Progress" && !isAdmin && (
                           <div className="flex items-center gap-2">
                             <Button
@@ -528,29 +536,21 @@ const ComplaintsManagementPage = () => {
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <Select
-                                value={complaint.status}
-                                onValueChange={(value) =>
-                                  handleStatusUpdate(
-                                    complaint.complaint_id,
-                                    value
-                                  )
-                                }
-                              >
-                                <SelectTrigger className="w-28">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="In_Progress">
-                                    In Progress
-                                  </SelectItem>
-                                  <SelectItem value="Resolved">
-                                    Resolved
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusUpdate(
+                                  complaint.complaint_id,
+                                  "Resolved",
+                                  complaint.remarks // Pass current remarks when resolving
+                                );
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                              disabled={isUpdating}
+                            >
+                              Resolved
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -577,6 +577,34 @@ const ComplaintsManagementPage = () => {
         completionDate={completionDate}
         setCompletionDate={setCompletionDate}
       />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-sm p-4 rounded-lg shadow-lg transition-all duration-300 ${
+            toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-green-500 text-white'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              {toast.type === 'error' ? (
+                <AlertTriangle className="w-5 h-5 mr-2" />
+              ) : (
+                <MessageSquare className="w-5 h-5 mr-2" />
+              )}
+              <span className="font-medium">{toast.message}</span>
+            </div>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-4 text-white hover:text-gray-200 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

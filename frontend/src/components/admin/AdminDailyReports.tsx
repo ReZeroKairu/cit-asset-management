@@ -41,10 +41,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   const loadReports = async () => {
     try {
       setLoading(true);
-      console.log("Loading admin daily reports...");
       // For admin view, show only pending reports
       const data = await getAllDailyReports({ status: "Pending" });
-      console.log("Admin reports data received:", data);
       setReports(data.data || data);
     } catch (err: any) {
       console.error("Error loading admin reports:", err);
@@ -134,15 +132,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     });
   };
 
-  console.log(
-    "AdminDailyReports render - reports:",
-    reports,
-    "loading:",
-    loading,
-    "error:",
-    error
-  );
-
   const filteredReports = (reports || []).filter((report) => {
     let matchesFilter = true;
 
@@ -173,8 +162,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
 
   const handleGenerateReport = async (report: DailyReport) => {
     try {
-      console.log("Generating report for:", report.report_id);
-
       // Show loading state
       setError("");
 
@@ -184,11 +171,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
       }
 
       // Use the same API call as DailyAccomplishmentReport that works
-      console.log("Fetching detailed report data for ID:", report.report_id);
       const response = await api.get(`/daily-reports/${report.report_id}`);
       const detailedReport = response.data;
-
-      console.log("Detailed report data:", detailedReport);
 
       // Check if detailedReport exists and has the expected structure
       if (!detailedReport) {
@@ -205,11 +189,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           remarks: item.remarks || "",
         })) || [];
 
-      console.log("Processed workstations:", processedWorkstations);
-
-      // Use procedures data directly from API response
+      // Use procedures data directly from the API response
       const proceduresData = detailedReport.procedures || [];
-      console.log("Procedures data:", proceduresData);
 
       // Map the report data to template format in same way as DailyAccomplishmentReport
       const templateData = mapReportDataToTemplate({
@@ -224,12 +205,26 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         report_id: detailedReport.report_id,
         created_at: detailedReport.created_at || detailedReport.report_date,
         report_date: detailedReport.report_date,
+        report_type: detailedReport.report_type
       });
 
-      console.log("Template data:", templateData);
-
-      // Determine template based on lab_id
-      const getLabTemplate = (labId: number): string => {
+      // Determine template based on lab_id and report_type
+      const getLabTemplate = (labId: number, reportType?: string): string => {
+        // Use auto template for automated reports
+        if (reportType && reportType !== 'manual') {
+          switch (labId) {
+            case 1:
+              return "/Lab1_DAR_auto.docx"; // CIT-Lab 1 auto template
+            case 2:
+              return "/Lab2_DAR_auto.docx"; // CIT-Lab 2 auto template
+            case 3:
+              return "/CiscoLab_DAR_auto.docx"; // CIT-CISCO Lab auto template
+            default:
+              return "/Lab2_DAR_auto.docx"; // Default auto template
+          }
+        }
+        
+        // Use regular template for manual reports
         switch (labId) {
           case 1:
             return "/Lab1_DAR.docx"; // CIT-Lab 1 template
@@ -242,7 +237,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         }
       };
 
-      const templateFile = getLabTemplate(detailedReport.lab_id);
+      const templateFile = getLabTemplate(detailedReport.lab_id, detailedReport.report_type);
       const reportDate = detailedReport.report_date
         ? new Date(detailedReport.report_date)
         : new Date();
@@ -252,13 +247,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         reportDate.toISOString().split("T")[0]
       }.docx`;
 
-      console.log("Using template:", templateFile);
-      console.log("File name:", fileName);
-
       // Generate and download the report
       await generateTemplateReport(templateFile, templateData, fileName);
-
-      console.log("Report generated successfully!");
     } catch (error) {
       console.error("Failed to generate report:", error);
       setError(
@@ -490,8 +480,10 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                         Report #{report.report_id}
                       </div>
                       {report.general_remarks && (
-                        <div className="text-sm text-gray-500 mt-1 truncate">
-                          {report.general_remarks}
+                          <div className="text-sm text-gray-500 mt-1 truncate" title={report.general_remarks}>
+                          {report.general_remarks.length > 50 
+                            ? `${report.general_remarks.substring(0, 50)}...` 
+                            : report.general_remarks}
                         </div>
                       )}
                     </td>

@@ -1,40 +1,109 @@
-// src/controllers/publicFormsController.ts
 import { Request, Response } from "express";
-import * as FormsService from "../services/formsService";
+import { PrismaClient } from "@prisma/client";
+import { softwareInstallationSchema } from "../middleware/validation";
+import { ZodError } from "zod";
 
-const getClientIP = (req: any) => {
-  return (
-    req.headers["x-forwarded-for"] ||
-    req.headers["x-real-ip"] ||
-    req.connection?.remoteAddress ||
-    req.socket?.remoteAddress ||
-    (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
-    req.ip
+const prisma = new PrismaClient();
+
+const resolveCustodianUserIdByLaboratory = async (
+  laboratory: string | null | undefined
+) => {
+  if (!laboratory) return null;
+
+  const raw = String(laboratory).trim();
+  if (!raw) return null;
+
+  const candidates = Array.from(
+    new Set([
+      raw,
+      raw.replace(/-/g, " "),
+      raw.replace(/\s+/g, " "),
+      raw.replace(/-/g, " ").replace(/\s+/g, " "),
+    ])
   );
+
+  const lab = await prisma.laboratories.findFirst({
+    where: {
+      OR: candidates.map((name) => ({ lab_name: name })),
+    },
+    select: {
+      lab_id: true,
+      lab_name: true,
+    },
+  });
+
+  if (!lab?.lab_id) return null;
+
+  const custodian = await prisma.users.findFirst({
+    where: {
+      lab_id: lab.lab_id,
+      role: "Custodian",
+    },
+    select: {
+      user_id: true,
+    },
+  });
+
+  return custodian?.user_id ?? null;
 };
 
+// Public Software Installation Controller (no authentication required)
 export const createPublicSoftwareInstallation = async (
   req: Request,
-  res: Response,
+  res: Response
 ) => {
   try {
-    // Notice the "true" flag indicating this is a public form!
-    const data = await FormsService.createSoftwareInstallation(
-      req.body,
-      getClientIP(req),
-      true,
+    const {
+      date,
+      faculty_name,
+      laboratory,
+      software_list,
+      requested_by,
+      user_type,
+      installation_remarks,
+      prepared_by,
+    } = req.body;
+
+    const custodianUserId = await resolveCustodianUserIdByLaboratory(
+      laboratory
     );
+
+    // Get client IP address
+    const getClientIP = (req: any) => {
+      return req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             req.connection?.remoteAddress || 
+             req.socket?.remoteAddress ||
+             (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+             req.ip;
+    };
+
+    const softwareInstallation = await prisma.software_installations.create({
+      data: {
+        date: new Date(date),
+        faculty_name,
+        laboratory,
+        software_list,
+        requested_by,
+        user_type,
+        installation_remarks,
+        prepared_by,
+        user_id: custodianUserId, // Associate to custodian for retrieval (fallback null if not found)
+        status: "Pending", // Default status for public submissions
+        ip_address: getClientIP(req),
+      },
+    });
 
     res.status(201).json({
       success: true,
       message: "Software installation request submitted successfully",
-      data,
+      data: softwareInstallation,
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to submit software installation request",
-      error: error.message,
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };

@@ -61,13 +61,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const updatedUser = response.data;
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      // console.log("User data refreshed successfully:", updatedUser);
-    } catch (error: any) {
+      } catch (error: any) {
       console.error("Failed to refresh user data:", error);
 
       // Only logout on authentication errors (401/403), not on server errors
       if (error.response?.status === 401 || error.response?.status === 403) {
-        console.log("Authentication error, logging out...");
         logout();
       } else {
         // For other errors, just log them but don't logout

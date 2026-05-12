@@ -26,7 +26,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     lab_id: report?.lab_id || 0,
-    report_date: report?.report_date || new Date().toISOString().split("T")[0],
+    report_date: report?.report_date ? new Date(report.report_date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
     general_remarks: report?.general_remarks || "",
   });
 
@@ -37,6 +37,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
   const [procedureSearch, setProcedureSearch] = useState("");
   const [procedures, setProcedures] = useState<ReportProcedure[]>([]);
   const [workstations, setWorkstations] = useState<any[]>([]);
+  const [workstationDataLoaded, setWorkstationDataLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -109,6 +110,7 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
         // Fetch saved data for this report
         const reportData = await api.get(`/daily-reports/${reportId}`);
         const savedProcedures = reportData.data.procedures || [];
+        const savedWorkstationItems = reportData.data.workstation_items || [];
 
         // Merge filtered DAR procedures with their saved status
         const mergedProcedures = darProcedures.map((proc: Procedure) => {
@@ -125,6 +127,55 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
         });
 
         setProcedures(mergedProcedures);
+
+        // Load all available workstations and mark saved ones as selected
+        if (savedWorkstationItems.length > 0) {
+          try {
+            const availableWorkstations = await getLabWorkstationsForReport(formData.lab_id);
+            
+            // Create a map of saved workstation items for quick lookup
+            const savedWorkstationMap = new Map();
+            savedWorkstationItems.forEach((savedWs: any) => {
+              savedWorkstationMap.set(savedWs.workstation_id, savedWs);
+            });
+            
+            // Merge all available workstations with saved data
+            const allWorkstations = availableWorkstations.map((availableWs: any) => {
+              const savedWs = savedWorkstationMap.get(availableWs.workstation_id);
+              if (savedWs) {
+                // This workstation was saved in the report
+                return {
+                  ...availableWs,
+                  checked: true, // Mark as selected
+                  status: savedWs.status || "Working",
+                  remarks: savedWs.remarks || "",
+                };
+              } else {
+                // This workstation was not in the saved report
+                return {
+                  ...availableWs,
+                  checked: false, // Mark as not selected
+                  status: "Working",
+                  remarks: "",
+                };
+              }
+            });
+            
+            // Sort workstations numerically by name (e.g., "PC 1", "PC 2", "PC 10")
+            const sortedWorkstations = allWorkstations.sort((a: any, b: any) => {
+              const numA = parseInt(a.workstation_name?.match(/\d+/)?.[0] || "0");
+              const numB = parseInt(b.workstation_name?.match(/\d+/)?.[0] || "0");
+              return numA - numB;
+            });
+            
+            setWorkstations(sortedWorkstations);
+            setWorkstationDataLoaded(true);
+          } catch (wsError) {
+            // Fallback: use saved workstation items as-is
+            setWorkstations(savedWorkstationItems);
+            setWorkstationDataLoaded(true);
+          }
+        }
       } catch (apiError: any) {
         console.error("API Error fetching specific report details:", apiError);
         // Fallback: just use default DAR procedures
@@ -143,6 +194,11 @@ const DailyReportFormTab: React.FC<DailyReportFormTabProps> = ({
 
   const loadWorkstations = async (labId: number) => {
     try {
+      // If we're editing a report and already loaded workstation data, don't override it
+      if (report && workstationDataLoaded) {
+        return;
+      }
+      
       const reportId = report?.report_id;
       const data = await getLabWorkstationsForReport(labId, reportId);
       // Sort workstations by number in name (e.g., "PC 1", "PC 2", "PC 10")

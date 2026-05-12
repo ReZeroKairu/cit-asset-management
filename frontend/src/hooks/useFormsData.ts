@@ -88,6 +88,33 @@ export const useFormsData = () => {
     }
   }, [user?.id, user?.role, fetchForms]);
 
+  // Add periodic polling for new submissions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only fetch if page is visible and user is authenticated
+      if (!document.hidden && user && user.id) {
+        fetchForms();
+      }
+    }, 1800000); // Check for new submissions every 30 minutes
+
+    return () => clearInterval(interval);
+  }, [user?.id, fetchForms]);
+
+  // Add immediate refresh when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && user.id) {
+        fetchForms();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id, fetchForms]);
+
   return {
     forms,
     loading,

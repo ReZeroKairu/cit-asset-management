@@ -59,7 +59,6 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   return (
     <div className="flex gap-2 w-full sm:w-auto">
       <Select value={value} onValueChange={(newValue) => {
-        console.log('🔄 Status filter changed:', newValue);
         onChange(newValue);
       }}>
         <SelectTrigger className="w-full sm:w-48">

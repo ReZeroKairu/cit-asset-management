@@ -1,4 +1,6 @@
-import { prisma } from "../../config/database";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export class ServiceLogService {
   // GET Service History for a Workstation
@@ -171,11 +173,11 @@ export class ServiceLogService {
               where: { detail_id: asset.asset_details.detail_id },
               data: {
                 status_id:
-                  functionalStatus?.status_id || asset.asset_details.status_id,
+                        functionalStatus?.status_id || asset.asset_details.status_id,
                 asset_remarks: action.remarks
                   ? `${action.action} on ${new Date(service_date).toLocaleDateString()}: ${action.remarks}`
                   : asset.asset_details.asset_remarks,
-              },
+                 },
             });
           }
         }

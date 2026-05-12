@@ -1,17 +1,16 @@
 {
   "compilerOptions": {
-    "target": "es2022",
+    "target": "es2016",
     "module": "commonjs",
-    "rootDir": "./", // FIXED: Changed from "./src" to "./"
+    "rootDir": ".",
     "outDir": "./dist",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true
+    "moduleResolution": "node"
   },
-  "include": ["src/**/*", "scripts/**/*", "prisma/**/*"], // FIXED: Included all folders
-  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "tests/**/*"]
+  "include": ["src/**/*", "prisma/**/*"],
+  "exclude": ["node_modules", "*.js"]
 }

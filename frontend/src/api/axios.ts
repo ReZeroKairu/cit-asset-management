@@ -3,9 +3,10 @@ import axios from "axios";
 
 const getApiBaseUrl = () => {
   // Use network IP when accessing from network, localhost for local development
-  const isNetworkAccess = window.location.hostname.includes('172.72.102.4');
+  const isNetworkAccess = window.location.hostname.includes('192.168.56.1') || 
+                          window.location.hostname.includes('192.168.0.104');
   return isNetworkAccess 
-    ? "http://172.72.102.4:3001" 
+    ? "http://192.168.56.1:3001" 
     : "http://localhost:3001";
 };
 

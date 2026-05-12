@@ -225,6 +225,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         report_id: report.report_id,
         created_at: report.created_at || report.report_date, // Add creation timestamp with fallback
         report_date: report.report_date, // Add report date
+        report_type: report.report_type || "manual", // Add report type for template selection
         current_datetime: formatDisplayDateTime(
           report.created_at || report.report_date
         ), // Add formatted display date
@@ -245,7 +246,22 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
     }
   };
 
-  const getLabTemplate = (labId: number): string => {
+  const getLabTemplate = (labId: number, reportType?: string): string => {
+    // Use auto template for automated reports
+    if (reportType && reportType !== 'manual') {
+      switch (labId) {
+        case 1:
+          return "/Lab1_DAR_auto.docx"; // CIT-Lab 1 auto template
+        case 2:
+          return "/Lab2_DAR_auto.docx"; // CIT-Lab 2 auto template
+        case 3:
+          return "/CiscoLab_DAR_auto.docx"; // CIT-CISCO Lab auto template
+        default:
+          return "/Lab2_DAR_auto.docx"; // Default auto template
+      }
+    }
+    
+    // Use regular template for manual reports
     switch (labId) {
       case 1:
         return "/Lab1_DAR.docx"; // CIT-Lab 1 template
@@ -262,8 +278,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
     if (!reportData) return;
 
     try {
-      // Determine template based on lab_id using helper function
-      const templateFile = getLabTemplate(reportData.lab_id);
+      // Determine template based on lab_id and report_type using helper function
+      const templateFile = getLabTemplate(reportData.lab_id, reportData.report_type);
 
       // Map the report data to template format
       const templateData = mapReportDataToTemplate(reportData);
@@ -324,10 +340,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
           report_id: detailedReport.report_id,
           created_at: detailedReport.created_at || detailedReport.report_date, // Add creation timestamp with fallback
           report_date: detailedReport.report_date, // Add report date
+          report_type: detailedReport.report_type || "manual", // Add report type for template selection
         });
 
-        // Determine template based on lab_id using helper function
-        const templateFile = getLabTemplate(detailedReport.lab_id);
+        // Determine template based on lab_id and report_type using helper function
+        const templateFile = getLabTemplate(detailedReport.lab_id, detailedReport.report_type);
 
         await generateTemplateReport(
           templateFile,

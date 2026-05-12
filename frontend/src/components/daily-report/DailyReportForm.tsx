@@ -80,9 +80,7 @@ const DailyReportForm: React.FC<DailyReportFormProps> = ({
 
   const loadAssignedLab = async () => {
     try {
-      console.log("Loading assigned lab...");
       const data = await getUserAssignedLab();
-      console.log("API Response:", data);
       setAssignedLab(data.assigned_lab);
 
       // Auto-fill lab_id if user has assigned lab (for both new and existing reports)

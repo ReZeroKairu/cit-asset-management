@@ -1,106 +1,467 @@
+//backend/src/controllers/workstationController.ts
 import { Request, Response } from "express";
-import * as WorkstationService from "../services/workstationService";
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
+
+// 1. GET ALL WORKSTATIONS (with view optimization + asset fetching)
 export const getAllWorkstations = async (req: Request, res: Response) => {
   try {
-    const workstations = await WorkstationService.getAllWorkstations(
-      req.user?.role,
-      req.user?.lab_id,
-    );
-    res.json(workstations);
-  } catch (error: any) {
+    const user = req.user;
+    const includeAssets = req.query.includeAssets === 'true';
+
+    // Build SQL where conditions for view
+    let whereConditions: string[] = [];
+    const params: any[] = [];
+
+    // Role-based access control
+    if (user?.role === "Custodian") {
+      if (user.lab_id) {
+        whereConditions.push("lab_id = ?");
+        params.push(user.lab_id);
+      } else {
+        // Unassigned custodians see nothing
+        return res.json([]);
+      }
+    }
+
+    const whereClause = whereConditions.length > 0
+      ? `WHERE ${whereConditions.join(" AND ")}`
+      : "";
+
+    let workstations: any[] = [];
+    let usedView = false;
+
+    try {
+      // Try optimized view first
+      workstations = await prisma.$queryRawUnsafe(`
+        SELECT 
+          workstation_id,
+          workstation_name,
+          lab_id,
+          status_id,
+          workstation_remarks,
+          created_at,
+          lab_name,
+          lab_location,
+          workstation_status,
+          asset_count,
+          last_maintenance_date,
+          last_report_date,
+          service_status_30d
+        FROM view_workstation_status_summary
+        ${whereClause}
+        ORDER BY workstation_name ASC
+      `, ...params);
+      
+      usedView = true;
+    } catch (viewError) {
+      // Build Prisma where clause as fallback
+      const prismaWhere: any = {};
+      if (user?.role === "Custodian" && user.lab_id) {
+        prismaWhere.lab_id = user.lab_id;
+      }
+      
+      const prismaWorkstations = await prisma.workstations.findMany({
+        where: Object.keys(prismaWhere).length > 0 ? prismaWhere : undefined,
+        include: {
+          laboratories: {
+            select: {
+              lab_id: true,
+              lab_name: true,
+              location: true,
+            },
+          },
+          asset_statuses: true,
+          inventory_assets: {
+            include: {
+              asset_details: true,
+              units: true,
+            },
+          },
+        },
+      });
+      
+      return res.json(prismaWorkstations);
+    }
+
+    if (usedView) {
+      // Transform view result to match Prisma structure
+      let transformedWorkstations: any[] = (workstations as any[]).map(ws => ({
+        workstation_id: Number(ws.workstation_id),
+        workstation_name: ws.workstation_name,
+        lab_id: Number(ws.lab_id),
+        status_id: Number(ws.status_id),
+        workstation_remarks: ws.workstation_remarks,
+        created_at: ws.created_at,
+        laboratories: ws.lab_name ? {
+          lab_id: Number(ws.lab_id),
+          lab_name: ws.lab_name,
+          location: ws.lab_location
+        } : null,
+        asset_statuses: ws.workstation_status ? {
+          status_name: ws.workstation_status
+        } : null,
+        inventory_assets: [], // Will be populated if needed
+        asset_count: Number(ws.asset_count || 0),
+        last_maintenance_date: ws.last_maintenance_date,
+        last_report_date: ws.last_report_date,
+        service_status_30d: ws.service_status_30d
+      }));
+
+      // If assets are needed (for workstation reports), fetch them separately
+      if (includeAssets && transformedWorkstations.length > 0) {
+        const workstationIds = transformedWorkstations.map(ws => ws.workstation_id);
+        
+        const assets = await prisma.inventory_assets.findMany({
+          where: {
+            workstation_id: {
+              in: workstationIds
+            }
+          },
+          include: {
+            asset_details: true,
+            units: true,
+          },
+        });
+
+        // Group assets by workstation_id
+        const assetsByWorkstation = assets.reduce((acc, asset) => {
+          const wsId = asset.workstation_id;
+          if (wsId && !acc[wsId]) acc[wsId] = [];
+          if (wsId) acc[wsId].push(asset);
+          return acc;
+        }, {} as Record<number, any[]>);
+
+        // Attach assets to workstations
+        transformedWorkstations = transformedWorkstations.map(ws => ({
+          ...ws,
+          inventory_assets: assetsByWorkstation[ws.workstation_id] || []
+        }));
+      }
+      
+      res.json(transformedWorkstations);
+    }
+  } catch (error) {
     console.error("Error fetching workstations:", error);
     res.status(500).json({ error: "Failed to fetch workstations" });
   }
 };
 
+// 2. CREATE WORKSTATION
 export const createWorkstation = async (req: Request, res: Response) => {
   try {
-    const newWorkstation = await WorkstationService.createWorkstation(req.body);
+    const { workstation_name, lab_id, workstation_remarks, status_id } =
+      req.body;
+
+    if (!workstation_name) {
+      return res.status(400).json({ error: "Workstation name is required" });
+    }
+
+    const newWorkstation = await prisma.workstations.create({
+      data: {
+        workstation_name,
+        lab_id: lab_id ? Number(lab_id) : null,
+        workstation_remarks: workstation_remarks || null,
+        status_id: status_id ? Number(status_id) : 1, // Default to 1
+      },
+      include: {
+        asset_statuses: true,
+      },
+    });
+
     res.status(201).json(newWorkstation);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating workstation:", error);
-    res
-      .status(error.message.includes("VALIDATION") ? 400 : 500)
-      .json({ error: error.message || "Failed to create workstation" });
+    res.status(500).json({ error: "Failed to create workstation" });
   }
 };
 
+// 3. GET WORKSTATION DETAILS (By ID or Name)
 export const getWorkstationDetails = async (req: Request, res: Response) => {
   try {
-    const workstation = await WorkstationService.getWorkstationDetails(
-      req.params.name as string,
-    );
+    const { name } = req.params;
+
+    // ✅ FIX: Explicitly convert to string to satisfy TypeScript
+    // This handles the "string | string[]" error
+    const searchParam = String(name);
+
+    const isId = !isNaN(Number(searchParam));
+
+    const workstation = await prisma.workstations.findFirst({
+      where: isId
+        ? { workstation_id: Number(searchParam) }
+        : { workstation_name: searchParam },
+      include: {
+        laboratories: {
+          select: {
+            lab_id: true,
+            lab_name: true,
+            location: true,
+          },
+        },
+        asset_statuses: true,
+        inventory_assets: {
+          include: {
+            asset_details: true,
+            units: true,
+          },
+        },
+      },
+    });
+
+    if (!workstation) {
+      return res.status(404).json({ error: "Workstation not found" });
+    }
+
     res.json(workstation);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching workstation details:", error);
-    res
-      .status(error.message.includes("NOT_FOUND") ? 404 : 500)
-      .json({ error: error.message || "Failed to fetch workstation details" });
+    res.status(500).json({ error: "Failed to fetch workstation details" });
   }
 };
 
+// 4. UPDATE WORKSTATION (FIXED TS ERROR)
 export const updateWorkstation = async (req: Request, res: Response) => {
   try {
-    const workstationId = parseInt(req.params.id as string);
-    if (isNaN(workstationId))
-      return res.status(400).json({ error: "Workstation ID is required" });
+    const { id } = req.params;
+    const workstationId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
 
-    const updatedWorkstation = await WorkstationService.updateWorkstation(
-      workstationId,
-      req.body,
-    );
+    const { workstation_name, lab_id, workstation_remarks, status_id } =
+      req.body;
+
+    if (!workstationId) {
+      return res.status(400).json({ error: "Workstation ID is required" });
+    }
+
+    // Check if workstation exists
+    const existingWorkstation = await prisma.workstations.findUnique({
+      where: { workstation_id: workstationId },
+    });
+
+    if (!existingWorkstation) {
+      return res.status(404).json({ error: "Workstation not found" });
+    }
+
+    // ✅ FIX: Construct data object dynamically to avoid Type 'number | undefined' error
+    const updateData: any = {
+      workstation_name,
+      workstation_remarks, // Pass as is; Prisma handles undefined by ignoring it
+    };
+
+    // Only set status_id if it explicitly exists (truthy or 0)
+    if (status_id) {
+      updateData.status_id = Number(status_id);
+    }
+
+    // Handle Laboratory Relation
+    if (lab_id) {
+      updateData.lab_id = Number(lab_id);
+    }
+
+    // Update the workstation
+    const updatedWorkstation = await prisma.workstations.update({
+      where: { workstation_id: workstationId },
+      data: updateData,
+      include: {
+        asset_statuses: true,
+      },
+    });
+
     res.json(updatedWorkstation);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating workstation:", error);
-    res
-      .status(error.message.includes("NOT_FOUND") ? 404 : 500)
-      .json({ error: error.message || "Failed to update workstation" });
+    res.status(500).json({
+      error: "Failed to update workstation",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 };
 
+// 5. DELETE WORKSTATION
 export const deleteWorkstation = async (req: Request, res: Response) => {
   try {
-    const workstationId = parseInt(req.params.id as string);
-    if (isNaN(workstationId))
-      return res.status(400).json({ error: "Workstation ID is required" });
+    const { id } = req.params;
+    const workstationId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
 
-    const result = await WorkstationService.deleteWorkstation(workstationId);
-    res.json(result);
+    if (!workstationId) {
+      return res.status(400).json({ error: "Workstation ID is required" });
+    }
+
+    const existingWorkstation = await prisma.workstations.findUnique({
+      where: { workstation_id: workstationId },
+    });
+
+    if (!existingWorkstation) {
+      return res.status(404).json({ error: "Workstation not found" });
+    }
+
+    // ✅ FIX: Use a transaction to handle all foreign key constraints before deleting
+    await prisma.$transaction(async (tx) => {
+      // 1. Unassign all assets linked to this workstation (moves them to Unassigned Assets)
+      await tx.inventory_assets.updateMany({
+        where: { workstation_id: workstationId },
+        data: { workstation_id: null },
+      });
+
+      // 2. Delete related Daily Report items for this workstation
+      await tx.report_workstation_items.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 3. Delete related PMC Reports for this workstation
+      // (This will also automatically delete pmc_report_procedures due to the Cascade rule in your schema)
+      await tx.pmc_reports.deleteMany({
+        where: { workstation_id: workstationId },
+      });
+
+      // 4. Now that dependencies are cleared, delete the workstation itself
+      await tx.workstations.delete({
+        where: { workstation_id: workstationId },
+      });
+    });
+
+    res.json({ message: "Workstation and its relations deleted successfully" });
   } catch (error: any) {
     console.error("Error deleting workstation:", error);
-    res
-      .status(error.message.includes("NOT_FOUND") ? 404 : 500)
-      .json({ error: error.message || "Failed to delete workstation" });
+    res.status(500).json({
+      error: "Failed to delete workstation",
+      details: error.message,
+    });
   }
 };
 
+// 6. BATCH CREATE WORKSTATIONS
 export const batchCreateWorkstations = async (req: Request, res: Response) => {
   try {
-    const result = await WorkstationService.batchCreateWorkstations(
-      req.body.workstations,
+    const { workstations } = req.body;
+
+    if (!Array.isArray(workstations) || workstations.length === 0) {
+      return res.status(400).json({
+        error: "Invalid data format. Expected an array of workstations.",
+      });
+    }
+
+    // Validate input data
+    const validationErrors: string[] = [];
+    for (const [index, ws] of workstations.entries()) {
+      if (!ws.workstation_name || typeof ws.workstation_name !== "string") {
+        validationErrors.push(
+          `Workstation ${index + 1}: Missing or invalid name`,
+        );
+      }
+      if (!ws.lab_id || isNaN(Number(ws.lab_id))) {
+        validationErrors.push(
+          `Workstation ${index + 1}: Missing or invalid lab_id`,
+        );
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: validationErrors,
+      });
+    }
+
+    // Check if labs exist
+    const labIds = [...new Set(workstations.map((ws) => Number(ws.lab_id)))];
+    const existingLabs = await prisma.laboratories.findMany({
+      where: { lab_id: { in: labIds } },
+      select: { lab_id: true, lab_name: true },
+    });
+
+    const missingLabIds = labIds.filter(
+      (id) => !existingLabs.find((lab) => lab.lab_id === id),
     );
-    res.status(201).json(result);
+    if (missingLabIds.length > 0) {
+      return res.status(400).json({
+        error: "Invalid laboratory IDs",
+        details: `Lab IDs not found: ${missingLabIds.join(", ")}`,
+      });
+    }
+
+    // Check for duplicates
+    const existingWorkstations = await prisma.workstations.findMany({
+      where: {
+        AND: [
+          {
+            OR: workstations.map((ws) => ({
+              workstation_name: ws.workstation_name.trim(),
+              lab_id: Number(ws.lab_id),
+            })),
+          },
+        ],
+      },
+      select: {
+        workstation_name: true,
+        lab_id: true,
+      },
+    });
+
+    if (existingWorkstations.length > 0) {
+      const duplicates = existingWorkstations.map(
+        (ws) => `"${ws.workstation_name}" in Lab ID: ${ws.lab_id}`,
+      );
+      return res.status(409).json({
+        error: "Duplicate workstation names found",
+        details: `These workstations already exist: ${duplicates.join(", ")}`,
+      });
+    }
+
+    // Create workstations
+    const result = await prisma.workstations.createMany({
+      data: workstations.map((ws: any) => ({
+        workstation_name: ws.workstation_name.trim(),
+        lab_id: Number(ws.lab_id),
+        workstation_remarks: ws.workstation_remarks || null,
+        status_id: ws.status_id ? Number(ws.status_id) : 1,
+      })),
+    });
+
+    res.status(201).json({
+      message: `Successfully created ${result.count} workstation(s)`,
+      count: result.count,
+      created: result.count,
+    });
   } catch (error: any) {
     console.error("Batch create error:", error);
-    if (error.message.includes("VALIDATION"))
-      return res.status(400).json({ error: error.message });
-    if (error.message.includes("DUPLICATE"))
-      return res.status(409).json({ error: error.message });
-    res
-      .status(500)
-      .json({ error: "Failed to create workstations", details: error.message });
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        error: "Duplicate workstation names detected",
+        details:
+          "One or more workstation names already exist in the specified laboratories",
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to create workstations",
+      details: error.message,
+    });
   }
 };
 
+// 7. GET WORKSTATIONS BY LAB (For Maintenance Page)
 export const getWorkstationsByLab = async (req: Request, res: Response) => {
-  try {
-    const labId = parseInt(req.params.labId as string);
-    if (isNaN(labId)) return res.status(400).json({ error: "Invalid Lab ID" });
+  const { labId } = req.params;
 
-    const workstations = await WorkstationService.getWorkstationsByLab(labId);
+  try {
+    const workstations = await prisma.workstations.findMany({
+      where: {
+        lab_id: Number(labId),
+      },
+      include: {
+        asset_statuses: true, // ✅ Fetches "Functional", "For Disposal", etc.
+        inventory_assets: true,
+      },
+      orderBy: {
+        workstation_name: "asc",
+      },
+    });
+
     res.json(workstations);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching lab workstations:", error);
     res.status(500).json({ error: "Failed to fetch workstations" });
   }

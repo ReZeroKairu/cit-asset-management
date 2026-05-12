@@ -61,7 +61,7 @@ const toReactNode = (value: unknown): ReactNode => {
   return String(value) as ReactNode;
 };
 
-export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
+  export const FormDetailsModal: React.FC<FormDetailsModalProps> = ({
   show,
   form,
   editMode = false,
@@ -119,7 +119,6 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
       };
       setEditFormData(initialData);
       setIsInitialized(true);
-      console.log("Edit form data initialized:", initialData);
     } else if (!editMode) {
       setEditFormData({
         time_out: "",
@@ -150,16 +149,7 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
     };
   }, [show, onClose]);
 
-  console.log("FormDetailsModal props:", {
-    show,
-    form: form ? "exists" : "null",
-    userRole,
-    editMode,
-  });
-  console.log("Modal should render:", !(!show || !form));
-
   if (!show || !form) {
-    console.log("Modal not rendering - show:", show, "form:", form);
     return null;
   }
 
@@ -167,12 +157,6 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
     userRole === "Custodian" &&
     form.type === "software-install" &&
     form.status === "Custodian_Approved";
-
-  console.log("Modal rendering...", {
-    show,
-    form: form?.id,
-    formType: form?.type,
-  });
   return (
     <>
       <div
@@ -264,15 +248,7 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <div className="bg-white p-3 rounded border border-gray-200">
-                        <label className="text-xs text-gray-500 uppercase tracking-wide">
-                          Approved by
-                        </label>
-                        <p className="font-medium text-gray-900">
-                          {toReactNode(form.details.approved_by || "N/A")}
-                        </p>
-                      </div>
-                      <div className="bg-white p-3 rounded border border-gray-200">
+                                            <div className="bg-white p-3 rounded border border-gray-200">
                         <label className="text-xs text-gray-500 uppercase tracking-wide">
                           Prepared by
                         </label>
@@ -419,8 +395,6 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
                           updateData.feedback_date = editFormData.feedback_date;
                         }
 
-                        console.log("Saving edited form data:", updateData);
-
                         // Call the appropriate API function based on form type
                         if (form.type === "software-install") {
                           await updateSoftwareInstallDetails(
@@ -429,10 +403,6 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
                           );
                         }
 
-                        console.log(
-                          "Form updated successfully with data:",
-                          updateData
-                        );
                         alert("Form updated successfully!");
 
                         // Call onUpdate to refresh the parent component's data

@@ -34,14 +34,12 @@ const CustodianInventoryAnalyticsSection = () => {
     const fetchData = async () => {
       try {
         const analyticsData = await getInventoryAnalytics();
-        console.log("API Response:", analyticsData);
 
         const transformedData: InventoryAnalyticsData = {
           ...analyticsData,
           statusDistribution: analyticsData.statusDistribution,
         };
 
-        console.log("Transformed data:", transformedData);
         setData(transformedData);
       } catch (err) {
         console.error("Failed to fetch inventory analytics:", err);

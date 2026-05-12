@@ -1,4 +1,6 @@
-import { prisma } from "../../config/database";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export class ScheduleService {
   // GET all schedules for a lab and fiscal year
@@ -8,32 +10,31 @@ export class ScheduleService {
         lab_id,
         fiscal_year,
       },
-      orderBy: [{ quarter: "asc" }],
+      orderBy: [
+        { quarter: "asc" }
+      ],
     });
 
     // Transform to the format expected by frontend
-    const formattedSchedules = schedules.reduce(
-      (acc, schedule) => {
-        acc[schedule.quarter] = {
-          start: schedule.start_date.toISOString().split("T")[0],
-          end: schedule.end_date.toISOString().split("T")[0],
-          servicingWeeks: Array.isArray(schedule.servicing_weeks)
-            ? schedule.servicing_weeks
-            : JSON.parse((schedule.servicing_weeks as string) || "[]"),
-        };
-        return acc;
-      },
-      {} as Record<string, any>,
-    );
+    const formattedSchedules = schedules.reduce((acc, schedule) => {
+      acc[schedule.quarter] = {
+        start: schedule.start_date.toISOString().split('T')[0],
+        end: schedule.end_date.toISOString().split('T')[0],
+        servicingWeeks: Array.isArray(schedule.servicing_weeks) 
+          ? schedule.servicing_weeks 
+          : JSON.parse(schedule.servicing_weeks as string || '[]'),
+      };
+      return acc;
+    }, {} as Record<string, any>);
 
     return formattedSchedules;
   }
 
   // CREATE or UPDATE schedules for a lab
   static async upsertSchedules(
-    lab_id: number,
-    fiscal_year: string,
-    schedules: Record<string, any>,
+    lab_id: number, 
+    fiscal_year: string, 
+    schedules: Record<string, any>
   ) {
     const result = await prisma.$transaction(async (tx) => {
       const createdQuarters: string[] = [];
