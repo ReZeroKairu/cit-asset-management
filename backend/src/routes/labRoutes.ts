@@ -21,8 +21,23 @@ router.get("/", getLaboratories);
 router.get("/:id", getLaboratoryById);
 
 // Admin only
-router.post("/", requireRole(["Admin"]), auditMiddleware("CREATE", "laboratory"), createLaboratory);
-router.put("/:id", requireRole(["Admin"]), auditMiddleware("UPDATE", "laboratory"), updateLaboratory);
-router.delete("/:id", requireRole(["Admin"]), auditMiddleware("DELETE", "laboratory"), deleteLaboratory);
+router.post(
+  "/",
+  requireRole(["Admin"]),
+  auditMiddleware("CREATE", "laboratory"),
+  createLaboratory,
+);
+router.put(
+  "/:id",
+  requireRole(["Admin"]),
+  auditMiddleware("UPDATE", "laboratory"),
+  updateLaboratory,
+);
+router.delete(
+  "/:id",
+  requireRole(["Admin"]),
+  auditMiddleware("DELETE", "laboratory"),
+  deleteLaboratory,
+);
 
 export default router;

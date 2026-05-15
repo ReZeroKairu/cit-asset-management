@@ -16,7 +16,10 @@ const prisma = new PrismaClient();
 
 // Add a simple test endpoint to verify backend is working
 router.get("/test", (req, res) => {
-  res.json({ message: "Backend is working!", timestamp: new Date().toISOString() });
+  res.json({
+    message: "Backend is working!",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Protected routes require authentication
@@ -27,37 +30,40 @@ router.post(
   "/",
   authenticateToken,
   auditMiddleware("CREATE", "inventory"),
-  createAsset
+  createAsset,
 );
 router.post(
   "/batch",
   authenticateToken,
   auditMiddleware("CREATE", "inventory"),
-  batchCreateAssets
+  batchCreateAssets,
 );
 router.put(
   "/:id",
   authenticateToken,
   auditMiddleware("UPDATE", "inventory"),
-  updateAsset
+  updateAsset,
 );
 router.delete(
   "/:id",
   authenticateToken,
   requireRole(["Admin", "Custodian"]),
   auditMiddleware("DELETE", "inventory"),
-  deleteAsset
+  deleteAsset,
 );
 
 // ✅ ADD THIS ROUTE
 router.get("/statuses", getAssetStatuses);
 
 // Asset Lifecycle Timeline View
-router.get("/lifecycle-timeline", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const { lab_id } = req.query;
-    
-    let query = `
+router.get(
+  "/lifecycle-timeline",
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { lab_id } = req.query;
+
+      let query = `
       SELECT 
         asset_id,
         property_tag_no,
@@ -95,32 +101,38 @@ router.get("/lifecycle-timeline", authenticateToken, async (req: Request, res: R
         searchable_text
       FROM asset_lifecycle_timeline_view
     `;
-    
-    const params: any[] = [];
-    
-    // Add lab filter if specified (for custodians)
-    if (lab_id) {
-      query += " WHERE lab_id = ?";
-      params.push(Number(lab_id));
+
+      const params: any[] = [];
+
+      // Add lab filter if specified (for custodians)
+      if (lab_id) {
+        query += " WHERE lab_id = ?";
+        params.push(Number(lab_id));
+      }
+
+      query += " ORDER BY current_age_years DESC, lab_name, workstation_name";
+
+      const results = await prisma.$queryRawUnsafe(query, ...params);
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching asset lifecycle timeline:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch asset lifecycle timeline" });
     }
-    
-    query += " ORDER BY current_age_years DESC, lab_name, workstation_name";
-    
-    const results = await prisma.$queryRawUnsafe(query, ...params);
-    
-    res.json(results);
-  } catch (error) {
-    console.error("Error fetching asset lifecycle timeline:", error);
-    res.status(500).json({ error: "Failed to fetch asset lifecycle timeline" });
-  }
-});
+  },
+);
 
 // Asset Lifecycle Summary
-router.get("/lifecycle-summary", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const { lab_id } = req.query;
-    
-    let query = `
+router.get(
+  "/lifecycle-summary",
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { lab_id } = req.query;
+
+      let query = `
       SELECT 
         lifecycle_stage,
         lifecycle_status,
@@ -132,25 +144,29 @@ router.get("/lifecycle-summary", authenticateToken, async (req: Request, res: Re
         COUNT(CASE WHEN assignment_status = 'Unassigned' THEN 1 END) AS unassigned_count
       FROM asset_lifecycle_timeline_view
     `;
-    
-    const params: any[] = [];
-    
-    // Add lab filter if specified (for custodians)
-    if (lab_id) {
-      query += " WHERE lab_id = ?";
-      params.push(Number(lab_id));
+
+      const params: any[] = [];
+
+      // Add lab filter if specified (for custodians)
+      if (lab_id) {
+        query += " WHERE lab_id = ?";
+        params.push(Number(lab_id));
+      }
+
+      query +=
+        " GROUP BY lifecycle_stage, lifecycle_status ORDER BY lifecycle_stage";
+
+      const results = await prisma.$queryRawUnsafe(query, ...params);
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching asset lifecycle summary:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch asset lifecycle summary" });
     }
-    
-    query += " GROUP BY lifecycle_stage, lifecycle_status ORDER BY lifecycle_stage";
-    
-    const results = await prisma.$queryRawUnsafe(query, ...params);
-    
-    res.json(results);
-  } catch (error) {
-    console.error("Error fetching asset lifecycle summary:", error);
-    res.status(500).json({ error: "Failed to fetch asset lifecycle summary" });
-  }
-});
+  },
+);
 
 // Resources
 router.get("/units", async (req: Request, res: Response) => {
@@ -174,28 +190,32 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { unit_name, device_type_id } = req.body;
-      
+
       if (!unit_name || !device_type_id) {
-        return res.status(400).json({ error: "Unit name and device type are required" });
+        return res
+          .status(400)
+          .json({ error: "Unit name and device type are required" });
       }
 
       // Check if unit already exists for this device type
       const existingUnit = await prisma.units.findFirst({
         where: {
           unit_name: unit_name.trim(),
-          device_type_id: Number(device_type_id)
-        }
+          device_type_id: Number(device_type_id),
+        },
       });
 
       if (existingUnit) {
-        return res.status(400).json({ error: "Unit with this name already exists for this device type" });
+        return res.status(400).json({
+          error: "Unit with this name already exists for this device type",
+        });
       }
 
       const newUnit = await prisma.units.create({
         data: {
           unit_name: unit_name.trim(),
-          device_type_id: Number(device_type_id)
-        }
+          device_type_id: Number(device_type_id),
+        },
       });
 
       res.status(201).json(newUnit);
@@ -203,7 +223,7 @@ router.post(
       console.error("Error creating unit:", error);
       res.status(500).json({ error: "Failed to create unit" });
     }
-  }
+  },
 );
 
 router.get("/device-types", async (req: Request, res: Response) => {
@@ -216,36 +236,42 @@ router.get("/device-types", async (req: Request, res: Response) => {
 });
 
 // ✅ NEW: Resolve workstation name to ID based on lab_id
-router.get("/resolve-workstation", authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const { lab_id, workstation_name } = req.query;
-    
-    if (!lab_id || !workstation_name) {
-      return res.status(400).json({ error: "lab_id and workstation_name are required" });
-    }
-    
-    // Find workstation by name and lab_id
-    const workstation = await prisma.workstations.findFirst({
-      where: {
-        workstation_name: String(workstation_name).trim(),
-        lab_id: Number(lab_id)
-      },
-      select: {
-        workstation_id: true
+router.get(
+  "/resolve-workstation",
+  authenticateToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { lab_id, workstation_name } = req.query;
+
+      if (!lab_id || !workstation_name) {
+        return res
+          .status(400)
+          .json({ error: "lab_id and workstation_name are required" });
       }
-    });
-    
-    if (!workstation) {
-      return res.status(404).json({ 
-        error: `Workstation "${workstation_name}" not found in Lab ${lab_id}` 
+
+      // Find workstation by name and lab_id
+      const workstation = await prisma.workstations.findFirst({
+        where: {
+          workstation_name: String(workstation_name).trim(),
+          lab_id: Number(lab_id),
+        },
+        select: {
+          workstation_id: true,
+        },
       });
+
+      if (!workstation) {
+        return res.status(404).json({
+          error: `Workstation "${workstation_name}" not found in Lab ${lab_id}`,
+        });
+      }
+
+      res.json({ workstation_id: workstation.workstation_id });
+    } catch (error) {
+      console.error("Error resolving workstation:", error);
+      res.status(500).json({ error: "Failed to resolve workstation" });
     }
-    
-    res.json({ workstation_id: workstation.workstation_id });
-  } catch (error) {
-    console.error("Error resolving workstation:", error);
-    res.status(500).json({ error: "Failed to resolve workstation" });
-  }
-});
+  },
+);
 
 export default router;

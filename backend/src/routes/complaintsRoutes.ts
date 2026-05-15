@@ -9,172 +9,170 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Public complaint submission (no authentication required)
-router.post(
-  "/",
-  validate(complaintSchema),
-  async (req, res) => {
-    // Custom audit logging for public complaints
-    const auditData: any = {
-      action: "CREATE",
-      description: "CREATE public complaint",
-      user_agent: req.headers['user-agent'] as string
-    };
+router.post("/", validate(complaintSchema), async (req, res) => {
+  // Custom audit logging for public complaints
+  const auditData: any = {
+    action: "CREATE",
+    description: "CREATE public complaint",
+    user_agent: req.headers["user-agent"] as string,
+  };
 
-    // Add lab_id to audit data if available
-    if (req.body.lab_id) {
-      auditData.lab_id = req.body.lab_id;
-      auditData.user_id = null; // Public action, no user
-    }
+  // Add lab_id to audit data if available
+  if (req.body.lab_id) {
+    auditData.lab_id = req.body.lab_id;
+    auditData.user_id = null; // Public action, no user
+  }
 
-    // Create audit log
-    await (prisma as any).audit_logs.create({
-      data: auditData
+  // Create audit log
+  await (prisma as any).audit_logs.create({
+    data: auditData,
+  });
+
+  try {
+    const {
+      lab_id,
+      workstation_id,
+      asset_id,
+      faculty_student_name,
+      user_type,
+      year_level,
+      issue_description,
+      asset_info,
+    } = req.body;
+
+    // Get laboratory and workstation info
+    const laboratory = await prisma.laboratories.findUnique({
+      where: { lab_id },
+      include: {
+        users: {
+          where: { role: "Custodian" },
+          take: 1,
+        },
+      },
     });
 
-    try {
-      const {
-        lab_id,
-        workstation_id,
-        asset_id,
-        faculty_student_name,
-        user_type,
-        year_level,
-        issue_description,
-        asset_info,
-      } = req.body;
+    if (!laboratory) {
+      return res.status(400).json({ message: "Invalid laboratory" });
+    }
 
-      // Get laboratory and workstation info
-      const laboratory = await prisma.laboratories.findUnique({
-        where: { lab_id },
-        include: {
-          users: {
-            where: { role: "Custodian" },
-            take: 1,
+    let workstation = null;
+    if (workstation_id) {
+      workstation = await prisma.workstations.findUnique({
+        where: { workstation_id },
+      });
+      if (!workstation) {
+        return res.status(400).json({ message: "Invalid workstation" });
+      }
+    }
+
+    // Check for existing pending complaints for the same asset/workstation/lab
+    let existingComplaint = null;
+
+    if (asset_id && asset_id !== "") {
+      // Check for existing complaints for this specific asset
+      existingComplaint = await prisma.complaints.findFirst({
+        where: {
+          asset_id: parseInt(asset_id),
+          status: {
+            in: ["Open", "In_Progress"],
           },
         },
       });
-
-      if (!laboratory) {
-        return res.status(400).json({ message: "Invalid laboratory" });
-      }
-
-      let workstation = null;
-      if (workstation_id) {
-        workstation = await prisma.workstations.findUnique({
-          where: { workstation_id },
-        });
-        if (!workstation) {
-          return res.status(400).json({ message: "Invalid workstation" });
-        }
-      }
-
-      // Check for existing pending complaints for the same asset/workstation/lab
-      let existingComplaint = null;
-      
-      if (asset_id && asset_id !== "") {
-        // Check for existing complaints for this specific asset
-        existingComplaint = await prisma.complaints.findFirst({
-          where: {
-            asset_id: parseInt(asset_id),
-            status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
-        });
-      } else if (workstation_id && workstation_id !== "") {
-        // Check for existing complaints for this workstation (no asset specified)
-        existingComplaint = await prisma.complaints.findFirst({
-          where: {
-            workstation_id: parseInt(workstation_id),
-            asset_id: null, // Only block if no specific asset complaint exists
-            status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
-        });
-      } else {
-        // Check for existing complaints in the same lab
-        existingComplaint = await prisma.complaints.findFirst({
-          where: {
-            lab_id: parseInt(lab_id),
-            workstation_id: null,
-            asset_id: null,
-            status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
-        });
-      }
-
-      if (existingComplaint) {
-        let conflictMessage = "A complaint is already pending";
-        if (asset_id && asset_id !== "") {
-          conflictMessage = `A complaint is already pending for this asset`;
-        } else if (existingComplaint.workstation_id) {
-          conflictMessage = `A complaint is already pending for this workstation`;
-        } else {
-          conflictMessage = `A complaint is already pending for this laboratory`;
-        }
-        
-        return res.status(409).json({ 
-          message: conflictMessage,
-          existingComplaintId: existingComplaint.complaint_id
-        });
-      }
-
-      // Get client IP address
-      const getClientIP = (req: any) => {
-        return req.headers['x-forwarded-for'] || 
-               req.headers['x-real-ip'] || 
-               req.connection?.remoteAddress || 
-               req.socket?.remoteAddress ||
-               (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
-               req.ip;
-      };
-
-      // Create complaint
-      const complaint = await prisma.complaints.create({
-        data: {
-          lab_id,
-          workstation_id: workstation_id || null,
-          asset_id: asset_id ? parseInt(asset_id) : null,
-          faculty_student_name,
-          user_type,
-          year_level: year_level || null,
-          issue_description,
-          asset_info: asset_info || null,
-          ip_address: getClientIP(req),
-          status: "Open",
-          monitored_by: laboratory.users[0]?.full_name || null,
-          approved_by: laboratory.users[0]?.full_name || null,
-          custodian_user_id: laboratory.users[0]?.user_id || null,
-          updated_at: new Date(),
-        } as any,
-        include: {
-          laboratories: true,
-          workstations: true,
+    } else if (workstation_id && workstation_id !== "") {
+      // Check for existing complaints for this workstation (no asset specified)
+      existingComplaint = await prisma.complaints.findFirst({
+        where: {
+          workstation_id: parseInt(workstation_id),
+          asset_id: null, // Only block if no specific asset complaint exists
+          status: {
+            in: ["Open", "In_Progress"],
+          },
         },
       });
-
-      res.status(201).json({
-        success: true,
-        message: "Complaint submitted successfully",
-        data: {
-          complaint_id: complaint.complaint_id,
-          status: complaint.status,
-          created_at: complaint.created_at,
+    } else {
+      // Check for existing complaints in the same lab
+      existingComplaint = await prisma.complaints.findFirst({
+        where: {
+          lab_id: parseInt(lab_id),
+          workstation_id: null,
+          asset_id: null,
+          status: {
+            in: ["Open", "In_Progress"],
+          },
         },
-      });
-    } catch (error) {
-      console.error("Error creating public complaint:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to submit complaint",
-        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
+
+    if (existingComplaint) {
+      let conflictMessage = "A complaint is already pending";
+      if (asset_id && asset_id !== "") {
+        conflictMessage = `A complaint is already pending for this asset`;
+      } else if (existingComplaint.workstation_id) {
+        conflictMessage = `A complaint is already pending for this workstation`;
+      } else {
+        conflictMessage = `A complaint is already pending for this laboratory`;
+      }
+
+      return res.status(409).json({
+        message: conflictMessage,
+        existingComplaintId: existingComplaint.complaint_id,
+      });
+    }
+
+    // Get client IP address
+    const getClientIP = (req: any) => {
+      return (
+        req.headers["x-forwarded-for"] ||
+        req.headers["x-real-ip"] ||
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress ||
+        (req.connection?.socket ? req.connection.socket.remoteAddress : null) ||
+        req.ip
+      );
+    };
+
+    // Create complaint
+    const complaint = await prisma.complaints.create({
+      data: {
+        lab_id,
+        workstation_id: workstation_id || null,
+        asset_id: asset_id ? parseInt(asset_id) : null,
+        faculty_student_name,
+        user_type,
+        year_level: year_level || null,
+        issue_description,
+        asset_info: asset_info || null,
+        ip_address: getClientIP(req),
+        status: "Open",
+        monitored_by: laboratory.users[0]?.full_name || null,
+        approved_by: laboratory.users[0]?.full_name || null,
+        custodian_user_id: laboratory.users[0]?.user_id || null,
+        updated_at: new Date(),
+      } as any,
+      include: {
+        laboratories: true,
+        workstations: true,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Complaint submitted successfully",
+      data: {
+        complaint_id: complaint.complaint_id,
+        status: complaint.status,
+        created_at: complaint.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating public complaint:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit complaint",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
-);
+});
 
 // Get all laboratories with custodian info (for public form) - NO AUTH REQUIRED
 router.get("/public-laboratories", async (req, res) => {
@@ -217,10 +215,10 @@ router.get("/public-laboratories/:labId/workstations", async (req, res) => {
         lab_id: parseInt(labId),
         workstation_name: {
           not: {
-            contains: 'Server'
-          }
-        }
-      }
+            contains: "Server",
+          },
+        },
+      },
     });
 
     // Apply natural sorting to ensure proper numerical order (WS-PC1, WS-PC2, WS-PC10)
@@ -229,14 +227,14 @@ router.get("/public-laboratories/:labId/workstations", async (req, res) => {
         const match = name.match(/(\d+)/);
         return match ? parseInt(match[1]) : 0;
       };
-      
+
       const numA = extractNumber(a.workstation_name);
       const numB = extractNumber(b.workstation_name);
-      
+
       if (numA !== numB) {
         return numA - numB;
       }
-      
+
       // Fallback to alphabetical if numbers are the same
       return a.workstation_name.localeCompare(b.workstation_name);
     });
@@ -349,21 +347,17 @@ router.get(
         if (user.lab_id) {
           // Custodians can only see workstations from their assigned lab
           if (parseInt(labId as string) !== user.lab_id) {
-            return res
-              .status(403)
-              .json({
-                error:
-                  "Access denied: You can only view workstations from your assigned laboratory",
-              });
+            return res.status(403).json({
+              error:
+                "Access denied: You can only view workstations from your assigned laboratory",
+            });
           }
         } else {
           // Unassigned custodians should see nothing
-          return res
-            .status(403)
-            .json({
-              error:
-                "Access denied: You must be assigned to a laboratory to view workstations",
-            });
+          return res.status(403).json({
+            error:
+              "Access denied: You must be assigned to a laboratory to view workstations",
+          });
         }
       }
 
@@ -372,9 +366,9 @@ router.get(
           lab_id: parseInt(labId as string),
           workstation_name: {
             not: {
-              contains: 'Server'
-            }
-          }
+              contains: "Server",
+            },
+          },
         },
         include: {
           laboratories: true,
@@ -388,14 +382,14 @@ router.get(
           const match = name.match(/(\d+)/);
           return match ? parseInt(match[1]) : 0;
         };
-        
+
         const numA = extractNumber(a.workstation_name);
         const numB = extractNumber(b.workstation_name);
-        
+
         if (numA !== numB) {
           return numA - numB;
         }
-        
+
         // Fallback to alphabetical if numbers are the same
         return a.workstation_name.localeCompare(b.workstation_name);
       });
@@ -405,7 +399,7 @@ router.get(
       console.error("Error fetching workstations:", error);
       res.status(500).json({ message: "Failed to fetch workstations" });
     }
-  }
+  },
 );
 
 // Submit a new complaint
@@ -472,16 +466,16 @@ router.post(
 
       // Check for existing pending complaints for the same asset/workstation/lab
       let existingComplaint = null;
-      
+
       if (asset_id && asset_id !== "") {
         // Check for existing complaints for this specific asset
         existingComplaint = await prisma.complaints.findFirst({
           where: {
             asset_id: parseInt(asset_id),
             status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
+              in: ["Open", "In_Progress"],
+            },
+          },
         });
       } else if (workstation_id && workstation_id !== "") {
         // Check for existing complaints for this workstation (no asset specified)
@@ -490,9 +484,9 @@ router.post(
             workstation_id: parseInt(workstation_id),
             asset_id: null, // Only block if no specific asset complaint exists
             status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
+              in: ["Open", "In_Progress"],
+            },
+          },
         });
       } else {
         // Check for existing complaints in the same lab
@@ -502,9 +496,9 @@ router.post(
             workstation_id: null,
             asset_id: null,
             status: {
-              in: ['Open', 'In_Progress']
-            }
-          }
+              in: ["Open", "In_Progress"],
+            },
+          },
         });
       }
 
@@ -517,10 +511,10 @@ router.post(
         } else {
           conflictMessage = `A complaint is already pending for this laboratory`;
         }
-        
-        return res.status(409).json({ 
+
+        return res.status(409).json({
           message: conflictMessage,
-          existingComplaintId: existingComplaint.complaint_id
+          existingComplaintId: existingComplaint.complaint_id,
         });
       }
 
@@ -562,7 +556,7 @@ router.post(
       console.error("Error creating complaint:", error);
       res.status(500).json({ message: "Failed to create complaint" });
     }
-  }
+  },
 );
 
 // Get complaints analytics for dashboard
@@ -664,16 +658,22 @@ router.get("/analytics", authenticateToken, async (req, res) => {
     });
 
     // Create lab name lookup
-    const labNameMap = labs.reduce((acc, lab) => {
-      acc[lab.lab_id] = lab.lab_name;
-      return acc;
-    }, {} as Record<number, string>);
+    const labNameMap = labs.reduce(
+      (acc, lab) => {
+        acc[lab.lab_id] = lab.lab_name;
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
 
     // Create resolved complaints lookup
-    const resolvedLookup = labResolvedComplaints.reduce((acc, lc) => {
-      acc[lc.lab_id] = lc._count.complaint_id;
-      return acc;
-    }, {} as Record<number, number>);
+    const resolvedLookup = labResolvedComplaints.reduce(
+      (acc, lc) => {
+        acc[lc.lab_id] = lc._count.complaint_id;
+        return acc;
+      },
+      {} as Record<number, number>,
+    );
 
     // Transform the data to include both total and resolved counts
     const labComplaintsData = labIds.map((labId) => ({
@@ -684,8 +684,8 @@ router.get("/analytics", authenticateToken, async (req, res) => {
       resolved_count: resolvedLookup[labId] || 0,
       active_count: Math.max(
         0,
-        (labComplaints.find((lc) => lc.lab_id === labId)?._count.complaint_id || 0) -
-          (resolvedLookup[labId] || 0)
+        (labComplaints.find((lc) => lc.lab_id === labId)?._count.complaint_id ||
+          0) - (resolvedLookup[labId] || 0),
       ),
     }));
 
@@ -741,21 +741,17 @@ router.get("/:complaintId", authenticateToken, async (req, res) => {
       if (user.lab_id) {
         // Custodians can only see complaints from their assigned lab
         if (complaint.lab_id !== user.lab_id) {
-          return res
-            .status(403)
-            .json({
-              error:
-                "Access denied: You can only view complaints from your assigned laboratory",
-            });
+          return res.status(403).json({
+            error:
+              "Access denied: You can only view complaints from your assigned laboratory",
+          });
         }
       } else {
         // Unassigned custodians should see nothing
-        return res
-          .status(403)
-          .json({
-            error:
-              "Access denied: You must be assigned to a laboratory to view complaints",
-          });
+        return res.status(403).json({
+          error:
+            "Access denied: You must be assigned to a laboratory to view complaints",
+        });
       }
     }
 
@@ -837,21 +833,17 @@ router.get("/check-asset/:assetId", authenticateToken, async (req, res) => {
       if (user.lab_id) {
         // Custodians can only check assets from their assigned lab
         if (asset.lab_id !== user.lab_id) {
-          return res
-            .status(403)
-            .json({
-              error:
-                "Access denied: You can only check assets from your assigned laboratory",
-            });
+          return res.status(403).json({
+            error:
+              "Access denied: You can only check assets from your assigned laboratory",
+          });
         }
       } else {
         // Unassigned custodians should see nothing
-        return res
-          .status(403)
-          .json({
-            error:
-              "Access denied: You must be assigned to a laboratory to check assets",
-          });
+        return res.status(403).json({
+          error:
+            "Access denied: You must be assigned to a laboratory to check assets",
+        });
       }
     }
 
@@ -921,16 +913,18 @@ router.get("/", authenticateToken, async (req, res) => {
       }
     }
 
-    const whereClause = whereConditions.length > 0
-      ? `WHERE ${whereConditions.join(" AND ")}`
-      : "";
+    const whereClause =
+      whereConditions.length > 0
+        ? `WHERE ${whereConditions.join(" AND ")}`
+        : "";
 
     let complaints: any[] = [];
     let usedView = false;
 
     try {
       // Try optimized view first
-      complaints = await prisma.$queryRawUnsafe(`
+      complaints = await prisma.$queryRawUnsafe(
+        `
         SELECT 
           complaint_id,
           lab_id,
@@ -957,12 +951,17 @@ router.get("/", authenticateToken, async (req, res) => {
         FROM view_complaint_details
         ${whereClause}
         ORDER BY created_at DESC
-      `, ...params);
-      
+      `,
+        ...params,
+      );
+
       usedView = true;
     } catch (viewError) {
-      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
-      
+      console.log(
+        "⚠️ View failed, falling back to Prisma:",
+        (viewError as Error).message,
+      );
+
       // Build Prisma where clause as fallback
       const prismaWhere: any = {};
       if (userRole === "Custodian" && userId) {
@@ -970,14 +969,14 @@ router.get("/", authenticateToken, async (req, res) => {
           where: { user_id: userId },
           select: { lab_id: true },
         });
-        
+
         if (user?.lab_id) {
           prismaWhere.lab_id = user.lab_id;
         } else {
           prismaWhere.lab_id = -1;
         }
       }
-      
+
       const prismaComplaints = await prisma.complaints.findMany({
         where: prismaWhere,
         include: {
@@ -1006,13 +1005,13 @@ router.get("/", authenticateToken, async (req, res) => {
           created_at: "desc",
         },
       });
-      
+
       return res.json(prismaComplaints);
     }
 
     if (usedView) {
       // Transform view result to match Prisma structure
-      const transformedComplaints = (complaints as any[]).map(c => ({
+      const transformedComplaints = (complaints as any[]).map((c) => ({
         complaint_id: Number(c.complaint_id),
         lab_id: Number(c.lab_id),
         workstation_id: Number(c.workstation_id),
@@ -1031,22 +1030,28 @@ router.get("/", authenticateToken, async (req, res) => {
         created_at: c.created_at,
         updated_at: c.updated_at,
         accepted_at: c.accepted_at,
-        laboratories: c.lab_name ? {
-          lab_id: Number(c.lab_id),
-          lab_name: c.lab_name,
-          location: null
-        } : null,
-        workstations: c.workstation_name ? {
-          workstation_id: Number(c.workstation_id),
-          workstation_name: c.workstation_name
-        } : null,
-        users: c.custodian_name ? {
-          user_id: Number(c.custodian_user_id),
-          full_name: c.custodian_name,
-          email: null
-        } : null
+        laboratories: c.lab_name
+          ? {
+              lab_id: Number(c.lab_id),
+              lab_name: c.lab_name,
+              location: null,
+            }
+          : null,
+        workstations: c.workstation_name
+          ? {
+              workstation_id: Number(c.workstation_id),
+              workstation_name: c.workstation_name,
+            }
+          : null,
+        users: c.custodian_name
+          ? {
+              user_id: Number(c.custodian_user_id),
+              full_name: c.custodian_name,
+              email: null,
+            }
+          : null,
       }));
-      
+
       res.json(transformedComplaints);
     }
   } catch (error) {
@@ -1071,8 +1076,8 @@ router.put(
 
       // Require remarks when resolving a complaint
       if (status === "Resolved" && (!remarks || remarks?.trim() === "")) {
-        return res.status(400).json({ 
-          message: "Remarks are required when resolving a complaint" 
+        return res.status(400).json({
+          message: "Remarks are required when resolving a complaint",
         });
       }
 
@@ -1114,7 +1119,7 @@ router.put(
       console.error("Error updating complaint status:", error);
       res.status(500).json({ message: "Failed to update complaint status" });
     }
-  }
+  },
 );
 
 // Update complaint remarks
@@ -1155,7 +1160,7 @@ router.put(
       console.error("Error updating complaint remarks:", error);
       res.status(500).json({ message: "Failed to update complaint remarks" });
     }
-  }
+  },
 );
 
 export default router;

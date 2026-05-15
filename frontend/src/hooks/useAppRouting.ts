@@ -20,7 +20,8 @@ export type PageType =
   | "public-complaints"
   | "cit-lab-users"
   | "disposals"
-  | "developer";
+  | "developer"
+  | "lab-accomplishments";
 
 const getInitialPage = (): PageType => {
   const path = window.location.pathname;

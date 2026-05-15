@@ -23,9 +23,29 @@ router.get("/organization-data", getOrganizationData);
 
 // Admin only routes
 router.get("/assignments", requireRole(["Admin"]), getAllUsersWithAssignments);
-router.put("/assign-lab", requireRole(["Admin"]), auditMiddleware("UPDATE", "user assignment"), assignUserToLab);
-router.post("/", requireRole(["Admin"]), auditMiddleware("CREATE", "user"), createUser);
-router.put("/:id", requireRole(["Admin"]), auditMiddleware("UPDATE", "user"), updateUser);
-router.delete("/:id", requireRole(["Admin"]), auditMiddleware("DELETE", "user"), deleteUser);
+router.put(
+  "/assign-lab",
+  requireRole(["Admin"]),
+  auditMiddleware("UPDATE", "user assignment"),
+  assignUserToLab,
+);
+router.post(
+  "/",
+  requireRole(["Admin"]),
+  auditMiddleware("CREATE", "user"),
+  createUser,
+);
+router.put(
+  "/:id",
+  requireRole(["Admin"]),
+  auditMiddleware("UPDATE", "user"),
+  updateUser,
+);
+router.delete(
+  "/:id",
+  requireRole(["Admin"]),
+  auditMiddleware("DELETE", "user"),
+  deleteUser,
+);
 
 export default router;

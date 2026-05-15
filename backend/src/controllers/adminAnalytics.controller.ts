@@ -16,10 +16,11 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
     // Time-based analytics
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
 
     // Use analytics_summary_view for aggregated data (replaces 15 separate queries)
-    const viewSummaryData = await prisma.$queryRawUnsafe(`
+    const viewSummaryData = (await prisma.$queryRawUnsafe(
+      `
       SELECT 
         entity_type,
         group_key,
@@ -27,10 +28,13 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       FROM analytics_summary_view 
       WHERE (date_group >= ? OR date_group IS NULL)
       GROUP BY entity_type, group_key
-    `, thirtyDaysAgoStr) as any[];
+    `,
+      thirtyDaysAgoStr,
+    )) as any[];
 
     // Get detailed breakdowns from view
-    const viewDetailedData = await prisma.$queryRawUnsafe(`
+    const viewDetailedData = (await prisma.$queryRawUnsafe(
+      `
       SELECT 
         entity_type,
         group_key,
@@ -40,19 +44,61 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       FROM analytics_summary_view 
       WHERE (date_group >= ? OR date_group IS NULL)
       ORDER BY entity_type, date_group
-    `, thirtyDaysAgoStr) as any[];
+    `,
+      thirtyDaysAgoStr,
+    )) as any[];
 
     // Process view data into required format
-    const reportsByStatus = viewSummaryData.filter(d => d.entity_type === 'daily_reports').map(d => ({ status: d.group_key, _count: { report_id: Number(d.total_count) } }));
-    const reportsByDay = viewDetailedData.filter(d => d.entity_type === 'daily_reports' && d.date_group).map(d => ({ report_date: d.date_group, _count: { report_id: Number(d.total_count) } }));
-    const reportsByLab = viewDetailedData.filter(d => d.entity_type === 'daily_reports').map(d => ({ lab_id: d.lab_id, _count: { report_id: Number(d.total_count) } }));
+    const reportsByStatus = viewSummaryData
+      .filter((d) => d.entity_type === "daily_reports")
+      .map((d) => ({
+        status: d.group_key,
+        _count: { report_id: Number(d.total_count) },
+      }));
+    const reportsByDay = viewDetailedData
+      .filter((d) => d.entity_type === "daily_reports" && d.date_group)
+      .map((d) => ({
+        report_date: d.date_group,
+        _count: { report_id: Number(d.total_count) },
+      }));
+    const reportsByLab = viewDetailedData
+      .filter((d) => d.entity_type === "daily_reports")
+      .map((d) => ({
+        lab_id: d.lab_id,
+        _count: { report_id: Number(d.total_count) },
+      }));
 
-    const complaintsByStatus = viewSummaryData.filter(d => d.entity_type === 'complaints').map(d => ({ status: d.group_key, _count: { complaint_id: Number(d.total_count) } }));
-    const complaintsByDay = viewDetailedData.filter(d => d.entity_type === 'complaints' && d.date_group).map(d => ({ created_at: d.date_group, _count: { complaint_id: Number(d.total_count) } }));
-    const complaintsByLab = viewDetailedData.filter(d => d.entity_type === 'complaints').map(d => ({ lab_id: d.lab_id, _count: { complaint_id: Number(d.total_count) } }));
+    const complaintsByStatus = viewSummaryData
+      .filter((d) => d.entity_type === "complaints")
+      .map((d) => ({
+        status: d.group_key,
+        _count: { complaint_id: Number(d.total_count) },
+      }));
+    const complaintsByDay = viewDetailedData
+      .filter((d) => d.entity_type === "complaints" && d.date_group)
+      .map((d) => ({
+        created_at: d.date_group,
+        _count: { complaint_id: Number(d.total_count) },
+      }));
+    const complaintsByLab = viewDetailedData
+      .filter((d) => d.entity_type === "complaints")
+      .map((d) => ({
+        lab_id: d.lab_id,
+        _count: { complaint_id: Number(d.total_count) },
+      }));
 
-    const maintenanceByQuarter = viewSummaryData.filter(d => d.entity_type === 'pmc_reports').map(d => ({ quarter: d.group_key, _count: { pmc_id: Number(d.total_count) } }));
-    const maintenanceByLab = viewDetailedData.filter(d => d.entity_type === 'pmc_reports').map(d => ({ lab_id: d.lab_id, _count: { pmc_id: Number(d.total_count) } }));
+    const maintenanceByQuarter = viewSummaryData
+      .filter((d) => d.entity_type === "pmc_reports")
+      .map((d) => ({
+        quarter: d.group_key,
+        _count: { pmc_id: Number(d.total_count) },
+      }));
+    const maintenanceByLab = viewDetailedData
+      .filter((d) => d.entity_type === "pmc_reports")
+      .map((d) => ({
+        lab_id: d.lab_id,
+        _count: { pmc_id: Number(d.total_count) },
+      }));
 
     // Get remaining data via Prisma (not in view)
     const [
@@ -69,14 +115,18 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       // Forms by Type (Software Installations only)
       prisma.$transaction(async (tx) => {
         const softwareInstallations = await tx.software_installations.count();
-        return [{ type: "Software Installations", count: softwareInstallations }];
+        return [
+          { type: "Software Installations", count: softwareInstallations },
+        ];
       }),
 
       // Forms by Status (Software Installations only)
       prisma.$transaction(async (tx) => {
         const [softPending, softApproved, softDenied] = await Promise.all([
           tx.software_installations.count({ where: { status: "Pending" } }),
-          tx.software_installations.count({ where: { status: "Custodian_Approved" } }),
+          tx.software_installations.count({
+            where: { status: "Custodian_Approved" },
+          }),
           tx.software_installations.count({ where: { status: "Denied" } }),
         ]);
         return [
@@ -97,22 +147,38 @@ export const getAdminAnalytics = async (req: Request, res: Response) => {
       }),
 
       // Assets by Lab (all time)
-      prisma.inventory_assets.groupBy({ by: ["lab_id"], _count: { asset_id: true } }),
+      prisma.inventory_assets.groupBy({
+        by: ["lab_id"],
+        _count: { asset_id: true },
+      }),
 
       // Assets by Type
-      prisma.units.groupBy({ by: ["device_type_id"], _count: { unit_id: true } }),
+      prisma.units.groupBy({
+        by: ["device_type_id"],
+        _count: { unit_id: true },
+      }),
 
       // Assets by Status
-      prisma.asset_details.groupBy({ by: ["status_id"], _count: { detail_id: true } }),
+      prisma.asset_details.groupBy({
+        by: ["status_id"],
+        _count: { detail_id: true },
+      }),
 
       // Users by Role
       prisma.users.groupBy({ by: ["role"], _count: { user_id: true } }),
 
       // Users by Lab
-      prisma.users.groupBy({ by: ["lab_id"], _count: { user_id: true }, where: { lab_id: { not: null } } }),
+      prisma.users.groupBy({
+        by: ["lab_id"],
+        _count: { user_id: true },
+        where: { lab_id: { not: null } },
+      }),
 
       // Maintenance Completion Rate
-      prisma.pmc_reports.aggregate({ _count: { pmc_id: true }, where: { overall_remarks: { not: null } } }),
+      prisma.pmc_reports.aggregate({
+        _count: { pmc_id: true },
+        where: { overall_remarks: { not: null } },
+      }),
     ]);
 
     // Get lab names for all lab-based data

@@ -14,6 +14,7 @@ import ComplaintsPage from "../../pages/ComplaintsPage";
 import ComplaintsManagementPage from "../../pages/ComplaintsManagementPage";
 import CITLabUsersPage from "../../pages/CITLabUsersPage";
 import MaintenancePage from "../../pages/MaintenancePage";
+import LabAccomplishmentsPage from "../../pages/DailyAccomplishmentsPage";
 import type { PageType } from "../../hooks/useAppRouting";
 
 interface CreateUserData {
@@ -103,6 +104,12 @@ const PageRenderer = ({
         return <HomePage onNavigate={onNavigate} />;
       }
       return <ComplaintsManagementPage />;
+    case "lab-accomplishments":
+      // Only admins can access lab accomplishments tracker
+      if (user?.role !== "Admin") {
+        return <HomePage onNavigate={onNavigate} />;
+      }
+      return <LabAccomplishmentsPage />;
     case "public-landing":
       return <PublicLandingPage />;
     default:

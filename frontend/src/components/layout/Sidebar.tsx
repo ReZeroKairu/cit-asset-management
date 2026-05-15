@@ -19,7 +19,7 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
     } catch (error) {
       console.error("Refresh error:", error);
       alert(
-        "Failed to refresh user data. Please check the console for details or try logging out and back in."
+        "Failed to refresh user data. Please check the console for details or try logging out and back in.",
       );
     }
   };
@@ -364,6 +364,47 @@ const Sidebar = ({ active, onNavigate, collapsed = false }: SidebarProps) => {
                     }}
                   >
                     {collapsed ? "Complaints" : "Complaints"} Management
+                  </span>
+                </button>
+              </li>
+            )}
+            {user?.role === "Admin" && (
+              <li>
+                <button
+                  className={`w-full text-left rounded-md flex items-center transition-colors relative overflow-hidden ${
+                    active === "lab-accomplishments"
+                      ? "bg-blue-600 text-white"
+                      : "hover:bg-gray-700 text-gray-300"
+                  } px-4 py-2`}
+                  onClick={() => onNavigate("lab-accomplishments")}
+                  title={collapsed ? "Lab Accomplishments" : ""}
+                >
+                  <svg
+                    className="w-5 h-5 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4M7 20H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-5l-4 4v-4z"
+                    />
+                  </svg>
+                  <span
+                    style={{
+                      marginLeft: collapsed ? "0" : "12px",
+                      opacity: collapsed ? 0 : 1,
+                      transform: collapsed
+                        ? "translateX(-20px)"
+                        : "translateX(0)",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      whiteSpace: "nowrap",
+                      position: collapsed ? "absolute" : "relative",
+                    }}
+                  >
+                    Daily Accomplishments
                   </span>
                 </button>
               </li>

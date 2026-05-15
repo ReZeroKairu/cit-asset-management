@@ -1,11 +1,19 @@
 import React, { useState } from "react";
-import { X, Calendar, Clock, ChevronDown } from "lucide-react";
+import {
+  X,
+  Calendar,
+  Clock,
+  ChevronDown,
+  Copy,
+  CheckCircle,
+} from "lucide-react";
 // ✅ Combined imports into a single, safe relative path
 import {
   fiscalQuarterMonths,
   getMonthsBetweenDates,
   getWeeksInDateRange,
   formatWeekRange,
+  getAutoQuarterDates,
 } from "../../utils/quarterLogic";
 import { upsertSchedules } from "../../api/schedule";
 
@@ -15,7 +23,7 @@ interface Props {
   onSuccess: (
     scheduledQuarters: string[],
     schedules?: Record<string, QuarterSchedule>,
-    fiscalYear?: string
+    fiscalYear?: string,
   ) => void;
 }
 
@@ -109,6 +117,11 @@ const HybridDateInput: React.FC<{
 const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
   const [fiscalYear, setFiscalYear] = useState("2025-2026");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mirrorFeedback, setMirrorFeedback] = useState<{
+    success: boolean;
+    message: string;
+    week?: number;
+  } | null>(null);
 
   const [schedules, setSchedules] = useState<Record<string, QuarterSchedule>>({
     "1st": { start: "", end: "", servicingWeeks: [] },
@@ -120,7 +133,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
   const handleDateChange = (
     quarter: string,
     field: "start" | "end",
-    value: string
+    value: string,
   ) => {
     setSchedules((prev) => ({
       ...prev,
@@ -144,6 +157,91 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     });
   };
 
+  // ✅ Auto-fill quarter dates based on fiscal year
+  const autoFillDates = () => {
+    const quarterDates = getAutoQuarterDates(fiscalYear);
+    setSchedules((prev) => ({
+      "1st": {
+        ...prev["1st"],
+        start: quarterDates["1st"].start,
+        end: quarterDates["1st"].end,
+      },
+      "2nd": {
+        ...prev["2nd"],
+        start: quarterDates["2nd"].start,
+        end: quarterDates["2nd"].end,
+      },
+      "3rd": {
+        ...prev["3rd"],
+        start: quarterDates["3rd"].start,
+        end: quarterDates["3rd"].end,
+      },
+      "4th": {
+        ...prev["4th"],
+        start: quarterDates["4th"].start,
+        end: quarterDates["4th"].end,
+      },
+    }));
+  };
+
+  // ✅ Mirror a selected week to corresponding weeks in other quarters
+  const mirrorWeekToOtherQuarters = (sourceQuarter: string, week: number) => {
+    const quarters = ["1st", "2nd", "3rd", "4th"];
+    let mirrored = 0;
+    let skipped = 0;
+
+    setSchedules((prev) => {
+      const updated = { ...prev };
+
+      quarters.forEach((quarter) => {
+        if (quarter === sourceQuarter) return; // Skip source quarter
+
+        const targetSchedule = updated[quarter];
+        const availableWeeks =
+          isDateComplete(targetSchedule.start) &&
+          isDateComplete(targetSchedule.end)
+            ? getWeeksInDateRange(targetSchedule.start, targetSchedule.end)
+            : [];
+
+        // Only mirror if the target quarter has that week available
+        if (availableWeeks.includes(week)) {
+          if (!targetSchedule.servicingWeeks.includes(week)) {
+            targetSchedule.servicingWeeks = [
+              ...targetSchedule.servicingWeeks,
+              week,
+            ].sort((a, b) => a - b);
+            mirrored++;
+          }
+        } else {
+          skipped++;
+        }
+      });
+
+      return updated;
+    });
+
+    // Show feedback
+    if (mirrored > 0) {
+      setMirrorFeedback({
+        success: true,
+        message: `Week ${week} mirrored to ${mirrored} quarter${mirrored !== 1 ? "s" : ""}${
+          skipped > 0
+            ? `. ${skipped} quarter${skipped !== 1 ? "s" : ""} doesn't have Week ${week}.`
+            : "."
+        }`,
+        week,
+      });
+      setTimeout(() => setMirrorFeedback(null), 3000);
+    } else {
+      setMirrorFeedback({
+        success: false,
+        message: `Week ${week} is not available in other quarters.`,
+        week,
+      });
+      setTimeout(() => setMirrorFeedback(null), 3000);
+    }
+  };
+
   // Helper to ensure the date is fully formed before passing to utilities
   const isDateComplete = (dString: string) => {
     const p = dString ? dString.split("-") : [];
@@ -159,7 +257,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
         ([_, dates]) =>
           isDateComplete(dates.start) &&
           isDateComplete(dates.end) &&
-          dates.servicingWeeks.length > 0
+          dates.servicingWeeks.length > 0,
       )
       .map(([quarter, dates]) => ({
         lab_id: labId,
@@ -172,7 +270,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
 
     if (validSchedules.length === 0) {
       return alert(
-        "Please complete the Start Date and End Date for at least one quarter and select servicing weeks."
+        "Please complete the Start Date and End Date for at least one quarter and select servicing weeks.",
       );
     }
 
@@ -188,8 +286,8 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
           response.scheduledQuarters.length
         } quarters with ${validSchedules.reduce(
           (acc, s) => acc + s.servicing_weeks.length,
-          0
-        )} servicing weeks for AY ${fiscalYear}!`
+          0,
+        )} servicing weeks for AY ${fiscalYear}!`,
       );
       onSuccess(response.scheduledQuarters, schedules, fiscalYear);
     } catch (error) {
@@ -226,17 +324,46 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
           onSubmit={handleSubmit}
           className="flex-1 flex flex-col p-6 space-y-6 overflow-hidden"
         >
-          <div className="w-1/3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Academic Year
-            </label>
-            <input
-              type="text"
-              value={fiscalYear}
-              onChange={(e) => setFiscalYear(e.target.value)}
-              placeholder="e.g., 2025-2026"
-              className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="space-y-3">
+            <div className="flex items-end gap-3">
+              <div className="flex-1 max-w-xs">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Academic Year
+                </label>
+                <input
+                  type="text"
+                  value={fiscalYear}
+                  onChange={(e) => setFiscalYear(e.target.value)}
+                  placeholder="e.g., 2025-2026"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={autoFillDates}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+              >
+                Auto-fill Dates
+              </button>
+            </div>
+
+            {/* Mirror Feedback Toast */}
+            {mirrorFeedback && (
+              <div
+                className={`flex items-start p-3 rounded-md text-sm transition-all ${
+                  mirrorFeedback.success
+                    ? "bg-green-50 border border-green-200 text-green-800"
+                    : "bg-amber-50 border border-amber-200 text-amber-800"
+                }`}
+              >
+                <CheckCircle
+                  className={`w-4 h-4 mr-2 mt-0.5 flex-shrink-0 ${
+                    mirrorFeedback.success ? "text-green-600" : "text-amber-600"
+                  }`}
+                />
+                <span>{mirrorFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 border rounded-lg overflow-hidden flex flex-col min-h-0">
@@ -325,13 +452,14 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                                     setOpenDropdown(
                                       openDropdown === quarterId
                                         ? null
-                                        : quarterId
+                                        : quarterId,
                                     )
                                   }
                                   className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white border rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
                                 >
                                   <span className="text-gray-700 font-medium">
-                                    {schedules[quarterId].servicingWeeks.length > 0
+                                    {schedules[quarterId].servicingWeeks
+                                      .length > 0
                                       ? `${schedules[quarterId].servicingWeeks.length} weeks selected`
                                       : "Select servicing weeks..."}
                                   </span>
@@ -349,10 +477,12 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                                     <div className="p-1 flex flex-col">
                                       {availableWeeks.map((week) => {
                                         const isSelected =
-                                          schedules[quarterId].servicingWeeks.includes(week);
+                                          schedules[
+                                            quarterId
+                                          ].servicingWeeks.includes(week);
                                         const weekRange = formatWeekRange(
                                           schedules[quarterId].start,
-                                          week
+                                          week,
                                         );
 
                                         return (
@@ -368,7 +498,10 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                                               type="checkbox"
                                               checked={isSelected}
                                               onChange={() =>
-                                                handleWeekToggle(quarterId, week)
+                                                handleWeekToggle(
+                                                  quarterId,
+                                                  week,
+                                                )
                                               }
                                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2 cursor-pointer"
                                             />
@@ -388,7 +521,8 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                               </div>
 
                               {/* Selected Weeks Summary */}
-                              {schedules[quarterId].servicingWeeks.length > 0 && (
+                              {schedules[quarterId].servicingWeeks.length >
+                                0 && (
                                 <div className="text-xs text-gray-600 bg-blue-50/50 border border-blue-100 p-2.5 rounded-md max-h-32 overflow-y-auto">
                                   <strong className="block mb-1.5 text-blue-800">
                                     Selected weeks overview:
@@ -398,19 +532,34 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                                       (week) => (
                                         <div
                                           key={week}
-                                          className="flex justify-between items-center border-b border-blue-100/50 last:border-0 pb-1 last:pb-0"
+                                          className="flex justify-between items-center border-b border-blue-100/50 last:border-0 pb-1 last:pb-0 group hover:bg-blue-100/30 px-1 rounded transition-colors"
                                         >
-                                          <span className="font-medium text-gray-700">
-                                            Week {week}:
-                                          </span>
-                                          <span className="text-blue-700">
-                                            {formatWeekRange(
-                                              schedules[quarterId].start,
-                                              week
-                                            )}
-                                          </span>
+                                          <div className="flex flex-col flex-1">
+                                            <span className="font-medium text-gray-700">
+                                              Week {week}:
+                                            </span>
+                                            <span className="text-blue-700 text-xs">
+                                              {formatWeekRange(
+                                                schedules[quarterId].start,
+                                                week,
+                                              )}
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              mirrorWeekToOtherQuarters(
+                                                quarterId,
+                                                week,
+                                              )
+                                            }
+                                            title={`Mirror Week ${week} to other quarters`}
+                                            className="ml-2 p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-200/50 rounded opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                          >
+                                            <Copy className="w-3.5 h-3.5" />
+                                          </button>
                                         </div>
-                                      )
+                                      ),
                                     )}
                                   </div>
                                 </div>

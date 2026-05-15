@@ -18,7 +18,7 @@ import maintenanceRoutes from "./routes/maintenanceRoutes";
 import formsRoutes from "./routes/formsRoutes";
 import publicFormsRoutes from "./routes/publicFormsRoutes";
 import complaintsRoutes from "./routes/complaintsRoutes";
-import analyticsRoutes from "./routes/analyticsRoutes";
+import analyticsRoutes from "./routes/analytics.routes";
 import auditRoutes from "./routes/auditRoutesFallback";
 import { auditMiddleware } from "./middleware/audit";
 
@@ -32,48 +32,50 @@ const prisma = new PrismaClient();
 const isDevelopment = process.env.NODE_ENV !== "production";
 app.use(
   cors({
-    origin: isDevelopment ? [
-      /^http:\/\/localhost:\d+$/,
-      /^http:\/\/127\.0\.0\.1:\d+$/,
-      // Keep existing specific origins for production
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:5174",
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:3001",
-      "http://192.168.56.1:5173",
-      "http://192.168.56.1:5174",
-      "http://192.168.56.1:3000",
-      "http://192.168.56.1:3001",
-      "http://192.168.111.21:5173",
-      "http://192.168.111.21:5174",
-      "http://192.168.111.21:3000",
-      "http://192.168.111.21:3001",
-      "http://172.72.102.4:5173",
-      "http://172.72.102.4:5174",
-      "http://172.72.102.4:3000",
-      "http://172.72.102.4:3001",
-    ] : [
-      // Production specific origins
-      "http://192.168.56.1:5173",
-      "http://192.168.56.1:5174",
-      "http://192.168.56.1:3000",
-      "http://192.168.56.1:3001",
-      "http://192.168.111.21:5173",
-      "http://192.168.111.21:5174",
-      "http://192.168.111.21:3000",
-      "http://192.168.111.21:3001",
-      "http://172.72.102.4:5173",
-      "http://172.72.102.4:5174",
-      "http://172.72.102.4:3000",
-      "http://172.72.102.4:3001",
-    ],
+    origin: isDevelopment
+      ? [
+          /^http:\/\/localhost:\d+$/,
+          /^http:\/\/127\.0\.0\.1:\d+$/,
+          // Keep existing specific origins for production
+          "http://localhost:5173",
+          "http://localhost:5174",
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://127.0.0.1:5173",
+          "http://127.0.0.1:5174",
+          "http://127.0.0.1:3000",
+          "http://127.0.0.1:3001",
+          "http://192.168.56.1:5173",
+          "http://192.168.56.1:5174",
+          "http://192.168.56.1:3000",
+          "http://192.168.56.1:3001",
+          "http://192.168.111.21:5173",
+          "http://192.168.111.21:5174",
+          "http://192.168.111.21:3000",
+          "http://192.168.111.21:3001",
+          "http://172.72.102.4:5173",
+          "http://172.72.102.4:5174",
+          "http://172.72.102.4:3000",
+          "http://172.72.102.4:3001",
+        ]
+      : [
+          // Production specific origins
+          "http://192.168.56.1:5173",
+          "http://192.168.56.1:5174",
+          "http://192.168.56.1:3000",
+          "http://192.168.56.1:3001",
+          "http://192.168.111.21:5173",
+          "http://192.168.111.21:5174",
+          "http://192.168.111.21:3000",
+          "http://192.168.111.21:3001",
+          "http://172.72.102.4:5173",
+          "http://172.72.102.4:5174",
+          "http://172.72.102.4:3000",
+          "http://172.72.102.4:3001",
+        ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  })
+  }),
 );
 
 app.use(express.json());
@@ -166,7 +168,7 @@ app.post(
   auditMiddleware("TEST", "ENDPOINT"),
   async (req, res) => {
     res.json({ success: true, message: "Audit middleware test successful!" });
-  }
+  },
 );
 
 // ✅ FIXED: Changed from "/maintenance-reports" to "/maintenance" to match frontend API
@@ -187,7 +189,6 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
-
 const getLanIpv4Address = (): string | null => {
   const nets = os.networkInterfaces();
 
@@ -205,4 +206,10 @@ const getLanIpv4Address = (): string | null => {
 
 app.listen(config.port, "0.0.0.0", () => {
   const lanIp = getLanIpv4Address();
+  console.log("✅ Backend is running!");
+  console.log(`📡 Server listening on port ${config.port}`);
+  console.log(`🌐 Local: http://localhost:${config.port}`);
+  if (lanIp) {
+    console.log(`🌐 Network: http://${lanIp}:${config.port}`);
+  }
 });
