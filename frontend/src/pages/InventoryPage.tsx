@@ -572,38 +572,43 @@ const InventoryPage = () => {
         )}
       </div>
 
+      {/* Laboratory Tabs - For Admin only */}
+      {user?.role === "Admin" && availableLabs.length > 0 && (
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedLabId(null)}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                selectedLabId === null
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              All Laboratories
+            </button>
+            {availableLabs.map((lab) => (
+              <button
+                key={lab.lab_id}
+                onClick={() => setSelectedLabId(lab.lab_id)}
+                className={`pb-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                  selectedLabId === lab.lab_id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                {lab.lab_name} {lab.location && `(${lab.location})`}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
+
       {/* Filter Toggle & Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         {/* Lab Filter & Toggles - Top Row for Admins only */}
         {user?.role === "Admin" && availableLabs.length > 0 && (
           <div className="mb-4 flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <label
-                  htmlFor="lab-filter"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Filter by Laboratory:
-                </label>
-                <select
-                  id="lab-filter"
-                  value={selectedLabId || ""}
-                  onChange={(e) =>
-                    setSelectedLabId(
-                      e.target.value ? Number(e.target.value) : null,
-                    )
-                  }
-                  className="h-9 px-3 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">All Laboratories</option>
-                  {availableLabs.map((lab) => (
-                    <option key={lab.lab_id} value={lab.lab_id}>
-                      {lab.lab_name} {lab.location && `(${lab.location})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* View Toggles - Always show for all users */}
               <>
                 <button

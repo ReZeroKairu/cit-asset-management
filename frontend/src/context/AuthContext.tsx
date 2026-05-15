@@ -9,6 +9,7 @@ interface User {
   role: users_role;
   lab_id?: number; // Assigned lab for custodians
   lab_name?: string; // Lab name for display
+  fiscal_year?: string; // Current fiscal year
 }
 
 // Backend enum types for type safety
@@ -61,7 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const updatedUser = response.data;
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      } catch (error: any) {
+    } catch (error: any) {
       console.error("Failed to refresh user data:", error);
 
       // Only logout on authentication errors (401/403), not on server errors

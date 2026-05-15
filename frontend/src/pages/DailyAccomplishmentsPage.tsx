@@ -27,6 +27,8 @@ const LabAccomplishmentsPage = () => {
   const [laboratories, setLaboratories] = useState<any[]>([]);
   const [custodians, setCustodians] = useState<any[]>([]);
 
+  const [selectedLab, setSelectedLab] = useState<string>("");
+
   const [filters, setFilters] = useState<FilterOptions>({
     laboratory: "",
     custodian: "",
@@ -159,6 +161,9 @@ const LabAccomplishmentsPage = () => {
   }, [activities, filters]);
 
   const handleFilterChange = (key: keyof FilterOptions, value: string) => {
+    if (key === "laboratory") {
+      setSelectedLab(value);
+    }
     setFilters((prev) => ({
       ...prev,
       [key]: value,
@@ -166,6 +171,7 @@ const LabAccomplishmentsPage = () => {
   };
 
   const clearFilters = () => {
+    setSelectedLab("");
     setFilters({
       laboratory: "",
       custodian: "",
@@ -200,6 +206,42 @@ const LabAccomplishmentsPage = () => {
         </p>
       </div>
 
+      {/* Laboratory Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8 overflow-x-auto pb-2">
+          <button
+            onClick={() => {
+              setSelectedLab("");
+              handleFilterChange("laboratory", "");
+            }}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+              selectedLab === ""
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            All Laboratories
+          </button>
+          {laboratories.map((lab) => (
+            <button
+              key={lab.id || lab.laboratory_id}
+              onClick={() => {
+                const labName = lab.laboratory_name || lab.name;
+                setSelectedLab(labName);
+                handleFilterChange("laboratory", labName);
+              }}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                selectedLab === (lab.laboratory_name || lab.name)
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {lab.laboratory_name || lab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -212,7 +254,7 @@ const LabAccomplishmentsPage = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -228,28 +270,6 @@ const LabAccomplishmentsPage = () => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
-          </div>
-
-          {/* Laboratory Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Laboratory
-            </label>
-            <select
-              value={filters.laboratory}
-              onChange={(e) => handleFilterChange("laboratory", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            >
-              <option value="">All Laboratories</option>
-              {laboratories.map((lab) => (
-                <option
-                  key={lab.id || lab.laboratory_id}
-                  value={lab.laboratory_name || lab.name}
-                >
-                  {lab.laboratory_name || lab.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Custodian Filter */}
