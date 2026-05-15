@@ -26,7 +26,7 @@ const ComplaintsManagementPage = () => {
   const [labFilter, setLabFilter] = useState("all");
   const [workstationFilter, setWorkstationFilter] = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(
-    null
+    null,
   );
   const [isEditingRemarks, setIsEditingRemarks] = useState(false);
   const [remarksText, setRemarksText] = useState("");
@@ -34,7 +34,7 @@ const ComplaintsManagementPage = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
-    type: 'error' | 'success';
+    type: "error" | "success";
     visible: boolean;
   } | null>(null);
 
@@ -42,7 +42,7 @@ const ComplaintsManagementPage = () => {
   const isAdmin = user?.role === "Admin";
 
   // Toast helper functions
-  const showToast = (message: string, type: 'error' | 'success') => {
+  const showToast = (message: string, type: "error" | "success") => {
     setToast({ message, type, visible: true });
     setTimeout(() => {
       setToast(null);
@@ -89,10 +89,14 @@ const ComplaintsManagementPage = () => {
     }
   };
 
-  const handleStatusUpdate = async (complaintId: number, newStatus: string, remarks?: string) => {
+  const handleStatusUpdate = async (
+    complaintId: number,
+    newStatus: string,
+    remarks?: string,
+  ) => {
     try {
       setIsUpdating(true);
-      
+
       // Check if resolving without remarks or completion date
       if (newStatus === "Resolved") {
         if (!remarks || remarks.trim() === "") {
@@ -100,18 +104,23 @@ const ComplaintsManagementPage = () => {
           return;
         }
         if (!completionDate) {
-          showToast("Completion date is required when resolving a complaint", "error");
+          showToast(
+            "Completion date is required when resolving a complaint",
+            "error",
+          );
           return;
         }
       }
-      
+
       await updateComplaintStatus(complaintId, newStatus, remarks);
 
       // Update local state
       setComplaints((prev) =>
         prev.map((c) =>
-          c.complaint_id === complaintId ? { ...c, status: newStatus, remarks: remarks || c.remarks } : c
-        )
+          c.complaint_id === complaintId
+            ? { ...c, status: newStatus, remarks: remarks || c.remarks }
+            : c,
+        ),
       );
 
       showToast("Complaint status updated successfully", "success");
@@ -147,8 +156,8 @@ const ComplaintsManagementPage = () => {
                 remarks: remarksText,
                 resolved_at: completionDate || undefined,
               }
-            : c
-        )
+            : c,
+        ),
       );
 
       setSelectedComplaint({
@@ -178,8 +187,8 @@ const ComplaintsManagementPage = () => {
     const matchesLab = isAdmin
       ? labFilter === "all" || complaint.lab_id.toString() === labFilter
       : user?.lab_id
-      ? complaint.lab_id === user.lab_id
-      : true;
+        ? complaint.lab_id === user.lab_id
+        : true;
 
     const matchesWorkstation =
       workstationFilter === "all" ||
@@ -203,17 +212,18 @@ const ComplaintsManagementPage = () => {
   const uniqueWorkstations = Array.from(
     new Set(
       complaints
-        .filter((c) =>
-          (labFilter === "all" || c.lab_id.toString() === labFilter) &&
-          ["Open", "In_Progress"].includes(c.status)
+        .filter(
+          (c) =>
+            (labFilter === "all" || c.lab_id.toString() === labFilter) &&
+            ["Open", "In_Progress"].includes(c.status),
         )
         .map((c) => c.workstation_id)
-        .filter(Boolean)
-    )
+        .filter(Boolean),
+    ),
   )
     .map((workstationId) => {
       const complaint = complaints.find(
-        (c) => c.workstation_id === workstationId
+        (c) => c.workstation_id === workstationId,
       );
       return {
         workstation_id: workstationId!,
@@ -226,7 +236,7 @@ const ComplaintsManagementPage = () => {
 
   const openComplaints = complaints.filter((c) => c.status === "Open").length;
   const inProgressComplaints = complaints.filter(
-    (c) => c.status === "In_Progress"
+    (c) => c.status === "In_Progress",
   ).length;
 
   if (loading) {
@@ -248,7 +258,7 @@ const ComplaintsManagementPage = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -387,7 +397,6 @@ const ComplaintsManagementPage = () => {
         </CardContent>
       </Card>
 
-      
       {/* Complaints List */}
       <div className="space-y-4">
         {filteredComplaints.length === 0 ? (
@@ -470,13 +479,13 @@ const ComplaintsManagementPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
                         {complaint.workstations?.workstation_name ||
-                          `Workstation ${complaint.workstation_id || 'N/A'}`}
+                          `Workstation ${complaint.workstation_id || "N/A"}`}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                          complaint.status
+                          complaint.status,
                         )}`}
                       >
                         {complaint.status.replace("_", " ")}
@@ -543,7 +552,7 @@ const ComplaintsManagementPage = () => {
                                 handleStatusUpdate(
                                   complaint.complaint_id,
                                   "Resolved",
-                                  complaint.remarks // Pass current remarks when resolving
+                                  complaint.remarks, // Pass current remarks when resolving
                                 );
                               }}
                               className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
@@ -582,14 +591,14 @@ const ComplaintsManagementPage = () => {
       {toast && (
         <div
           className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-sm p-4 rounded-lg shadow-lg transition-all duration-300 ${
-            toast.type === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-green-500 text-white'
+            toast.type === "error"
+              ? "bg-red-500 text-white"
+              : "bg-green-500 text-white"
           }`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              {toast.type === 'error' ? (
+              {toast.type === "error" ? (
                 <AlertTriangle className="w-5 h-5 mr-2" />
               ) : (
                 <MessageSquare className="w-5 h-5 mr-2" />

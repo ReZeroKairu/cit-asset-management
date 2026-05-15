@@ -1,10 +1,10 @@
 // Add this to src/utils/quarterLogic.ts
 
 export const fiscalQuarterMonths = {
-  "1st": "January - March",
-  "2nd": "April - June",
-  "3rd": "July - September",
-  "4th": "October - December",
+  "1st": "July - September",
+  "2nd": "October - December",
+  "3rd": "January - March",
+  "4th": "April - June",
 };
 
 export const getMonthsBetweenDates = (start: string, end: string): string => {
@@ -107,7 +107,7 @@ export const formatWeekRange = (startDate: string, week: number): string => {
   return `${monthName} ${weekStart.getDate()}-${weekEnd.getDate()}`;
 };
 
-// ✅ Auto-generate quarter dates from fiscal year (e.g., "2025-2026")
+// ✅ Auto-generate quarter dates from fiscal year starting July (e.g., "2025-2026" = Jul 2025 - Jun 2026)
 export const getAutoQuarterDates = (
   fiscalYear: string,
 ): Record<string, { start: string; end: string }> => {
@@ -126,22 +126,27 @@ export const getAutoQuarterDates = (
   const formatDate = (year: number, month: number, day: number) =>
     `${year}-${pad(month)}-${pad(day)}`;
 
+  // Fiscal year runs: Jul (start) - Jun (end)
+  // Q1: Jul - Sep (start year)
+  // Q2: Oct - Dec (start year)
+  // Q3: Jan - Mar (end year)
+  // Q4: Apr - Jun (end year)
   return {
     "1st": {
-      start: formatDate(startYear, 1, 1),
-      end: formatDate(startYear, 3, 31),
-    },
-    "2nd": {
-      start: formatDate(startYear, 4, 1),
-      end: formatDate(startYear, 6, 30),
-    },
-    "3rd": {
       start: formatDate(startYear, 7, 1),
       end: formatDate(startYear, 9, 30),
     },
-    "4th": {
+    "2nd": {
       start: formatDate(startYear, 10, 1),
-      end: formatDate(endYear, 12, 31),
+      end: formatDate(startYear, 12, 31),
+    },
+    "3rd": {
+      start: formatDate(endYear, 1, 1),
+      end: formatDate(endYear, 3, 31),
+    },
+    "4th": {
+      start: formatDate(endYear, 4, 1),
+      end: formatDate(endYear, 6, 30),
     },
   };
 };

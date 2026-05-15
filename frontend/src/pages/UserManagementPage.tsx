@@ -3,7 +3,11 @@ import api from "../api/axios";
 import EmbeddedCreateUserForm from "../components/EmbeddedCreateUserForm";
 import EditUserModal from "../components/EditUserModal";
 import { useAuth } from "../context/AuthContext";
-import { getAllUsersWithAssignments, assignUserToLab, getLaboratories } from "../api/assignments";
+import {
+  getAllUsersWithAssignments,
+  assignUserToLab,
+  getLaboratories,
+} from "../api/assignments";
 import { Edit, Trash2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 
@@ -43,9 +47,12 @@ interface UserManagementPageProps {
   setCreateUserData: React.Dispatch<React.SetStateAction<CreateUserData>>;
 }
 
-const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData, setCreateUserData }) => {
+const UserManagementPage: React.FC<UserManagementPageProps> = ({
+  createUserData,
+  setCreateUserData,
+}) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'create'>('users');
+  const [activeTab, setActiveTab] = useState<"users" | "create">("users");
   const [users, setUsers] = useState<User[]>([]);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,7 +61,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
-    if (user?.role === 'Admin') {
+    if (user?.role === "Admin") {
       loadData();
     }
   }, [user, activeTab]);
@@ -63,10 +70,10 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
     try {
       setLoading(true);
       setError(null);
-      
+
       const [usersData, labsData] = await Promise.all([
         getAllUsersWithAssignments(),
-        getLaboratories()
+        getLaboratories(),
       ]);
       setUsers(usersData);
       setLaboratories(labsData);
@@ -78,37 +85,43 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
     }
   };
 
-  const handleAssignmentChange = async (userId: number, labId: number | null) => {
+  const handleAssignmentChange = async (
+    userId: number,
+    labId: number | null,
+  ) => {
     try {
       // If assigning to a lab, check if user is a custodian and lab already has one
       if (labId !== null) {
-        const user = users.find(u => u.user_id === userId);
-        if (user?.role === 'Custodian') {
-          const existingCustodian = users.find(u => 
-            u.lab_id === labId && 
-            u.role === 'Custodian' && 
-            u.user_id !== userId
+        const user = users.find((u) => u.user_id === userId);
+        if (user?.role === "Custodian") {
+          const existingCustodian = users.find(
+            (u) =>
+              u.lab_id === labId &&
+              u.role === "Custodian" &&
+              u.user_id !== userId,
           );
-          
+
           if (existingCustodian) {
-            setError(`Cannot assign ${user.full_name} to this laboratory. ${existingCustodian.full_name} is already assigned as the custodian.`);
+            setError(
+              `Cannot assign ${user.full_name} to this laboratory. ${existingCustodian.full_name} is already assigned as the custodian.`,
+            );
             return;
           }
         }
       }
-      
+
       await assignUserToLab(userId, labId);
       await loadData(); // Refresh data
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update assignment');
+      setError(err.response?.data?.error || "Failed to update assignment");
     }
   };
 
   const handleUserCreated = () => {
     // Refresh users data and switch to users tab
-    setActiveTab('users');
+    setActiveTab("users");
     loadData();
-    
+
     // Reset create user form data
     setCreateUserData({
       full_name: "",
@@ -124,27 +137,27 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Admin':
-        return 'bg-purple-100 text-purple-800';
-      case 'Custodian':
-        return 'bg-blue-100 text-blue-800';
+      case "Admin":
+        return "bg-purple-100 text-purple-800";
+      case "Custodian":
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getAssignmentStatus = (user: User) => {
     if (user.assigned_lab) {
       return {
-        status: 'assigned',
+        status: "assigned",
         labName: user.assigned_lab.lab_name,
-        location: user.assigned_lab.location
+        location: user.assigned_lab.location,
       };
     }
     return {
-      status: 'unassigned',
-      labName: 'Not Assigned',
-      location: ''
+      status: "unassigned",
+      labName: "Not Assigned",
+      location: "",
     };
   };
 
@@ -166,7 +179,11 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
   };
 
   const handleDeleteUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to delete ${user.full_name}? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${user.full_name}? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -174,48 +191,52 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
       await api.delete(`/users/${user.user_id}`);
       await loadData();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete user');
+      setError(err.response?.data?.error || "Failed to delete user");
     }
   };
 
-  if (user?.role !== 'Admin') {
+  if (user?.role !== "Admin") {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <h3 className="text-lg font-medium text-gray-900">Access Denied</h3>
-          <p className="text-gray-500">You don't have permission to access user management.</p>
+          <p className="text-gray-500">
+            You don't have permission to access user management.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-gray-600">Manage system users and their laboratory assignments</p>
+        <p className="text-gray-600">
+          Manage system users and their laboratory assignments
+        </p>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('users')}
+            onClick={() => setActiveTab("users")}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'users'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "users"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             Users
           </button>
           <button
-            onClick={() => setActiveTab('create')}
+            onClick={() => setActiveTab("create")}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'create'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              activeTab === "create"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             Create User
@@ -231,7 +252,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
       )}
 
       {/* Tab Content */}
-      {activeTab === 'users' && (
+      {activeTab === "users" && (
         <div>
           {/* Users Table */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -270,7 +291,10 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-4 text-center text-gray-500"
+                      >
                         No users found.
                       </td>
                     </tr>
@@ -297,21 +321,33 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
                           {userItem.email}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(userItem.role)}`}>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(userItem.role)}`}
+                          >
                             {userItem.role}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <select
                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            value={userItem.lab_id || ''}
-                            onChange={(e) => handleAssignmentChange(userItem.user_id, e.target.value ? parseInt(e.target.value) : null)}
+                            value={userItem.lab_id || ""}
+                            onChange={(e) =>
+                              handleAssignmentChange(
+                                userItem.user_id,
+                                e.target.value
+                                  ? parseInt(e.target.value)
+                                  : null,
+                              )
+                            }
                           >
-                            <option value="" disabled hidden>Select Laboratory</option>
+                            <option value="" disabled hidden>
+                              Select Laboratory
+                            </option>
                             <option value="">Remove Assignment</option>
                             {laboratories.map((lab) => (
                               <option key={lab.lab_id} value={lab.lab_id}>
-                                {lab.lab_name} {lab.location && `(${lab.location})`}
+                                {lab.lab_name}{" "}
+                                {lab.location && `(${lab.location})`}
                               </option>
                             ))}
                           </select>
@@ -349,12 +385,13 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
         </div>
       )}
 
-
-      {activeTab === 'create' && (
+      {activeTab === "create" && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Create New User</h3>
-          <EmbeddedCreateUserForm 
-            onSuccess={handleUserCreated} 
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
+            Create New User
+          </h3>
+          <EmbeddedCreateUserForm
+            onSuccess={handleUserCreated}
             formData={createUserData}
             setFormData={setCreateUserData}
           />

@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { getLaboratories } from "../api/laboratories";
-import { getInventory, deleteAsset, updateAsset, getAssetStatuses, getWorkstationAssets } from "../api/inventory";
+import {
+  getInventory,
+  deleteAsset,
+  updateAsset,
+  getAssetStatuses,
+  getWorkstationAssets,
+} from "../api/inventory";
 import { getAllWorkstations } from "../api/workstations";
 import { getWorkstationPMCReports } from "../api/maintenance";
 import { getCurrentQuarter } from "../utils/quarterLogic";
@@ -117,9 +123,10 @@ const InventoryPage = () => {
       const data = await getInventory();
       setAssets(data);
       // Calculate disposal assets count
-      const disposalAssets = data.filter((asset: any) => 
-        asset.asset_details?.asset_statuses?.status_name === 'For Repair' ||
-        asset.asset_details?.asset_statuses?.status_name === 'For Disposal'
+      const disposalAssets = data.filter(
+        (asset: any) =>
+          asset.asset_details?.asset_statuses?.status_name === "For Repair" ||
+          asset.asset_details?.asset_statuses?.status_name === "For Disposal",
       );
       setDisposalAssetsCount(disposalAssets.length);
     } catch (err) {
@@ -149,26 +156,39 @@ const InventoryPage = () => {
     try {
       const currentQuarter = getCurrentQuarter();
       const workstationIds = workstations.map((ws) => ws.workstation_id);
-      
+
       // Only fetch for current quarter first
       try {
-        const reports = await getWorkstationPMCReports(workstationIds, currentQuarter);
+        const reports = await getWorkstationPMCReports(
+          workstationIds,
+          currentQuarter,
+        );
         setPmcReports(reports);
       } catch (err) {
         // If current quarter has no reports, try other quarters
-        const quarters = ["1st", "2nd", "3rd", "4th"].filter(q => q !== currentQuarter);
+        const quarters = ["1st", "2nd", "3rd", "4th"].filter(
+          (q) => q !== currentQuarter,
+        );
         const allReports: Record<number, any> = {};
-        
+
         for (const quarter of quarters) {
           try {
-            const reports = await getWorkstationPMCReports(workstationIds, quarter);
-            
+            const reports = await getWorkstationPMCReports(
+              workstationIds,
+              quarter,
+            );
+
             // Merge reports, keeping the latest for each workstation
             Object.entries(reports).forEach(([workstationId, report]) => {
               const existingReport = allReports[parseInt(workstationId)];
-              
+
               // If no existing report or this one is newer, use this report
-              if (!existingReport || (report && new Date(report.report_date) > new Date(existingReport.report_date))) {
+              if (
+                !existingReport ||
+                (report &&
+                  new Date(report.report_date) >
+                    new Date(existingReport.report_date))
+              ) {
                 allReports[parseInt(workstationId)] = report;
               }
             });
@@ -176,7 +196,7 @@ const InventoryPage = () => {
             // Silently handle quarters with no reports
           }
         }
-        
+
         setPmcReports(allReports);
       }
     } catch (err) {
@@ -192,7 +212,7 @@ const InventoryPage = () => {
   const handleDelete = async (assetId: number) => {
     // Use a custom confirmation instead of browser confirm to avoid focus issues
     const shouldDelete = window.confirm(
-      "Are you sure you want to delete this asset? This action cannot be undone."
+      "Are you sure you want to delete this asset? This action cannot be undone.",
     );
 
     if (!shouldDelete) return;
@@ -207,7 +227,7 @@ const InventoryPage = () => {
           ...ws,
           assets:
             ws.assets?.filter((asset) => asset.asset_id !== assetId) || [],
-        }))
+        })),
       );
 
       // Show success message without using alert (which can cause focus issues)
@@ -217,21 +237,27 @@ const InventoryPage = () => {
       // Use console.error instead of alert to avoid focus issues
       console.error(
         "Delete error:",
-        err.response?.data?.error || "Failed to delete asset"
+        err.response?.data?.error || "Failed to delete asset",
       );
     }
   };
 
   const handleMarkForDisposal = async (assetId: number) => {
-    if (!confirm("Are you sure you want to mark this asset for disposal? This will change its status to 'For Disposal'.")) {
+    if (
+      !confirm(
+        "Are you sure you want to mark this asset for disposal? This will change its status to 'For Disposal'.",
+      )
+    ) {
       return;
     }
 
     try {
       // Get asset statuses to find the "For Disposal" status ID
       const statuses = await getAssetStatuses();
-      const forDisposalStatus = statuses.find((status: any) => status.status_name === "For Disposal");
-      
+      const forDisposalStatus = statuses.find(
+        (status: any) => status.status_name === "For Disposal",
+      );
+
       if (!forDisposalStatus) {
         alert("For Disposal status not found in system");
         return;
@@ -239,14 +265,13 @@ const InventoryPage = () => {
 
       // Update asset status to "For Disposal"
       await updateAsset(assetId, {
-        status_id: forDisposalStatus.status_id
+        status_id: forDisposalStatus.status_id,
       });
-      
+
       // Refresh the inventory data
       fetchInventory();
-      
+
       alert("Asset status changed to For Disposal");
-      
     } catch (err: any) {
       console.error("Failed to update asset status:", err);
       alert("Failed to update asset status. Please try again.");
@@ -277,13 +302,20 @@ const InventoryPage = () => {
   };
 
   const handleBulkDisposeWorkstations = async (workstationIds: number[]) => {
-    if (!confirm(`Are you sure you want to mark all assets in ${workstationIds.length} workstation(s) for disposal? This will change the status of all assets in these workstations to 'For Disposal' but keep the workstations intact.`)) return;
-    
+    if (
+      !confirm(
+        `Are you sure you want to mark all assets in ${workstationIds.length} workstation(s) for disposal? This will change the status of all assets in these workstations to 'For Disposal' but keep the workstations intact.`,
+      )
+    )
+      return;
+
     try {
       // Get all asset statuses
       const statuses = await getAssetStatuses();
-      const forDisposalStatus = statuses.find((s: any) => s.status_name === "For Disposal");
-      
+      const forDisposalStatus = statuses.find(
+        (s: any) => s.status_name === "For Disposal",
+      );
+
       if (!forDisposalStatus) {
         alert("For Disposal status not found");
         return;
@@ -295,27 +327,37 @@ const InventoryPage = () => {
       for (const workstationId of workstationIds) {
         try {
           const assets = await getWorkstationAssets(workstationId);
-          
+
           for (const asset of assets) {
-            const statusName = asset.status || asset.details?.current_status?.status_name || "Functional";
-            
+            const statusName =
+              asset.status ||
+              asset.details?.current_status?.status_name ||
+              "Functional";
+
             // Only update assets that are not already in disposal workflow
-            if (statusName !== "For Disposal" && 
-                statusName !== "Disposed" && 
-                statusName !== "For Replacement") {
-              await updateAsset(asset.asset_id, { 
-                status_id: forDisposalStatus.status_id 
+            if (
+              statusName !== "For Disposal" &&
+              statusName !== "Disposed" &&
+              statusName !== "For Replacement"
+            ) {
+              await updateAsset(asset.asset_id, {
+                status_id: forDisposalStatus.status_id,
               });
               totalAssetsUpdated++;
             }
           }
         } catch (error) {
-          console.error(`Failed to update assets for workstation ${workstationId}:`, error);
+          console.error(
+            `Failed to update assets for workstation ${workstationId}:`,
+            error,
+          );
         }
       }
-      
+
       fetchInventory();
-      alert(`Successfully marked ${totalAssetsUpdated} assets in ${workstationIds.length} workstation(s) for disposal. Workstations remain intact.`);
+      alert(
+        `Successfully marked ${totalAssetsUpdated} assets in ${workstationIds.length} workstation(s) for disposal. Workstations remain intact.`,
+      );
     } catch (err) {
       console.error("Failed to bulk dispose workstations:", err);
       alert("Failed to update asset statuses. Please try again.");
@@ -323,13 +365,20 @@ const InventoryPage = () => {
   };
 
   const handleBulkDisposeUnassignedAssets = async (assetIds: number[]) => {
-    if (!confirm(`Are you sure you want to mark ${assetIds.length} unassigned asset(s) for disposal? This will change their status to 'For Disposal'.`)) return;
-    
+    if (
+      !confirm(
+        `Are you sure you want to mark ${assetIds.length} unassigned asset(s) for disposal? This will change their status to 'For Disposal'.`,
+      )
+    )
+      return;
+
     try {
       // Get all asset statuses
       const statuses = await getAssetStatuses();
-      const forDisposalStatus = statuses.find((s: any) => s.status_name === "For Disposal");
-      
+      const forDisposalStatus = statuses.find(
+        (s: any) => s.status_name === "For Disposal",
+      );
+
       if (!forDisposalStatus) {
         alert("For Disposal status not found");
         return;
@@ -341,16 +390,20 @@ const InventoryPage = () => {
       for (const assetId of assetIds) {
         try {
           // Find the asset to check its current status
-          const asset = assets.find(a => a.asset_id === assetId);
+          const asset = assets.find((a) => a.asset_id === assetId);
           if (asset) {
-            const statusName = (asset as any).asset_details?.asset_statuses?.status_name || "Functional";
-            
+            const statusName =
+              (asset as any).asset_details?.asset_statuses?.status_name ||
+              "Functional";
+
             // Only update assets that are not already in disposal workflow
-            if (statusName !== "For Disposal" && 
-                statusName !== "Disposed" && 
-                statusName !== "For Replacement") {
-              await updateAsset(assetId, { 
-                status_id: forDisposalStatus.status_id 
+            if (
+              statusName !== "For Disposal" &&
+              statusName !== "Disposed" &&
+              statusName !== "For Replacement"
+            ) {
+              await updateAsset(assetId, {
+                status_id: forDisposalStatus.status_id,
               });
               totalAssetsUpdated++;
             }
@@ -359,9 +412,11 @@ const InventoryPage = () => {
           console.error(`Failed to update asset ${assetId}:`, error);
         }
       }
-      
+
       fetchInventory();
-      alert(`Successfully marked ${totalAssetsUpdated} unassigned asset(s) for disposal.`);
+      alert(
+        `Successfully marked ${totalAssetsUpdated} unassigned asset(s) for disposal.`,
+      );
     } catch (err) {
       console.error("Failed to bulk dispose unassigned assets:", err);
       alert("Failed to update asset statuses. Please try again.");
@@ -369,16 +424,16 @@ const InventoryPage = () => {
   };
 
   // --- Filtering Logic ---
-  const unassignedAssets = (assets || []).filter(
-    (asset: any) => !asset.workstation && !asset.workstation_id
-  ).filter(
-    (asset: any) => {
+  const unassignedAssets = (assets || [])
+    .filter((asset: any) => !asset.workstation && !asset.workstation_id)
+    .filter((asset: any) => {
       const statusName = asset.asset_details?.asset_statuses?.status_name;
-      return statusName !== "For Disposal" && 
-             statusName !== "Disposed" && 
-             statusName !== "For Replacement";
-    }
-  );
+      return (
+        statusName !== "For Disposal" &&
+        statusName !== "Disposed" &&
+        statusName !== "For Replacement"
+      );
+    });
 
   const filteredWorkstations = (
     selectedLabId
@@ -388,7 +443,7 @@ const InventoryPage = () => {
     .filter((ws) =>
       (ws.workstation_name || "")
         .toLowerCase()
-        .includes(workstationSearch.toLowerCase())
+        .includes(workstationSearch.toLowerCase()),
     )
     .sort((a, b) =>
       (a.workstation_name || "").localeCompare(
@@ -397,15 +452,18 @@ const InventoryPage = () => {
         {
           numeric: true,
           sensitivity: "base",
-        }
-      )
+        },
+      ),
     );
 
   // Pagination logic for workstations
   const totalPages = Math.ceil(filteredWorkstations.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedWorkstations = filteredWorkstations.slice(startIndex, endIndex);
+  const paginatedWorkstations = filteredWorkstations.slice(
+    startIndex,
+    endIndex,
+  );
 
   // Reset page when search changes
   useEffect(() => {
@@ -451,8 +509,8 @@ const InventoryPage = () => {
     user?.role === "Admin"
       ? laboratories
       : user?.lab_id
-      ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
-      : [];
+        ? laboratories.filter((lab) => lab.lab_id === user.lab_id)
+        : [];
 
   useEffect(() => {
     if (user?.role === "Custodian" && user.lab_id && !selectedLabId) {
@@ -487,7 +545,7 @@ const InventoryPage = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
@@ -532,7 +590,7 @@ const InventoryPage = () => {
                   value={selectedLabId || ""}
                   onChange={(e) =>
                     setSelectedLabId(
-                      e.target.value ? Number(e.target.value) : null
+                      e.target.value ? Number(e.target.value) : null,
                     )
                   }
                   className="h-9 px-3 border border-gray-300 rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -770,17 +828,20 @@ const InventoryPage = () => {
               getStatusColor={getStatusColor}
               pmcReports={pmcReports}
             />
-            
+
             {/* Pagination Controls for Workstations */}
             {totalPages > 1 && (
               <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredWorkstations.length)} of{" "}
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(endIndex, filteredWorkstations.length)} of{" "}
                   {filteredWorkstations.length} workstations
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
                     disabled={currentPage === 1}
                     className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -790,7 +851,9 @@ const InventoryPage = () => {
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

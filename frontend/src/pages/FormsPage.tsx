@@ -11,10 +11,7 @@ import { useFormsData } from "../hooks/useFormsData";
 import { useFormStatus } from "../hooks/useFormStatus";
 import { useFormFiltering } from "../hooks/useFormFiltering";
 import { getFormStatusColor } from "../utils/statusUtils";
-import {
-  formatUserType,
-  formatLaboratory,
-} from "../utils/formatUtils";
+import { formatUserType, formatLaboratory } from "../utils/formatUtils";
 import { type FormSubmission } from "../types/forms";
 
 // ─── Submitted Forms Table ────────────────────────────────────────────────────
@@ -27,7 +24,7 @@ interface SubmittedFormsTableProps {
   onUpdateStatus: (
     formId: number,
     formType: string,
-    newStatus: string
+    newStatus: string,
   ) => Promise<void>;
   onEditForm: (form: FormSubmission) => void;
   onDownloadForm: (form: FormSubmission) => void;
@@ -186,7 +183,7 @@ const SubmittedFormsTable = ({
               <td className="px-4 py-3 align-middle text-center">
                 <span
                   className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${getStatusColor(
-                    form.status
+                    form.status,
                   )}`}
                 >
                   {form.status.replace(/_/g, " ")}
@@ -246,7 +243,7 @@ const FormsPage = () => {
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
   const { updateStatus, handleBulkApprove } = useFormStatus(
     refetchForms,
-    selectedForms
+    selectedForms,
   );
   const {
     filter,
@@ -289,12 +286,10 @@ const FormsPage = () => {
   // ── Non-admin view ──────────────────────────────────────────────────────────
 
   if (user?.role !== ("Admin" as users_role)) {
-    const tabs = [
-      ...TAB_ITEMS,
-    ];
+    const tabs = [...TAB_ITEMS];
 
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Forms</h1>
@@ -363,7 +358,6 @@ const FormsPage = () => {
           </div>
         )}
 
-
         {selectedForm && (
           <FormDetailsModal
             show={showDetails}
@@ -423,7 +417,6 @@ const FormsPage = () => {
           userRole={user?.role}
         />
       )}
-
     </div>
   );
 };
