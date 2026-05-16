@@ -12,6 +12,7 @@ import {
   ClipboardList,
   MessageSquare,
   Users,
+  CheckCircle,
 } from "lucide-react";
 import { getDashboardStats, type DashboardData } from "../../api/dashboard";
 import { getLabSchedules } from "../../api/schedule";
@@ -22,32 +23,50 @@ interface HomePageProps {
 }
 
 // Helper function to calculate service week dates
-const getServiceWeekDates = (servicingWeeks: number[], quarterStartDate: string): string => {
+const getServiceWeekDates = (
+  servicingWeeks: number[],
+  quarterStartDate: string,
+): string => {
   if (!servicingWeeks || servicingWeeks.length === 0) {
-    return 'Not set';
+    return "Not set";
   }
-  
+
   const quarterStart = new Date(quarterStartDate);
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  
-  const weekDates = servicingWeeks.map(weekNumber => {
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const weekDates = servicingWeeks.map((weekNumber) => {
     // Calculate the start date of the given week
     const weekStart = new Date(quarterStart);
     weekStart.setDate(quarterStart.getDate() + (weekNumber - 1) * 7);
-    
+
     // Calculate the end date of the week (6 days after start)
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
-    
+
     // Format as "Mon D - Mon D"
     return `${monthNames[weekStart.getMonth()]} ${weekStart.getDate()} - ${monthNames[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
   });
-  
-  return weekDates.join(', ');
+
+  return weekDates.join(", ");
 };
 
 const HomePage = ({ onNavigate }: HomePageProps) => {
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [upcomingSchedule, setUpcomingSchedule] = useState<{
     quarter: string;
@@ -63,7 +82,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
       try {
         const data = await getDashboardStats();
         setDashboardData(data);
-        
+
         // Fetch upcoming maintenance schedule for custodians
         if (user?.role === "Custodian") {
           await fetchUpcomingSchedule();
@@ -86,41 +105,48 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
       const labId = userData.assigned_lab.lab_id;
       const currentFiscalYear = "2025-2026"; // Could be made dynamic
       const schedules = await getLabSchedules(labId, currentFiscalYear);
-      
+
       const today = new Date();
-      let nextSchedule: { quarter: string; startDate: string; endDate: string; daysUntil: number; servicingWeeks: number[] } | null = null;
-      
+      let nextSchedule: {
+        quarter: string;
+        startDate: string;
+        endDate: string;
+        daysUntil: number;
+        servicingWeeks: number[];
+      } | null = null;
+
       // Find the next upcoming quarter
       for (const [quarter, dates] of Object.entries(schedules)) {
         const startDate = new Date(dates.start);
         const endDate = new Date(dates.end);
-        
+
         // If quarter hasn't started yet, calculate days until
         if (today < startDate) {
-          const daysUntil = Math.ceil((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          
+          const daysUntil = Math.ceil(
+            (startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+          );
+
           if (!nextSchedule || daysUntil < nextSchedule.daysUntil) {
             nextSchedule = {
               quarter,
               startDate: dates.start,
               endDate: dates.end,
               daysUntil,
-              servicingWeeks: dates.servicingWeeks || []
+              servicingWeeks: dates.servicingWeeks || [],
             };
           }
-        }
-        else if (today >= startDate && today <= endDate) {
+        } else if (today >= startDate && today <= endDate) {
           nextSchedule = {
             quarter,
             startDate: dates.start,
             endDate: dates.end,
             daysUntil: 0, // Currently active
-            servicingWeeks: dates.servicingWeeks || []
+            servicingWeeks: dates.servicingWeeks || [],
           };
           break; // Found current quarter, no need to check further
         }
       }
-      
+
       setUpcomingSchedule(nextSchedule);
     } catch (error) {
       console.error("Failed to fetch upcoming schedule:", error);
@@ -175,8 +201,8 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
           {userRole === "Custodian" && userAssignedLab
             ? `Manage your laboratory assets and daily reports efficiently for ${userAssignedLab.lab_name}`
             : userRole === "Admin"
-            ? "Manage reports efficiently"
-            : "Manage your laboratory assets and daily reports efficiently"}
+              ? "Manage reports efficiently"
+              : "Manage your laboratory assets and daily reports efficiently"}
         </p>
       </div>
 
@@ -200,12 +226,17 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         {userRole === "Custodian" && (
           <DashboardCard
             title="Maintenance Schedule"
-            value={upcomingSchedule ? `${upcomingSchedule.quarter} Quarter` : "No Schedule"}
-            subtitle={upcomingSchedule 
-              ? upcomingSchedule.daysUntil === 0 
-                ? `Service${upcomingSchedule.servicingWeeks && upcomingSchedule.servicingWeeks.length > 0 ? '\nDays: ' + getServiceWeekDates(upcomingSchedule.servicingWeeks, upcomingSchedule.startDate) : ''}` 
-                : `${new Date(upcomingSchedule.startDate).toLocaleDateString()} - ${new Date(upcomingSchedule.endDate).toLocaleDateString()} • Starts in ${upcomingSchedule.daysUntil} days →${upcomingSchedule.servicingWeeks && upcomingSchedule.servicingWeeks.length > 0 ? '\nService: ' + getServiceWeekDates(upcomingSchedule.servicingWeeks, upcomingSchedule.startDate) : ''}`
-              : "Set maintenance schedule →"
+            value={
+              upcomingSchedule
+                ? `${upcomingSchedule.quarter} Quarter`
+                : "No Schedule"
+            }
+            subtitle={
+              upcomingSchedule
+                ? upcomingSchedule.daysUntil === 0
+                  ? `Service${upcomingSchedule.servicingWeeks && upcomingSchedule.servicingWeeks.length > 0 ? "\nDays: " + getServiceWeekDates(upcomingSchedule.servicingWeeks, upcomingSchedule.startDate) : ""}`
+                  : `${new Date(upcomingSchedule.startDate).toLocaleDateString()} - ${new Date(upcomingSchedule.endDate).toLocaleDateString()} • Starts in ${upcomingSchedule.daysUntil} days →${upcomingSchedule.servicingWeeks && upcomingSchedule.servicingWeeks.length > 0 ? "\nService: " + getServiceWeekDates(upcomingSchedule.servicingWeeks, upcomingSchedule.startDate) : ""}`
+                : "Set maintenance schedule →"
             }
             icon={Wrench}
             iconBgColor="bg-indigo-100"
@@ -275,6 +306,19 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
             onClick={() => handleNavigate("complaints-management")}
           />
         )}
+
+        {userRole === "Custodian" && (
+          <DashboardCard
+            title="Add Accomplishments"
+            value="Create New"
+            subtitle="Document your daily activities →"
+            icon={CheckCircle}
+            iconBgColor="bg-emerald-100"
+            iconColor="text-emerald-600"
+            subtitleColor="text-emerald-600"
+            onClick={() => handleNavigate("reports", "create")}
+          />
+        )}
       </div>
 
       {/* Inventory Analytics Section - Role Based */}
@@ -285,9 +329,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
       ) : null}
 
       {/* Audit Section - Admin and Custodian */}
-      {(isAdmin || userRole === "Custodian") && (
-        <AuditSection />
-      )}
+      {(isAdmin || userRole === "Custodian") && <AuditSection />}
     </div>
   );
 };

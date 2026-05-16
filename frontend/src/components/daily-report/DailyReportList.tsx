@@ -30,17 +30,19 @@ interface DailyReportListProps {
   viewMode?: "my" | "all";
   adminMode?: boolean;
   archiveMode?: boolean;
+  defaultTab?: "list" | "create";
 }
 
 const DailyReportList: React.FC<DailyReportListProps> = ({
   viewMode = "my",
   adminMode = false,
   archiveMode = false,
+  defaultTab = "list",
 }) => {
   const [reports, setReports] = useState<DailyReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"list" | "create">("list");
+  const [activeTab, setActiveTab] = useState<"list" | "create">(defaultTab);
   const [editingReport, setEditingReport] = useState<DailyReport | undefined>();
   const [viewingReport, setViewingReport] = useState<DailyReport | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);

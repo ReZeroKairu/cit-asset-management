@@ -14,7 +14,7 @@ import ComplaintsPage from "../../pages/ComplaintsPage";
 import ComplaintsManagementPage from "../../pages/ComplaintsManagementPage";
 import CITLabUsersPage from "../../pages/CITLabUsersPage";
 import MaintenancePage from "../../pages/MaintenancePage";
-import LabAccomplishmentsPage from "../../pages/DailyAccomplishmentsPage";
+import DailyAccomplishmentsPage from "../../pages/DailyAccomplishmentsPage";
 import type { PageType } from "../../hooks/useAppRouting";
 
 interface CreateUserData {
@@ -68,7 +68,11 @@ const PageRenderer = ({
         />
       );
     case "reports":
-      return <DailyReportsPage />;
+      return (
+        <DailyReportsPage
+          defaultTab={urlParams.get("tab") as "list" | "create" | undefined}
+        />
+      );
     case "admin-reports":
       return <AdminReportsPage />;
     case "archives":
@@ -109,7 +113,7 @@ const PageRenderer = ({
       if (user?.role !== "Admin") {
         return <HomePage onNavigate={onNavigate} />;
       }
-      return <LabAccomplishmentsPage />;
+      return <DailyAccomplishmentsPage />;
     case "public-landing":
       return <PublicLandingPage />;
     default:
