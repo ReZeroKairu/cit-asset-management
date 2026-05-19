@@ -135,9 +135,6 @@ const DisposalConfirmationModal: React.FC<Props> = ({
                     required
                     autoFocus
                   />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Name of the person performing the disposal
-                  </p>
                 </div>
 
                 <div className="flex justify-end space-x-3">

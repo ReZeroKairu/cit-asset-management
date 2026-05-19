@@ -111,14 +111,12 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
       });
       
     } catch (error) {
-      console.error('❌ Database error:', error);
       res.status(500).json({ 
         error: 'Database query failed', 
         details: (error as Error).message 
       });
     }
   } catch (error) {
-    console.error('❌ General error:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });

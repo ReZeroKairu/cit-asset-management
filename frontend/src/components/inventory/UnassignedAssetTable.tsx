@@ -49,7 +49,7 @@ const UnassignedAssetTable: React.FC<Props> = ({
   }) : assets;
   
     return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto border rounded-lg">
       {selectedAssets.size > 0 && (
         <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
           <div className="flex items-center justify-between">

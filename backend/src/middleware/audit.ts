@@ -7,8 +7,6 @@ const prisma = new PrismaClient();
 
 export const auditMiddleware = (action: string, entityType: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    // console.log(`🔍 Audit middleware called: ${action} ${entityType}`);
-    
     // Store original res.json to intercept responses
     const originalJson = res.json;
     let responseData: any;
@@ -22,11 +20,8 @@ export const auditMiddleware = (action: string, entityType: string) => {
 
     // Handle the audit logging after response is sent
     res.on('finish', async () => {
-      // console.log(`✅ Response finished with status: ${statusCode}`);
-      
       // Log successful responses (2xx status codes)
       if (statusCode >= 200 && statusCode < 300) {
-        // console.log(`✅ Successful response, creating audit log`);
         try {
           // Try to get user info from multiple sources
           let userId: number | null = null;
@@ -83,7 +78,7 @@ export const auditMiddleware = (action: string, entityType: string) => {
             data: auditData
           });
         } catch (error) {
-          console.error('❌ Audit logging failed:', error);
+          // Silent fail - don't log errors to avoid performance impact
         }
       }
     });

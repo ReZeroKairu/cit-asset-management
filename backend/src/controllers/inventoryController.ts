@@ -47,30 +47,32 @@ export const getInventory = async (req: Request, res: Response) => {
       // Try optimized view first
       assets = await prisma.$queryRawUnsafe(`
         SELECT 
-          asset_id,
-          lab_id,
-          workstation_id,
-          unit_id,
-          date_added,
-          added_by_user_id,
-          property_tag_no,
-          quantity,
-          description,
-          serial_number,
-          date_of_purchase,
-          date_disposed,
-          disposed_by,
-          asset_remarks,
-          status_id,
-          asset_status,
-          lab_name,
-          lab_location,
-          unit_name,
-          device_type_name,
-          added_by_name
-        FROM view_asset_full_details
+          vafd.asset_id,
+          vafd.lab_id,
+          vafd.workstation_id,
+          vafd.unit_id,
+          vafd.date_added,
+          vafd.added_by_user_id,
+          vafd.property_tag_no,
+          vafd.quantity,
+          vafd.description,
+          vafd.serial_number,
+          vafd.date_of_purchase,
+          vafd.date_disposed,
+          vafd.disposed_by,
+          vafd.asset_remarks,
+          vafd.status_id,
+          vafd.asset_status,
+          vafd.lab_name,
+          vafd.lab_location,
+          vafd.unit_name,
+          vafd.device_type_name,
+          vafd.added_by_name,
+          ws.workstation_name
+        FROM view_asset_full_details vafd
+        LEFT JOIN workstations ws ON vafd.workstation_id = ws.workstation_id
         ${whereClause}
-        ORDER BY date_added DESC
+        ORDER BY vafd.date_added DESC
       `, ...params);
       
       usedView = true;
@@ -143,7 +145,9 @@ export const getInventory = async (req: Request, res: Response) => {
         users: asset.added_by_name ? {
           full_name: asset.added_by_name
         } : null,
-        workstations: null
+        workstations: asset.workstation_name ? {
+          workstation_name: asset.workstation_name
+        } : null
       }));
       
       res.json(transformedAssets);

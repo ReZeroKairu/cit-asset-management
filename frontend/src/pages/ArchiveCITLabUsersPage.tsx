@@ -107,7 +107,6 @@ const ArchiveCITLabUsersPage = () => {
         setUniqueLabs(labNames);
       }
     } catch (error) {
-      console.error('❌ Error fetching labs:', error);
       // Fallback to common lab names
       const fallbackLabs = [
         "E-Forum",
@@ -149,7 +148,6 @@ const ArchiveCITLabUsersPage = () => {
       const logsData = response?.data || [];
       setLogs(logsData);
     } catch (err: any) {
-      console.error('❌ Error fetching CIT Lab Users logs:', err);
       
       // Handle 429 rate limit error specifically
       if (err.response?.status === 429) {
@@ -425,10 +423,10 @@ const ArchiveCITLabUsersPage = () => {
               <p className="text-sm">Try adjusting your filters or check back later</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border rounded-lg">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b bg-gray-50">
+                  <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Name</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">User Type</th>
                     <th className="py-3 px-4 text-left font-semibold text-sm text-gray-700">Laboratory</th>

@@ -7,8 +7,6 @@ const router = Router();
 // Enhanced audit service with filtering and search using view tables
 router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (req, res) => {
   try {
-    // console.log('🔍 Enhanced audit route hit!', { user: req.user, query: req.query });
-    
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50); // Max 50 for performance
     
@@ -24,20 +22,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     // Get current user info for role-based filtering
     const currentUserRole = req.user?.role;
     const currentUserId = req.user?.userId;
-    
-    // console.log('🔍 Extracted parameters:', { 
-      // action: action || 'none', 
-      // search: search || 'none', 
-      // userId: userId || 'none',
-      // actionCategory: actionCategory || 'none',
-      // userRole: userRole || 'none',
-      // startDate: startDate ? startDate.toISOString() : 'none',
-      // endDate: endDate ? endDate.toISOString() : 'none',
-      // currentUserRole,
-      // currentUserId,
-      // page, 
-      // limit 
-    // });
     
     try {
       // Use the enhanced AuditService with view tables and role-based filtering
@@ -55,12 +39,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         currentUserId    // Pass current user's ID
       });
       
-      // console.log('📊 AuditService result:', { 
-        // logsCount: (result.logs as any[]).length, 
-        // total: result.total,
-        // search: search || 'none'
-      // });
-      
       const response = {
         logs: result.logs as any[],
         total: result.total,
@@ -69,17 +47,14 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
         filters: { action, search, userId, actionCategory, userRole, startDate, endDate }
       };
       
-      // console.log('✅ Final result being sent:', response);
       res.json(response);
     } catch (error) {
-      console.error('❌ Error in enhanced audit route:', error);
       res.status(500).json({ 
         error: 'Failed to fetch audit logs', 
         details: (error as Error).message 
       });
     }
   } catch (error) {
-    console.error('Failed to fetch audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
@@ -94,7 +69,6 @@ router.get('/recent', authenticateToken, requireRole(['Admin', 'Custodian']), as
     
     res.json({ logs });
   } catch (error) {
-    console.error('Failed to fetch recent audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch recent audit logs' });
   }
 });
@@ -106,7 +80,6 @@ router.get('/statistics', authenticateToken, requireRole(['Admin', 'Custodian'])
     
     res.json({ statistics: stats });
   } catch (error) {
-    console.error('Failed to fetch audit statistics:', error);
     res.status(500).json({ error: 'Failed to fetch audit statistics' });
   }
 });
@@ -125,7 +98,6 @@ router.get('/user/:userId', authenticateToken, requireRole(['Admin', 'Custodian'
     
     res.json({ logs });
   } catch (error) {
-    console.error('Failed to fetch user audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch user audit logs' });
   }
 });
@@ -139,7 +111,6 @@ router.get('/system', authenticateToken, requireRole(['Admin', 'Custodian']), as
     
     res.json({ logs });
   } catch (error) {
-    console.error('Failed to fetch system audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch system audit logs' });
   }
 });
@@ -153,7 +124,6 @@ router.get('/high-priority', authenticateToken, requireRole(['Admin', 'Custodian
     
     res.json({ logs });
   } catch (error) {
-    console.error('Failed to fetch high priority audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch high priority audit logs' });
   }
 });

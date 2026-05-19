@@ -123,7 +123,7 @@ const InventoryPage = () => {
       );
       setDisposalAssetsCount(disposalAssets.length);
     } catch (err) {
-      console.error("Error fetching inventory:", err);
+      // Error fetching inventory
     }
   };
 
@@ -132,7 +132,7 @@ const InventoryPage = () => {
       const data = await getAllWorkstations();
       setWorkstations(data);
     } catch (err) {
-      console.error("Error fetching workstations:", err);
+      // Error fetching workstations
     }
   };
 
@@ -141,7 +141,7 @@ const InventoryPage = () => {
       const labs = await getLaboratories();
       setLaboratories(labs);
     } catch (err) {
-      console.error("Error fetching laboratories:", err);
+      // Error fetching laboratories
     }
   };
 
@@ -155,32 +155,38 @@ const InventoryPage = () => {
         const reports = await getWorkstationPMCReports(workstationIds, currentQuarter);
         setPmcReports(reports);
       } catch (err) {
-        // If current quarter has no reports, try other quarters
+        // If current quarter has no reports, try other quarters (parallel for performance)
         const quarters = ["1st", "2nd", "3rd", "4th"].filter(q => q !== currentQuarter);
         const allReports: Record<number, any> = {};
-        
-        for (const quarter of quarters) {
+
+        const quarterPromises = quarters.map(async (quarter) => {
           try {
             const reports = await getWorkstationPMCReports(workstationIds, quarter);
-            
-            // Merge reports, keeping the latest for each workstation
-            Object.entries(reports).forEach(([workstationId, report]) => {
-              const existingReport = allReports[parseInt(workstationId)];
-              
-              // If no existing report or this one is newer, use this report
-              if (!existingReport || (report && new Date(report.report_date) > new Date(existingReport.report_date))) {
-                allReports[parseInt(workstationId)] = report;
-              }
-            });
+            return { quarter, reports };
           } catch (err) {
             // Silently handle quarters with no reports
+            return { quarter, reports: {} };
           }
-        }
+        });
+
+        const quarterResults = await Promise.all(quarterPromises);
+
+        // Merge reports, keeping the latest for each workstation
+        quarterResults.forEach(({ reports }) => {
+          Object.entries(reports).forEach(([workstationId, report]) => {
+            const existingReport = allReports[parseInt(workstationId)];
+
+            // If no existing report or this one is newer, use this report
+            if (!existingReport || (report && new Date(report.report_date) > new Date(existingReport.report_date))) {
+              allReports[parseInt(workstationId)] = report;
+            }
+          });
+        });
         
         setPmcReports(allReports);
       }
     } catch (err) {
-      console.error("Error fetching PMC reports:", err);
+      // Error fetching PMC reports
     }
   };
 
@@ -211,14 +217,8 @@ const InventoryPage = () => {
       );
 
       // Show success message without using alert (which can cause focus issues)
-      console.log("Asset deleted successfully");
     } catch (err: any) {
-      console.error("Failed to delete asset:", err);
       // Use console.error instead of alert to avoid focus issues
-      console.error(
-        "Delete error:",
-        err.response?.data?.error || "Failed to delete asset"
-      );
     }
   };
 
@@ -248,7 +248,6 @@ const InventoryPage = () => {
       alert("Asset status changed to For Disposal");
       
     } catch (err: any) {
-      console.error("Failed to update asset status:", err);
       alert("Failed to update asset status. Please try again.");
     }
   };
@@ -310,14 +309,13 @@ const InventoryPage = () => {
             }
           }
         } catch (error) {
-          console.error(`Failed to update assets for workstation ${workstationId}:`, error);
+          // Failed to update assets for workstation
         }
       }
       
       fetchInventory();
       alert(`Successfully marked ${totalAssetsUpdated} assets in ${workstationIds.length} workstation(s) for disposal. Workstations remain intact.`);
     } catch (err) {
-      console.error("Failed to bulk dispose workstations:", err);
       alert("Failed to update asset statuses. Please try again.");
     }
   };
@@ -356,14 +354,13 @@ const InventoryPage = () => {
             }
           }
         } catch (error) {
-          console.error(`Failed to update asset ${assetId}:`, error);
+          // Failed to update asset
         }
       }
       
       fetchInventory();
       alert(`Successfully marked ${totalAssetsUpdated} unassigned asset(s) for disposal.`);
     } catch (err) {
-      console.error("Failed to bulk dispose unassigned assets:", err);
       alert("Failed to update asset statuses. Please try again.");
     }
   };

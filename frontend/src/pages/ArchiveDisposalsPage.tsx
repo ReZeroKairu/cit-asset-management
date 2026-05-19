@@ -141,7 +141,7 @@ const ArchiveDisposalsPage = () => {
 
   // Group assets by workstation
   const assetsByWorkstation = disposedAssets.reduce((acc, asset) => {
-    const workstationId = asset.workstation_id || 0;
+    const workstationId = asset.workstation_id ?? -1; // Use -1 for null, not 0
     const workstationName = asset.workstations?.workstation_name || "Unassigned";
     
     if (!acc[workstationId]) {

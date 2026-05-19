@@ -98,11 +98,7 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     res.json(response);
     
   } catch (error) {
-    console.error('Fallback audit route error:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch audit logs', 
-      details: (error as Error).message 
-    });
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
 

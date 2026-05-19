@@ -961,7 +961,7 @@ router.get("/", authenticateToken, async (req, res) => {
       
       usedView = true;
     } catch (viewError) {
-      console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+      // View failed, falling back to Prisma
       
       // Build Prisma where clause as fallback
       const prismaWhere: any = {};

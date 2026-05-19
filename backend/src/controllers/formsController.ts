@@ -93,7 +93,7 @@ export const getSoftwareInstallations = async (req: Request, res: Response) => {
       data: softwareInstallations
     });
   } catch (error) {
-    console.error('Error fetching software installations:', error);
+    // Silent fail - don't log errors to avoid performance impact
     res.status(500).json({
       success: false,
       message: 'Failed to fetch software installations',
@@ -103,9 +103,6 @@ export const getSoftwareInstallations = async (req: Request, res: Response) => {
 };
 
 export const updateSoftwareInstallationStatus = async (req: Request, res: Response) => {
-  console.log('🚀 updateSoftwareInstallationStatus called!');
-  console.log('📥 Request params:', req.params);
-  console.log('📥 Request body:', req.body);
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -132,7 +129,7 @@ export const updateSoftwareInstallationStatus = async (req: Request, res: Respon
     });
 
   } catch (error) {
-    console.error('❌ Error updating software installation status:', error);
+    // Silent fail - don't log errors to avoid performance impact
     res.status(500).json({
       success: false,
       message: 'Failed to update software installation status',
@@ -142,9 +139,6 @@ export const updateSoftwareInstallationStatus = async (req: Request, res: Respon
 };
 
 export const updateSoftwareInstallationDetails = async (req: Request, res: Response) => {
-  console.log('🚀 updateSoftwareInstallationDetails called!');
-  console.log('📥 Request params:', req.params);
-  console.log('📥 Request body:', req.body);
   try {
     const { id } = req.params;
     const { installation_remarks, feedback_date } = req.body;
@@ -159,8 +153,6 @@ export const updateSoftwareInstallationDetails = async (req: Request, res: Respo
     if (feedback_date !== undefined) {
       updateData.feedback_date = feedback_date ? new Date(feedback_date) : null;
     }
-
-    console.log('📝 Update data:', updateData);
 
     // Update software installation details
     const softwareInstallation = await prisma.software_installations.update({

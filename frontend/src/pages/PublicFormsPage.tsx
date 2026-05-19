@@ -59,7 +59,6 @@ const PublicFormsPage = () => {
 
       // Success is handled by the submittedForm state
     } catch (error: unknown) {
-      console.error("Error submitting form:", error);
 
       // Check if it's a rate limit error by checking the error message directly
       const formError = error as FormError;

@@ -51,7 +51,6 @@ export const FormList: React.FC<FormListProps> = ({
     try {
       await generateFormDocument(form);
     } catch (error) {
-      console.error("Error generating form:", error);
       alert("Failed to generate form document. Please try again.");
     }
   };
@@ -144,7 +143,7 @@ export const FormList: React.FC<FormListProps> = ({
           className="w-full divide-y divide-gray-200"
           style={{ minWidth: "700px" }}
         >
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               {userRole === "Admin" && approvableForms.length > 0 && (
                 <th

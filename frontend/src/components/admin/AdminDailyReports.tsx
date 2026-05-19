@@ -5,10 +5,12 @@ import {
   getAllDailyReports,
   getDailyReportById,
   updateDailyReport,
+  getUnifiedDailyReportById,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
 import { FileText, Download } from "lucide-react";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
+import UnifiedReportViewModal from "../reports/UnifiedReportViewModal";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
 import api from "../../api/axios";
@@ -23,6 +25,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     null
   );
   const [showDetailView, setShowDetailView] = useState(false);
+  const [isUnifiedViewModalOpen, setIsUnifiedViewModalOpen] = useState(false);
   const [selectedReports, setSelectedReports] = useState<number[]>([]);
   const [showDARModal, setShowDARModal] = useState(false);
   const [filters, setFilters] = useState({
@@ -57,7 +60,13 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
       // Fetch detailed report data including workstations and procedures
       const detailedReport = await getDailyReportById(report.report_id);
       setSelectedReport(detailedReport);
-      setShowDetailView(true);
+
+      // Show different modal based on report type
+      if (detailedReport.report_type === 'unified') {
+        setIsUnifiedViewModalOpen(true);
+      } else {
+        setShowDetailView(true);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to load report details");
     }
@@ -65,12 +74,25 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
 
   const handleBackToList = () => {
     setShowDetailView(false);
+    setIsUnifiedViewModalOpen(false);
     setSelectedReport(null);
   };
 
   const handleQuickApprove = async (reportId: number) => {
     try {
-      await updateDailyReport(reportId, { status: "Approved" });
+      const report = reports.find(r => r.report_id === reportId);
+      if (report?.report_type === 'unified' && report.all_report_ids) {
+        // Approve all underlying reports for unified reports
+        const promises = report.all_report_ids.map((id) =>
+          updateDailyReport(id, { status: "Approved" })
+        );
+        await Promise.all(promises);
+        alert(`Successfully approved ${report.all_report_ids.length} reports`);
+      } else {
+        // Approve single report for regular reports
+        await updateDailyReport(reportId, { status: "Approved" });
+        alert("Report approved successfully");
+      }
       loadReports();
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to approve report");
@@ -104,13 +126,27 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
 
     try {
       setLoading(true);
-      const promises = selectedReports.map((reportId) =>
+      // For unified reports, we need to approve all the underlying reports
+      const allReportIdsToApprove: number[] = [];
+      
+      for (const reportId of selectedReports) {
+        const report = reports.find(r => r.report_id === reportId);
+        if (report?.report_type === 'unified' && report.all_report_ids) {
+          // Add all underlying report IDs for unified reports
+          allReportIdsToApprove.push(...report.all_report_ids);
+        } else {
+          // Add the single report ID for regular reports
+          allReportIdsToApprove.push(reportId);
+        }
+      }
+      
+      const promises = allReportIdsToApprove.map((reportId) =>
         updateDailyReport(reportId, { status: "Approved" })
       );
       await Promise.all(promises);
       setSelectedReports([]);
       loadReports();
-      alert(`Successfully approved ${selectedReports.length} reports`);
+      alert(`Successfully approved ${allReportIdsToApprove.length} reports`);
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to approve reports");
     } finally {
@@ -205,7 +241,8 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         report_id: detailedReport.report_id,
         created_at: detailedReport.created_at || detailedReport.report_date,
         report_date: detailedReport.report_date,
-        report_type: detailedReport.report_type
+        report_type: detailedReport.report_type,
+        generated_data: detailedReport.generated_data
       });
 
       // Determine template based on lab_id and report_type
@@ -291,6 +328,20 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         report={selectedReport}
         onBack={handleBackToList}
         onReportUpdated={loadReports}
+      />
+    );
+  }
+
+  // Show unified report view if a report is selected
+  if (isUnifiedViewModalOpen && selectedReport) {
+    return (
+      <UnifiedReportViewModal
+        report={selectedReport}
+        isOpen={isUnifiedViewModalOpen}
+        onClose={() => {
+          setIsUnifiedViewModalOpen(false);
+          setSelectedReport(null);
+        }}
       />
     );
   }

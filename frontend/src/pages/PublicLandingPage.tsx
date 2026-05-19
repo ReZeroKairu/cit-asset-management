@@ -15,21 +15,18 @@ import api from "../api/axios";
 interface DeveloperProfile {
   developer_id?: number;
   full_name: string;
-  headline?: string;
   avatar_url?: string;
 }
 
 const DEFAULT_DEVELOPER: DeveloperProfile = {
   developer_id: 0,
   full_name: "Kyle Aaron Rana",
-  headline: "Backend & Frontend Developer",
   avatar_url: "/developer-avatar-1.jpg",
 };
 
 const SECOND_DEVELOPER: DeveloperProfile = {
   developer_id: 1,
   full_name: "Jesie Jim S. Masuangat",
-  headline: "UI UX Designer & Frontend Developer",
   avatar_url: "/developer-avatar-2.jpg",
 };
 
@@ -50,7 +47,6 @@ const PublicLandingPage = () => {
 
         setDevelopers(data);
       } catch (err) {
-        console.error("Error fetching developers:", err);
         setDevelopers([DEFAULT_DEVELOPER, SECOND_DEVELOPER]);
       } finally {
         setLoadingDevs(false);
@@ -85,11 +81,10 @@ const PublicLandingPage = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 mb-1">
-                    Submit Forms
+                    Software installation Form
                   </h2>
                   <p className="text-slate-500 leading-relaxed text-sm">
-                    Request new software installations or specific laboratory
-                    configurations for your classes.
+                    Faculty request software installations form.
                   </p>
                 </div>
               </div>
@@ -112,11 +107,10 @@ const PublicLandingPage = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 mb-1">
-                    Submit Complaint
+                    Submit Complaints
                   </h2>
                   <p className="text-slate-500 leading-relaxed text-sm">
-                    Help us maintain our facilities by reporting faulty
-                    equipment, software bugs, or network issues.
+                    Help us maintain our workstations by submitting a complaint.
                   </p>
                 </div>
               </div>
@@ -125,7 +119,7 @@ const PublicLandingPage = () => {
                 variant="outline"
                 className="w-full h-11 rounded-xl text-sm font-medium border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-orange-700 transition-colors group"
               >
-                File a Report
+                Submit a complaint
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </CardContent>
@@ -142,8 +136,7 @@ const PublicLandingPage = () => {
                     CIT Lab Users
                   </h2>
                   <p className="text-slate-500 leading-relaxed text-sm">
-                    Exclusive portal for CIT Students & Faculty to seamlessly
-                    log laboratory and workstation usage.
+                    CIT Students & Faculty workstation/lab log usage.
                   </p>
                 </div>
               </div>
@@ -169,16 +162,16 @@ const PublicLandingPage = () => {
                     Staff Portal
                   </h2>
                   <p className="text-slate-500 leading-relaxed text-sm">
-                    Secure administrative access for laboratory custodians,
-                    technical staff, and system administrators.
+                    Administrative access for laboratory custodians, and system administrators.
                   </p>
                 </div>
               </div>
               <Button
                 onClick={() => (window.location.href = "/login")}
-                className="w-full h-11 rounded-xl text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md transition-all group"
+                variant="outline"
+                className="w-full h-11 rounded-xl text-sm font-medium border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-green-700 transition-colors group"
               >
-                Secure Login
+                Staff Login
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </CardContent>
@@ -186,7 +179,7 @@ const PublicLandingPage = () => {
         </div>
 
         {/* Developer Team Section */}
-        <div className="pt">
+        <div className="pb-20">
           <div className="text-center mb-18">
             <div className="inline-flex items-center justify-center p-3 bg-indigo-50 rounded-full mb-4">
               <Code2 className="w-6 h-6 text-indigo-600" />
@@ -228,11 +221,7 @@ const PublicLandingPage = () => {
                   <h3 className="text-xl font-bold text-slate-800">
                     {dev.full_name}
                   </h3>
-                  {dev.headline && (
-                    <p className="text-sm text-indigo-600/80 font-medium mt-2">
-                      {dev.headline}
-                    </p>
-                  )}
+                
                 </div>
               ))}
             </div>
@@ -250,7 +239,7 @@ const PublicLandingPage = () => {
       </div>
 
       {/* Footer - Pinned to Bottom */}
-      <div className="mt-auto border-t border-slate-200/60 pt-16 pb-2 relative">
+      <div className="mt-auto pt-5 relative">
         <div className="text-center">
           <p className="text-slate-500 font-small">
             &copy; 2026 College of Information Technology Asset Management. All

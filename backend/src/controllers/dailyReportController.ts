@@ -204,7 +204,16 @@ export const getDailyReportById = async (req: Request, res: Response) => {
     
     const report = await prisma.daily_reports.findUnique({
       where: { report_id: reportId },
-      include: {
+      select: {
+        report_id: true,
+        user_id: true,
+        lab_id: true,
+        report_date: true,
+        report_type: true,
+        general_remarks: true,
+        status: true,
+        created_at: true,
+        generated_data: true,
         users: {
           select: { user_id: true, full_name: true, email: true }
         },
@@ -260,6 +269,7 @@ export const getDailyReportById = async (req: Request, res: Response) => {
 
     const formattedReport = {
       ...report,
+      generated_data: (report as any).generated_data || {},
       workstation_items: workstationItems.map((item: any) => {
         const ws = workstationMap.get(item.workstation_id);
         return {
@@ -477,6 +487,163 @@ export const deleteDailyReport = async (req: Request, res: Response) => {
   }
 };
 
+// GENERATE unified report server-side - fetches complaints and forms data from database
+export const generateUnifiedReport = async (req: Request, res: Response) => {
+  try {
+    const { report_date, lab_id } = req.body;
+
+    // Get user ID from authenticated request
+    const user_id = req.user?.userId;
+    const user_role = req.user?.role;
+    const userLabId = req.user?.lab_id;
+    if (!user_id) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+
+    // Use provided lab_id or user's assigned lab
+    const targetLabId = lab_id || userLabId;
+
+    // Fetch resolved complaints for the date
+    const complaints = await prisma.complaints.findMany({
+      where: {
+        status: 'Resolved',
+        resolved_at: {
+          gte: new Date(`${report_date}T00:00:00`),
+          lt: new Date(`${report_date}T23:59:59`)
+        },
+        ...(targetLabId && { lab_id: targetLabId })
+      },
+      include: {
+        workstations: {
+          select: { workstation_name: true }
+        }
+      }
+    });
+
+    // Fetch completed software installations for the date
+    const softwareInstallations = await prisma.software_installations.findMany({
+      where: {
+        status: { in: ['Completed', 'Custodian_Approved'] },
+        feedback_date: {
+          gte: new Date(`${report_date}T00:00:00`),
+          lt: new Date(`${report_date}T23:59:59`)
+        }
+      }
+    });
+
+    // Check if there's any data
+    if (complaints.length === 0 && softwareInstallations.length === 0) {
+      return res.status(400).json({ error: "No data found for the selected date" });
+    }
+
+    // Generate detailed remarks for complaints
+    const complaintsRemarks = complaints.slice(0, 40).map((complaint: any) => {
+      const timeString = complaint.resolved_at || complaint.created_at || '';
+      const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }) : '';
+
+      const workstationName = complaint.workstations?.workstation_name || complaint.workstation_name || 'Unknown WS';
+      return `• ${formattedTime} - ${workstationName} [Asset: ${complaint.asset_info || 'N/A'}] (${complaint.status}) - Remarks: ${complaint.remarks || 'No remarks'}`;
+    }).join('\n');
+
+    // Generate detailed remarks for software installations
+    const formsRemarks = softwareInstallations.slice(0, 40).map((form: any) => {
+      const timeString = form.feedback_date || form.created_at || '';
+      const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }) : '';
+
+      const facultyName = form.faculty_name;
+      const softwareName = form.software_list;
+      const installationRemarks = form.installation_remarks;
+
+      return `• ${formattedTime} - Software: ${softwareName} [Faculty: ${facultyName}] - ${installationRemarks || 'No remarks'}`;
+    }).join('\n');
+
+    // Create the unified report
+    const unifiedReport = await prisma.daily_reports.create({
+      data: {
+        user_id,
+        lab_id: targetLabId || 2,
+        report_date: new Date(report_date),
+        report_type: 'unified',
+        general_remarks: `Unified Report - ${complaints.length} complaints, ${softwareInstallations.length} software installations`,
+        generated_data: {
+          complaints_count: complaints.length,
+          software_installations_count: softwareInstallations.length,
+          complaints_remarks: complaintsRemarks,
+          forms_remarks: formsRemarks,
+          complaints: complaints.slice(0, 40).map((c: any) => ({
+            id: c.id,
+            complaint_id: c.complaint_id,
+            issue_description: c.issue_description,
+            workstation_name: c.workstations?.workstation_name || c.workstation_name,
+            resolved_at: c.resolved_at,
+            status: c.status,
+            asset_info: c.asset_info,
+            remarks: c.remarks
+          })),
+          software_installations: softwareInstallations.slice(0, 40).map((f: any) => ({
+            id: f.id,
+            faculty_name: f.faculty_name,
+            software_list: f.software_list,
+            installation_remarks: f.installation_remarks,
+            laboratory: f.laboratory,
+            created_at: f.created_at
+          }))
+        } as any,
+        status: 'Pending'
+      } as any,
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      }
+    });
+
+    // Create procedures for the report
+    if (complaints.length > 0) {
+      await prisma.daily_report_procedures.createMany({
+        data: [
+          { report_id: unifiedReport.report_id, procedure_id: 5, overall_status: 'Completed', overall_remarks: '' },
+          { report_id: unifiedReport.report_id, procedure_id: 6, overall_status: 'Completed', overall_remarks: '' }
+        ]
+      });
+    }
+    if (softwareInstallations.length > 0) {
+      await prisma.daily_report_procedures.create({
+        data: { report_id: unifiedReport.report_id, procedure_id: 2, overall_status: 'Completed', overall_remarks: '' }
+      });
+    }
+
+    // Create workstation items from complaints
+    if (complaints.length > 0) {
+      const workstationItems = complaints.slice(0, 40).map((c: any) => ({
+        report_id: unifiedReport.report_id,
+        workstation_id: 1, // Default workstation ID since complaints don't have workstation_id
+        status: 'Working',
+        remarks: c.remarks || ''
+      }));
+      await prisma.report_workstation_items.createMany({
+        data: workstationItems
+      });
+    }
+
+    res.json(unifiedReport);
+  } catch (error) {
+    console.error("Error generating unified report:", error);
+    res.status(500).json({ error: "Failed to generate unified report" });
+  }
+};
+
 // CREATE auto-generated daily report - handles report_type field
 export const createAutoGeneratedReport = async (req: Request, res: Response) => {
   try {
@@ -510,9 +677,9 @@ export const createAutoGeneratedReport = async (req: Request, res: Response) => 
     }
 
     // Validate report_type
-    const validReportTypes = ['auto_complaints', 'auto_forms'];
+    const validReportTypes = ['auto_complaints', 'auto_forms', 'unified'];
     if (!validReportTypes.includes(report_type)) {
-      return res.status(400).json({ error: "Invalid report type. Valid types are: auto_complaints, auto_forms" });
+      return res.status(400).json({ error: "Invalid report type. Valid types are: auto_complaints, auto_forms, unified" });
     }
 
     // Create the auto-generated daily report
@@ -630,5 +797,337 @@ export const getMyDailyReports = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error fetching user daily reports:", error);
     res.status(500).json({ error: "Failed to fetch daily reports" });
+  }
+};
+
+// GET unified daily reports (combines auto_complaints and auto_forms for same date/user)
+export const getUnifiedDailyReports = async (req: Request, res: Response) => {
+  try {
+    const { status, start_date, end_date } = req.query;
+    
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
+    const where: any = {
+      report_type: { in: ['auto_complaints', 'auto_forms', 'unified'] }
+    };
+    
+    // Role-based filtering
+    if (userRole === 'Custodian') {
+      // Custodians can only see reports from their assigned lab
+      where.lab_id = userLabId;
+    }
+    
+    if (status) where.status = Array.isArray(status) ? status[0] : status;
+    if (start_date && end_date) {
+      const startDate = String(Array.isArray(start_date) ? start_date[0] : start_date) as string;
+      const endDate = String(Array.isArray(end_date) ? end_date[0] : end_date) as string;
+      where.report_date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      };
+    }
+
+    // Fetch all auto-generated reports
+    const reports = await prisma.daily_reports.findMany({
+      where,
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      },
+      orderBy: [
+        { report_date: 'desc' },
+        { created_at: 'desc' }
+      ]
+    });
+
+    // Group reports by user_id, lab_id, and report_date
+    const groupedReports = new Map();
+    
+    reports.forEach(report => {
+      const key = `${report.user_id}-${report.lab_id}-${report.report_date.toISOString().split('T')[0]}`;
+      
+      if (!groupedReports.has(key)) {
+        groupedReports.set(key, {
+          user_id: report.user_id,
+          lab_id: report.lab_id,
+          report_date: report.report_date,
+          users: report.users,
+          laboratories: report.laboratories,
+          complaints_report: null,
+          forms_report: null,
+          report_ids: [],
+          status: report.status,
+          created_at: report.created_at
+        });
+      }
+      
+      const group = groupedReports.get(key);
+      
+      if (report.report_type === 'auto_complaints') {
+        group.complaints_report = report;
+      } else if (report.report_type === 'auto_forms') {
+        group.forms_report = report;
+      }
+      
+      group.report_ids.push(report.report_id);
+      
+      // Update status if any report is approved
+      if (report.status === 'Approved') {
+        group.status = 'Approved';
+      }
+    });
+
+    // Convert map to array and add a unified report_id (use the first report's ID)
+    const unifiedReports = Array.from(groupedReports.values()).map(group => ({
+      ...group,
+      report_id: group.report_ids[0], // Use first report ID as the unified ID
+      all_report_ids: group.report_ids,
+      report_type: 'unified' // Mark as unified
+    }));
+
+    res.json({
+      success: true,
+      data: unifiedReports
+    });
+  } catch (error) {
+    console.error("Error fetching unified daily reports:", error);
+    res.status(500).json({ error: "Failed to fetch unified daily reports" });
+  }
+};
+
+// GET unified daily report by ID (fetches both complaints and forms reports)
+export const getUnifiedDailyReportById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get user info from authentication
+    const authenticatedUserId = req.user?.userId;
+    const userRole = req.user?.role;
+    
+    if (!authenticatedUserId) {
+      return res.status(401).json({ error: "User authentication required" });
+    }
+    
+    // Fetch user's lab assignment from database
+    const user = await prisma.users.findUnique({
+      where: { user_id: authenticatedUserId },
+      select: { lab_id: true }
+    });
+    
+    const userLabId = user?.lab_id;
+    
+    const reportId = Array.isArray(id) ? parseInt(id[0]) : parseInt(id);
+    
+    // Fetch the report to get user_id, lab_id, and report_date
+    const baseReport = await prisma.daily_reports.findUnique({
+      where: { report_id: reportId },
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      }
+    });
+
+    if (!baseReport) {
+      return res.status(404).json({ error: "Daily report not found" });
+    }
+
+    // Security check: Custodians can only access reports from their own lab
+    if (userRole !== 'Admin' && baseReport.lab_id !== userLabId) {
+      return res.status(403).json({ error: "Access denied: You can only access reports from your assigned laboratory" });
+    }
+
+    // Fetch both auto_complaints, auto_forms, and unified reports for the same user, lab, and date
+    const reports = await prisma.daily_reports.findMany({
+      where: {
+        user_id: baseReport.user_id,
+        lab_id: baseReport.lab_id,
+        report_date: baseReport.report_date,
+        report_type: { in: ['auto_complaints', 'auto_forms', 'unified'] }
+      },
+      include: {
+        users: {
+          select: { user_id: true, full_name: true, email: true }
+        },
+        laboratories: {
+          select: { lab_id: true, lab_name: true, location: true }
+        }
+      }
+    });
+
+    // Fetch detailed data for each report
+    const detailedReports = await Promise.all(
+      reports.map(async (report) => {
+        const [workstationItems, reportProcedures] = await Promise.all([
+          prisma.report_workstation_items.findMany({
+            where: { report_id: report.report_id }
+          }),
+          prisma.daily_report_procedures.findMany({
+            where: { report_id: report.report_id }
+          })
+        ]);
+
+        const workstationIds = workstationItems.map(item => item.workstation_id);
+        const workstationDetails = workstationIds.length > 0 
+          ? await prisma.workstations.findMany({
+              where: { workstation_id: { in: workstationIds } },
+              select: { workstation_id: true, workstation_name: true }
+            })
+          : [];
+
+        const workstationMap = new Map(workstationDetails.map(ws => [ws.workstation_id, ws]));
+
+        const procedureIds = reportProcedures.map(rp => rp.procedure_id);
+        const procedureDetails = procedureIds.length > 0 
+          ? await prisma.procedures.findMany({
+              where: { procedure_id: { in: procedureIds } },
+              select: { procedure_id: true, procedure_name: true, category: true }
+            })
+          : [];
+
+        const procedureMap = new Map(procedureDetails.map(p => [p.procedure_id, p]));
+
+        return {
+          ...report,
+          workstation_items: workstationItems.map((item: any) => {
+            const ws = workstationMap.get(item.workstation_id);
+            return {
+              workstation_id: item.workstation_id,
+              workstation_name: ws?.workstation_name || 'Unknown',
+              status: item.status || 'Working',
+              remarks: item.remarks || null
+            };
+          }),
+          procedures: reportProcedures.map((rp: any) => {
+            const procedure = procedureMap.get(rp.procedure_id);
+            return {
+              procedure_id: rp.procedure_id,
+              procedure_name: procedure?.procedure_name || 'Unknown Procedure',
+              category: procedure?.category || null,
+              overall_status: rp.overall_status || 'Pending',
+              overall_remarks: rp.overall_remarks || null,
+              checklists: []
+            };
+          })
+        };
+      })
+    );
+
+    // Check if the base report is already a unified report
+    if (baseReport.report_type === 'unified') {
+      // Fetch detailed data for the unified report
+      const [workstationItems, reportProcedures] = await Promise.all([
+        prisma.report_workstation_items.findMany({
+          where: { report_id: reportId }
+        }),
+        prisma.daily_report_procedures.findMany({
+          where: { report_id: reportId }
+        })
+      ]);
+
+      const workstationIds = workstationItems.map(item => item.workstation_id);
+      const workstationDetails = workstationIds.length > 0 
+        ? await prisma.workstations.findMany({
+            where: { workstation_id: { in: workstationIds } },
+            select: { workstation_id: true, workstation_name: true }
+          })
+        : [];
+
+      const workstationMap = new Map(workstationDetails.map(ws => [ws.workstation_id, ws]));
+
+      const procedureIds = reportProcedures.map(rp => rp.procedure_id);
+      const procedureDetails = procedureIds.length > 0 
+        ? await prisma.procedures.findMany({
+            where: { procedure_id: { in: procedureIds } },
+            select: { procedure_id: true, procedure_name: true, category: true }
+          })
+        : [];
+
+      const procedureMap = new Map(procedureDetails.map(p => [p.procedure_id, p]));
+
+      const unifiedReport = {
+        report_id: reportId,
+        user_id: baseReport.user_id,
+        lab_id: baseReport.lab_id,
+        report_date: baseReport.report_date,
+        users: baseReport.users,
+        laboratories: baseReport.laboratories,
+        status: baseReport.status,
+        created_at: baseReport.created_at,
+        report_type: 'unified',
+        generated_data: (baseReport as any).generated_data || {},
+        workstation_items: workstationItems.map((item: any) => {
+          const ws = workstationMap.get(item.workstation_id);
+          return {
+            workstation_id: item.workstation_id,
+            workstation_name: ws?.workstation_name || 'Unknown',
+            status: item.status || 'Working',
+            remarks: item.remarks || null
+          };
+        }),
+        procedures: reportProcedures.map((rp: any) => {
+          const procedure = procedureMap.get(rp.procedure_id);
+          return {
+            procedure_id: rp.procedure_id,
+            procedure_name: procedure?.procedure_name || 'Unknown Procedure',
+            category: procedure?.category || null,
+            overall_status: rp.overall_status || 'Pending',
+            overall_remarks: rp.overall_remarks || null,
+            checklists: []
+          };
+        }),
+        complaints_report: null,
+        forms_report: null,
+        all_report_ids: [reportId]
+      };
+
+      res.json(unifiedReport);
+      return;
+    }
+
+    // Separate into complaints and forms reports
+    const complaintsReport = detailedReports.find(r => r.report_type === 'auto_complaints');
+    const formsReport = detailedReports.find(r => r.report_type === 'auto_forms');
+
+    const unifiedReport = {
+      report_id: reportId,
+      user_id: baseReport.user_id,
+      lab_id: baseReport.lab_id,
+      report_date: baseReport.report_date,
+      users: baseReport.users || (detailedReports[0]?.users),
+      laboratories: baseReport.laboratories || (detailedReports[0]?.laboratories),
+      status: detailedReports.some(r => r.status === 'Approved') ? 'Approved' : 'Pending',
+      created_at: detailedReports[0]?.created_at || baseReport.created_at,
+      report_type: 'unified',
+      complaints_report: complaintsReport || null,
+      forms_report: formsReport || null,
+      all_report_ids: detailedReports.map(r => r.report_id)
+    };
+
+    res.json(unifiedReport);
+  } catch (error) {
+    console.error("Error fetching unified daily report:", error);
+    res.status(500).json({ error: "Failed to fetch unified daily report" });
   }
 };

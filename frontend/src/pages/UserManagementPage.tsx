@@ -71,7 +71,6 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
       setUsers(usersData);
       setLaboratories(labsData);
     } catch (err) {
-      console.error("Error fetching data:", err);
       setError("Failed to fetch data");
     } finally {
       setLoading(false);
@@ -237,7 +236,7 @@ const UserManagementPage: React.FC<UserManagementPageProps> = ({ createUserData,
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       User

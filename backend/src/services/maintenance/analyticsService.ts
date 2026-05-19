@@ -44,7 +44,6 @@ export class AnalyticsService {
         }
       }
     } catch (error) {
-      console.error("Failed to get schedules for quarter detection:", error);
     }
     
     // Fallback to calendar-based quarter detection
@@ -65,7 +64,6 @@ export class AnalyticsService {
         return Object.keys(schedules);
       }
     } catch (error) {
-      console.error("Failed to get quarters for history:", error);
     }
     
     // Fallback to standard quarters
@@ -80,7 +78,6 @@ export class AnalyticsService {
       const schedules = await ScheduleService.getLabSchedules(labId, currentFiscalYear);
       return schedules[quarter];
     } catch (error) {
-      console.error("Failed to get quarter dates:", error);
       return null;
     }
   }

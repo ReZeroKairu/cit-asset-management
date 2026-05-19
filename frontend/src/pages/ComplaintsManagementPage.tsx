@@ -83,7 +83,6 @@ const ComplaintsManagementPage = () => {
       setComplaints(data);
     } catch (err) {
       showToast("Failed to fetch complaints", "error");
-      console.error("Error fetching complaints:", err);
     } finally {
       setLoading(false);
     }
@@ -117,7 +116,6 @@ const ComplaintsManagementPage = () => {
       showToast("Complaint status updated successfully", "success");
     } catch (err) {
       showToast("Failed to update complaint status", "error");
-      console.error("Error updating complaint status:", err);
     } finally {
       setIsUpdating(false);
     }
@@ -160,7 +158,6 @@ const ComplaintsManagementPage = () => {
       showToast("Remarks updated successfully", "success");
     } catch (err) {
       showToast("Failed to update remarks", "error");
-      console.error("Error updating remarks:", err);
     } finally {
       setIsUpdating(false);
     }
@@ -407,9 +404,9 @@ const ComplaintsManagementPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="overflow-hidden">
+          <div className="overflow-hidden border rounded-lg">
             <table className="w-full divide-y divide-gray-200 table-fixed">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                     Complaint Info

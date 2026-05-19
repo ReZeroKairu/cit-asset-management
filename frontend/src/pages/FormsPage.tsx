@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAuth, type users_role } from "../context/AuthContext";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { StatusFilter } from "../components/forms/StatusFilter";
@@ -99,7 +99,7 @@ const SubmittedFormsTable = ({
         className="w-full divide-y divide-gray-200"
         style={{ minWidth: "680px" }}
       >
-        <thead className="bg-gray-50">
+        <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             <th
               scope="col"
@@ -277,7 +277,7 @@ const FormsPage = () => {
     try {
       generateFormDocument(form as any);
     } catch (error) {
-      console.error("Error downloading form:", error);
+      // Error downloading form
     }
   }, []);
 

@@ -202,7 +202,7 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
         }
       });
       
-      const results = await Promise.all(updatePromises);
+      await Promise.all(updatePromises);
       
       // Refresh data to show updated status
       await fetchDisposalAssets();
@@ -361,7 +361,7 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
               <p className="text-sm">No assets are currently marked for replacement or disposal.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border rounded-lg">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>

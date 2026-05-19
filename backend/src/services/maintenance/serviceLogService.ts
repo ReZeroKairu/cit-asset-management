@@ -97,12 +97,6 @@ export class ServiceLogService {
       // Process asset actions
       for (const action of asset_actions) {
         if (action.action === "REPLACED") {
-          // Decommission old asset
-          await tx.inventory_assets.update({
-            where: { asset_id: action.asset_id },
-            data: { workstation_id: null },
-          });
-
           // Update old asset status to decommissioned if status exists
           const oldAsset = await tx.inventory_assets.findUnique({
             where: { asset_id: action.asset_id },

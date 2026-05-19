@@ -86,14 +86,12 @@ router.get('/', authenticateToken, requireRole(['Admin']), async (req, res) => {
       
       res.json(result);
     } catch (error) {
-      console.error('❌ Error in enhanced audit route:', error);
       res.status(500).json({ 
         error: 'Failed to fetch audit logs', 
         details: (error as Error).message 
       });
     }
   } catch (error) {
-    console.error('Failed to fetch audit logs:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });

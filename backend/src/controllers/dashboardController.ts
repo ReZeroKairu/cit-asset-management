@@ -520,7 +520,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
           };
         }
       } catch (viewError) {
-        console.log('⚠️ View failed, falling back to Prisma:', (viewError as Error).message);
+        // View failed, falling back to Prisma
         
         // Fallback to Prisma
         const user = await prisma.users.findUnique({

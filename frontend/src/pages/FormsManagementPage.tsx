@@ -114,7 +114,6 @@ export const FormsManagementPage = () => {
         )
       );
     } catch (error) {
-      console.error("Error fetching forms:", error);
     } finally {
       setLoading(false);
     }
@@ -124,7 +123,6 @@ export const FormsManagementPage = () => {
     try {
       await generateFormDocument(form);
     } catch (error) {
-      console.error("Error generating form:", error);
     }
   };
 
@@ -140,7 +138,6 @@ export const FormsManagementPage = () => {
           response = await updateSoftwareInstallationStatus(formId, newStatus);
           break;
         default:
-          console.error("Unsupported form type:", formType);
           return;
       }
 
@@ -148,7 +145,6 @@ export const FormsManagementPage = () => {
         fetchForms(); // Refresh the list
       }
     } catch (error) {
-      console.error("Error updating status:", error);
     }
   };
 

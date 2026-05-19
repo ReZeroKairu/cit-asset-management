@@ -19,7 +19,6 @@ const ComplaintsPage = () => {
         submittedAt: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error submitting complaint:", error);
 
       // Check if it's a rate limit error
       if (

@@ -177,7 +177,6 @@ export const generateFormDocument = async (formData: FormData): Promise<void> =>
     
     await generateTemplateReport(templatePath, templateData, fileName);
   } catch (error) {
-    console.error('Error generating form document:', error);
     throw error;
   }
 };

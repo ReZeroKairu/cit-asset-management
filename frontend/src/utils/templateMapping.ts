@@ -16,7 +16,6 @@ export const mapReportDataToTemplate = (reportData: any) => {
 
     formattedDateTime = `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
   } catch (error) {
-    console.error("Date formatting error:", error);
     formattedDateTime = new Date().toLocaleString(); // Fallback
   }
 
@@ -131,13 +130,29 @@ export const mapReportDataToTemplate = (reportData: any) => {
     workstationRemarks[`ws_${i}_remarks`] = ws?.remarks || "";
   }
   
+  // Handle unified reports - combine detailed remarks from generated_data
+  let remarksForTemplate = reportData.general_remarks || "";
+  if (reportData.report_type === 'unified' && reportData.generated_data) {
+    const complaintsRemarks = reportData.generated_data.complaints_remarks || "";
+    const formsRemarks = reportData.generated_data.forms_remarks || "";
+    if (complaintsRemarks || formsRemarks) {
+      remarksForTemplate = [
+        "=== COMPLAINTS ===",
+        complaintsRemarks,
+        "",
+        "=== SOFTWARE INSTALLATIONS ===",
+        formsRemarks
+      ].filter(Boolean).join('\n');
+    }
+  }
+
   const result = {
     // Basic info
     lab_name: reportData.lab_name,
     current_datetime: formattedDateTime,
     custodian_name: reportData.custodian_name,
     noted_by: reportData.noted_by,
-    general_remarks: reportData.general_remarks || "",
+    general_remarks: remarksForTemplate,
 
     // Procedure checkmarks
     hardware_checks: procedureChecks.hardware_checks ? "☑" : "☐",

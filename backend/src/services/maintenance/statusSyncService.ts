@@ -18,7 +18,6 @@ export const syncInventoryStatusWithMaintenance = async (
     });
 
     if (!statusRecord) {
-      console.error("❌ Status not found:", targetStatusName);
       return;
     }
 
@@ -49,7 +48,6 @@ export const syncInventoryStatusWithMaintenance = async (
     }
 
   } catch (error) {
-    console.error("❌ STATUS SYNC ERROR:", error);
     // Don't throw - don't break the maintenance report creation
   }
 };
@@ -76,7 +74,6 @@ export const syncIndividualAssetStatuses = async (
       });
 
       if (!statusRecord) {
-        console.error("❌ Status not found for asset:", assetAction.asset_id, assetAction.status_after);
         continue;
       }
 
@@ -92,7 +89,6 @@ export const syncIndividualAssetStatuses = async (
     }
 
   } catch (error) {
-    console.error("❌ INDIVIDUAL ASSET SYNC ERROR:", error);
     // Don't throw - don't break maintenance report creation
   }
 };

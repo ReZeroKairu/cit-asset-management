@@ -120,7 +120,6 @@ const MaintenancePage = () => {
             setOpenQuarters([]); // Keep empty when no schedules exist
           }
         } catch (error) {
-          console.error("Failed to load existing schedules:", error);
           setOpenQuarters([]); // Keep empty on error
         } finally {
           setSchedulesLoaded(true); // Mark as loaded regardless of outcome
@@ -170,7 +169,6 @@ const MaintenancePage = () => {
         setSavedSchedules({}); // Clear saved schedules
         alert("All schedules have been reset successfully.");
       } catch (error) {
-        console.error("Failed to reset schedules:", error);
         alert("Failed to reset schedules. Please try again.");
       }
     }
@@ -192,9 +190,9 @@ const MaintenancePage = () => {
       const wsData = await getLabWorkstationsForReport(labId);
       setLabWorkstations(wsData);
 
-      // Load assets for each workstation to calculate actual status
+      // Load assets for each workstation to calculate actual status (parallel for performance)
       const assetsData: Record<number, any[]> = {};
-      for (const ws of wsData) {
+      const assetPromises = wsData.map(async (ws: any) => {
         try {
           const assets = await getWorkstationAssets(ws.workstation_id);
           // Transform assets to have status property
@@ -205,33 +203,34 @@ const MaintenancePage = () => {
               asset.status ||
               "Functional",
           }));
-          assetsData[ws.workstation_id] = transformedAssets;
+          return { workstationId: ws.workstation_id, assets: transformedAssets };
         } catch (error) {
-          console.error(
-            `Failed to load assets for workstation ${ws.workstation_id}:`,
-            error
-          );
-          assetsData[ws.workstation_id] = [];
+          // Failed to load assets for workstation
+          return { workstationId: ws.workstation_id, assets: [] };
         }
-      }
+      });
+
+      const assetResults = await Promise.all(assetPromises);
+      assetResults.forEach(({ workstationId, assets }) => {
+        assetsData[workstationId] = assets;
+      });
       setWorkstationAssets(assetsData);
 
       // Fetch unassigned assets for logged user's lab
       try {
-        const unassignedData = await getInventory({ 
+        const unassignedData = await getInventory({
           lab_id: labId,
           workstation_id: undefined // Get assets with no workstation assignment
         });
         setUnassignedAssets(unassignedData || []);
       } catch (error) {
-        console.error("Failed to load unassigned assets:", error);
         setUnassignedAssets([]);
       }
 
       const reportsData = await getLabPMCReports(labId, selectedQuarter);
       setReports(reportsData);
     } catch (error) {
-      console.error("Failed to load maintenance data", error);
+      // Failed to load maintenance data
     }
   };
 

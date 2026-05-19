@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getLaboratories, updateLaboratory, deleteLaboratory } from "../api/laboratories";
+import { getLaboratories, deleteLaboratory } from "../api/laboratories";
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Plus, Edit, Trash2, Building } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import EmbeddedLaboratoryForm from "../components/EmbeddedLaboratoryForm";
 import EditLaboratoryModal from "../components/EditLaboratoryModal";
 
@@ -149,7 +149,7 @@ const LaboratoriesPage: React.FC<LaboratoriesPageProps> = ({ labFormData, setLab
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Lab Name

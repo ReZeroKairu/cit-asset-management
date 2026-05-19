@@ -36,7 +36,6 @@ export const generateQPMCReport = async (templateData: any) => {
     const fileName = `LDCU-Forms-CIT-030-PreventiveMaintenanceChecklistForm_${templateData.workstation}__${templateData.date.replace(/\//g, "-")}.docx`;
     saveAs(out, fileName);
   } catch (error) {
-    console.error("Error generating report:", error);
     alert(
       "Failed to generate the document. Please check the console for details.",
     );

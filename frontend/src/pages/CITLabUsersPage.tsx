@@ -26,7 +26,6 @@ const CITLabUsersPage = () => {
       
       // Show success message
     } catch (error: any) {
-      console.error('Error submitting form:', error);
       
       // Check if it's a rate limit error by checking the error message directly
       const errorMessage = error.message || '';

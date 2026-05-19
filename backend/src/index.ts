@@ -98,9 +98,9 @@ const publicFormsLimiter = rateLimit({
 
 // Skip rate limiting during development
 if (process.env.NODE_ENV === "development") {
-  // console.log('🚀 Development mode: Rate limiting disabled for public forms');
+  // Rate limiting disabled for public forms in development
 } else {
-  // console.log('🛡️ Production mode: Rate limiting active (10 submissions/hour per IP)');
+  // Rate limiting active in production (10 submissions/hour per IP)
 }
 
 // General rate limiting for all requests
@@ -133,8 +133,6 @@ app.use("/audit", auditRoutes); // handles audit logs (admin only)
 // Simple audit test route - bypass all complexity
 app.get("/audit-test", async (req, res) => {
   try {
-    // console.log('🔍 Direct audit test route hit!');
-
     // Direct database query
     const result = (await prisma.$queryRawUnsafe(`
       SELECT id, user_id, action, description, created_at 
@@ -143,8 +141,6 @@ app.get("/audit-test", async (req, res) => {
       LIMIT 5
     `)) as any[];
 
-    // console.log('📊 Direct query result:', result);
-
     res.json({
       success: true,
       logs: result,
@@ -152,7 +148,6 @@ app.get("/audit-test", async (req, res) => {
       message: "Direct query successful!",
     });
   } catch (error) {
-    console.error("❌ Direct query error:", error);
     res.status(500).json({
       error: "Direct query failed",
       details: (error as Error).message,

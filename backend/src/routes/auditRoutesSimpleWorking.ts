@@ -104,7 +104,6 @@ router.get('/', authenticateToken, requireRole(['Admin', 'Custodian']), async (r
     res.json(result);
     
   } catch (error) {
-    console.error('❌ Error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch audit logs',
       message: (error as Error).message

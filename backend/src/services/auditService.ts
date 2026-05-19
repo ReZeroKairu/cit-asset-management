@@ -45,8 +45,6 @@ export class AuditService {
     try {
       const { page = 1, limit = 50, userId, action, entityType, startDate, endDate, search, actionCategory, userRole, currentUserRole, currentUserId } = filters;
       
-      // console.log('🔍 AuditService.getAuditLogs called with filters:', filters);
-      
       // Build where clause using the view for better performance
       const where: any = {};
       
@@ -141,11 +139,8 @@ export class AuditService {
       const totalResult = Array.isArray(total) && total.length > 0 ? total[0] : { total: 0 };
       const totalCount = typeof totalResult.total === 'bigint' ? Number(totalResult.total) : totalResult.total;
 
-      // console.log('📊 AuditService result:', { logsCount: (logs as any[]).length, total });
-
       return { logs: logs as any[], total: totalCount, page, limit };
     } catch (error) {
-      console.error('❌ AuditService.getAuditLogs error:', error);
       // Return empty result on database error
       return { logs: [], total: 0, page: filters.page || 1, limit: filters.limit || 50 };
     }
@@ -222,7 +217,6 @@ export class AuditService {
 
       return logs;
     } catch (error) {
-      console.error('❌ AuditService.getAuditLogsByUser error:', error);
       return [];
     }
   }
@@ -244,7 +238,6 @@ export class AuditService {
 
       return logs;
     } catch (error) {
-      console.error('❌ AuditService.getSystemAuditLogs error:', error);
       return [];
     }
   }
@@ -266,7 +259,6 @@ export class AuditService {
 
       return logs;
     } catch (error) {
-      console.error('❌ AuditService.getHighPriorityAuditLogs error:', error);
       return [];
     }
   }
@@ -288,7 +280,6 @@ export class AuditService {
 
       return logs;
     } catch (error) {
-      console.error('❌ AuditService.getRecentAuditLogs error:', error);
       return [];
     }
   }
@@ -309,7 +300,6 @@ export class AuditService {
 
       return stats;
     } catch (error) {
-      console.error('❌ AuditService.getAuditStatistics error:', error);
       return [];
     }
   }

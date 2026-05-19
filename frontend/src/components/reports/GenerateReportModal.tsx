@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { X, FileText, ClipboardCheck } from "lucide-react";
+import { X, FileText, ClipboardCheck, Zap } from "lucide-react";
 import { getSoftwareInstallations } from "../../api/forms";
+import type { DailyReport } from "../../api/dailyReports";
 import api from "../../api/axios";
-import { generateTemplateReport } from "../../utils/generateTemplateReport";
-import { mapReportDataToTemplate } from "../../utils/templateMapping";
+import UnifiedReportViewModal from "./UnifiedReportViewModal";
 
 interface GenerateReportModalProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   onReportGenerated,
   userLabId,
 }) => {
-  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | "unified" | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const now = new Date();
     return now.getFullYear() + '-' + 
@@ -49,6 +49,8 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [unifiedReport, setUnifiedReport] = useState<DailyReport | null>(null);
+  const [showUnifiedModal, setShowUnifiedModal] = useState(false);
 
   // Update selectedDate to current date whenever modal opens
   useEffect(() => {
@@ -143,6 +145,26 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
     setError("");
 
     try {
+      if (selectedReportType === "unified") {
+        // Use the new backend endpoint that fetches data server-side
+        try {
+          await api.post('/daily-reports/generate-unified', {
+            report_date: selectedDate,
+            lab_id: userLabId
+          });
+
+          // Report created successfully
+          onClose();
+          onReportGenerated?.(); // Notify parent to refresh data
+          return;
+        } catch (error: any) {
+          console.error('Error generating unified report:', error);
+          setError(error.response?.data?.error || "Failed to generate unified report");
+          setLoading(false);
+          return;
+        }
+      }
+
       let reportData: ReportData = {
         complaints: [],
         softwareInstallations: []
@@ -180,19 +202,6 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
       setError(`Failed to generate report: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getLabTemplate = (labId: number): string => {
-    switch (labId) {
-      case 1:
-        return "/Lab1_DAR_auto.docx"; // CIT-Lab 1 auto template
-      case 2:
-        return "/Lab2_DAR_auto.docx"; // CIT-Lab 2 auto template
-      case 3:
-        return "/CiscoLab_DAR_auto.docx"; // CIT-CISCO Lab auto template
-      default:
-        return "/Lab2_DAR_auto.docx"; // Default auto template
     }
   };
 
@@ -236,7 +245,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
       }, []);
 
       // First, create a database entry for this auto-generated report
-      const reportResponse = await api.post('/daily-reports/auto-generated', {
+      const reportPayload = {
         lab_id: userLabId || 2,
         report_date: date,
         report_type: 'auto_complaints',
@@ -275,81 +284,12 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
           status: "",
           remarks: ws.remarks
         }))
-      });
-
-      const createdReport = reportResponse.data;
-
-      // Create a structured report using the auto template format
-      const reportData = {
-        report_id: createdReport.report_id, // Include the report ID
-        lab_name: "Daily Complaints Report",
-        lab_id: userLabId || 2, // Use user's lab ID
-        custodian_name: "SYSTEM GENERATED",
-        noted_by: "DR. MARCO MARVIN L. RADO",
-        
-        // For complaint DAR reports, automatically check hardware checks and cleanliness & organization
-        procedures: [
-          {
-            procedure_name: "hardware checks",
-            overall_status: "Completed",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "software checks", 
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "network & connectivity checks",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "cleanliness & organization",
-            overall_status: "Completed",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "user management",
-            overall_status: "", 
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "security & safety",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "end of day checks",
-            overall_status: "",
-            overall_remarks: ""
-          }
-        ],
-        
-        // Collect all complaint remarks for general_remarks
-        general_remarks: complaints.slice(0, 40).map((complaint) => {
-          // Format: time from resolved_at or created_at
-          const timeString = complaint.resolved_at || complaint.created_at || '';
-          const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: true 
-          }) : '';
-          
-          const workstationName = complaint.workstations?.workstation_name || complaint.workstation_name || 'Unknown WS';
-          return `• ${formattedTime} - ${workstationName}: ${complaint.issue_description} [Asset: ${complaint.asset_info || 'N/A'}] (${complaint.status}) - Remarks: ${complaint.remarks || 'No remarks'}`;
-        }).join('\n'),
-        
-        // Use the deduplicated workstations
-        workstations: uniqueWorkstations
       };
 
-      // Map to template format using the existing utility
-      const templateData = mapReportDataToTemplate(reportData);
-      const templateFile = getLabTemplate(userLabId || 2); // Use user's lab ID or default to Lab 2
-      const fileName = `Daily_Complaints_Report_${date}_Report${createdReport.report_id}.docx`;
-      
-      await generateTemplateReport(templateFile, templateData, fileName);
+      await api.post('/daily-reports/auto-generated', reportPayload);
+
+      // Report created successfully - no automatic download
+      // Download can be triggered manually from the report list
     } catch (error) {
       console.error('Error generating complaints report:', error);
       throw error;
@@ -373,7 +313,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
       }));
 
       // First, create a database entry for this auto-generated report
-      const reportResponse = await api.post('/daily-reports/auto-generated', {
+      const formsPayload = {
         lab_id: userLabId || 2,
         report_date: date,
         report_type: 'auto_forms',
@@ -410,83 +350,12 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         procedures: [
           { procedure_id: 2, overall_status: reportData.softwareInstallations.length > 0 ? "Completed" : "", overall_remarks: "" } // software checks only
         ]
-      });
-
-      const createdReport = reportResponse.data;
-
-      // Create a structured report using the auto template format
-      const formData = {
-        report_id: createdReport.report_id, // Include the report ID
-        lab_name: "Daily Forms Report",
-        lab_id: userLabId || 2, // Use user's lab ID
-        custodian_name: "SYSTEM GENERATED",
-        noted_by: "DR. MARCO MARVIN L. RADO",
-        general_remarks: allForms.slice(0, 40).map((form) => {
-          // Format time from feedback_date
-          const timeString = form.feedback_date || form.created_at || '';
-          const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: true 
-          }) : '';
-          
-          // Use correct field names from software_installations model
-          const facultyName = form.faculty_name;
-          const softwareName = form.software_list;
-          const installationRemarks = form.installation_remarks;
-          
-          return `• ${formattedTime} - Software: ${softwareName} [Faculty: ${facultyName}] - ${installationRemarks || 'No remarks'}`;
-        }).join('\n'),
-        
-        // For software installations DAR reports, only check software checks
-        procedures: [
-          {
-            procedure_name: "hardware checks",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "software checks", 
-            overall_status: reportData.softwareInstallations.length > 0 ? "Completed" : "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "network & connectivity checks",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "cleanliness & organization",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "user management",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "security & safety",
-            overall_status: "",
-            overall_remarks: ""
-          },
-          {
-            procedure_name: "end of day checks",
-            overall_status: "",
-            overall_remarks: ""
-          }
-        ],
-        
-        // No workstation section for software installations - only lab-based work
-        workstations: []
       };
 
-      // Map to template format using the existing utility
-      const templateData = mapReportDataToTemplate(formData);
-      const templateFile = getLabTemplate(userLabId || 2); // Use user's lab ID or default to Lab 2
-      const fileName = `Daily_Forms_Report_${date}_Report${createdReport.report_id}.docx`;
-      
-      await generateTemplateReport(templateFile, templateData, fileName);
+      await api.post('/daily-reports/auto-generated', formsPayload);
+
+      // Report created successfully - no automatic download
+      // Download can be triggered manually from the report list
     } catch (error) {
       console.error('Error generating forms report:', error);
       throw error;
@@ -561,6 +430,23 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
                   </div>
                 </div>
               </button>
+
+              <button
+                onClick={() => setSelectedReportType("unified")}
+                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                  selectedReportType === "unified"
+                    ? "border-orange-500 bg-orange-50 text-orange-700"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+              >
+                <Zap className="w-5 h-5" />
+                <div className="text-left">
+                  <div className="font-medium">Unified Report</div>
+                  <div className="text-sm text-gray-600">
+                    View combined complaints and forms report
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -597,6 +483,18 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         </div>
         </div>
       </div>
+    )}
+
+    {showUnifiedModal && unifiedReport && (
+      <UnifiedReportViewModal
+        report={unifiedReport}
+        isOpen={showUnifiedModal}
+        onClose={() => {
+          setShowUnifiedModal(false);
+          setUnifiedReport(null);
+          onClose();
+        }}
+      />
     )}
     </>
   );
