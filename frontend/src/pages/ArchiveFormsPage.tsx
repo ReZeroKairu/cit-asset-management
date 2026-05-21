@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { FormDetailsModal } from "../components/forms/FormDetailsModal";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -26,6 +26,10 @@ const ArchiveFormsPage = () => {
   });
   const [selectedForm, setSelectedForm] = useState<FormSubmission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 20,
+  });
 
   useEffect(() => {
     fetchArchivedForms();
@@ -115,6 +119,7 @@ const ArchiveFormsPage = () => {
       }
 
       setForms(filteredForms);
+      setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to page 1 when filters change
     } catch (err) {
       setError("Failed to fetch archived forms");
       console.error("Error fetching archived forms:", err);
@@ -122,6 +127,54 @@ const ArchiveFormsPage = () => {
       setLoading(false);
     }
   };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, currentPage: newPage }));
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    const totalPages = Math.ceil(forms.length / pagination.itemsPerPage);
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (pagination.currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (pagination.currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = pagination.currentPage - 1; i <= pagination.currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  // Get paginated data
+  const paginatedForms = forms.slice(
+    (pagination.currentPage - 1) * pagination.itemsPerPage,
+    pagination.currentPage * pagination.itemsPerPage
+  );
+
+  const totalPages = Math.ceil(forms.length / pagination.itemsPerPage);
 
   const getStatusIcon = () => {
     return null;
@@ -221,7 +274,10 @@ const ArchiveFormsPage = () => {
 
           <div className="flex items-end">
             <button
-              onClick={() => setDateFilter({ start_date: "", end_date: "" })}
+              onClick={() => {
+                setDateFilter({ start_date: "", end_date: "" });
+                setPagination((prev) => ({ ...prev, currentPage: 1 }));
+              }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 cursor-pointer"
             >
               Clear Filters
@@ -243,29 +299,30 @@ const ArchiveFormsPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="overflow-hidden">
-            <table className="w-full divide-y divide-gray-200 table-fixed">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
-                    Form Info
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
-                    User Details
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                    Submitted
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                    Actions
-                  </th>
-                </tr>
+          <>
+            <div className="overflow-hidden">
+              <table className="w-full divide-y divide-gray-200 table-fixed">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                      Form Info
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
+                      User Details
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      Submitted
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                      Actions
+                    </th>
+                  </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {forms.map((form) => (
+                {paginatedForms.map((form) => (
                   <tr
                     key={`${form.type}-${form.id}`}
                     className="hover:bg-blue-50 cursor-pointer transition-colors"
@@ -342,6 +399,65 @@ const ArchiveFormsPage = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden mt-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="text-sm text-gray-700">
+                  Showing{" "}
+                  {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} to{" "}
+                  {Math.min(
+                    pagination.currentPage * pagination.itemsPerPage,
+                    forms.length
+                  )}{" "}
+                  of {forms.length} results
+                </div>
+              </div>
+              <div className="px-6 py-4 flex items-center justify-between">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page as number)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          page === pagination.currentPage
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === totalPages}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
 

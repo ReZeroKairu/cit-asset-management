@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { getComplaints, type Complaint } from "../api/complaints";
 import { useAuth } from "../context/AuthContext";
 import EnhancedComplaintDetailsModal from "../components/complaints/EnhancedComplaintDetailsModal";
@@ -17,6 +17,10 @@ const ArchiveComplaintsPage = () => {
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(
     null
   );
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 20,
+  });
 
   // Check if user is admin
   const isAdmin = user?.role === "Admin";
@@ -89,12 +93,62 @@ const ArchiveComplaintsPage = () => {
     }
 
     setFilteredComplaints(filtered);
+    setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to page 1 when filters change
   }, [complaints, startDate, endDate]);
 
   const clearFilters = () => {
     setStartDate("");
     setEndDate("");
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, currentPage: newPage }));
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    const totalPages = Math.ceil(filteredComplaints.length / pagination.itemsPerPage);
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (pagination.currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (pagination.currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = pagination.currentPage - 1; i <= pagination.currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  // Get paginated data
+  const paginatedComplaints = filteredComplaints.slice(
+    (pagination.currentPage - 1) * pagination.itemsPerPage,
+    pagination.currentPage * pagination.itemsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredComplaints.length / pagination.itemsPerPage);
 
   if (loading) {
     return (
@@ -183,96 +237,156 @@ const ArchiveComplaintsPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="overflow-hidden border rounded-lg">
-            <table className="w-full divide-y divide-gray-200 table-fixed">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
-                    Complaint Info
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                    Submitted
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredComplaints.map((complaint) => (
-                  <tr
-                    key={complaint.complaint_id}
-                    className="hover:bg-blue-50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedComplaint(complaint)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        Complaint #{complaint.complaint_id}
-                      </div>
-                      {complaint.asset_info && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
-                          Asset: {complaint.asset_info}
-                        </div>
-                      )}
-                      {complaint.issue_description && (
-                        <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
-                          {complaint.issue_description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {complaint.faculty_student_name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {complaint.user_type}
-                        {complaint.year_level &&
-                          ` • Year ${complaint.year_level}`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {complaint.laboratories?.lab_name ||
-                          `Lab ${complaint.lab_id}`}
-                      </div>
-                      {complaint.workstations && (
-                        <div className="text-sm text-gray-500">
-                          {complaint.workstations.workstation_name}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                          complaint.status
-                        )}`}
-                      >
-                        {complaint.status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                      {new Date(complaint.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                      {/* No actions needed for archived complaints - rows are clickable */}
-                      <div className="text-xs text-gray-400">
-                        Click row for details
-                      </div>
-                    </td>
+          <>
+            <div className="overflow-hidden border rounded-lg">
+              <table className="w-full divide-y divide-gray-200 table-fixed">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
+                      Complaint Info
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                      Submitted
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedComplaints.map((complaint) => (
+                    <tr
+                      key={complaint.complaint_id}
+                      className="hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedComplaint(complaint)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          Complaint #{complaint.complaint_id}
+                        </div>
+                        {complaint.asset_info && (
+                          <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                            Asset: {complaint.asset_info}
+                          </div>
+                        )}
+                        {complaint.issue_description && (
+                          <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
+                            {complaint.issue_description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {complaint.faculty_student_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {complaint.user_type}
+                          {complaint.year_level &&
+                            ` • Year ${complaint.year_level}`}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {complaint.laboratories?.lab_name ||
+                            `Lab ${complaint.lab_id}`}
+                        </div>
+                        {complaint.workstations && (
+                          <div className="text-sm text-gray-500">
+                            {complaint.workstations.workstation_name}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                            complaint.status
+                          )}`}
+                        >
+                          {complaint.status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                        {new Date(complaint.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                        {/* No actions needed for archived complaints - rows are clickable */}
+                        <div className="text-xs text-gray-400">
+                          Click row for details
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="text-sm text-gray-700">
+                    Showing{" "}
+                    {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} to{" "}
+                    {Math.min(
+                      pagination.currentPage * pagination.itemsPerPage,
+                      filteredComplaints.length
+                    )}{" "}
+                    of {filteredComplaints.length} results
+                  </div>
+                </div>
+                <div className="px-6 py-4 flex items-center justify-between">
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page as number)}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${
+                            page === pagination.currentPage
+                              ? "bg-blue-600 text-white"
+                              : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      )
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === totalPages}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

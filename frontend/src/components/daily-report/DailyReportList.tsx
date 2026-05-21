@@ -4,8 +4,6 @@ import {
   getAllDailyReports,
   getMyDailyReports,
   getDailyReportById,
-  getUnifiedDailyReports,
-  getUnifiedDailyReportById,
 } from "../../api/dailyReports";
 import type { DailyReport } from "../../api/dailyReports";
 import DailyReportFormTab from "./DailyReportFormTab";
@@ -17,9 +15,6 @@ import UnifiedReportViewModal from "../reports/UnifiedReportViewModal";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../ui/button";
 import {
-  Archive,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Download,
   Edit,
@@ -223,15 +218,6 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     // Format as MM/DD/YYYY HH:MM AM/PM
@@ -391,19 +377,21 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                 Create New Report
               </Button>
             )}
-            <Button
-              onClick={() => setShowGenerateReportModal(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              Generate Report
-            </Button>
+            {user?.role !== 'Admin' && (
+              <Button
+                onClick={() => setShowGenerateReportModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Generate Report
+              </Button>
+            )}
             <Button
               onClick={() => setShowDARModal(true)}
               className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
             >
               <FileText className="w-4 h-4" />
-              Generate DAR
+              Download DAR
             </Button>
           </div>
         </div>

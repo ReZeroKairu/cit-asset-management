@@ -5,8 +5,40 @@ import { config } from '../config';
 
 const prisma = new PrismaClient();
 
+// Actions to log (final/completed actions only)
+const LOGGABLE_ACTIONS = [
+  'CREATE',
+  'DELETE',
+  'RESOLVE',
+  'APPROVE',
+  'REJECT',
+  'LOGIN',
+  'LOGOUT',
+  'GENERATE',
+  'ASSIGN',
+  'UNASSIGN'
+];
+
+// Actions to skip (intermediate actions)
+const SKIP_ACTIONS = [
+  'UPDATE',
+  'EDIT',
+  'MODIFY',
+  'STATUS',
+  'DISPOSE',
+  'DISPOSED'
+];
+
 export const auditMiddleware = (action: string, entityType: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Check if this action should be skipped
+    const actionUpper = action.toUpperCase();
+    if (SKIP_ACTIONS.some(skip => actionUpper.includes(skip))) {
+      // Skip logging for intermediate actions
+      next();
+      return;
+    }
+
     // Store original res.json to intercept responses
     const originalJson = res.json;
     let responseData: any;
@@ -83,6 +115,21 @@ export const auditMiddleware = (action: string, entityType: string) => {
       }
     });
 
+    next();
+  };
+};
+
+// Conditional audit middleware for status changes - logs RESOLVE when status is "Resolved"
+export const auditStatusMiddleware = (entityType: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const { status } = req.body;
+    
+    // Only log if status is being changed to "Resolved"
+    if (status === "Resolved") {
+      return auditMiddleware("RESOLVE", entityType)(req, res, next);
+    }
+    
+    // Skip logging for other status changes
     next();
   };
 };

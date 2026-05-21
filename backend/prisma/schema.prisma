@@ -86,9 +86,9 @@ model daily_reports {
   report_date              DateTime                   @db.Date
   general_remarks          String?                    @db.Text
   status                   daily_reports_status?      @default(Pending)
-  report_type              String                     @default("manual") @db.VarChar(20)
-  generated_data           Json?
   created_at               DateTime?                  @default(now()) @db.Timestamp(0)
+  report_type              String?                    @default("manual") @db.VarChar(20)
+  generated_data           Json?
   daily_report_procedures  daily_report_procedures[]
   laboratories             laboratories               @relation(fields: [lab_id], references: [lab_id])
   users                    users                      @relation(fields: [user_id], references: [user_id])
@@ -96,7 +96,7 @@ model daily_reports {
 
   @@index([lab_id], map: "lab_id")
   @@index([user_id], map: "user_id")
-  @@index([report_type])
+  @@index([report_type], map: "idx_daily_reports_report_type")
 }
 
 model departments {
@@ -118,7 +118,6 @@ model device_types {
   device_type_name String  @db.VarChar(50)
   units            units[]
 }
-
 
 model inventory_assets {
   asset_id           Int                  @id @default(autoincrement())
@@ -183,7 +182,6 @@ model office_types {
   type_name   String        @unique(map: "type_name") @db.VarChar(50)
   departments departments[]
 }
-
 
 model pmc_report_procedures {
   id           Int         @id @default(autoincrement())
@@ -263,7 +261,6 @@ model asset_statuses {
   @@map("asset_statuses")
 }
 
-
 model service_log_assets {
   id                   Int              @id @default(autoincrement())
   log_id               Int
@@ -323,13 +320,13 @@ model software_installations {
   laboratory           String                        @db.VarChar(20)
   software_list        String                        @db.Text
   requested_by         String                        @db.VarChar(100)
-  user_type            String?                        @db.VarChar(20)
   installation_remarks String?                       @db.Text
   prepared_by          String?                       @db.VarChar(100)
   feedback_date        DateTime?                     @db.Date
   status               software_installations_status @default(Pending)
   created_at           DateTime                      @default(now()) @db.Timestamp(0)
   ip_address           String?                       @db.VarChar(45)
+  user_type            String?                       @db.VarChar(20)
   users                users?                        @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -368,11 +365,11 @@ model users {
 model audit_logs {
   id          Int      @id @default(autoincrement())
   user_id     Int?
-  lab_id      Int?
   action      String   @db.VarChar(50)
   description String?  @db.Text
   created_at  DateTime @default(now())
   user_agent  String?  @db.Text
+  lab_id      Int?
   users       users?   @relation(fields: [user_id], references: [user_id])
 
   @@index([user_id])
@@ -401,8 +398,6 @@ model workstations {
 model cit_lab_logs {
   log_id               Int      @id @default(autoincrement())
   date                 DateTime @db.Date
-  time_in              String   @db.VarChar(5)  // HH:MM format
-  time_out             String   @db.VarChar(5)  // HH:MM format, now required
   usage_type           String   @db.VarChar(20)
   faculty_student_name String   @db.VarChar(100)
   year_level           String?  @db.VarChar(20)
@@ -412,6 +407,8 @@ model cit_lab_logs {
   monitored_by         String?  @db.VarChar(100)
   user_type            String?  @db.VarChar(20)
   created_at           DateTime @default(now()) @db.Timestamp(0)
+  time_in              String   @db.VarChar(5)
+  time_out             String?  @db.VarChar(5)
   ip_address           String?  @db.VarChar(45)
 
   @@index([created_at])
@@ -443,5 +440,3 @@ enum software_installations_status {
   Denied
   Completed
 }
-
-

@@ -35,7 +35,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
   const [reportData, setReportData] = useState<any>(null);
   const [availableReports, setAvailableReports] = useState<any[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
-  const [generateMode, setGenerateMode] = useState<"single" | "all">("single");
+  const [generateMode, setGenerateMode] = useState<"single" | "all" | "compiled">("single");
   const [dateFilters, setDateFilters] = useState({
     start_date: "",
     end_date: "",
@@ -93,6 +93,13 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
   const getFilteredReports = () => {
     let filtered = availableReports;
 
+    // For compiled mode, require date filters
+    if (generateMode === "compiled") {
+      if (!dateFilters.start_date && !dateFilters.end_date) {
+        return []; // Return empty if no date filters in compiled mode
+      }
+    }
+
     // Apply date filters
     if (dateFilters.start_date || dateFilters.end_date) {
       filtered = filtered.filter((report) => {
@@ -103,6 +110,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         const endDate = dateFilters.end_date
           ? new Date(dateFilters.end_date + "T23:59:59")
           : null;
+
+        console.log("Filtering report:", {
+          reportDate: reportDate.toISOString(),
+          startDate: startDate?.toISOString(),
+          endDate: endDate?.toISOString(),
+          startFilter: dateFilters.start_date,
+          endFilter: dateFilters.end_date
+        });
 
         if (startDate && reportDate < startDate) return false;
         if (endDate && reportDate > endDate) return false;
@@ -118,6 +133,23 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       user?.role !== "Admin"
     ) {
       filtered = filtered.filter((report) => report.created_by === user?.id);
+    }
+
+    // For compiled mode, only keep the latest report per day
+    if (generateMode === "compiled" && filtered.length > 0) {
+      const reportsByDate = new Map<string, any>();
+      
+      filtered.forEach((report) => {
+        const dateKey = new Date(report.report_date || report.created_at).toDateString();
+        const existing = reportsByDate.get(dateKey);
+        
+        // Keep the report with the latest created_at timestamp
+        if (!existing || new Date(report.created_at) > new Date(existing.created_at)) {
+          reportsByDate.set(dateKey, report);
+        }
+      });
+      
+      filtered = Array.from(reportsByDate.values());
     }
 
     return filtered;
@@ -241,6 +273,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
   const handleDownload = async () => {
     if (generateMode === "all") {
       await generateAllReports();
+    } else if (generateMode === "compiled") {
+      await generateCompiledRemarks();
     } else {
       await generateSingleReport();
     }
@@ -367,6 +401,106 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
     }
   };
 
+  const generateCompiledRemarks = async () => {
+    const reportsToCompile = getFilteredReports();
+    if (reportsToCompile.length === 0) {
+      alert("No reports available to compile with current filters.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Format dates for display
+      const formatDateForDisplay = (dateString: string) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      };
+
+      // Format time for display
+      const formatTimeForDisplay = (dateString: string) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        const hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        const formattedHours = String(hours % 12 || 12).padStart(2, "0");
+        return `${formattedHours}:${minutes} ${ampm}`;
+      };
+
+      // Format unified report remarks
+      const formatUnifiedRemarks = (report: any) => {
+        const generatedData = (report as any).generated_data || {};
+        const complaints = generatedData.complaints || [];
+        const softwareInstallations = generatedData.software_installations || [];
+
+        let formattedRemarks = "";
+
+        // Format complaints
+        if (complaints.length > 0) {
+          formattedRemarks += "=== COMPLAINTS ===\n";
+          complaints.forEach((c: any) => {
+            const time = formatTimeForDisplay(c.resolved_at || c.created_at);
+            const assetInfo = c.asset_info ? `[Asset: ${c.asset_info}]` : '';
+            const status = c.status ? `(${c.status})` : '';
+            const remarks = (c.remarks || c.issue_description || '').replace(/[\r\n]+/g, ' ').trim();
+            formattedRemarks += `• ${time} - ${assetInfo} ${status} - Remarks: ${remarks}\n`;
+          });
+          formattedRemarks += "\n";
+        }
+
+        // Format software installations
+        if (softwareInstallations.length > 0) {
+          formattedRemarks += "=== SOFTWARE INSTALLATIONS ===\n";
+          softwareInstallations.forEach((s: any) => {
+            const time = formatTimeForDisplay(s.created_at);
+            const softwareInfo = s.software_list ? `Software: ${s.software_list}` : '';
+            const facultyInfo = s.faculty_name ? `[Faculty: ${s.faculty_name}]` : '';
+            const remarks = (s.installation_remarks || 'no').replace(/[\r\n]+/g, ' ').trim();
+            formattedRemarks += `• ${time} - ${softwareInfo} ${facultyInfo} - ${remarks}\n`;
+          });
+        }
+
+        return formattedRemarks || "No unified report data";
+      };
+
+      // Compile remarks from all filtered reports
+      const compiledData = {
+        lab_name: reportsToCompile[0]?.laboratories?.lab_name || "Unknown Lab",
+        custodian_name: reportsToCompile[0]?.users?.full_name || "Unknown",
+        start_date: formatDateForDisplay(dateFilters.start_date || reportsToCompile[reportsToCompile.length - 1]?.report_date),
+        end_date: formatDateForDisplay(dateFilters.end_date || reportsToCompile[0]?.report_date),
+        remarks: reportsToCompile.map((report) => {
+          // Check if it's a unified report
+          const isUnifiedReport = (report as any).report_type === 'unified' || (report as any).generated_data;
+          
+          return {
+            date: new Date(report.report_date).toLocaleDateString(),
+            remarks: isUnifiedReport 
+              ? formatUnifiedRemarks(report)
+              : (report.general_remarks || "No remarks"),
+          };
+        }),
+      };
+
+      // Generate Word document using the template
+      console.log("Generating compiled remarks with template:", compiledData);
+      await generateTemplateReport(
+        "/Compiled_Remarks_Template.docx",
+        compiledData,
+        `Compiled_Remarks_${compiledData.lab_name}_${new Date(dateFilters.start_date || reportsToCompile[reportsToCompile.length - 1]?.report_date).toISOString().split('T')[0]}_to_${new Date(dateFilters.end_date || reportsToCompile[0]?.report_date).toISOString().split('T')[0]}.docx`
+      );
+
+      alert(`Successfully compiled ${reportsToCompile.length} reports!`);
+    } catch (error) {
+      console.error("Compilation failed:", error);
+      alert("Failed to compile remarks. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       {show && (
@@ -389,7 +523,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
                   disabled={
                     loading ||
                     (generateMode === "single" && !reportData) ||
-                    (generateMode === "all" &&
+                    ((generateMode === "all" || generateMode === "compiled") &&
                       getFilteredReports().length === 0)
                   }
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer"
@@ -397,6 +531,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
                   <FileDown className="w-4 h-4" />
                   {generateMode === "all"
                     ? `Download All (${getFilteredReports().length})`
+                    : generateMode === "compiled"
+                    ? `Download Compiled (${getFilteredReports().length})`
                     : "Download Word Doc"}
                 </button>
                 <button
@@ -436,6 +572,16 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
                       className="mr-2"
                     />
                     All Reports
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="compiled"
+                      checked={generateMode === "compiled"}
+                      onChange={() => setGenerateMode("compiled")}
+                      className="mr-2"
+                    />
+                    Compiled Remarks
                   </label>
                 </div>
               </div>
@@ -533,8 +679,51 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
                   <p className="mt-2 text-gray-500">
                     {generateMode === "all"
                       ? "Generating all reports..."
+                      : generateMode === "compiled"
+                      ? "Compiling remarks..."
                       : "Loading report data..."}
                   </p>
+                </div>
+              ) : generateMode === "compiled" ? (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-900 mb-2">
+                      Compiled Remarks Mode
+                    </h4>
+                    <p className="text-green-700">
+                      Ready to compile remarks from {getFilteredReports().length} daily reports into a single document.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h5 className="font-medium text-gray-900">
+                      Reports to be compiled:
+                    </h5>
+                    {getFilteredReports().map((report) => (
+                      <div
+                        key={report.report_id}
+                        className="flex justify-between items-center border rounded p-3"
+                      >
+                        <div>
+                          <span className="font-medium">
+                            Report #{report.report_id}
+                          </span>
+                          <span className="text-gray-500 ml-2">
+                            {new Date(report.report_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {report.general_remarks ? (
+                            <span className="text-gray-700 truncate max-w-xs">
+                              {report.general_remarks.substring(0, 50)}...
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 italic">No remarks</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : generateMode === "all" ? (
                 <div className="space-y-4">

@@ -4,9 +4,12 @@ import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Trash2, Package, Monitor, Cpu, Monitor as MonitorIcon, Search } from "lucide-react";
 import { getInventory } from "../api/inventory";
+import { getLaboratories } from "../api/laboratories";
 import type { Asset } from "../api/inventory";
+import { useAuth } from "../context/AuthContext";
 
 const ArchiveDisposalsPage = () => {
+  const { user } = useAuth();
   const [disposedAssets, setDisposedAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,19 +20,22 @@ const ArchiveDisposalsPage = () => {
   const [dateFilterType, setDateFilterType] = useState<"all" | "date_purchased" | "date_disposed">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [viewMode, setViewMode] = useState<"workstation" | "other">("workstation");
+  const [selectedLab, setSelectedLab] = useState<number | null>(null);
+  const [laboratories, setLaboratories] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch all assets and filter by "Disposed" status
         const allAssetsResponse = await getInventory();
-        
-        // Filter assets by status name "Disposed"
+
+        // Filter assets by status name "For Disposal" or "Disposed"
         const disposedAssets = allAssetsResponse.filter(
-          (asset: Asset) => asset.asset_details?.asset_statuses?.status_name === "Disposed"
+          (asset: Asset) =>
+            asset.asset_details?.asset_statuses?.status_name === "For Disposal" ||
+            asset.asset_details?.asset_statuses?.status_name === "Disposed"
         );
-        
+
         setDisposedAssets(disposedAssets);
         setLoading(false);
       } catch (err: any) {
@@ -41,6 +47,21 @@ const ArchiveDisposalsPage = () => {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchLaboratories = async () => {
+      try {
+        const labs = await getLaboratories();
+        setLaboratories(labs);
+      } catch (err) {
+        console.error("Error fetching laboratories:", err);
+      }
+    };
+
+    if (user?.role === "Admin") {
+      fetchLaboratories();
+    }
+  }, [user]);
 
   const getUnitIcon = (unitName?: string) => {
     const name = (unitName || "").toLowerCase();
@@ -139,11 +160,16 @@ const ArchiveDisposalsPage = () => {
     };
   }, [selectedWorkstation]);
 
-  // Group assets by workstation
-  const assetsByWorkstation = disposedAssets.reduce((acc, asset) => {
-    const workstationId = asset.workstation_id ?? -1; // Use -1 for null, not 0
+  // Filter assets by laboratory (for admin)
+  const filteredByLab = selectedLab
+    ? disposedAssets.filter((asset) => asset.lab_id === selectedLab)
+    : disposedAssets;
+
+  // Group filtered assets by workstation
+  const filteredAssetsByWorkstation = filteredByLab.reduce((acc, asset) => {
+    const workstationId = asset.workstation_id ?? -1;
     const workstationName = asset.workstations?.workstation_name || "Unassigned";
-    
+
     if (!acc[workstationId]) {
       acc[workstationId] = {
         workstationId,
@@ -151,27 +177,10 @@ const ArchiveDisposalsPage = () => {
         assets: []
       };
     }
-    
+
     acc[workstationId].assets.push(asset);
     return acc;
   }, {} as Record<number, { workstationId: number; workstationName: string; assets: Asset[] }>);
-
-  // Get assets based on view mode
-  const getAssetsByViewMode = () => {
-    if (viewMode === "workstation") {
-      // Return all assets (grouped by workstation)
-      return disposedAssets;
-    } else {
-      // Return only assets not assigned to workstations
-      return disposedAssets.filter(asset => !asset.workstation_id);
-    }
-  };
-
-  // Filter assets for current view mode
-  const getFilteredAssets = () => {
-    const assets = getAssetsByViewMode();
-    return filterAssets(assets);
-  };
 
   if (loading) {
     return (
@@ -197,14 +206,37 @@ const ArchiveDisposalsPage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Asset Disposals</h1>
-        <p className="text-gray-600">Archive of all disposed assets (status changed to "Disposed")</p>
+        <p className="text-gray-600">
+          Archive of all disposed assets (status changed to "Disposed") - 
+          <span className="font-semibold text-blue-600"> {filteredByLab.length} total disposed assets</span>
+          {selectedLab && ` in ${laboratories.find(l => l.lab_id === selectedLab)?.lab_name || 'selected lab'}`}
+        </p>
       </div>
 
       
       {/* Filters Section */}
       <div className="bg-white shadow-lg rounded-lg p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {user?.role === "Admin" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Laboratory
+              </label>
+              <select
+                value={selectedLab || ""}
+                onChange={(e) => setSelectedLab(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Laboratories</option>
+                {laboratories.map((lab) => (
+                  <option key={lab.lab_id} value={lab.lab_id}>
+                    {lab.lab_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Search
@@ -223,7 +255,7 @@ const ArchiveDisposalsPage = () => {
               />
             </div>
           </div>
-                  </div>
+        </div>
       </div>
 
       {/* Disposed Assets Table */}
@@ -233,8 +265,8 @@ const ArchiveDisposalsPage = () => {
         </h2>
         {
           // Workstation Assets View
-          Object.values(assetsByWorkstation).filter((workstation) => 
-            searchTerm === "" || 
+          Object.values(filteredAssetsByWorkstation).filter((workstation) =>
+            searchTerm === "" ||
             workstation.workstationName.toLowerCase().includes(searchTerm.toLowerCase())
           ).length === 0 ? (
             <Card>
@@ -268,9 +300,9 @@ const ArchiveDisposalsPage = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.values(assetsByWorkstation)
-                      .filter((workstation) => 
-                        searchTerm === "" || 
+                    {Object.values(filteredAssetsByWorkstation)
+                      .filter((workstation) =>
+                        searchTerm === "" ||
                         workstation.workstationName.toLowerCase().includes(searchTerm.toLowerCase())
                       )
                       .map((workstation) => (

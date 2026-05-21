@@ -4,7 +4,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Button } from "../components/ui/button";
-import { Search, Users, RefreshCw } from "lucide-react";
+import { Search, Users, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { getCITLabUsersLogs } from "../api/forms";
 import { getApiBaseUrl } from "../api/publicForms";
 import { useAuth } from "../context/AuthContext";
@@ -88,6 +88,10 @@ const ArchiveCITLabUsersPage = () => {
   const hasFetched = useRef(false);
   const lastRequestTime = useRef(0);
   const requestTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 20,
+  });
 
   const { user, refreshUser } = useAuth();
 
@@ -109,12 +113,9 @@ const ArchiveCITLabUsersPage = () => {
     } catch (error) {
       // Fallback to common lab names
       const fallbackLabs = [
-        "E-Forum",
-        "Hardware Lab", 
-        "Software Lab",
-        "Network Lab",
-        "Computer Laboratory 1",
-        "Computer Laboratory 2"
+        "Cisco-Lab 3",
+        "Lab 1",
+        "Lab 2"
       ];
       setUniqueLabs(fallbackLabs);
     }
@@ -233,6 +234,7 @@ const ArchiveCITLabUsersPage = () => {
       }
 
       setFilteredLogs(filtered);
+      setPagination((prev) => ({ ...prev, currentPage: 1 })); // Reset to page 1 when filters change
     }, 0); // Defer to next tick
   }, [logs, filters, user]);
 
@@ -251,7 +253,56 @@ const ArchiveCITLabUsersPage = () => {
       startDate: "",
       endDate: ""
     });
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
   };
+
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, currentPage: newPage }));
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    const totalPages = Math.ceil(filteredLogs.length / pagination.itemsPerPage);
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (pagination.currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (pagination.currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = pagination.currentPage - 1; i <= pagination.currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  // Get paginated data
+  const paginatedLogs = filteredLogs.slice(
+    (pagination.currentPage - 1) * pagination.itemsPerPage,
+    pagination.currentPage * pagination.itemsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredLogs.length / pagination.itemsPerPage);
 
   if (loading) {
     return (
@@ -436,15 +487,73 @@ const ArchiveCITLabUsersPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLogs.map((log) => (
-                    <LogTableRow 
-                      key={log.log_id} 
-                      log={log} 
+                  {paginatedLogs.map((log) => (
+                    <LogTableRow
+                      key={log.log_id}
+                      log={log}
                       onClick={setSelectedLog}
                     />
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden mt-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="text-sm text-gray-700">
+                  Showing{" "}
+                    {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} to{" "}
+                    {Math.min(
+                      pagination.currentPage * pagination.itemsPerPage,
+                      filteredLogs.length
+                    )}{" "}
+                    of {filteredLogs.length} results
+                </div>
+              </div>
+              <div className="px-6 py-4 flex items-center justify-between">
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page as number)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          page === pagination.currentPage
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === totalPages}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
             </div>
           )}
         </CardContent>

@@ -382,7 +382,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2 rounded-md font-medium shadow-sm transition-colors cursor-pointer"
             >
               <FileText className="w-4 h-4" />
-              Generate DAR
+              Download DAR
             </button>
           </div>
         </div>

@@ -19,8 +19,10 @@ import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import { Button } from "../ui/button";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
 import { mapReportDataToTemplate } from "../../utils/templateMapping";
+import { useAuth } from "../../context/AuthContext";
 
 const ArchivedReportsList: React.FC = () => {
+  const { user } = useAuth();
   const [archivedData, setArchivedData] =
     useState<ArchivedReportsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,13 +245,15 @@ const ArchivedReportsList: React.FC = () => {
               <Archive className="w-4 h-4" />
               <span>{paginationInfo?.totalCount || 0} archived reports</span>
             </div>
-            <Button
-              onClick={() => setShowDARModal(true)}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              Generate Report
-            </Button>
+            {user?.role !== 'Admin' && (
+              <Button
+                onClick={() => setShowDARModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Generate Report
+              </Button>
+            )}
           </div>
         </div>
       </div>

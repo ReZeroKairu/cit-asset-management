@@ -19,6 +19,7 @@ import UploadAssetModal from "../components/inventory/UploadAssetModal";
 import WorkstationTable from "../components/inventory/WorkstationTable";
 import UnassignedAssetTable from "../components/inventory/UnassignedAssetTable";
 import ForDisposalToggle from "../components/inventory/ForDisposalToggle";
+import SearchAllAssetsTable from "../components/inventory/SearchAllAssetsTable";
 
 interface Asset {
   asset_id: number;
@@ -88,6 +89,7 @@ const InventoryPage = () => {
   const [showEditWSModal, setShowEditWSModal] = useState(false);
   const [showUnassignedAssets, setShowUnassignedAssets] = useState(false);
   const [showForDisposalAssets, setShowForDisposalAssets] = useState(false);
+  const [showSearchAssets, setShowSearchAssets] = useState(false);
   const [disposalAssetsCount, setDisposalAssetsCount] = useState(0);
   const [showWorkstationReport, setShowWorkstationReport] = useState(false);
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
@@ -464,7 +466,7 @@ const InventoryPage = () => {
   useEffect(() => {
     setWorkstationSearch("");
     setAssetSearch("");
-  }, [showUnassignedAssets, showForDisposalAssets]);
+  }, [showUnassignedAssets, showForDisposalAssets, showSearchAssets]);
 
   const getStatusColor = (statusName?: string) => {
     switch (statusName) {
@@ -549,9 +551,10 @@ const InventoryPage = () => {
                   onClick={() => {
                     setShowUnassignedAssets(false);
                     setShowForDisposalAssets(false);
+                    setShowSearchAssets(false);
                   }}
                   className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                    !showUnassignedAssets && !showForDisposalAssets
+                    !showUnassignedAssets && !showForDisposalAssets && !showSearchAssets
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -562,9 +565,10 @@ const InventoryPage = () => {
                   onClick={() => {
                     setShowUnassignedAssets(true);
                     setShowForDisposalAssets(false);
+                    setShowSearchAssets(false);
                   }}
                   className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                    showUnassignedAssets && !showForDisposalAssets
+                    showUnassignedAssets && !showForDisposalAssets && !showSearchAssets
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -575,14 +579,29 @@ const InventoryPage = () => {
                   onClick={() => {
                     setShowUnassignedAssets(false);
                     setShowForDisposalAssets(true);
+                    setShowSearchAssets(false);
                   }}
                   className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                    showForDisposalAssets
+                    showForDisposalAssets && !showSearchAssets
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   🗑️ For Disposal ({disposalAssetsCount})
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUnassignedAssets(false);
+                    setShowForDisposalAssets(false);
+                    setShowSearchAssets(true);
+                  }}
+                  className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                    showSearchAssets
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  🔍 Search All Assets ({assets.length})
                 </button>
               </>
             </div>
@@ -597,9 +616,10 @@ const InventoryPage = () => {
                 onClick={() => {
                   setShowUnassignedAssets(false);
                   setShowForDisposalAssets(false);
+                  setShowSearchAssets(false);
                 }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                  !showUnassignedAssets && !showForDisposalAssets
+                  !showUnassignedAssets && !showForDisposalAssets && !showSearchAssets
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
@@ -610,9 +630,10 @@ const InventoryPage = () => {
                 onClick={() => {
                   setShowUnassignedAssets(true);
                   setShowForDisposalAssets(false);
+                  setShowSearchAssets(false);
                 }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                  showUnassignedAssets && !showForDisposalAssets
+                  showUnassignedAssets && !showForDisposalAssets && !showSearchAssets
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
@@ -623,14 +644,29 @@ const InventoryPage = () => {
                 onClick={() => {
                   setShowUnassignedAssets(false);
                   setShowForDisposalAssets(true);
+                  setShowSearchAssets(false);
                 }}
                 className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
-                  showForDisposalAssets
+                  showForDisposalAssets && !showSearchAssets
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 🗑️ For Disposal ({disposalAssetsCount})
+              </button>
+              <button
+                onClick={() => {
+                  setShowUnassignedAssets(false);
+                  setShowForDisposalAssets(false);
+                  setShowSearchAssets(true);
+                }}
+                className={`px-4 py-2 rounded-md font-medium transition-colors cursor-pointer ${
+                  showSearchAssets
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                🔍 Search All Assets ({assets.length})
               </button>
             </div>
           </div>
@@ -639,7 +675,7 @@ const InventoryPage = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-4">
             {/* Workstation Search - Moved to first position */}
-            {!showUnassignedAssets && !showForDisposalAssets && (
+            {!showUnassignedAssets && !showForDisposalAssets && !showSearchAssets && (
               <div className="flex items-center space-x-2">
                 <label
                   htmlFor="workstation-search"
@@ -672,8 +708,8 @@ const InventoryPage = () => {
               </div>
             )}
 
-            {/* Asset Search - Only show when viewing unassigned assets */}
-            {(showUnassignedAssets || showForDisposalAssets) && (
+            {/* Asset Search - Only show when viewing unassigned assets or search assets */}
+            {(showUnassignedAssets || showForDisposalAssets || showSearchAssets) && (
               <div className="flex items-center space-x-2">
                 <label
                   htmlFor="asset-search"
@@ -704,7 +740,7 @@ const InventoryPage = () => {
             )}
 
             {/* Action Buttons - Moved beside search */}
-            {!showUnassignedAssets && !showForDisposalAssets && (
+            {!showUnassignedAssets && !showForDisposalAssets && !showSearchAssets && (
               <button
                 className="h-10 px-4 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
                 onClick={() => setShowWSModal(true)}
@@ -712,7 +748,7 @@ const InventoryPage = () => {
                 <Plus className="w-4 h-4 mr-1.5" /> Add Workstation
               </button>
             )}
-            {(user?.role === "Admin" || user?.role === "Custodian") && (
+            {(user?.role === "Admin" || user?.role === "Custodian") && !showSearchAssets && (
               <>
                 <button
                   className="h-10 px-4 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center font-medium shadow-sm transition-colors cursor-pointer"
@@ -757,7 +793,7 @@ const InventoryPage = () => {
 
       {/* Main Content Rendered via Components */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {!showUnassignedAssets && !showForDisposalAssets ? (
+        {!showUnassignedAssets && !showForDisposalAssets && !showSearchAssets ? (
           <>
             <WorkstationTable
               workstations={paginatedWorkstations}
@@ -797,6 +833,15 @@ const InventoryPage = () => {
               </div>
             )}
           </>
+        ) : showSearchAssets ? (
+          <SearchAllAssetsTable
+            assets={assets}
+            assetSearch={assetSearch}
+            setAssetSearch={setAssetSearch}
+            selectedLabId={selectedLabId}
+            onEdit={handleEdit}
+            getStatusColor={getStatusColor}
+          />
         ) : showForDisposalAssets ? (
           <ForDisposalToggle onDisposalSuccess={fetchInventory} />
         ) : (

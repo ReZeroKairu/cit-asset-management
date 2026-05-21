@@ -403,22 +403,19 @@ export default function ForDisposalToggle({ onDisposalSuccess }: ForDisposalTogg
                         onClick={() => handleRowClick(workstationName, assets)}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div 
-                            onClick={(e) => {
-                              e.preventDefault();
+                          <input
+                            type="checkbox"
+                            checked={selectedWorkstations.includes(workstationName)}
+                            onChange={(e) => {
                               e.stopPropagation();
-                              e.nativeEvent.stopImmediatePropagation();
-                              handleWorkstationCheckboxChange(workstationName, !selectedWorkstations.includes(workstationName));
+                              e.preventDefault();
+                              handleWorkstationCheckboxChange(workstationName, e.target.checked);
                             }}
-                            className="inline-block"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedWorkstations.includes(workstationName)}
-                              onChange={() => {}}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                            />
-                          </div>
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className="font-semibold text-blue-600 group-hover:text-blue-800 transition-colors">

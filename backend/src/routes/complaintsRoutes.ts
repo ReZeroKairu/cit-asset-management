@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { generateComplaintNumber } from "../utils/complaintUtils";
 import { authenticateToken } from "../middleware/auth";
 import { validate, complaintSchema } from "../middleware/validation";
-import { auditMiddleware } from "../middleware/audit";
+import { auditMiddleware, auditStatusMiddleware } from "../middleware/audit";
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -1059,7 +1059,7 @@ router.get("/", authenticateToken, async (req, res) => {
 router.put(
   "/:complaintId/status",
   authenticateToken,
-  auditMiddleware("UPDATE", "complaint status"),
+  auditStatusMiddleware("complaint"),
   async (req, res) => {
     try {
       const { complaintId } = req.params;

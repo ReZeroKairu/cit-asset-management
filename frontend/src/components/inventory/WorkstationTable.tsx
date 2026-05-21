@@ -204,6 +204,7 @@ const WorkstationTable: React.FC<Props> = ({
                     checked={selectedWorkstations.has(workstation.workstation_id)}
                     onChange={(e) => {
                       e.stopPropagation(); // Prevent row click
+                      e.preventDefault(); // Prevent default behavior
                       const newSelected = new Set(selectedWorkstations);
                       if (e.target.checked) {
                         newSelected.add(workstation.workstation_id);
@@ -212,7 +213,10 @@ const WorkstationTable: React.FC<Props> = ({
                       }
                       setSelectedWorkstations(newSelected);
                     }}
-                    className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent row click
+                    }}
+                    className="border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
