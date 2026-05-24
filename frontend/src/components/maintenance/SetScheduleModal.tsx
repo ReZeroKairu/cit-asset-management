@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Calendar, Clock, ChevronDown } from "lucide-react";
 // ✅ Combined imports into a single, safe relative path
 import {
@@ -7,7 +7,7 @@ import {
   getWeeksInDateRange,
   formatWeekRange,
 } from "../../utils/quarterLogic";
-import { upsertSchedules } from "../../api/schedule";
+import { upsertSchedules, type ScheduleData } from "../../api/schedule";
 
 interface Props {
   labId: number | null;
@@ -117,6 +117,50 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     "3rd": { start: "", end: "", servicingWeeks: [] },
     "4th": { start: "", end: "", servicingWeeks: [] },
   });
+
+  // Refs for dropdown containers
+  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown) {
+        const dropdownElement = dropdownRefs.current[openDropdown];
+        if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
+          setOpenDropdown(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openDropdown]);
+
+  // Handle ESC key and click outside to close modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   const handleDateChange = (
     quarter: string,
@@ -274,7 +318,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
     }
 
     try {
-      const response = await upsertSchedules(labId, fiscalYear, schedules);
+      const response = await upsertSchedules(labId, fiscalYear, schedules as ScheduleData);
 
       alert(
         `Successfully scheduled ${
@@ -293,7 +337,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div ref={modalRef} className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex justify-between items-center p-4 border-b bg-gray-50">
           <div>
             <h3 className="text-lg font-bold text-gray-900 flex items-center">
@@ -462,7 +506,7 @@ const SetScheduleModal: React.FC<Props> = ({ labId, onClose, onSuccess }) => {
                           {availableWeeks.length > 0 ? (
                             <div className="space-y-3">
                               {/* Custom Dropdown */}
-                              <div className="relative">
+                              <div className="relative" ref={(el) => { dropdownRefs.current[quarterId] = el; }}>
                                 <button
                                   type="button"
                                   onClick={() =>

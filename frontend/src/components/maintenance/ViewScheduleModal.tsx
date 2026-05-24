@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Calendar, Clock, Plus } from "lucide-react";
 import {
   fiscalQuarterMonths,
@@ -31,6 +31,7 @@ const ViewScheduleModal: React.FC<Props> = ({
   const [fiscalYear, setFiscalYear] = useState(propFiscalYear || "2025-2026");
   const [schedules, setSchedules] = useState<Record<string, QuarterSchedule>>({});
   const [loading, setLoading] = useState(true);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Load existing schedules when modal opens
   useEffect(() => {
@@ -38,6 +39,29 @@ const ViewScheduleModal: React.FC<Props> = ({
       loadSchedules();
     }
   }, [labId, fiscalYear]);
+
+  // Handle ESC key and click outside to close modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   const loadSchedules = async () => {
     setLoading(true);
@@ -77,7 +101,7 @@ const ViewScheduleModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div ref={modalRef} className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex justify-between items-center p-4 border-b bg-gray-50">
           <div>
             <h3 className="text-lg font-bold text-gray-900 flex items-center">

@@ -63,6 +63,7 @@ const MaintenancePage = () => {
   const [showScheduleDropdown, setShowScheduleDropdown] = useState(false);
   const [savedSchedules, setSavedSchedules] = useState<Record<string, any>>({});
   const [currentFiscalYear, setCurrentFiscalYear] = useState("2025-2026");
+  const [currentActiveQuarter, setCurrentActiveQuarter] = useState<string | null>(null);
 
   // UI-only state for toggles
   const [activeTab, setActiveTab] = useState<"all" | "pending">("all");
@@ -85,6 +86,36 @@ const MaintenancePage = () => {
     { id: "4th", num: "Q4", label: "4th Quarter" },
   ];
 
+  // Helper function to check if today falls within a selected servicing week
+  const isCurrentServicingWeek = (quarterData: any): boolean => {
+    if (!quarterData || !quarterData.servicingWeeks || quarterData.servicingWeeks.length === 0) {
+      return false;
+    }
+
+    const today = new Date();
+    today.setHours(12, 0, 0, 0); // Set to noon for accurate comparison
+
+    for (const week of quarterData.servicingWeeks) {
+      // Calculate the actual week dates
+      const start = new Date(quarterData.start);
+      const dayOfWeek = start.getDay();
+      const weekStart = new Date(start);
+      weekStart.setDate(weekStart.getDate() - dayOfWeek + (week - 1) * 7);
+      weekStart.setHours(0, 0, 0, 0); // Start of the day
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999); // End of the day
+
+      // Check if today falls within this week
+      if (today >= weekStart && today <= weekEnd) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   // Fetch actual schedules and auto-select current quarter
   useEffect(() => {
     const loadSchedules = async () => {
@@ -100,28 +131,29 @@ const MaintenancePage = () => {
 
             // 2. Figure out which quarter we are currently in based on today's date!
             const today = new Date();
-            let activeQuarter = scheduledQuarters[0]; // Default to the first available if none match
+            let activeQuarter = null; // Default to null if no current servicing week
 
             for (const [quarter, dates] of Object.entries(schedules)) {
-              // Convert the saved string dates to actual Date objects
-              const startDate = new Date((dates as any).start);
-              const endDate = new Date((dates as any).end);
-
-              // If today falls between the start and end date, this is our active quarter
-              if (today >= startDate && today <= endDate) {
+              // Check if today falls within this quarter's selected servicing weeks
+              if (isCurrentServicingWeek(dates)) {
                 activeQuarter = quarter;
                 break;
               }
             }
 
             // 3. Set the UI to the correct quarter
-            setSelectedQuarter(activeQuarter);
+            if (activeQuarter) {
+              setSelectedQuarter(activeQuarter);
+            }
+            setCurrentActiveQuarter(activeQuarter);
           } else {
             setOpenQuarters([]); // Keep empty when no schedules exist
+            setCurrentActiveQuarter(null);
           }
         } catch (error) {
           console.error("Failed to load existing schedules:", error);
           setOpenQuarters([]); // Keep empty on error
+          setCurrentActiveQuarter(null);
         } finally {
           setSchedulesLoaded(true); // Mark as loaded regardless of outcome
         }
@@ -142,6 +174,19 @@ const MaintenancePage = () => {
     });
     if (schedules) {
       setSavedSchedules(schedules);
+
+      // Recalculate current active quarter based on current servicing week
+      let activeQuarter = null;
+      for (const [quarter, dates] of Object.entries(schedules)) {
+        if (isCurrentServicingWeek(dates)) {
+          activeQuarter = quarter;
+          break;
+        }
+      }
+      if (activeQuarter) {
+        setSelectedQuarter(activeQuarter);
+      }
+      setCurrentActiveQuarter(activeQuarter);
     }
     if (fiscalYear) {
       setCurrentFiscalYear(fiscalYear);
@@ -168,6 +213,7 @@ const MaintenancePage = () => {
         setOpenQuarters([]);
         setSelectedQuarter("1st"); // Reset to default quarter
         setSavedSchedules({}); // Clear saved schedules
+        setCurrentActiveQuarter(null);
         alert("All schedules have been reset successfully.");
       } catch (error) {
         console.error("Failed to reset schedules:", error);
@@ -424,6 +470,16 @@ const MaintenancePage = () => {
                     Set Schedule
                   </button>
                 </div>
+              ) : schedulesLoaded && !currentActiveQuarter ? (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 flex flex-col items-center justify-center">
+                  <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    No current servicing week
+                  </h3>
+                  <p className="text-gray-500 mb-6 max-w-md text-center">
+                    There are no servicing weeks scheduled for this week. Please wait until a servicing week begins to service workstations.
+                  </p>
+                </div>
               ) : (
                 <>
                   {/* Quarter Tabs matching the attached design */}
@@ -431,23 +487,24 @@ const MaintenancePage = () => {
                     {quartersList.map((q) => {
                       const isActive = selectedQuarter === q.id;
                       const isOpen = openQuarters.includes(q.id);
+                      const isCurrentWeek = currentActiveQuarter === q.id;
 
                       return (
                         <button
                           key={q.id}
                           onClick={() => {
-                            if (isOpen) setSelectedQuarter(q.id);
+                            if (isCurrentWeek) setSelectedQuarter(q.id);
                           }}
-                          disabled={!isOpen}
+                          disabled={!isCurrentWeek}
                           className={`relative flex flex-col items-start justify-center w-36 transition-all ${
-                            !isOpen
+                            !isCurrentWeek
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed rounded-xl px-5 py-3 mb-2 border border-gray-200"
                               : isActive
                                 ? "bg-white text-blue-600 rounded-t-2xl z-10 border-t border-x border-gray-100 px-6 py-4 -mb-px shadow-[0_-4px_10px_rgba(0,0,0,0.02)]"
                                 : "bg-blue-500 text-white hover:bg-blue-600 rounded-xl px-5 py-3 mb-2 shadow-sm"
                           }`}
                         >
-                          {isActive && isOpen && (
+                          {isActive && isCurrentWeek && (
                             <div className="absolute left-0 top-4 bottom-4 w-1 bg-blue-600 rounded-r-md"></div>
                           )}
 
@@ -462,7 +519,7 @@ const MaintenancePage = () => {
                               </span>
                               <span
                                 className={`text-xs font-medium tracking-wide block text-left ${
-                                  !isOpen
+                                  !isCurrentWeek
                                     ? "text-gray-400"
                                     : isActive
                                       ? "text-gray-500"
@@ -473,7 +530,7 @@ const MaintenancePage = () => {
                               </span>
                             </div>
 
-                            {!isOpen && (
+                            {!isCurrentWeek && (
                               <Lock className="w-4 h-4 text-gray-400 opacity-70" />
                             )}
                           </div>
