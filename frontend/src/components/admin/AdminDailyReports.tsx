@@ -337,7 +337,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           setIsUnifiedViewModalOpen(false);
           setSelectedReport(null);
         }}
-        onReportUpdated={loadReports}
       />
     );
   }
