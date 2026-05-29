@@ -10,6 +10,7 @@ import {
   upsertSchedules,
   deleteLabSchedules,
   getWorkstationPMCReportsBatch,
+  getMaintenanceServicesByDate,
 } from "../controllers/maintenanceController";
 import { authenticateToken } from "../middleware/auth";
 import { auditMiddleware } from "../middleware/audit";
@@ -48,6 +49,10 @@ router.post("/pmc/repair", createRepairLog);
 // 6. Get preventive maintenance analytics for dashboard
 // GET /api/maintenance/analytics
 router.get("/analytics", getMaintenanceAnalytics);
+
+// 7. Get maintenance services by date (for reports)
+// GET /api/maintenance/services-by-date?date=2025-01-15&lab_id=1
+router.get("/services-by-date", getMaintenanceServicesByDate);
 
 // ✅ SCHEDULE MANAGEMENT ROUTES
 

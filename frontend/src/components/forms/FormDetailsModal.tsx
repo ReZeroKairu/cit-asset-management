@@ -77,6 +77,7 @@ const toReactNode = (value: unknown): ReactNode => {
   installation_remarks?: string;
   printing_pages?: string;
   feedback_date?: string;
+  completed_at?: string; // This is the actual completion timestamp
 }
 
 const [editFormData, setEditFormData] = useState<EditFormData>({
@@ -85,11 +86,38 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
   remarks: "",
   installation_remarks: "",
   printing_pages: "",
-  feedback_date: ""
+  feedback_date: "",
+  completed_at: "", // Keep for display, but not for editing
 });
   const [isInitialized, setIsInitialized] = useState(false);
 
   
+  const formatDateForInput = (dateString: string | Date | undefined): string => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return ""; // Invalid date
+    return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD for date input
+  };
+
+  const formatDateTimeForInput = (dateString: string | Date | undefined): string => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const formatDateTimeForDisplay = (dateString: string | Date | undefined): string => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleString();
+  };
   // Initialize edit form data when entering edit mode
   React.useEffect(() => {
     if (editMode && form && !isInitialized) {
@@ -99,23 +127,8 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
         remarks: (form.details.remarks && typeof form.details.remarks === 'string') ? form.details.remarks : "",
         installation_remarks: (form.details.installation_remarks && typeof form.details.installation_remarks === 'string') ? form.details.installation_remarks : "",
         printing_pages: (form.details.printing_pages && typeof form.details.printing_pages === 'string') ? form.details.printing_pages : "",
-        feedback_date: (() => {
-          const feedbackDate = form.details.feedback_date;
-          if (!feedbackDate) return "";
-
-          if (typeof feedbackDate === "string") {
-            if (feedbackDate.includes("T")) {
-              const date = new Date(feedbackDate);
-              return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD for date input
-            } else {
-              return feedbackDate; // Return as-is if already in correct format
-            }
-          } else if (feedbackDate instanceof Date) {
-            return feedbackDate.toISOString().split("T")[0]; // Format as YYYY-MM-DD for date input
-          }
-
-          return "";
-        })(),
+        feedback_date: formatDateForInput(form.details.feedback_date || (form as any).feedback_date), // Keep editable
+        completed_at: formatDateTimeForInput(form.completed_at || (form.details?.completed_at as string) || (form as any).completed_at), // Display only
       };
       setEditFormData(initialData);
       setIsInitialized(true);
@@ -126,7 +139,8 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
         remarks: "",
         installation_remarks: "",
         printing_pages: "",
-        feedback_date: ""
+        feedback_date: "",
+        completed_at: "",
       });
       setIsInitialized(false);
     }
@@ -281,43 +295,30 @@ const [editFormData, setEditFormData] = useState<EditFormData>({
                               className="mt-1 cursor-pointer"
                             />
                           ) : (
-                            <p className="font-medium text-gray-900">
-                              {(() => {
-                                const feedbackDate = form.details.feedback_date;
-                                if (!feedbackDate) return "";
-
-                                if (typeof feedbackDate === "string") {
-                                  if (feedbackDate.includes("T")) {
-                                    const date = new Date(feedbackDate);
-                                    return date.toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    });
-                                  } else {
-                                    return feedbackDate; // Return as-is if no T
-                                  }
-                                } else if (feedbackDate instanceof Date) {
-                                  return feedbackDate.toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      year: "numeric",
-                                      month: "2-digit",
-                                      day: "2-digit",
-                                    }
-                                  );
-                                }
-
-                                return "";
-                              })()}
-                            </p>
+                            <p className="font-medium text-gray-900">{formatDateForInput(form.details.feedback_date)}</p>
                           )}
+                        </div>
+                      )}
+                      {/* Completed At field for software installation forms */}
+                      {form.type === "software-install" && (form.completed_at || form.details?.completed_at) && (
+                        <div
+                          className={`bg-white p-3 rounded border ${
+                            "border-gray-200" // Always display, not editable
+                          }`}
+                        >
+                          <label className="text-xs text-gray-500 uppercase tracking-wide">
+                            Completed At
+                          </label>
+                          {/* Display only, value comes directly from the form prop. Prioritize top-level completed_at. */}
+                          <p className="font-medium text-gray-900">
+                            {formatDateTimeForDisplay(form.completed_at || form.details?.completed_at)}
+                          </p>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-
+                
                 {form.details.software_list && (
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                     <h4 className="font-medium text-indigo-900 mb-2">

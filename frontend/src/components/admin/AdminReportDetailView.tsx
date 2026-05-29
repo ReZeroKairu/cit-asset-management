@@ -56,16 +56,16 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    // Format as MM/DD/YYYY HH:MM AM/PM
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
     const year = date.getFullYear();
     const hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const ampm = hours >= 12 ? "PM" : "AM";
     const formattedHours = String(hours % 12 || 12).padStart(2, "0");
 
-    return `${month}/${day}/${year} ${formattedHours}:${minutes} ${ampm}`;
+    return `${month} ${day}, ${year} ${formattedHours}:${minutes} ${ampm}`;
   };
 
   return (

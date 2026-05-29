@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
 import { ScheduleService } from "../services/maintenance/scheduleService";
 import { PMCReportService } from "../services/maintenance/pmcReportService";
 import { ServiceLogService } from "../services/maintenance/serviceLogService";
 import { AnalyticsService } from "../services/maintenance/analyticsService";
+
+const prisma = new PrismaClient();
 
 // SCHEDULE MANAGEMENT CONTROLLERS
 
@@ -283,7 +286,11 @@ export const getWorkstationPMCReportsBatch = async (req: Request, res: Response)
     }
 
     // Parse workstation_ids from comma-separated string
-    const workstationIdArray = String(workstation_ids).split(',').map(id => Number(id.trim()));
+    const workstationIdArray = String(workstation_ids).split(',').map(id => Number(id.trim)).filter(id => !isNaN(id));
+
+    if (workstationIdArray.length === 0) {
+      return res.status(400).json({ error: "Invalid workstation IDs provided" });
+    }
     
     const reports = await PMCReportService.getWorkstationPMCReportsBatch(
       workstationIdArray,
@@ -298,5 +305,98 @@ export const getWorkstationPMCReportsBatch = async (req: Request, res: Response)
       error: error.message || "Failed to fetch batch PMC reports",
       details: error.stack 
     });
+  }
+};
+
+// 3. GET Maintenance Services by Date (for reports)
+export const getMaintenanceServicesByDate = async (req: Request, res: Response) => {
+  try {
+    console.log('🔍 GET MAINTENANCE SERVICES BY DATE - Request received');
+    const { date, lab_id } = req.query;
+    const user_id = req.user?.userId;
+    const user_role = req.user?.role;
+    const userLabId = req.user?.lab_id;
+
+    console.log('📋 Request params:', { date, lab_id, user_id, user_role, userLabId });
+
+    if (!date) {
+      console.log('❌ Date is required');
+      return res.status(400).json({ error: "Date is required" });
+    }
+
+    // Use provided lab_id or user's assigned lab
+    const targetLabId = lab_id ? Number(lab_id) : userLabId;
+    console.log('🎯 Target Lab ID:', targetLabId);
+
+    // Fetch service logs for the date with ROUTINE service type
+    // Include related PMC reports to get overall_remarks and workstation info
+    const serviceLogs = await prisma.service_logs.findMany({
+      where: {
+        service_date: {
+          gte: new Date(`${date}T00:00:00`),
+          lt: new Date(`${date}T23:59:59`)
+        },
+        service_type: 'ROUTINE', // Only daily services
+        ...(targetLabId && { pmc_reports: { lab_id: targetLabId } })
+      },
+      include: {
+        pmc_reports: {
+          include: {
+            workstations: {
+              select: { workstation_name: true }
+            },
+            pmc_report_procedures: {
+              include: {
+                procedures: {
+                  select: { procedure_id: true, procedure_name: true, category: true }
+                }
+              }
+            }
+          }
+        },
+        users: {
+          select: { full_name: true }
+        },
+        service_log_procedures: {
+          include: {
+            procedures: {
+              select: { procedure_id: true, procedure_name: true, category: true }
+            }
+          }
+        }
+      },
+      orderBy: { created_at: 'asc' } // chronological order (first created first)
+    });
+
+    // Get only the latest service per workstation
+    const latestServicesMap = new Map();
+    serviceLogs.forEach(log => {
+      const wsId = log.pmc_reports?.workstation_id;
+      // Always update to get the latest service (since we sorted by date asc, last one is latest)
+      if (wsId) {
+        latestServicesMap.set(wsId, log);
+      }
+    });
+
+    const uniqueLatestServices = Array.from(latestServicesMap.values())
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // Sort by created_at ascending
+
+    console.log('✅ Found service logs:', serviceLogs.length);
+    console.log('✅ Latest services per workstation:', uniqueLatestServices.length);
+    console.log('🔍 Sample service data:', uniqueLatestServices.slice(0, 1).map(s => ({
+      log_id: s.log_id,
+      has_service_log_procedures: !!s.service_log_procedures,
+      service_log_procedures_count: s.service_log_procedures?.length || 0,
+      has_pmc_report_procedures: !!s.pmc_reports?.pmc_report_procedures,
+      pmc_report_procedures_count: s.pmc_reports?.pmc_report_procedures?.length || 0
+    })));
+
+    res.json({
+      success: true,
+      data: uniqueLatestServices
+    });
+  } catch (error) {
+    console.error("❌ Error fetching maintenance services by date:", error);
+    res.status(500).json({ error: "Failed to fetch maintenance services" });
   }
 };

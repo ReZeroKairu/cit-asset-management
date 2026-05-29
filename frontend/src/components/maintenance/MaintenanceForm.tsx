@@ -293,6 +293,17 @@ const MaintenanceForm: React.FC<Props> = ({
       }));
 
 
+      const completedProcedureIds = procedures
+        .filter((p) => p.overall_status === "Completed")
+        .map((p) => p.procedure_id);
+
+      console.log('📋 Procedures being sent to backend:', completedProcedureIds);
+      console.log('📋 All procedures state:', procedures.map(p => ({
+        id: p.procedure_id,
+        name: p.procedure_name,
+        status: p.overall_status
+      })));
+
       const reportPayload = {
         lab_id: formData.lab_id,
         workstation_id: targetWorkstation?.id,
@@ -306,9 +317,7 @@ const MaintenanceForm: React.FC<Props> = ({
         connectivity_type_status: networkItems[1].status,
         connectivity_speed: networkItems[2].remarks,
         connectivity_speed_status: networkItems[2].status,
-        procedure_ids: procedures
-          .filter((p) => p.overall_status === "Completed")
-          .map((p) => p.procedure_id),
+        procedure_ids: completedProcedureIds,
         service_type: "ROUTINE",
         asset_actions,
       };

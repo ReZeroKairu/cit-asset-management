@@ -199,6 +199,27 @@ export const getWorkstationPMCReports = async (
   }
 };
 
+// 8. GET MAINTENANCE SERVICES BY DATE (for DAR reports)
+export const getMaintenanceServicesByDate = async (
+  date: string,
+  labId?: number
+): Promise<any[]> => {
+  try {
+    console.log('Fetching maintenance services by date:', { date, labId });
+    const response = await api.get("/maintenance/services-by-date", {
+      params: { date, lab_id: labId }
+    });
+    console.log('Maintenance services response:', response.data);
+    return response.data?.data || response.data || [];
+  } catch (error: any) {
+    console.error('Error fetching maintenance services by date:', error);
+    console.error('Error response:', error.response);
+    console.error('Error status:', error.response?.status);
+    console.error('Error data:', error.response?.data);
+    return [];
+  }
+};
+
 export interface MaintenanceAnalyticsData {
   totalWorkstations: number;
   completedReports: number;

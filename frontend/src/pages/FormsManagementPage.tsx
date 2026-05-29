@@ -23,26 +23,7 @@ import {
   getSoftwareInstallations,
   updateSoftwareInstallationStatus,
 } from "../api/forms";
-
-interface FormSubmission {
-  id: number;
-  type: "software-install";
-  date: string;
-  name: string;
-  status:
-    | "Pending"
-    | "Approved"
-    | "Denied"
-    | "Completed"
-    | "Custodian_Approved";
-  laboratory: string;
-  purpose: string;
-  createdAt: string;
-  userId?: number;
-  details: any;
-  // Form-specific ID fields
-  software_id?: number;
-}
+import { type FormSubmission } from "../types/forms";
 
 export const FormsManagementPage = () => {
   const { user } = useAuth();
@@ -86,6 +67,7 @@ export const FormsManagementPage = () => {
           createdAt: install.created_at,
           details: install,
           userId: install.user_id || install.users?.id,
+          completed_at: install.completed_at || install.details?.completed_at,
           software_id: install.id,
         })),
       ];

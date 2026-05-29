@@ -5,7 +5,6 @@ import {
   getAllDailyReports,
   getDailyReportById,
   updateDailyReport,
-  getUnifiedDailyReportById,
 } from "../../api/dailyReports";
 import AdminReportDetailView from "../admin/AdminReportDetailView";
 import { FileText, Download } from "lucide-react";
@@ -192,10 +191,6 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     return matchesFilter;
   });
 
-  const handleReportUpdated = () => {
-    loadReports();
-  };
-
   const handleGenerateReport = async (report: DailyReport) => {
     try {
       // Show loading state
@@ -342,6 +337,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
           setIsUnifiedViewModalOpen(false);
           setSelectedReport(null);
         }}
+        onReportUpdated={loadReports}
       />
     );
   }

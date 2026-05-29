@@ -238,9 +238,8 @@ const MaintenancePage = () => {
       const wsData = await getLabWorkstationsForReport(labId);
       setLabWorkstations(wsData);
 
-      // Load assets for each workstation to calculate actual status
-      const assetsData: Record<number, any[]> = {};
-      for (const ws of wsData) {
+      // Load assets for each workstation in parallel to calculate actual status
+      const assetsPromises = wsData.map(async (ws: any) => {
         try {
           const assets = await getWorkstationAssets(ws.workstation_id);
           // Transform assets to have status property
@@ -251,15 +250,24 @@ const MaintenancePage = () => {
               asset.status ||
               "Functional",
           }));
-          assetsData[ws.workstation_id] = transformedAssets;
+          return { workstationId: ws.workstation_id, assets: transformedAssets };
         } catch (error) {
           console.error(
             `Failed to load assets for workstation ${ws.workstation_id}:`,
             error,
           );
-          assetsData[ws.workstation_id] = [];
+          return { workstationId: ws.workstation_id, assets: [] };
         }
-      }
+      });
+
+      // Fetch PMC reports in parallel with assets
+      const reportsPromise = getLabPMCReports(labId, selectedQuarter);
+
+      const assetsResults = await Promise.all(assetsPromises);
+      const assetsData: Record<number, any[]> = {};
+      assetsResults.forEach(({ workstationId, assets }) => {
+        assetsData[workstationId] = assets;
+      });
       setWorkstationAssets(assetsData);
 
       // Fetch unassigned assets for logged user's lab
@@ -274,7 +282,7 @@ const MaintenancePage = () => {
         setUnassignedAssets([]);
       }
 
-      const reportsData = await getLabPMCReports(labId, selectedQuarter);
+      const reportsData = await reportsPromise;
       setReports(reportsData);
     } catch (error) {
       console.error("Failed to load maintenance data", error);

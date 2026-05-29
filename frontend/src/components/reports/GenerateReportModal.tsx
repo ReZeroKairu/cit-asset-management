@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { X, FileText, ClipboardCheck, Zap } from "lucide-react";
+import { X, FileText, ClipboardCheck, Zap, Wrench } from "lucide-react";
 import { getSoftwareInstallations } from "../../api/forms";
+import { getMaintenanceServicesByDate } from "../../api/maintenance";
 import type { DailyReport } from "../../api/dailyReports";
 import api from "../../api/axios";
 import UnifiedReportViewModal from "./UnifiedReportViewModal";
@@ -40,7 +41,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   onReportGenerated,
   userLabId,
 }) => {
-  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | "unified" | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | "maintenance" | "unified" | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const now = new Date();
     return now.getFullYear() + '-' + 
@@ -107,18 +108,18 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
 
       // Filter for completed forms with feedback_date matching the selected date
       const completedSoftware = softwareInstallations.filter((form: any) => {
-        const isCompleted = form.status === "Completed" || form.status === "Approved";
+        const isCompleted = form.status === "Completed";
         if (!isCompleted) return false;
-        
-        // Filter by feedback_date for software installations
-        const feedbackDate = form.feedback_date;
-        if (!feedbackDate) return false;
-        
-        const formLocalDate = new Date(feedbackDate);
-        const formDateOnly = formLocalDate.getFullYear() + '-' + 
-                           String(formLocalDate.getMonth() + 1).padStart(2, '0') + '-' + 
+
+        // Strictly filter by completed_at (ignore old records with only feedback_date)
+        const completionDate = form.completed_at;
+        if (!completionDate) return false;
+
+        const formLocalDate = new Date(completionDate);
+        const formDateOnly = formLocalDate.getFullYear() + '-' +
+                           String(formLocalDate.getMonth() + 1).padStart(2, '0') + '-' +
                            String(formLocalDate.getDate()).padStart(2, '0');
-        
+
         return formDateOnly === date;
       });
 
@@ -132,6 +133,19 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         softwareInstallations: [],
         citLabUsers: []
       };
+    }
+  };
+
+  const fetchMaintenanceData = async (date: string) => {
+    try {
+      // Get maintenance service logs for the date using the API function
+      const maintenanceServices = await getMaintenanceServicesByDate(date, userLabId);
+
+      // The backend already filters by date, so no need to filter again
+      return maintenanceServices;
+    } catch (error) {
+      console.error('Error fetching maintenance data:', error);
+      return [];
     }
   };
 
@@ -172,7 +186,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
 
       if (selectedReportType === "complaints") {
         reportData.complaints = await fetchComplaintsData(selectedDate);
-        
+
         if (reportData.complaints.length === 0) {
           setError("No resolved complaints found for the selected date");
           setLoading(false);
@@ -193,6 +207,17 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
 
         // Generate forms report
         await generateFormsReport(reportData, selectedDate);
+      } else if (selectedReportType === "maintenance") {
+        const maintenanceServices = await fetchMaintenanceData(selectedDate);
+
+        if (maintenanceServices.length === 0) {
+          setError("No maintenance services found for the selected date");
+          setLoading(false);
+          return;
+        }
+
+        // Generate maintenance report
+        await generateMaintenanceReport(maintenanceServices, selectedDate);
       }
 
       onClose();
@@ -244,12 +269,19 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         return acc;
       }, []);
 
+      // Sort complaints by resolution time (old to latest)
+      const sortedComplaints = [...complaints].sort((a, b) => {
+        const timeA = new Date(a.resolved_at || a.created_at || 0).getTime();
+        const timeB = new Date(b.resolved_at || b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
+
       // First, create a database entry for this auto-generated report
       const reportPayload = {
         lab_id: userLabId || 2,
         report_date: date,
         report_type: 'auto_complaints',
-        general_remarks: complaints.slice(0, 40).map((complaint) => {
+        general_remarks: sortedComplaints.slice(0, 40).map((complaint) => {
           // Format time from resolved_at
           const timeString = complaint.resolved_at || complaint.created_at || '';
           const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', { 
@@ -263,7 +295,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         }).join('\n'),
         generated_data: {
           complaints_count: complaints.length,
-          complaints: complaints.slice(0, 40).map(c => ({
+          complaints: sortedComplaints.slice(0, 40).map(c => ({
             id: c.id,
             complaint_id: c.complaint_id,
             issue_description: c.issue_description,
@@ -309,16 +341,26 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
         software_list: form.software_list,
         software_name: form.software_list, // For consistency
         installation_remarks: form.installation_remarks,
-        purpose: form.installation_remarks // For consistency
+        purpose: form.installation_remarks, // For consistency
+        created_at: form.created_at,
+        updated_at: form.updated_at
       }));
+
+      // Sort forms by completion time (old to latest)
+      allForms.sort((a, b) => {
+        const timeA = new Date(a.completed_at || a.updated_at || a.created_at || 0).getTime();
+        const timeB = new Date(b.completed_at || b.updated_at || b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
 
       // First, create a database entry for this auto-generated report
       const formsPayload = {
         lab_id: userLabId || 2,
         report_date: date,
         report_type: 'auto_forms',
-        general_remarks: allForms.slice(0, 3).map((form) => {
-          const timeString = form.feedback_date || form.created_at || '';
+        general_remarks: allForms.slice(0, 40).map((form) => {
+          // Ensure we use the most recent timestamp (updated_at) for the remark time
+          const timeString = form.completed_at || form.updated_at || form.created_at || form.feedback_date || '';
           const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', { 
             hour: '2-digit', 
             minute: '2-digit',
@@ -343,13 +385,16 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
             software_list: f.software_list,
             software_name: f.software_name || f.software_list,
             installation_remarks: f.installation_remarks,
-            purpose: f.purpose || f.installation_remarks
+            purpose: f.purpose || f.installation_remarks,
+            created_at: f.created_at, // Keep created_at for context
+            updated_at: f.updated_at, // Keep updated_at for context
+            completed_at: f.completed_at // Include completed_at
           }))
         },
-        // Include procedures only (no workstation data for software installations)
         procedures: [
           { procedure_id: 2, overall_status: reportData.softwareInstallations.length > 0 ? "Completed" : "", overall_remarks: "" } // software checks only
-        ]
+        ],
+        workstation_items: [] // Start with no workstations so custodian can manually assign them in editor
       };
 
       await api.post('/daily-reports/auto-generated', formsPayload);
@@ -358,6 +403,171 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
       // Download can be triggered manually from the report list
     } catch (error) {
       console.error('Error generating forms report:', error);
+      throw error;
+    }
+  };
+
+  const generateMaintenanceReport = async (maintenanceServices: any[], date: string) => {
+    try {
+      // Map service logs for the report
+      const allServices = maintenanceServices.map(log => ({
+        ...log,
+        workstation_name: log.pmc_reports?.workstations?.workstation_name || 'Unknown WS',
+        overall_remarks: log.pmc_reports?.overall_remarks || log.remarks || 'No remarks',
+        service_type: log.service_type || 'ROUTINE',
+        service_date: log.service_date, // Date for filtering
+        created_at: log.created_at // Actual timestamp with time
+      }));
+
+      // Sort services by created_at to ensure chronological order in remarks
+      allServices.sort((a, b) => {
+        const dateA = new Date(a.created_at || a.service_date).getTime();
+        const dateB = new Date(b.created_at || b.service_date).getTime();
+        return dateA - dateB;
+      });
+
+      // Extract procedures from maintenance services
+      console.log('🔧 Maintenance services for procedure extraction:', maintenanceServices.map(s => ({
+        log_id: s.log_id,
+        has_service_log_procedures: !!s.service_log_procedures,
+        service_log_procedures_count: s.service_log_procedures?.length || 0,
+        has_pmc_report_procedures: !!s.pmc_reports?.pmc_report_procedures,
+        pmc_report_procedures_count: s.pmc_reports?.pmc_report_procedures?.length || 0
+      })));
+
+      const allProcedures = new Set<number>();
+      maintenanceServices.forEach(log => {
+        // Extract procedures from service_log_procedures
+        if (log.service_log_procedures && Array.isArray(log.service_log_procedures)) {
+          log.service_log_procedures.forEach((slp: any) => {
+            if (slp.procedures) {
+              console.log('✅ Found procedure from service_log_procedures:', slp.procedures);
+              allProcedures.add(slp.procedures.procedure_id);
+            }
+          });
+        }
+        // Extract procedures from pmc_report_procedures
+        if (log.pmc_reports?.pmc_report_procedures && Array.isArray(log.pmc_reports.pmc_report_procedures)) {
+          log.pmc_reports.pmc_report_procedures.forEach((prp: any) => {
+            if (prp.procedures) {
+              console.log('✅ Found procedure from pmc_report_procedures:', prp.procedures);
+              allProcedures.add(prp.procedures.procedure_id);
+            }
+          });
+        }
+      });
+
+      console.log('📋 Extracted procedure IDs:', Array.from(allProcedures));
+
+      // Map maintenance procedures to DAR procedures
+      const darProcedureIds = new Set<number>();
+      allProcedures.forEach(procId => {
+        // Map maintenance/QPMC procedures to DAR procedures
+        // QPMC procedures (8-13) map to DAR procedures (1-7)
+        switch (procId) {
+          case 8: // Hardware Maintenance → Hardware Checks
+            darProcedureIds.add(5);
+            break;
+          case 9: // Software Maintenance → Software Checks
+            darProcedureIds.add(2);
+            break;
+          case 10: // Security Maintenance → Security & Safety
+            darProcedureIds.add(3);
+            break;
+          case 11: // Network Maintenance → Network & Connectivity
+            darProcedureIds.add(4);
+            break;
+          case 12: // System Performance → End of the day checks
+            darProcedureIds.add(7);
+            break;
+          case 13: // Regular Cleaning → Cleanliness & Organization
+            darProcedureIds.add(6);
+            break;
+          default:
+            // If it's already a DAR procedure (1-7), use it directly
+            if (procId >= 1 && procId <= 7) {
+              darProcedureIds.add(procId);
+            }
+            break;
+        }
+      });
+
+      // If no specific procedures found, default to maintenance checks (procedure_id 3)
+      if (darProcedureIds.size === 0 && maintenanceServices.length > 0) {
+        console.log('⚠️ No procedures found, defaulting to procedure_id 3');
+        darProcedureIds.add(3);
+      }
+
+      // Convert to procedures array
+      const procedures = Array.from(darProcedureIds).map(procId => ({
+        procedure_id: procId,
+        overall_status: "Completed",
+        overall_remarks: ""
+      }));
+
+      console.log('📤 Final procedures to send to backend:', procedures);
+
+      // Extract workstations from maintenance services
+      const maintenanceWorkstations = maintenanceServices.map((log, index) => ({
+        workstation_id: log.pmc_reports?.workstation_id || index + 1,
+        workstation_name: log.pmc_reports?.workstations?.workstation_name || log.workstation_name || 'Unknown Workstation',
+        status: "Working",
+        remarks: ""
+      }));
+
+      // Deduplicate workstations
+      const uniqueMaintenanceWorkstations = maintenanceWorkstations.reduce((acc: any[], current: any) => {
+        const existing = acc.find(ws => ws.workstation_id === current.workstation_id);
+        if (!existing) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+
+      // Create a database entry for this auto-generated maintenance report
+      const maintenancePayload = {
+        lab_id: userLabId || 2,
+        report_date: date,
+        report_type: 'auto_maintenance',
+        generated_data: {
+          maintenance_services_count: maintenanceServices.length,
+          maintenance_services: allServices.slice(0, 40).map(m => ({
+            id: m.log_id,
+            workstation_name: m.workstation_name,
+            overall_remarks: m.overall_remarks,
+            service_date: m.service_date,
+            created_at: m.created_at,
+            service_type: m.service_type
+          }))
+        },
+        general_remarks: allServices.slice(0, 40).map((service) => {
+          // Use created_at for actual time (service_date only has date, no time)
+          const timeString = service.created_at || service.service_date || '';
+          const formattedTime = timeString ? new Date(timeString).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }) : '';
+
+          const workstationName = service.workstation_name;
+          const overallRemarks = service.overall_remarks;
+
+          return `• ${formattedTime} - ${workstationName} - ${overallRemarks}`;
+        }).join('\n'),
+        procedures: procedures,
+        workstation_items: uniqueMaintenanceWorkstations.map(ws => ({
+          workstation_id: ws.workstation_id,
+          status: "",
+          remarks: ws.remarks
+        }))
+      };
+
+      await api.post('/daily-reports/auto-generated', maintenancePayload);
+
+      // Report created successfully - no automatic download
+      // Download can be triggered manually from the report list
+    } catch (error) {
+      console.error('Error generating maintenance report:', error);
       throw error;
     }
   };
@@ -432,6 +642,23 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
               </button>
 
               <button
+                onClick={() => setSelectedReportType("maintenance")}
+                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                  selectedReportType === "maintenance"
+                    ? "border-purple-500 bg-purple-50 text-purple-700"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+              >
+                <Wrench className="w-5 h-5" />
+                <div className="text-left">
+                  <div className="font-medium">Maintenance Report</div>
+                  <div className="text-sm text-gray-600">
+                    Workstation services performed within the day
+                  </div>
+                </div>
+              </button>
+
+              <button
                 onClick={() => setSelectedReportType("unified")}
                 className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-colors ${
                   selectedReportType === "unified"
@@ -443,7 +670,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
                 <div className="text-left">
                   <div className="font-medium">Unified Report</div>
                   <div className="text-sm text-gray-600">
-                    View combined complaints and forms report
+                    View combined complaints, forms, and maintenance report
                   </div>
                 </div>
               </button>

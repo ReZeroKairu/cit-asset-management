@@ -135,14 +135,24 @@ export const mapReportDataToTemplate = (reportData: any) => {
   if (reportData.report_type === 'unified' && reportData.generated_data) {
     const complaintsRemarks = reportData.generated_data.complaints_remarks || "";
     const formsRemarks = reportData.generated_data.forms_remarks || "";
-    if (complaintsRemarks || formsRemarks) {
+    const maintenanceRemarks = reportData.generated_data.maintenance_remarks || "";
+    if (complaintsRemarks || formsRemarks || maintenanceRemarks) {
       remarksForTemplate = [
         "=== COMPLAINTS ===",
         complaintsRemarks,
         "",
         "=== SOFTWARE INSTALLATIONS ===",
-        formsRemarks
+        formsRemarks,
+        "",
+        "=== MAINTENANCE ===",
+        maintenanceRemarks
       ].filter(Boolean).join('\n');
+    }
+  } else if (reportData.report_type === 'auto_maintenance' && reportData.generated_data) {
+    // Handle individual maintenance reports
+    const maintenanceRemarks = reportData.generated_data.maintenance_remarks || "";
+    if (maintenanceRemarks) {
+      remarksForTemplate = maintenanceRemarks;
     }
   }
 

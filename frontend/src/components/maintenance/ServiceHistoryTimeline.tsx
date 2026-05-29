@@ -5,7 +5,6 @@ import {
   ArrowUpCircle,
   CheckCircle2,
   Calendar,
-  User,
   ArrowRight,
 } from "lucide-react";
 import type { ServiceLog } from "../../api/maintenance";
@@ -57,6 +56,14 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  };
+
   return (
     <div className="space-y-4">
       {logs.map((log, index) => (
@@ -94,10 +101,9 @@ const ServiceHistoryTimeline: React.FC<Props> = ({ logs }) => {
                       <Calendar className="h-4 w-4 mr-1" />
                       {formatDate(log.service_date)}
                     </span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <User className="h-4 w-4 mr-1" />
-                    Performed by {log.user?.full_name || "Unknown"}
+                    <span className="flex items-center text-sm text-gray-600">
+                      {formatTime(log.created_at || log.service_date)}
+                    </span>
                   </div>
                 </div>
               </div>

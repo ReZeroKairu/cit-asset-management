@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { CheckCircle, ArrowLeft } from "lucide-react";
+import { CheckCircle, ArrowLeft, FileText } from "lucide-react";
 import { PublicSoftwareInstallForm } from "../components/forms/PublicSoftwareInstallForm";
 import {
   submitPublicSoftwareInstallation,
@@ -97,8 +97,9 @@ const PublicFormsPage = () => {
             </Button>
           </div>
           <div className="text-center">
+            <FileText className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              CIT Asset Management Forms
+              Software Installation Form
             </h1>
             <p className="text-gray-600 mt-2 text-sm sm:text-base">
               Submit your requests for software installation

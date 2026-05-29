@@ -146,7 +146,7 @@ const LoginPage = () => {
           <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
-              <span className="text-blue-600">CIT</span> Asset Manager
+              <span className="text-blue-600">CIT</span> Asset Management
             </CardTitle>
             <p className="text-sm text-gray-600 mt-2">
               Sign in to start your session

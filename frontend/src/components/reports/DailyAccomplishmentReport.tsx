@@ -408,6 +408,14 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       return;
     }
 
+    // Sort reports by report_date from oldest to latest for compiled remarks
+    reportsToCompile.sort((a: any, b: any) => {
+      const dateA = new Date(a.report_date).getTime();
+      const dateB = new Date(b.report_date).getTime();
+      return dateA - dateB; // Oldest first
+    });
+
+
     try {
       setLoading(true);
 
@@ -422,11 +430,18 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       const formatTimeForDisplay = (dateString: string) => {
         if (!dateString) return "";
         const date = new Date(dateString);
-        const hours = date.getHours();
-        const minutes = String(date.getMinutes()).padStart(2, "0");
-        const ampm = hours >= 12 ? "PM" : "AM";
-        const formattedHours = String(hours % 12 || 12).padStart(2, "0");
-        return `${formattedHours}:${minutes} ${ampm}`;
+        // Check if the dateString contains a time component (e.g., 'T' or a colon)
+        // If it's a date-only string (YYYY-MM-DD), new Date() defaults to midnight UTC,
+        // which becomes 08:00 AM in UTC+8. We want to avoid showing a misleading time.
+        if (dateString.includes('T') || dateString.includes(':')) {
+          const hours = date.getHours();
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          const formattedHours = String(hours % 12 || 12).padStart(2, "0");
+          return `${formattedHours}:${minutes} ${ampm}`;
+        } else {
+          return ""; // Return empty string if no time component to avoid misleading 08:00 AM
+        }
       };
 
       // Format unified report remarks
@@ -434,13 +449,20 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         const generatedData = (report as any).generated_data || {};
         const complaints = generatedData.complaints || [];
         const softwareInstallations = generatedData.software_installations || [];
+        const maintenanceServices = generatedData.maintenance_services || [];
 
         let formattedRemarks = "";
 
         // Format complaints
         if (complaints.length > 0) {
+          // Sort complaints by resolution time (old to latest)
+          const sortedComplaints = [...complaints].sort((a, b) => {
+            const timeA = new Date(a.resolved_at || a.created_at || 0).getTime();
+            const timeB = new Date(b.resolved_at || b.created_at || 0).getTime();
+            return timeA - timeB;
+          });
           formattedRemarks += "=== COMPLAINTS ===\n";
-          complaints.forEach((c: any) => {
+          sortedComplaints.forEach((c: any) => {
             const time = formatTimeForDisplay(c.resolved_at || c.created_at);
             const assetInfo = c.asset_info ? `[Asset: ${c.asset_info}]` : '';
             const status = c.status ? `(${c.status})` : '';
@@ -452,13 +474,38 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
 
         // Format software installations
         if (softwareInstallations.length > 0) {
+          // Sort forms by completion time (old to latest)
+          const sortedForms = [...softwareInstallations].sort((a, b) => {
+            const timeA = new Date(a.completed_at || a.created_at || 0).getTime();
+            const timeB = new Date(b.completed_at || b.created_at || 0).getTime();
+            return timeA - timeB;
+          });
           formattedRemarks += "=== SOFTWARE INSTALLATIONS ===\n";
-          softwareInstallations.forEach((s: any) => {
-            const time = formatTimeForDisplay(s.created_at);
+          sortedForms.forEach((s: any) => {
+            const time = formatTimeForDisplay(s.completed_at || s.created_at);
             const softwareInfo = s.software_list ? `Software: ${s.software_list}` : '';
             const facultyInfo = s.faculty_name ? `[Faculty: ${s.faculty_name}]` : '';
             const remarks = (s.installation_remarks || 'no').replace(/[\r\n]+/g, ' ').trim();
             formattedRemarks += `• ${time} - ${softwareInfo} ${facultyInfo} - ${remarks}\n`;
+          });
+          formattedRemarks += "\n";
+        }
+
+        // Format maintenance services
+        if (maintenanceServices.length > 0) {
+          // Sort maintenance services (old to latest)
+          const sortedMaintenance = [...maintenanceServices].sort((a, b) => {
+            const timeA = new Date(a.created_at || a.service_date || 0).getTime();
+            const timeB = new Date(b.created_at || b.service_date || 0).getTime();
+            return timeA - timeB;
+          });
+          formattedRemarks += "=== MAINTENANCE SERVICES ===\n";
+          sortedMaintenance.forEach((m: any) => {
+            const time = formatTimeForDisplay(m.created_at || m.service_date); // Prioritize created_at for accurate time
+            const workstationName = m.workstation_name || 'Unknown WS';
+            const overallRemarks = m.overall_remarks || 'No remarks';
+            const performedBy = m.performed_by ? `(by ${m.performed_by})` : '';
+            formattedRemarks += `• ${time} - ${workstationName} - ${overallRemarks} ${performedBy}\n`;
           });
         }
 
@@ -469,8 +516,8 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       const compiledData = {
         lab_name: reportsToCompile[0]?.laboratories?.lab_name || "Unknown Lab",
         custodian_name: reportsToCompile[0]?.users?.full_name || "Unknown",
-        start_date: formatDateForDisplay(dateFilters.start_date || reportsToCompile[reportsToCompile.length - 1]?.report_date),
-        end_date: formatDateForDisplay(dateFilters.end_date || reportsToCompile[0]?.report_date),
+        start_date: formatDateForDisplay(dateFilters.start_date || reportsToCompile[0]?.report_date),
+        end_date: formatDateForDisplay(dateFilters.end_date || reportsToCompile[reportsToCompile.length - 1]?.report_date),
         remarks: reportsToCompile.map((report) => {
           // Check if it's a unified report
           const isUnifiedReport = (report as any).report_type === 'unified' || (report as any).generated_data;

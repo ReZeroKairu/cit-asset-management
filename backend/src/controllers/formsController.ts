@@ -117,9 +117,17 @@ export const updateSoftwareInstallationStatus = async (req: Request, res: Respon
       });
     }
 
+    const updateData: any = { status };
+
+    // Set completed_at when status is 'Completed'
+    if (status === 'Completed') {
+      updateData.completed_at = new Date();
+    } else {
+      updateData.completed_at = null; // Clear completed_at if status changes from Completed
+    }
     const softwareInstallation = await prisma.software_installations.update({
       where: { id: parseInt(id as string) },
-      data: { status }
+      data: updateData
     });
 
     res.status(200).json({

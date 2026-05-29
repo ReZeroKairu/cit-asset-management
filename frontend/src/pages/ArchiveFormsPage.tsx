@@ -16,7 +16,7 @@ import { type FormSubmission } from "../types/forms";
 
 const ArchiveFormsPage = () => {
   const { user } = useAuth();
-  const [forms, setForms] = useState<any[]>([]);
+  const [forms, setForms] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("software-install");
@@ -49,7 +49,7 @@ const ArchiveFormsPage = () => {
         : softwareInstallationsRes?.data || [];
 
       // Transform to FormSubmission structure (same as FormsManagementPage)
-      const transformedForms: any[] = [
+      const transformedForms: FormSubmission[] = [
         ...softwareInstallations.map((install: any) => ({
           id: install.id || `soft-${Math.random()}`,
           type: "software-install" as const,
@@ -61,6 +61,7 @@ const ArchiveFormsPage = () => {
           createdAt: install.created_at,
           details: install,
           userId: install.user_id || install.users?.id,
+          completed_at: install.completed_at || install.details?.completed_at,
         })),
       ];
 
