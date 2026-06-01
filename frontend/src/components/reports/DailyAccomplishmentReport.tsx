@@ -132,7 +132,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       pageContext !== "daily-reports" &&
       user?.role !== "Admin"
     ) {
-      filtered = filtered.filter((report) => report.created_by === user?.id);
+      filtered = filtered.filter((report) => report.user_id === user?.id);
     }
 
     // For compiled mode, only keep the latest report per day
@@ -162,11 +162,11 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
       // In archive mode, respect creator permissions and only show approved reports
       if (archiveMode) {
         if (user?.role === "Admin") {
-          response = await api.get("/daily-reports?status=Approved");
+          response = await api.get("/daily-reports?status=Approved&limit=1000");
         } else {
           // Custodians can only see their own approved reports in archive mode
           response = await api.get(
-            `/daily-reports?created_by=${user?.id}&status=Approved`
+            `/daily-reports?user_id=${user?.id}&status=Approved&limit=1000`
           );
         }
       } else {
@@ -174,20 +174,20 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         if (pageContext === "daily-reports") {
           // On Daily Reports page, show only pending reports
           if (user?.role === "Admin") {
-            response = await api.get("/daily-reports?status=Pending");
+            response = await api.get("/daily-reports?status=Pending&limit=1000");
           } else {
             // For custodians, only get pending reports from their assigned lab
             response = await api.get(
-              `/daily-reports?status=Pending&lab_id=${user?.lab_id}`
+              `/daily-reports?status=Pending&lab_id=${user?.lab_id}&limit=1000`
             );
           }
         } else {
           // Normal filtering by role
           if (user?.role === "Admin") {
-            response = await api.get("/daily-reports");
+            response = await api.get("/daily-reports?limit=1000");
           } else {
             // For custodians, only get reports from their assigned lab
-            response = await api.get(`/daily-reports?lab_id=${user?.lab_id}`);
+            response = await api.get(`/daily-reports?lab_id=${user?.lab_id}&limit=1000`);
           }
         }
       }
@@ -473,14 +473,16 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
         }
 
         // Format software installations
-        if (softwareInstallations.length > 0) {
+        const softwareData = softwareInstallations.length > 0 ? softwareInstallations : (generatedData.forms || []);
+        if (softwareData.length > 0) {
           // Sort forms by completion time (old to latest)
-          const sortedForms = [...softwareInstallations].sort((a, b) => {
-            const timeA = new Date(a.completed_at || a.created_at || 0).getTime();
-            const timeB = new Date(b.completed_at || b.created_at || 0).getTime();
-            return timeA - timeB;
+          const sortedForms = [...softwareData].sort((a, b) => {
+            const timeA = new Date(a.completed_at || a.updated_at || a.created_at || 0).getTime();
+            const timeB = new Date(b.completed_at || b.updated_at || b.created_at || 0).getTime();
+            if (isNaN(timeA) || isNaN(timeB)) return 0;
+            return timeA - timeB; // Ascending: oldest to newest
           });
-          formattedRemarks += "=== SOFTWARE INSTALLATIONS ===\n";
+          formattedRemarks += (formattedRemarks ? "\n" : "") + "=== SOFTWARE INSTALLATIONS ===\n";
           sortedForms.forEach((s: any) => {
             const time = formatTimeForDisplay(s.completed_at || s.created_at);
             const softwareInfo = s.software_list ? `Software: ${s.software_list}` : '';
@@ -516,7 +518,7 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
           formattedRemarks += `${inventoryRemarks}\n`;
         }
 
-        return formattedRemarks || "No unified report data";
+        return formattedRemarks || generatedData.forms_remarks || generatedData.complaints_remarks || report.general_remarks || "No unified report data";
       };
 
       // Compile remarks from all filtered reports

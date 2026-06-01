@@ -245,15 +245,13 @@ const ArchivedReportsList: React.FC = () => {
               <Archive className="w-4 h-4" />
               <span>{paginationInfo?.totalCount || 0} archived reports</span>
             </div>
-            {user?.role !== 'Admin' && (
-              <Button
-                onClick={() => setShowDARModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                Generate Report
-              </Button>
-            )}
+            <Button
+              onClick={() => setShowDARModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Compile DAR
+            </Button>
           </div>
         </div>
       </div>
@@ -494,7 +492,9 @@ const ArchivedReportsList: React.FC = () => {
         show={showDARModal}
         onClose={() => setShowDARModal(false)}
         reportId={selectedReport?.report_id}
-        mode="single"
+        mode="compiled"
+        archiveMode={true}
+        pageContext="archives"
       />
     </div>
   );
