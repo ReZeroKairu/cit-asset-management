@@ -132,7 +132,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
       {/* Single Page Report View */}
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Report Header */}
-        <div className="bg-blue-50 p-6 border-b border-gray-200">
+        <div className="bg-gray-50 p-6 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-sm font-medium text-gray-600">Report ID</div>
@@ -165,7 +165,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
         <div className="p-6 space-y-6">
           {/* Custodian & Laboratory Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 👤 Custodian
               </h3>
@@ -180,7 +180,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
                 </div>
               </div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 🏢 Laboratory
               </h3>
@@ -198,7 +198,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
           </div>
 
           {/* Procedures */}
-          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
               ✅ Procedures ({report.procedures?.length || 0})
             </h3>
@@ -207,7 +207,7 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
                 {report.procedures.map((proc: any, index: number) => (
                   <div
                     key={index}
-                    className="bg-white p-3 rounded border border-purple-100"
+                    className="bg-white p-3 rounded border border-gray-200"
                   >
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium text-gray-900">
@@ -235,52 +235,52 @@ const AdminReportDetailView: React.FC<AdminReportDetailViewProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 bg-white rounded border border-purple-100">
+              <div className="text-center py-4 bg-white rounded border border-gray-200">
                 <p className="text-gray-500">No procedures reported</p>
               </div>
             )}
           </div>
 
           {/* Workstations */}
-          <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              💻 Workstations ({report.workstation_items?.length || 0})
-            </h3>
-            {report.workstation_items && report.workstation_items.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {report.workstation_items.map((workstation, index) => (
-                  <div
-                    key={index}
-                    className="bg-white p-3 rounded border border-emerald-100"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-gray-900">
-                        {workstation.workstation_name}
-                      </span>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            {(() => {
+              const generatedData = (report as any).generated_data || {};
+              const invWs = generatedData.inventory_workstations || [];
+              const wsItems = report.workstation_items || [];
+              const displayList = (report.report_type === 'auto_inventory' && invWs.length > 0) ? invWs : wsItems;
+              const count = displayList.length || 0;
+
+              return (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">💻 Workstations ({count})</h3>
+                  {count > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {displayList.map((workstation: any, index: number) => (
+                        <div
+                          key={index}
+                          className="bg-white px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700"
+                        >
+                          {workstation.workstation?.workstation_name || workstation.workstation_name || workstation.workstation_name}
+                        </div>
+                      ))}
                     </div>
-                    {workstation.remarks && (
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">Notes:</span>{" "}
-                        {workstation.remarks}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4 bg-white rounded border border-emerald-100">
-                <p className="text-gray-500">No workstations reported</p>
-              </div>
-            )}
+                  ) : (
+                    <div className="text-center py-4 bg-white rounded border border-gray-200">
+                      <p className="text-gray-500">No workstations reported</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Remarks - Moved to Bottom */}
           {report.general_remarks && (
-            <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 📝 Remarks
               </h3>
-              <div className="bg-white p-3 rounded border border-amber-100">
+              <div className="bg-white p-3 rounded border border-gray-200">
                 <div className="text-gray-700 whitespace-pre-line">
                   {report.general_remarks}
                 </div>

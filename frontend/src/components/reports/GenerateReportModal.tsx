@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { X, FileText, ClipboardCheck, Zap, Wrench } from "lucide-react";
+import { X, FileText, ClipboardCheck, Zap, Wrench, Package } from "lucide-react";
 import { getSoftwareInstallations } from "../../api/forms";
 import { getMaintenanceServicesByDate } from "../../api/maintenance";
+import { getInventory } from "../../api/inventory";
 import type { DailyReport } from "../../api/dailyReports";
 import api from "../../api/axios";
 import UnifiedReportViewModal from "./UnifiedReportViewModal";
@@ -41,7 +42,7 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
   onReportGenerated,
   userLabId,
 }) => {
-  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | "maintenance" | "unified" | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<"complaints" | "forms" | "maintenance" | "inventory" | "unified" | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const now = new Date();
     return now.getFullYear() + '-' + 
@@ -149,6 +150,34 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
     }
   };
 
+  const fetchInventoryData = async (date: string) => {
+    try {
+      const allAssets = await getInventory({ lab_id: userLabId });
+      const inventoryAssets = Array.isArray(allAssets) ? allAssets : [];
+
+      const selectedDateString = date;
+      return inventoryAssets.filter((asset: any) => {
+        const disposedBy = asset.asset_details?.disposed_by;
+        const disposedDate = asset.asset_details?.date_disposed;
+        const statusName = asset.asset_details?.asset_statuses?.status_name;
+
+        if (!disposedBy?.trim() || !disposedDate || statusName !== 'Disposed') {
+          return false;
+        }
+
+        const assetDate = new Date(disposedDate);
+        const assetDateOnly = assetDate.getFullYear() + '-' +
+          String(assetDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(assetDate.getDate()).padStart(2, '0');
+
+        return assetDateOnly === selectedDateString;
+      });
+    } catch (error) {
+      console.error('Error fetching inventory data:', error);
+      return [];
+    }
+  };
+
   const handleGenerateReport = async () => {
     if (!selectedReportType || !selectedDate) {
       setError("Please select a report type and date");
@@ -218,6 +247,17 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
 
         // Generate maintenance report
         await generateMaintenanceReport(maintenanceServices, selectedDate);
+      } else if (selectedReportType === "inventory") {
+        const inventoryAssets = await fetchInventoryData(selectedDate);
+
+        if (inventoryAssets.length === 0) {
+          setError("No inventory items found for the selected date");
+          setLoading(false);
+          return;
+        }
+
+        // Generate inventory report
+        await generateInventoryReport(inventoryAssets, selectedDate);
       }
 
       onClose();
@@ -572,6 +612,57 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
     }
   };
 
+  const generateInventoryReport = async (inventoryAssets: any[], date: string) => {
+    try {
+      const formattedAssets = inventoryAssets.slice(0, 40).map((asset: any) => ({
+        asset_id: asset.asset_id,
+        property_tag_no: asset.asset_details?.property_tag_no || "N/A",
+        serial_number: asset.asset_details?.serial_number || "N/A",
+        description: asset.asset_details?.description || asset.description || "N/A",
+        workstation_id: asset.workstations?.workstation_id || null,
+        workstation_name: asset.workstations?.workstation_name || "Unassigned",
+        lab_name: asset.laboratories?.lab_name || "Unknown",
+        status: asset.asset_details?.asset_statuses?.status_name || "Unknown",
+        date_added: asset.date_added,
+        date_of_purchase: asset.asset_details?.date_of_purchase,
+        date_disposed: asset.asset_details?.date_disposed,
+      }));
+
+      const disposedByNames = Array.from(new Set(
+        inventoryAssets
+          .map((asset: any) => asset.asset_details?.disposed_by)
+          .filter((name: string | null | undefined) => !!name)
+      ));
+      const disposedByLabel = disposedByNames.length === 0
+        ? 'Unknown'
+        : disposedByNames.join(', ');
+
+      // Build workstation_items from the inventory assets (unique workstation_ids)
+      const uniqueWorkstationIds = Array.from(new Set(inventoryAssets.map((a: any) => a.workstations?.workstation_id).filter((id: any) => !!id)));
+      const workstationItemsPayload = uniqueWorkstationIds.map((id: any) => ({ workstation_id: id, status: 'Working', remarks: '' }));
+
+      const inventoryPayload = {
+        lab_id: userLabId || 2,
+        report_date: date,
+        report_type: 'auto_inventory',
+        general_remarks: `Total disposed assets - ${inventoryAssets.length}, Disposal personnel - ${disposedByLabel}`,
+        generated_data: {
+          inventory_count: inventoryAssets.length,
+          inventory_items: formattedAssets,
+        },
+        procedures: [
+          { procedure_id: 5, overall_status: "Completed", overall_remarks: "" } // Hardware Checks
+        ],
+        workstation_items: workstationItemsPayload
+      };
+
+      await api.post('/daily-reports/auto-generated', inventoryPayload);
+    } catch (error) {
+      console.error('Error generating inventory report:', error);
+      throw error;
+    }
+  };
+
   return (
     <>
       {isOpen && (
@@ -659,6 +750,23 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
               </button>
 
               <button
+                onClick={() => setSelectedReportType("inventory")}
+                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-colors ${
+                  selectedReportType === "inventory"
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+              >
+                <Package className="w-5 h-5" />
+                <div className="text-left">
+                  <div className="font-medium">Disposal Inventory Report</div>
+                  <div className="text-sm text-gray-600">
+                    Disposed assets on the selected date
+                  </div>
+                </div>
+              </button>
+
+              <button
                 onClick={() => setSelectedReportType("unified")}
                 className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-colors ${
                   selectedReportType === "unified"
@@ -682,7 +790,6 @@ const GenerateReportModal: React.FC<GenerateReportModalProps> = ({
               Report Date
             </label>
             <input
-              key={selectedDate}
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}

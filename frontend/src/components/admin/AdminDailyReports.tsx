@@ -6,8 +6,8 @@ import {
   getDailyReportById,
   updateDailyReport,
 } from "../../api/dailyReports";
-import AdminReportDetailView from "../admin/AdminReportDetailView";
-import { FileText, Download } from "lucide-react";
+import AdminReportDetailView from "./AdminReportDetailView";
+import { FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import DailyAccomplishmentReport from "../reports/DailyAccomplishmentReport";
 import UnifiedReportViewModal from "../reports/UnifiedReportViewModal";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
@@ -31,21 +31,52 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
     start_date: "",
     end_date: "",
   });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalCount: 0,
+    limit: 10,
+  });
 
   useEffect(() => {
     loadReports();
-  }, []);
+  }, [filters, pagination.currentPage, pagination.limit]);
 
+  // Handle ESC key to go back from detail/unified views
   useEffect(() => {
-    loadReports();
-  }, [filters]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (showDetailView || isUnifiedViewModalOpen) {
+          handleBackToList();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showDetailView, isUnifiedViewModalOpen]);
 
   const loadReports = async () => {
     try {
       setLoading(true);
-      // For admin view, show only pending reports
-      const data = await getAllDailyReports({ status: "Pending" });
-      setReports(data.data || data);
+      // Pass filters and pagination to the API
+      const params = {
+        status: "Pending",
+        ...filters,
+        page: pagination.currentPage,
+        limit: pagination.limit
+      };
+      const response = await getAllDailyReports(params);
+      setReports(response.data || response);
+      if (response.pagination) {
+        setPagination(prev => ({
+          ...prev,
+          totalPages: response.pagination.totalPages,
+          totalCount: response.pagination.totalCount
+        }));
+      }
     } catch (err: any) {
       console.error("Error loading admin reports:", err);
       setError(err.response?.data?.error || "Failed to load reports");
@@ -99,7 +130,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
   };
 
   const handleSelectAll = () => {
-    const pendingReports = filteredReports.filter(
+    const pendingReports = reports.filter(
       (report) => report.status === "Pending"
     );
     if (selectedReports.length === pendingReports.length) {
@@ -165,31 +196,47 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
       start_date: "",
       end_date: "",
     });
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
-  const filteredReports = (reports || []).filter((report) => {
-    let matchesFilter = true;
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
 
-    // Start date filter
-    if (filters.start_date) {
-      const reportDate = new Date(report.report_date);
-      const startDate = new Date(filters.start_date + "T00:00:00");
-      if (reportDate < startDate) {
-        matchesFilter = false;
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    const { totalPages, currentPage } = pagination;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
       }
     }
-
-    // End date filter
-    if (filters.end_date) {
-      const reportDate = new Date(report.report_date);
-      const endDate = new Date(filters.end_date + "T23:59:59");
-      if (reportDate > endDate) {
-        matchesFilter = false;
-      }
-    }
-
-    return matchesFilter;
-  });
+    return pages;
+  };
 
   const handleGenerateReport = async (report: DailyReport) => {
     try {
@@ -426,7 +473,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
         </div>
       </div>
 
-      {filteredReports.length === 0 ? (
+      {reports.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -460,9 +507,9 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                       type="checkbox"
                       checked={
                         selectedReports.length ===
-                          filteredReports.filter((r) => r.status === "Pending")
+                          reports.filter((r) => r.status === "Pending")
                             .length &&
-                        filteredReports.some((r) => r.status === "Pending")
+                        reports.some((r) => r.status === "Pending")
                       }
                       onChange={handleSelectAll}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
@@ -489,7 +536,7 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredReports.map((report) => (
+                {reports.map((report) => (
                   <tr
                     key={report.report_id}
                     className="hover:bg-blue-50 cursor-pointer transition-colors"
@@ -590,6 +637,64 @@ const AdminDailyReports: React.FC<AdminDailyReportsProps> = () => {
               </tbody>
             </table>
           </div>
+        )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing{" "}
+              {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+              {Math.min(
+                pagination.currentPage * pagination.limit,
+                pagination.totalCount
+              )}{" "}
+              of {pagination.totalCount} results
+            </div>
+          </div>
+          <div className="px-6 py-4 flex items-center justify-between">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map((page, index) => (
+                page === '...' ? (
+                  <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page as number)}
+                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                      page === pagination.currentPage
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              ))}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={pagination.currentPage === pagination.totalPages}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+        </div>
         )}
 
       {/* Daily Accomplishment Report Modal */}

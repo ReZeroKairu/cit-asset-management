@@ -117,7 +117,9 @@ const AssetSearchTable: React.FC<Props> = ({
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {asset.units?.unit_name || "N/A"}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-900">
+                <td className="px-6 py-4 text-sm text-gray-900"
+                    title={asset.asset_details?.description}
+                >
                   {asset.asset_details?.description || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

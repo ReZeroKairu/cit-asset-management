@@ -185,7 +185,9 @@ const SearchAllAssetsTable: React.FC<SearchAllAssetsTableProps> = ({
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                     {asset.asset_details?.property_tag_no || "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
+                  <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate"
+                      title={asset.asset_details?.description}
+                  >
                     {asset.asset_details?.description || "No description"}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">

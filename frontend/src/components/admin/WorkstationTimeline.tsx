@@ -98,7 +98,7 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
         <div className="mb-2">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium truncate max-w-[140px] text-gray-900">
-              {workstation_name}
+              <span title={workstation_name}>{workstation_name.length > 20 ? `${workstation_name.substring(0, 17)}...` : workstation_name}</span>
             </span>
             <span className="text-xs text-gray-600">
               {assets.length} assets
@@ -292,7 +292,7 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className={`w-1.5 h-1.5 rounded-full ${
                         asset.timeline_position === 0 ? 'bg-gray-600' :
-                        asset.timeline_position === 1 ? 'bg-gray-600' :
+                        asset.timeline_position === 1 ? 'bg-blue-600' :
                         asset.timeline_position === 2 ? 'bg-green-600' :
                         asset.timeline_position === 3 ? 'bg-yellow-600' :
                         asset.timeline_position === 4 ? 'bg-orange-600' :
@@ -300,6 +300,7 @@ const WorkstationTimeline: React.FC<WorkstationTimelineProps> = ({
                       }`}></div>
                       <div className="font-bold text-gray-900 truncate">
                         {asset.unit_name || asset.asset_name}
+                        <span title={asset.unit_name || asset.asset_name}>{(asset.unit_name || asset.asset_name).length > 20 ? `${(asset.unit_name || asset.asset_name).substring(0, 17)}...` : (asset.unit_name || asset.asset_name)}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">

@@ -20,6 +20,8 @@ import {
   Download,
   Edit,
   Zap,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import api from "../../api/axios";
 import { generateTemplateReport } from "../../utils/generateTemplateReport";
@@ -52,31 +54,47 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
     start_date: "",
     end_date: "",
   });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalCount: 0,
+    limit: 10,
+  });
 
   const { user } = useAuth();
 
   useEffect(() => {
     loadReports();
-  }, [viewMode, filters]);
+  }, [viewMode, filters, pagination.currentPage, pagination.limit]);
 
   const loadReports = async () => {
     try {
       setLoading(true);
 
-      let data;
+      const params = {
+        ...filters,
+        page: pagination.currentPage,
+        limit: pagination.limit
+      };
+
+      let response;
       if (viewMode === "my") {
-        data = await getMyDailyReports();
+        response = await getMyDailyReports(params);
       } else if (archiveMode) {
-        // For archive mode, show only approved reports
-        data = await getAllDailyReports({ status: "Approved" });
+        response = await getAllDailyReports({ ...params, status: "Approved" });
       } else if (adminMode) {
-        // For regular admin daily reports, show only pending reports
-        data = await getAllDailyReports({ status: "Pending" });
+        response = await getAllDailyReports({ ...params, status: "Pending" });
       } else {
-        // For regular admin daily reports, show all reports
-        data = await getAllDailyReports({});
+        response = await getAllDailyReports(params);
       }
-      setReports(data.data || data);
+      setReports(response.data || response);
+      if (response.pagination) {
+        setPagination(prev => ({
+          ...prev,
+          totalPages: response.pagination.totalPages,
+          totalCount: response.pagination.totalCount
+        }));
+      }
     } catch (_err: any) {
       setError(_err.response?.data?.error || "Failed to load reports");
     } finally {
@@ -262,31 +280,47 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
       start_date: "",
       end_date: "",
     });
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
-  const filteredReports = reports.filter((report) => {
-    let matchesFilter = true;
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
 
-    // Start date filter
-    if (filters.start_date) {
-      const reportDate = new Date(report.report_date);
-      const startDate = new Date(filters.start_date + "T00:00:00");
-      if (reportDate < startDate) {
-        matchesFilter = false;
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    const { totalPages, currentPage } = pagination;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
       }
     }
-
-    // End date filter
-    if (filters.end_date) {
-      const reportDate = new Date(report.report_date);
-      const endDate = new Date(filters.end_date + "T23:59:59");
-      if (reportDate > endDate) {
-        matchesFilter = false;
-      }
-    }
-
-    return matchesFilter;
-  });
+    return pages;
+  };
 
   // Show detail view if a report is selected
   if (isViewModalOpen && viewingReport) {
@@ -465,7 +499,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
       </div>
 
       <div className="bg-white shadow-lg rounded-lg">
-        {filteredReports.length === 0 ? (
+        {reports.length === 0 ? (
           <div className="text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -519,7 +553,7 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredReports.map((report) => (
+                {reports.map((report) => (
                   <tr
                     key={report.report_id}
                     className="hover:bg-blue-50 cursor-pointer transition-colors"
@@ -537,14 +571,17 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
                               {report.report_type === 'auto_complaints' ? 'Complaints' : 
                                report.report_type === 'auto_forms' ? 'Forms' : 
                                report.report_type === 'auto_maintenance' ? 'Maintenance' :
+                               report.report_type === 'auto_inventory' ? 'Disposal Inventory' :
                                report.report_type === 'unified' ? 'Unified' : 'Auto'}
                             </span>
                           </div>
                         )}
                       </div>
-                      {report.general_remarks && (
+                      {report.general_remarks && report.general_remarks.length > 0 && (
                         <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
-                          {report.general_remarks}
+                          {report.general_remarks.length > 50
+                            ? `${report.general_remarks.substring(0, 50)}...`
+                            : report.general_remarks}
                         </div>
                       )}
                     </td>
@@ -624,6 +661,64 @@ const DailyReportList: React.FC<DailyReportListProps> = ({
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing{" "}
+              {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
+              {Math.min(
+                pagination.currentPage * pagination.limit,
+                pagination.totalCount
+              )}{" "}
+              of {pagination.totalCount} results
+            </div>
+          </div>
+          <div className="px-6 py-4 flex items-center justify-between">
+            <button
+              onClick={() => handlePageChange(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map((page, index) => (
+                page === '...' ? (
+                  <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-500">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page as number)}
+                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                      page === pagination.currentPage
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              ))}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(pagination.currentPage + 1)}
+              disabled={pagination.currentPage === pagination.totalPages}
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Daily Accomplishment Report Modal */}
       <DailyAccomplishmentReport

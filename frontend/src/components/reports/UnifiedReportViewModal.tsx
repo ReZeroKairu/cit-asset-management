@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { Button } from "../ui/button";
 import type { DailyReport } from "../../api/dailyReports";
 
@@ -13,11 +13,17 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const safeOnClose = useCallback(() => {
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+  }, [onClose]);
+
   // Add ESC key support
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
-        onClose();
+        safeOnClose();
       }
     };
 
@@ -28,7 +34,7 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, safeOnClose]);
 
   const reportData = report as any;
   if (!reportData || !isOpen) return null;
@@ -51,10 +57,12 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
   const complaints = generatedData.complaints || [];
   const softwareInstallations = generatedData.software_installations || [];
   const maintenanceServices = generatedData.maintenance_services || [];
+  const inventoryWorkstations = (generatedData.inventory_workstations || []).slice();
   const procedures = reportData.procedures || [];
   const complaintsRemarks = generatedData.complaints_remarks || '';
   const formsRemarks = generatedData.forms_remarks || '';
   const maintenanceRemarks = generatedData.maintenance_remarks || '';
+  const inventoryRemarks = generatedData.inventory_remarks || '';
 
   // Function to aggregate procedures from source records to ensure correct section grouping
   const getSectionProcedures = (items: any[], defaultDarIds: number[]) => {
@@ -98,6 +106,9 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
     remarks: null // No remarks in workstation area
   })).sort(sortWorkstations);
 
+  // For inventory procedures (ID 5 = Hardware Checks)
+  const inventoryProcedures = procedures.filter((p: any) => Number(p.procedure_id) === 5);
+
   // For software installations, create workstation items - flatten the workstations array
   const softwareWorkstations = softwareInstallations
     .flatMap((s: any) => 
@@ -123,13 +134,15 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
     remarks: null
   })).sort(sortWorkstations);
 
+  const sortedInventoryWorkstations = inventoryWorkstations.sort(sortWorkstations);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
         <div>
           <button
-            onClick={onClose}
+            onClick={safeOnClose}
             className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
           >
             <svg
@@ -160,7 +173,7 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
       {/* Single Page Report View */}
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
         {/* Report Header */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 border-b border-gray-200">
+        <div className="bg-gray-50 p-6 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
             <div>
               <div className="text-sm font-medium text-gray-600">Report ID</div>
@@ -193,7 +206,7 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Custodian & Laboratory Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 👤 Custodian
               </h3>
@@ -208,7 +221,7 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
                 </div>
               </div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 🏢 Laboratory
               </h3>
@@ -494,6 +507,94 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
             </div>
           )}
 
+          {(inventoryRemarks || sortedInventoryWorkstations.length > 0) ? (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900 border-b-2 border-gray-300 pb-2">
+                📦 Inventory Section
+              </h2>
+
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  ✅ Procedures ({inventoryProcedures.filter((p: any) => p.overall_status === "Completed").length})
+                </h3>
+                {inventoryProcedures.length > 0 ? (
+                  <div className="space-y-3">
+                    {inventoryProcedures
+                      .filter((proc: any) => proc.overall_status === "Completed")
+                      .map((proc: any, index: number) => (
+                        <div
+                          key={index}
+                          className="bg-white p-3 rounded border border-gray-200"
+                        >
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-gray-900">
+                              {proc.procedure_name}
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                proc.overall_status === "Completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {proc.overall_status === "Completed"
+                                ? "✓ Completed"
+                                : "○ Pending"}
+                            </span>
+                          </div>
+                          {proc.overall_remarks && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Notes:</span>{" "}
+                              {proc.overall_remarks}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 bg-white rounded border border-gray-200">
+                    <p className="text-gray-500">No procedures reported</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  💻 Workstations ({sortedInventoryWorkstations.length})
+                </h3>
+                {sortedInventoryWorkstations.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {sortedInventoryWorkstations.map((workstation: any, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-white px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700"
+                      >
+                        {workstation.workstation_name}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 bg-white rounded border border-gray-200">
+                    <p className="text-gray-500">No workstations reported</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  📝 Inventory Remarks
+                </h3>
+                <div className="bg-white p-3 rounded border border-gray-200">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700">{inventoryRemarks}</pre>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+              <p className="text-gray-500 text-center">No inventory data found in this unified report</p>
+            </div>
+          )}
+
           {/* Report Info */}
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
             <div className="flex justify-between items-center">
@@ -502,7 +603,7 @@ const UnifiedReportViewModal: React.FC<UnifiedReportViewModalProps> = ({
                 {formatDateTime(reportData.created_at || reportData.report_date)}
               </div>
               <Button
-                onClick={onClose}
+                onClick={safeOnClose}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Close

@@ -509,6 +509,13 @@ const DailyAccomplishmentReport: React.FC<Props> = ({
           });
         }
 
+        // Include inventory remarks if present (from unified generated_data or embedded inventory_report)
+        const inventoryRemarks = generatedData.inventory_remarks || (report.inventory_report && report.inventory_report.generated_data && report.inventory_report.generated_data.inventory_remarks) || '';
+        if (inventoryRemarks) {
+          formattedRemarks += "\n=== INVENTORY ===\n";
+          formattedRemarks += `${inventoryRemarks}\n`;
+        }
+
         return formattedRemarks || "No unified report data";
       };
 

@@ -248,7 +248,9 @@ const WorkstationTable: React.FC<Props> = ({
                   className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[150px] truncate"
                   title={getWorkstationRemarks(workstation)}
                 >
-                  {getWorkstationRemarks(workstation)}
+                  {getWorkstationRemarks(workstation).length > 50
+                    ? `${getWorkstationRemarks(workstation).substring(0, 47)}...`
+                    : getWorkstationRemarks(workstation)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-2">
                   <button

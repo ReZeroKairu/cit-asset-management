@@ -136,7 +136,8 @@ export const mapReportDataToTemplate = (reportData: any) => {
     const complaintsRemarks = reportData.generated_data.complaints_remarks || "";
     const formsRemarks = reportData.generated_data.forms_remarks || "";
     const maintenanceRemarks = reportData.generated_data.maintenance_remarks || "";
-    if (complaintsRemarks || formsRemarks || maintenanceRemarks) {
+    const inventoryRemarks = reportData.generated_data.inventory_remarks || "";
+    if (complaintsRemarks || formsRemarks || maintenanceRemarks || inventoryRemarks) {
       remarksForTemplate = [
         "=== COMPLAINTS ===",
         complaintsRemarks,
@@ -145,7 +146,10 @@ export const mapReportDataToTemplate = (reportData: any) => {
         formsRemarks,
         "",
         "=== MAINTENANCE ===",
-        maintenanceRemarks
+        maintenanceRemarks,
+        "",
+        "=== INVENTORY ===",
+        inventoryRemarks
       ].filter(Boolean).join('\n');
     }
   } else if (reportData.report_type === 'auto_maintenance' && reportData.generated_data) {
